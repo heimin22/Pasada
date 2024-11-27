@@ -38,7 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin: EdgeInsets.only(top: 200.0),
+              margin: EdgeInsets.only(top: 250.0),
               child: Text(
                 'Hi there!',
                 style: TextStyle(
@@ -59,12 +59,12 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(top: 270.0),
+              margin: const EdgeInsets.only(top: 240.0),
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF4ab00c),
-                  minimumSize: Size(260, 50),
+                  backgroundColor: Color(0xFF4AB00C),
+                  minimumSize: Size(260, 60),
                 ),
                 child: const Text(
                   'Create an account',
@@ -82,8 +82,12 @@ class _MyHomePageState extends State<MyHomePage> {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFFFFF),
-                  minimumSize: Size(260, 50),
+                  backgroundColor: Color(0xFFF2F2F2),
+                  minimumSize: Size(260, 60),
+                  side: BorderSide(
+                    color: Color(0xFF4AB00C),
+                    width: 2,
+                  ),
                 ),
                 child: const Text(
                     'Log-in',
