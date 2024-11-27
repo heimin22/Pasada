@@ -91,7 +91,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFFF2F2F2),
                   minimumSize: Size(260, 60),
-                  side: BorderSide(
+                  side: const BorderSide(
                     color: Color(0xFF4AB00C),
                     width: 2,
                   ),
