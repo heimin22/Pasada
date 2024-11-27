@@ -37,7 +37,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Hi there!',
               style: TextStyle(
                 fontSize: 40,
@@ -46,11 +46,30 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             SizedBox(height: 8),
-            Padding(
-                padding: const EdgeInsets.only(bottom: 30.0),
+            const Padding(
+                padding: EdgeInsets.only(bottom: 30.0),
               child: Text(
                 'Welcome to Pasada',
                 style: TextStyle(
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+            Container(
+
+            ),
+            ElevatedButton(
+              onPressed: (){},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF4ab00c),
+                minimumSize: Size(260, 50),
+              ),
+              child: const Text(
+                'Create an account',
+                style: TextStyle(
+                  color: Color(0xFFF2F2F2),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
                   fontFamily: 'Inter',
                 ),
               ),
