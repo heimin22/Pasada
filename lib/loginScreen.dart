@@ -22,6 +22,7 @@ class PassengerPassengerApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
+
   final String title;
 
   @override
@@ -29,7 +30,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,17 +37,20 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Hi there!',
-              style: TextStyle(
-                fontSize: 40,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
+            Container(
+              margin: EdgeInsets.only(top: 200.0),
+              child: Text(
+                'Hi there!',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             SizedBox(height: 8),
             const Padding(
-                padding: EdgeInsets.only(bottom: 30.0),
+              padding: EdgeInsets.only(bottom: 30.0),
               child: Text(
                 'Welcome to Pasada',
                 style: TextStyle(
@@ -56,25 +59,44 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Container(
-
-            ),
-            ElevatedButton(
-              onPressed: (){},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF4ab00c),
-                minimumSize: Size(260, 50),
-              ),
-              child: const Text(
-                'Create an account',
-                style: TextStyle(
-                  color: Color(0xFFF2F2F2),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20,
-                  fontFamily: 'Inter',
+              margin: const EdgeInsets.only(top: 270.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF4ab00c),
+                  minimumSize: Size(260, 50),
+                ),
+                child: const Text(
+                  'Create an account',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                  ),
                 ),
               ),
             ),
-          ]
+            Container(
+              margin: const EdgeInsets.only(top: 20.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFFFFFFF),
+                  minimumSize: Size(260, 50),
+                ),
+                child: const Text(
+                    'Log-in',
+                  style: TextStyle(
+                    color: Color(0xFF121212),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
