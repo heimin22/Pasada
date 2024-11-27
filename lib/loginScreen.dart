@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 void main() => runApp(const PassengerPassengerApp());
 
@@ -38,7 +39,13 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin: EdgeInsets.only(top: 250.0),
+              margin: EdgeInsets.only(top: 130.0),
+              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+              height: 130,
+              width: 130,
+            ),
+            Container(
+              margin: EdgeInsets.only(top: 70.0),
               child: Text(
                 'Hi there!',
                 style: TextStyle(
@@ -59,7 +66,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(top: 240.0),
+              margin: const EdgeInsets.only(top: 180.0),
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
@@ -90,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                 ),
                 child: const Text(
-                    'Log-in',
+                  'Log-in',
                   style: TextStyle(
                     color: Color(0xFF121212),
                     fontWeight: FontWeight.w600,
