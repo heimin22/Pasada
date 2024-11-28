@@ -31,6 +31,7 @@ class CAPage extends StatefulWidget {
 class CreateAccountScreen extends State<CAPage> {
   @override
   Widget build(BuildContext context) {
+    final TextEditingController inputController = TextEditingController();
     return Scaffold(
       body: Center(
         child: Column(
@@ -64,37 +65,74 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(left: 37.0, right: 70.0, bottom: 380.0),
+              margin: const EdgeInsets.only(left: 36.0, right: 39.0, bottom: 380.0),
               height: 50,
-              child: const TextField(
-                style: TextStyle(
+              child: TextField(
+                controller: inputController,
+                style: const TextStyle(
                   color: Color(0xFF121212),
                 ),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
+                  labelText: 'Enter your email or phone number',
+                  labelStyle: TextStyle(
+                    fontSize: 14,
+                  ),
+                  floatingLabelStyle: TextStyle(
+                    color: Color(0xFF4AB00C)
+                  ),
                   hintText: 'Email or phone number',
                   hintStyle: TextStyle(
                     fontSize: 4,
                   ),
-                  labelText: 'Enter email or phone number',
                   enabledBorder: OutlineInputBorder(
-                    borderSide: const BorderSide(
+                    borderSide: BorderSide(
                       color: Color(0xFFC7C7C6),
                       width: 1.0,
                     ),
                     borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFF4AB00C),
+                    ),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(left: 37.0, right: 70.0),
+              margin: const EdgeInsets.only(left: 36.0, right: 39.0),
               height: 50,
-              child: const TextField(),
+              child: const TextField(
+                style: TextStyle(
+                  color: Color(0xFF121212),
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter your password',
+                  hintStyle: TextStyle(
+                    fontSize: 4,
+                  ),
+                  labelText: 'Enter your password'
+                ),
+              ),
             ),
           ],
         ),
       ),
     );
   }
+  
+  // bool validateEmailOrPhone(String input) {
+  //   final emailRegex = RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$");
+  //   if (emailRegex.hasMatch(input)) {
+  //     return true;
+  //   }
+  //
+  //   final phoneRegex = RegExp(r"^\d{10,}$");
+  //   if (phoneRegex.hasMatch(input)) {
+  //     return true;
+  //   }
+  //
+  //   return false;
+  // }
 }
