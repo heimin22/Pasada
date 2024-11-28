@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/createAccount.dart';
+import 'package:pasada_passenger_app/loginAccount.dart';
 
-void main() => runApp(const PassengerPassengerApp());
+void main() => runApp(const PasadaPassenger());
 
-class PassengerPassengerApp extends StatelessWidget {
-  const PassengerPassengerApp({super.key});
+class PasadaPassenger extends StatelessWidget {
+  const PasadaPassenger({super.key});
 
   // This widget is the root of your application.
   @override
@@ -19,6 +20,11 @@ class PassengerPassengerApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const PasadaHomePage(title: 'Pasada'),
+      routes: <String, WidgetBuilder> {
+        'start': (BuildContext context) => const PasadaPassenger(),
+        'createAccount': (BuildContext context) => const CreateAccountPage(),
+        'loginAccount': (BuildContext context) => const LoginAccountPage(),
+      },
     );
   }
 }
@@ -74,7 +80,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4AB00C),
-                  minimumSize: const Size(260, 60),
+                  minimumSize: const Size(400, 50),
                 ),
                 child: const Text(
                   'Create an account',
@@ -90,15 +96,11 @@ class PasadaHomePageState extends State<PasadaHomePage> {
               margin: const EdgeInsets.only(top: 20.0),
               child: ElevatedButton(
                 onPressed: () {
-                  print('Button pressed');
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CreateAccountPage()),
-                  );
+                  Navigator.pushNamed(context, 'loginAccount');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF2F2F2),
-                  minimumSize: const Size(260, 60),
+                  minimumSize: const Size(400, 50),
                   side: const BorderSide(
                     color: Color(0xFF4AB00C),
                     width: 2,

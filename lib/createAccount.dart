@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/starttScreen.dart';
+import 'package:pasada_passenger_app/loginAccount.dart';
 
 void main() => runApp(const CreateAccountPage());
 
@@ -17,7 +18,8 @@ class CreateAccountPage extends StatelessWidget {
           fontFamily: 'Inter',
           useMaterial3: true,
         ),
-        home: const CAPage(title: 'Create Account'));
+        home: const CAPage(title: 'Create Account')
+    );
   }
 }
 
@@ -31,12 +33,13 @@ class CAPage extends StatefulWidget {
 }
 
 class CreateAccountScreen extends State<CAPage> {
+  final TextEditingController inputController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  bool isPasswordVisible = false;
+  String errorMessage = ' ';
+
   @override
   Widget build(BuildContext context) {
-    final TextEditingController inputController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
-    bool isPasswordVisible = false;
-
     return Scaffold(
       body: Center(
         child: Column(
@@ -44,16 +47,16 @@ class CreateAccountScreen extends State<CAPage> {
           children: [
             Container(
               margin:
-                  const EdgeInsets.only(bottom: 30.0, right: 300.0, top: 120.0),
+                  const EdgeInsets.only(bottom: 30.0, right: 300.0),
               height: 80,
               width: 80,
               child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
-            Container(
-              margin: const EdgeInsets.only(bottom: 10.0, right: 134.0),
-              child: const Text(
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10.0, right: 134.0),
+              child: Text(
                 'Create your account',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF121212),
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
@@ -61,9 +64,9 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             const SizedBox(height: 3),
-            Container(
-              margin: const EdgeInsets.only(bottom: 28.0, right: 60.0),
-              child: const Text(
+            const Padding(
+              padding: EdgeInsets.only(bottom: 25.0, right: 60.0),
+              child: Text(
                 'Join the Pasada app and make your ride easier',
                 style: TextStyle(color: Color(0xFF121212)),
               ),
@@ -101,7 +104,7 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Container(
-              margin: const EdgeInsets.only(bottom: 20.0, right: 307.0),
+              margin: const EdgeInsets.only(bottom: 15.0, right: 307.0),
               child: const Text(
                 'Password',
                 style: TextStyle(
@@ -112,7 +115,7 @@ class CreateAccountScreen extends State<CAPage> {
             ),
             Container(
               margin:
-                  const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 450.0),
+                  const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 50.0),
               height: 50,
               child: TextField(
                 controller: passwordController,
@@ -156,6 +159,22 @@ class CreateAccountScreen extends State<CAPage> {
                 ),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 150.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4AB00C),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
           ],
         ),
       ),
