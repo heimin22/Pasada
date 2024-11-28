@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/createAccount.dart';
 
 void main() => runApp(const PassengerPassengerApp());
 
@@ -10,27 +11,28 @@ class PassengerPassengerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Pasada',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+        fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const PasadaHomePage(title: 'Pasada'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class PasadaHomePage extends StatefulWidget {
+  const PasadaHomePage({super.key, required this.title});
 
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<PasadaHomePage> createState() => PasadaHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class PasadaHomePageState extends State<PasadaHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,39 +41,40 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin: EdgeInsets.only(top: 130.0),
-              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+              margin: const EdgeInsets.only(top: 130.0),
               height: 130,
               width: 130,
+              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
             Container(
-              margin: EdgeInsets.only(top: 70.0),
-              child: Text(
+              margin: const EdgeInsets.only(top: 70.0),
+              child: const Text(
                 'Hi there!',
                 style: TextStyle(
                   fontSize: 40,
-                  fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             const Padding(
               padding: EdgeInsets.only(bottom: 30.0),
               child: Text(
                 'Welcome to Pasada',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                ),
               ),
             ),
             Container(
               margin: const EdgeInsets.only(top: 180.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateAccountPage()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF4AB00C),
-                  minimumSize: Size(260, 60),
+                  backgroundColor: const Color(0xFF4AB00C),
+                  minimumSize: const Size(260, 60),
                 ),
                 child: const Text(
                   'Create an account',
@@ -79,7 +82,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Color(0xFFF2F2F2),
                     fontWeight: FontWeight.w600,
                     fontSize: 20,
-                    fontFamily: 'Inter',
                   ),
                 ),
               ),
@@ -87,10 +89,16 @@ class _MyHomePageState extends State<MyHomePage> {
             Container(
               margin: const EdgeInsets.only(top: 20.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  print('Button pressed');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateAccountPage()),
+                  );
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF2F2F2),
-                  minimumSize: Size(260, 60),
+                  backgroundColor: const Color(0xFFF2F2F2),
+                  minimumSize: const Size(260, 60),
                   side: const BorderSide(
                     color: Color(0xFF4AB00C),
                     width: 2,
@@ -102,7 +110,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     color: Color(0xFF121212),
                     fontWeight: FontWeight.w600,
                     fontSize: 20,
-                    fontFamily: 'Inter',
                   ),
                 ),
               ),
