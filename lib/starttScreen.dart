@@ -81,7 +81,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4AB00C),
-                  minimumSize: const Size(400, 50),
+                  minimumSize: const Size(380, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
                 ),
                 child: const Text(
                   'Create an account',
@@ -101,10 +104,13 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF2F2F2),
-                  minimumSize: const Size(400, 50),
+                  minimumSize: const Size(380, 50),
                   side: const BorderSide(
                     color: Color(0xFF4AB00C),
                     width: 2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
                 child: const Text(

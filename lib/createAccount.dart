@@ -48,10 +48,7 @@ class CreateAccountScreen extends State<CAPage> {
               margin: const EdgeInsets.only(top: 120.0, bottom: 30.0, right: 300.0),
               height: 80,
               width: 80,
-              child: SvgPicture.asset('assets/svg/Ellipse.svg')
-                  .animate()
-                  .fadeIn(duration: 650.ms, delay: 500.ms)
-                  .slide(),
+              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
             Padding(
               padding: EdgeInsets.only(bottom: 10.0, right: 134.0),
@@ -62,7 +59,7 @@ class CreateAccountScreen extends State<CAPage> {
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
                 ),
-              ).animate().fadeIn(duration: 600.ms, delay: 400.ms).slide(),
+              ),
             ),
             const SizedBox(height: 3),
             Padding(
@@ -70,7 +67,7 @@ class CreateAccountScreen extends State<CAPage> {
               child: Text(
                 'Join the Pasada app and make your ride easier',
                 style: TextStyle(color: Color(0xFF121212)),
-              ).animate().fadeIn(duration: 500.ms, delay: 500.ms).slide(),
+              ),
             ),
             Container(
               margin:
@@ -177,47 +174,84 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Container(
-              margin: EdgeInsets.only(bottom: 5.0, top: 100.0),
+              margin: EdgeInsets.only(bottom: 5.0, top: 75.0),
               child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
             ),
             Container(
+              // Google Button
               margin: EdgeInsets.only(bottom: 20.0),
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
-                  minimumSize: const Size(400, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 360,
                   ),
-                ),
-                child: const Text(
-                  'Continue with Google',
-                  style: TextStyle(
-                    color: Color(0xFFF2F2F2),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4AB00C),
+                      minimumSize: const Size(360, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/googleIcon.svg',
+                          height: 24,
+                          width: 24,
+                        ),
+                        const SizedBox(width: 25),
+                        const Text(
+                          'Continue with Google',
+                          style: TextStyle(
+                            color: Color(0xFFF2F2F2),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-            Container(
-              margin: EdgeInsets.only(bottom: 100.0),
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
-                  minimumSize: const Size(400, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
+            Container ( // Viber Button
+              margin: EdgeInsets.only(bottom: 20.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 360,
                   ),
-                ),
-                child: const Text(
-                  'Continue with Viber',
-                  style: TextStyle(
-                    color: Color(0xFFF2F2F2),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4AB00C),
+                      minimumSize: const Size(360, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/viberIcon.svg',
+                          height: 30,
+                          width: 30,
+                        ),
+                        const SizedBox(width: 25),
+                        const Text(
+                          'Continue with Viber',
+                          style: TextStyle(
+                            color: Color(0xFFF2F2F2),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
