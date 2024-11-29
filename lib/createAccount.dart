@@ -45,7 +45,7 @@ class CreateAccountScreen extends State<CAPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 40.0, bottom: 30.0, right: 300.0),
+              margin: const EdgeInsets.only(top: 120.0, bottom: 30.0, right: 300.0),
               height: 80,
               width: 80,
               child: SvgPicture.asset('assets/svg/Ellipse.svg')
@@ -177,7 +177,7 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Container(
-              margin: EdgeInsets.only(bottom: 5.0, top: 80.0),
+              margin: EdgeInsets.only(bottom: 5.0, top: 100.0),
               child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
             ),
             Container(

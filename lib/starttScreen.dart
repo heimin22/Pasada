@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/createAccount.dart';
 import 'package:pasada_passenger_app/loginAccount.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 void main() => runApp(const PasadaPassenger());
 
