@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/starttScreen.dart';
-import 'package:pasada_passenger_app/loginAccount.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 void main() => runApp(const CreateAccountPage());
 
@@ -18,8 +17,7 @@ class CreateAccountPage extends StatelessWidget {
           fontFamily: 'Inter',
           useMaterial3: true,
         ),
-        home: const CAPage(title: 'Create Account')
-    );
+        home: const CAPage(title: 'Create Account'));
   }
 }
 
@@ -41,18 +39,21 @@ class CreateAccountScreen extends State<CAPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin:
-                  const EdgeInsets.only(bottom: 30.0, right: 300.0),
+              margin: const EdgeInsets.only(top: 40.0, bottom: 30.0, right: 300.0),
               height: 80,
               width: 80,
-              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+              child: SvgPicture.asset('assets/svg/Ellipse.svg')
+                  .animate()
+                  .fadeIn(duration: 650.ms, delay: 500.ms)
+                  .slide(),
             ),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 10.0, right: 134.0),
               child: Text(
                 'Create your account',
@@ -61,15 +62,15 @@ class CreateAccountScreen extends State<CAPage> {
                   fontWeight: FontWeight.w700,
                   fontSize: 24,
                 ),
-              ),
+              ).animate().fadeIn(duration: 600.ms, delay: 400.ms).slide(),
             ),
             const SizedBox(height: 3),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 25.0, right: 60.0),
               child: Text(
                 'Join the Pasada app and make your ride easier',
                 style: TextStyle(color: Color(0xFF121212)),
-              ),
+              ).animate().fadeIn(duration: 500.ms, delay: 500.ms).slide(),
             ),
             Container(
               margin:
@@ -160,7 +161,7 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(bottom: 150.0),
+              padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
@@ -174,7 +175,53 @@ class CreateAccountScreen extends State<CAPage> {
                   ),
                 ),
               ),
-            )
+            ),
+            Container(
+              margin: EdgeInsets.only(bottom: 5.0, top: 80.0),
+              child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
+            ),
+            Container(
+              margin: EdgeInsets.only(bottom: 20.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4AB00C),
+                  minimumSize: const Size(400, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+                child: const Text(
+                  'Continue with Google',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              margin: EdgeInsets.only(bottom: 100.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4AB00C),
+                  minimumSize: const Size(400, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
+                  ),
+                ),
+                child: const Text(
+                  'Continue with Viber',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

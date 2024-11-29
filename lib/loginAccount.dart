@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/starttScreen.dart';
-import 'package:pasada_passenger_app/loginAccount.dart';
 
 void main() => runApp(const LoginAccountPage());
 

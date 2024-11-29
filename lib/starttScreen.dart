@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/createAccount.dart';
 import 'package:pasada_passenger_app/loginAccount.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 void main() => runApp(const PasadaPassenger());
 
@@ -20,7 +21,7 @@ class PasadaPassenger extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const PasadaHomePage(title: 'Pasada'),
-      routes: <String, WidgetBuilder> {
+      routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'createAccount': (BuildContext context) => const CreateAccountPage(),
         'loginAccount': (BuildContext context) => const LoginAccountPage(),
@@ -63,7 +64,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
               ),
             ),
             const SizedBox(height: 8),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 30.0),
               child: Text(
                 'Welcome to Pasada',
@@ -75,7 +76,8 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CreateAccountPage()),
+                    MaterialPageRoute(
+                        builder: (context) => const CreateAccountPage()),
                   );
                 },
                 style: ElevatedButton.styleFrom(
