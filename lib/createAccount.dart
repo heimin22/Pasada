@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:pasada_passenger_app/starttScreen.dart';
 
 void main() => runApp(const CreateAccountPage());
 
@@ -10,14 +11,18 @@ class CreateAccountPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Create Account',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-          fontFamily: 'Inter',
-          useMaterial3: true,
-        ),
-        home: const CAPage(title: 'Create Account'));
+      title: 'Create Account',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+        fontFamily: 'Inter',
+        useMaterial3: true,
+      ),
+      home: const CAPage(title: 'Create Account'),
+      routes: <String, WidgetBuilder>{
+        'start': (BuildContext context) => const PasadaPassenger(),
+      },
+    );
   }
 }
 
@@ -45,7 +50,16 @@ class CreateAccountScreen extends State<CAPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              margin: const EdgeInsets.only(top: 120.0, bottom: 30.0, right: 300.0),
+              margin: const EdgeInsets.only(top: 35.0, right: 360.0),
+              child: IconButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, 'start');
+                  },
+                  icon: Icon(Icons.arrow_back),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(top: 80.0, bottom: 30.0, right: 300.0),
               height: 80,
               width: 80,
               child: SvgPicture.asset('assets/svg/Ellipse.svg'),
@@ -77,6 +91,7 @@ class CreateAccountScreen extends State<CAPage> {
                 controller: inputController,
                 style: const TextStyle(
                   color: Color(0xFF121212),
+                  fontSize: 14,
                 ),
                 decoration: const InputDecoration(
                   labelText: 'Enter your email or phone number',
@@ -120,6 +135,7 @@ class CreateAccountScreen extends State<CAPage> {
                 obscureText: !isPasswordVisible,
                 style: const TextStyle(
                   color: Color(0xFF121212),
+                  fontSize: 14,
                 ),
                 decoration: InputDecoration(
                   labelText: 'Enter your password',
@@ -204,7 +220,7 @@ class CreateAccountScreen extends State<CAPage> {
                         ),
                         const SizedBox(width: 25),
                         const Text(
-                          'Continue with Google',
+                          'Sign-up with Google',
                           style: TextStyle(
                             color: Color(0xFFF2F2F2),
                             fontSize: 20,
@@ -243,7 +259,7 @@ class CreateAccountScreen extends State<CAPage> {
                         ),
                         const SizedBox(width: 25),
                         const Text(
-                          'Continue with Viber',
+                          'Sign-up with Viber',
                           style: TextStyle(
                             color: Color(0xFFF2F2F2),
                             fontSize: 20,

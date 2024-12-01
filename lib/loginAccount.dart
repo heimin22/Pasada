@@ -33,6 +33,17 @@ class LoginScreen extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(top: 35.0, right: 360.0),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
