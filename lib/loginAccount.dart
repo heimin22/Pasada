@@ -64,6 +64,17 @@ class LoginScreen extends State<LoginPage> {
               child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
             Padding(
+              padding: EdgeInsets.only (bottom: 10.0, right: 108.0),
+              child: Text(
+                'Log-in to your account',
+                style: TextStyle(
+                  color: Color(0xFF121212),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            Padding(
               padding: EdgeInsets.only(bottom: 25.0, right: 63.0),
               child: Text(
                 'Enter your email or mobile number to continue',
