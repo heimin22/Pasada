@@ -63,6 +63,11 @@ flutter:
     - assets/svg/otherOptionsOptimized.svg
     - assets/svg/googleIcon.svg
     - assets/svg/viberIcon.svg
+    - assets/svg/homeIcon.svg
+    - assets/svg/activityIcon.svg
+    - assets/svg/notificationIcon.svg
+    - assets/svg/profileIcon.svg
+    - assets/svg/settingsIcon.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

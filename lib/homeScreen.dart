@@ -41,7 +41,50 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
+      bottomNavigationBar: NavigationBar(
+        destinations: [
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/svg/homeIcon.svg',
+              width: 24,
+              height: 24,
+            ),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/svg/activityIcon.svg',
+              width: 24,
+              height: 24,
+            ),
+            label: 'Activity',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/svg/notificationIcon.svg',
+              width: 24,
+              height: 24,
+            ),
+            label: 'Notifications',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/svg/profileIcon.svg',
+              width: 24,
+              height: 24,
+            ),
+            label: 'Profile',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              'assets/svg/settingsIcon.svg',
+              width: 24,
+              height: 24,
+            ),
+            label: 'Settings',
+          ),
+        ],
+      ),
     );
   }
 }
