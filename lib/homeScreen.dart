@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:location/location.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/notificationScreen.dart';
 import 'package:pasada_passenger_app/activityScreen.dart';
 import 'package:pasada_passenger_app/profileSettingsScreen.dart';
@@ -39,6 +42,113 @@ class HomeScreenStateful extends StatefulWidget {
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
    int _currentIndex = 0;
+
+   @override
+   void initState() {
+     super.initState();
+     _checkPermissionsAndNavigate();
+   }
+
+   Future<void> _checkPermissionsAndNavigate() async {
+     // location instance
+     Location location = Location();
+       // check if location service is enabled
+       bool serviceEnabled = await location.serviceEnabled();
+       if (!serviceEnabled) {
+         serviceEnabled = await location.requestService();
+         if (!serviceEnabled) {
+           _showError('Location services are disabled.');
+           return;
+         }
+       }
+       // check for and request location permissions
+       PermissionStatus permissionGranted = await location.hasPermission();
+       if (permissionGranted == PermissionStatus.denied) {
+         permissionGranted = await location.requestPermission();
+         if (permissionGranted != PermissionStatus.granted) {
+           _showError('Location permissions are denied');
+           return;
+         }
+       }
+       // fetch location and open waze if all okay
+       _openGoogleMapsWithCurrentLocation(location);
+   }
+
+   Future<void> _openGoogleMapsWithCurrentLocation(Location location) async {
+     try {
+     // get the user's current location
+     LocationData locationData = await location.getLocation();
+     // launch Waze
+     final latitude = locationData.latitude;
+     final longitude = locationData.longitude;
+
+     if (latitude != null && longitude != null) {
+       final url = 'https://www.google.com/maps/dir/?api=1&destination=<latitude>,<longitude>';
+       if (await canLaunch(url)) {
+         await launch(url);
+       } else {
+         _showError('Could not launch Google Maps');
+       }
+     } else {
+       _showError('Could not fetch location.');
+     }
+   } catch (e) {
+     _showError(e.toString());
+     }
+   }
+
+   void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Permission Required'),
+        content: Text(
+          'This app needs location permission to work. Please allow it in your settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Ok'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLocationServicesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Enable Location Services'),
+        content: Text(
+          'Location services are disabled. Please enable them to use this feature.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+     showDialog(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: Text('Error'),
+         content: Text(message),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.of(context).pop(),
+             child: Text('Ok'),
+           ),
+         ],
+       ),
+     );
+   }
+
   // final List<Widget> pages = [
   //   HomeScreen(),
   //   // ActivityScreen(),
@@ -49,7 +159,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(),
+      body: Center(
+
+      ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
         currentIndex: _currentIndex,
