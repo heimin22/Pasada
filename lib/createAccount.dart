@@ -232,7 +232,8 @@ class CreateAccountScreen extends State<CAPage> {
                 ),
               ),
             ),
-            Container ( // Viber Button
+            Container(
+              // Viber Button
               margin: EdgeInsets.only(bottom: 20.0),
               child: Center(
                 child: ConstrainedBox(

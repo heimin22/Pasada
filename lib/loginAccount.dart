@@ -203,7 +203,7 @@ class LoginScreen extends State<LoginPage> {
                         ),
                         const SizedBox(width: 25),
                         const Text(
-                          'Sign-up with Google',
+                          'Continue with Google',
                           style: TextStyle(
                             color: Color(0xFFF2F2F2),
                             fontSize: 20,
@@ -216,7 +216,46 @@ class LoginScreen extends State<LoginPage> {
                 ),
               ),
             ),
-
+            Container(
+              // Viber Button
+              margin: EdgeInsets.only(bottom: 20.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 360,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4AB00C),
+                      minimumSize: const Size(360, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/viberIcon.svg',
+                          height: 30,
+                          width: 30,
+                        ),
+                        const SizedBox(width: 25),
+                        const Text(
+                          'Continue with Viber',
+                          style: TextStyle(
+                            color: Color(0xFFF2F2F2),
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
