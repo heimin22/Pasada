@@ -73,11 +73,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
               margin: const EdgeInsets.only(top: 180.0),
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const CreateAccountPage()),
-                  );
+                  Navigator.pushNamed(context, 'createAccount');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4AB00C),
