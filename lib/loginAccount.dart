@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/starttScreen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/homeScreen.dart';
 
 void main() => runApp(const LoginAccountPage());
 
@@ -20,6 +21,7 @@ class LoginAccountPage extends StatelessWidget {
       home: const LoginPage(title: 'Log-in to your account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
+        'home': (BuildContext context) => const HomeScreen(),
       },
     );
   }
@@ -170,12 +172,14 @@ class LoginScreen extends State<LoginPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, 'home');
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4AB00C),
                 ),
                 child: const Text(
-                  'Continue',
+                  'Log-in',
                   style: TextStyle(
                     color: Color(0xFFF2F2F2),
                     fontWeight: FontWeight.w600,
