@@ -42,60 +42,75 @@ class HomeScreenStateful extends StatefulWidget {
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
    int _currentIndex = 0;
+   late GoogleMapController mapController;
+   LocationData? _currentLocation;
+   late Location _location;
 
    @override
    void initState() {
      super.initState();
+     _location = Location();
      _checkPermissionsAndNavigate();
    }
 
    Future<void> _checkPermissionsAndNavigate() async {
-     // location instance
-     Location location = Location();
+     try {
        // check if location service is enabled
-       bool serviceEnabled = await location.serviceEnabled();
+       bool serviceEnabled = await _location.serviceEnabled();
        if (!serviceEnabled) {
-         serviceEnabled = await location.requestService();
+         serviceEnabled = await _location.requestService();
          if (!serviceEnabled) {
-           _showError('Location services are disabled.');
+           _showLocationServicesDialog();
            return;
          }
        }
        // check for and request location permissions
-       PermissionStatus permissionGranted = await location.hasPermission();
+       PermissionStatus permissionGranted = await _location.hasPermission();
        if (permissionGranted == PermissionStatus.denied) {
-         permissionGranted = await location.requestPermission();
+         permissionGranted = await _location.requestPermission();
          if (permissionGranted != PermissionStatus.granted) {
-           _showError('Location permissions are denied');
+           _showPermissionDialog();
            return;
          }
        }
-       // fetch location and open waze if all okay
-       _openGoogleMapsWithCurrentLocation(location);
-   }
-
-   Future<void> _openGoogleMapsWithCurrentLocation(Location location) async {
-     try {
-     // get the user's current location
-     LocationData locationData = await location.getLocation();
-     // launch Waze
-     final latitude = locationData.latitude;
-     final longitude = locationData.longitude;
-
-     if (latitude != null && longitude != null) {
-       final url = 'https://www.google.com/maps/dir/?api=1&destination=<latitude>,<longitude>';
-       if (await canLaunch(url)) {
-         await launch(url);
+       // get current location
+       _currentLocation = await _location.getLocation();
+       if (_currentLocation != null) {
+         setState(() {});
        } else {
-         _showError('Could not launch Google Maps');
+         _showLocationErrorDialog();
        }
-     } else {
-       _showError('Could not fetch location.');
+     } catch (e) {
+       _showErrorDialog("An error occurred while fetching the location.");
      }
-   } catch (e) {
-     _showError(e.toString());
-     }
-   }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+     mapController = controller;
+  }
+
+   // Future<void> _openGoogleMapsWithCurrentLocation(Location location) async {
+   //   try {
+   //   // get the user's current location
+   //   LocationData locationData = await location.getLocation();
+   //   // launch Waze
+   //   final latitude = locationData.latitude;
+   //   final longitude = locationData.longitude;
+   //
+   //   if (latitude != null && longitude != null) {
+   //     final url = 'https://www.google.com/maps/dir/?api=1&destination=<latitude>,<longitude>';
+   //     if (await canLaunch(url)) {
+   //       await launch(url);
+   //     } else {
+   //       _showError('Could not launch Google Maps');
+   //     }
+   //   } else {
+   //     _showError('Could not fetch location.');
+   //   }
+   // } catch (e) {
+   //   _showError(e.toString());
+   //   }
+   // }
 
    void _showPermissionDialog() {
     showDialog(
@@ -133,7 +148,23 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
     );
   }
 
-  void _showError(String message) {
+   void _showLocationErrorDialog() {
+     showDialog(
+       context: context,
+       builder: (context) => AlertDialog(
+         title: Text('Location Error'),
+         content: Text('Unable to fetch the current location. Please try again later.'),
+         actions: [
+           TextButton(
+             onPressed: () => Navigator.of(context).pop(),
+             child: Text('OK'),
+           ),
+         ],
+       ),
+     );
+   }
+
+   void _showErrorDialog(String message) {
      showDialog(
        context: context,
        builder: (context) => AlertDialog(
@@ -142,7 +173,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
          actions: [
            TextButton(
              onPressed: () => Navigator.of(context).pop(),
-             child: Text('Ok'),
+             child: Text('OK'),
            ),
          ],
        ),
@@ -158,9 +189,22 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   // ];
   @override
   Widget build(BuildContext context) {
+     if (_currentLocation == null) {
+       return Scaffold(
+         body: Center(child: CircularProgressIndicator()),
+       );
+     }
     return Scaffold(
       body: Center(
-
+        // child: GoogleMap(
+        //     onMapCreated: _onMapCreated,
+        //     initialCameraPosition: CameraPosition(
+        //       target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        //       zoom: 15,
+        //     ),
+        //   myLocationEnabled: true,
+        //   myLocationButtonEnabled: true,
+        // ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
