@@ -68,6 +68,11 @@ flutter:
     - assets/svg/notificationIcon.svg
     - assets/svg/profileIcon.svg
     - assets/svg/settingsIcon.svg
+    - assets/svg/homeSelectedIcon.svg
+    - assets/svg/activitySelectedIcon.svg
+    - assets/svg/notificationSelectedIcon.svg
+    - assets/svg/accountSelectedIcon.svg
+    - assets/svg/settingsSelectedIcon.svg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
