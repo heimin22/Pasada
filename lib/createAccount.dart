@@ -84,8 +84,7 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             Container(
-              margin:
-                  const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 25.0),
+              margin: const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 25.0),
               height: 50,
               child: TextField(
                 controller: inputController,
