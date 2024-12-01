@@ -85,10 +85,92 @@ class LoginScreen extends State<LoginPage> {
                   floatingLabelStyle: TextStyle(
                     color: Color(0xFF4AB00C),
                   ),
-
+                  enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFFC7C7C6),
+                      width: 1.0,
+                    ),
+                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFF4AB00C),
+                    ),
+                  )
                 ),
               ),
             ),
+            Container(
+              margin: const EdgeInsets.only(bottom: 15.0, right: 307.0),
+              child: const Text(
+                'Password',
+                style: TextStyle(
+                  color: Color(0xFF121212),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 50.0),
+              height: 50,
+              child: TextField(
+                controller: passwordController,
+                obscureText: !isPasswordVisible,
+                style: const TextStyle(
+                  color: Color(0xFF121212),
+                  fontSize: 14,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Enter your password',
+                  suffixIcon: IconButton(
+                    color: const Color(0xFF121212),
+                    onPressed: () {
+                      setState(() {
+                        isPasswordVisible = !isPasswordVisible;
+                      });
+                    },
+                    icon: Icon(
+                      isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    ),
+                  ),
+                  labelStyle: const TextStyle(
+                    fontSize: 12,
+                  ),
+                  floatingLabelStyle: const TextStyle(
+                    color: Color(0XFF4AB00C),
+                  ),
+                  enabledBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFFC7C7C6),
+                      width: 1.0,
+                    ),
+                    borderRadius: BorderRadius.all(Radius.circular(10.0)),
+                  ),
+                  focusedBorder: const OutlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Color(0xFF4AB00C),
+                    )
+                  )
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10.0),
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4AB00C),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+
           ],
         ),
       ),
