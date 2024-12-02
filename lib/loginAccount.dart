@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/selectionScreen.dart';
 import 'package:pasada_passenger_app/starttScreen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:pasada_passenger_app/selectionScreen.dart';
 
 void main() => runApp(const LoginAccountPage());
 
@@ -22,6 +24,7 @@ class LoginAccountPage extends StatelessWidget {
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'home': (BuildContext context) => const HomeScreen(),
+        'selection': (BuildContext context) => const selectionScreen(),
       },
     );
   }
@@ -173,7 +176,7 @@ class LoginScreen extends State<LoginPage> {
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, 'home');
+                  Navigator.pushNamed(context, 'selection');
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5f3fc4),
