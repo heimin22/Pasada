@@ -45,6 +45,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
    late GoogleMapController mapController;
    LocationData? _currentLocation;
    late Location _location;
+   String _searchText = "";
 
    @override
    void initState() {
@@ -182,34 +183,72 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
      if (_currentLocation == null) {
        return Scaffold(
          body: Center(child: CircularProgressIndicator()),
        );
      }
     return Scaffold(
-      body: Center(
-        child: Column(
+      body: SafeArea(
+        child: Stack(
           children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                    'Home'
+            // Floating search bar
+            Positioned(
+              top: screenHeight * 0.02, // 2% from the top of the screen
+              left: screenWidth * 0.05, // 5% padding from the left
+              right: screenWidth * 0.05, // 5% padding from the right
+              child: Material(
+                elevation: 3,
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  height:
+                  screenHeight * 0.06, // Adjust height based on screen size
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16), // Left padding
+                      const Icon(Icons.search, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          onChanged: (value) {
+                            setState(() {
+                              _searchText =
+                                  value; // Update state with search input
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search for routes',
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(
+                                color: Color(0xFFA2A2A2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16), // Right padding
+                    ],
+                  ),
                 ),
               ),
-            )
+            ),
+            // Displaying search input for testing purposes
+            Positioned(
+              top: screenHeight * 0.12,
+              left: screenWidth * 0.05,
+              right: screenWidth * 0.05,
+              child: Text(
+                _searchText.isNotEmpty ? 'You searched for: $_searchText' : '',
+                style: const TextStyle(color: Colors.black, fontSize: 16),
+              ),
+            ),
           ],
         ),
-        // child: GoogleMap(
-        //   onMapCreated: _onMapCreated,
-        //   initialCameraPosition: CameraPosition(
-        //     target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-        //     zoom: 15,
-        //   ),
-        //   myLocationEnabled: true,
-        //   myLocationButtonEnabled: true,
-        // ),
       ),
     );
   }
