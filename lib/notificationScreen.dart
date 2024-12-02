@@ -8,6 +8,7 @@ import 'package:pasada_passenger_app/notificationScreen.dart';
 import 'package:pasada_passenger_app/activityScreen.dart';
 import 'package:pasada_passenger_app/profileSettingsScreen.dart';
 import 'package:pasada_passenger_app/settingsScreen.dart';
+import 'package:pasada_passenger_app/homeScreen.dart';
 
 void main() => runApp(const NotificationScreen());
 
@@ -48,6 +49,8 @@ class NotifScreenPageState extends State<NotifScreenStateful> {
     HomeScreen(),
     ActivityScreen(),
     NotificationScreen(),
+    ProfileScreen(),
+    // SettingsScreen(),
   ];
 
   @override
