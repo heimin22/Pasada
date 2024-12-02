@@ -46,34 +46,102 @@ class NotifScreenPageState extends State<NotifScreenStateful> {
   int _currentIndex = 2;
 
   final List<Widget> pages = [
-    HomeScreen(),
-    ActivityScreen(),
-    NotificationScreen(),
-    ProfileScreen(),
-    SettingsScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Home'
+              ),
+            ),
+          )
+        ],
+      ),
+      // child: GoogleMap(
+      //   onMapCreated: _onMapCreated,
+      //   initialCameraPosition: CameraPosition(
+      //     target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+      //     zoom: 15,
+      //   ),
+      //   myLocationEnabled: true,
+      //   myLocationButtonEnabled: true,
+      // ),
+    ),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Activity'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // ActivityScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Notifications'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // NotificationScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Profile'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // ProfileScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Settings'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // SettingsScreen(),
+    // HomeScreen(),
+    // ActivityScreen(),
+    // NotificationScreen(),
+    // ProfileScreen(),
+    // SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack (
-        children: [
-          pages[_currentIndex],
-          Center(
-            child: Column(
-              children: [
-                Flexible(
-                  child: Container(
-                    // padding: ,
-                    child: Text(
-                        'Notifications'
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ),
-        ],
+      body: IndexedStack (
+        index: _currentIndex,
+        children: pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),

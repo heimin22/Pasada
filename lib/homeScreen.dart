@@ -182,11 +182,90 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
    }
 
   final List<Widget> pages = [
-    HomeScreen(),
-    ActivityScreen(),
-    NotificationScreen(),
-    ProfileScreen(),
-    SettingsScreen(),
+    // HomeScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Home'
+              ),
+            ),
+          )
+        ],
+      ),
+      // child: GoogleMap(
+      //   onMapCreated: _onMapCreated,
+      //   initialCameraPosition: CameraPosition(
+      //     target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+      //     zoom: 15,
+      //   ),
+      //   myLocationEnabled: true,
+      //   myLocationButtonEnabled: true,
+      // ),
+    ),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Activity'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // ActivityScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Notifications'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // NotificationScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Profile'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // ProfileScreen(),
+    Center(
+      child: Column(
+        children: [
+          Flexible(
+            child: Container(
+              // padding: ,
+              child: Text(
+                  'Settings'
+              ),
+            ),
+          )
+        ],
+      ),
+    ),
+    // SettingsScreen(),
   ];
 
   @override
@@ -197,21 +276,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
        );
      }
     return Scaffold(
-      body: Stack(
-        children: [
-          pages[_currentIndex],
-          // Center(
-          //   child: GoogleMap(
-          //     onMapCreated: _onMapCreated,
-          //     initialCameraPosition: CameraPosition(
-          //       target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-          //       zoom: 15,
-          //     ),
-          //     myLocationEnabled: true,
-          //     myLocationButtonEnabled: true,
-          //   ),
-          // ),
-        ],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: pages,
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
