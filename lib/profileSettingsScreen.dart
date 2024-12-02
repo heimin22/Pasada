@@ -56,19 +56,23 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                    'Profile'
-                ),
-              ),
-            )
-          ],
-        ),
+      body: Stack (
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Flexible(
+                  child: Container(
+                    // padding: ,
+                    child: Text(
+                        'Profile'
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
