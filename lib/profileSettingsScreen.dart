@@ -58,6 +58,7 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
     return Scaffold(
       body: Stack (
         children: [
+          pages[_currentIndex],
           Center(
             child: Column(
               children: [

@@ -58,6 +58,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     return Scaffold(
       body: Stack(
         children: [
+          pages[_currentIndex],
           Center(
             child: Column(
               children: [
