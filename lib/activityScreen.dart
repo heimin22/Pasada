@@ -56,19 +56,24 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                  'Activity'
-                ),
-              ),
-            )
-          ],
-        ),
+      body: Stack(
+        children: [
+          pages[_currentIndex],
+          Center(
+            child: Column(
+              children: [
+                Flexible(
+                  child: Container(
+                    // padding: ,
+                    child: Text(
+                        'Activity'
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),

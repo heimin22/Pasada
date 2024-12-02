@@ -197,16 +197,21 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
        );
      }
     return Scaffold(
-      body: Center(
-        // child: GoogleMap(
-        //     onMapCreated: _onMapCreated,
-        //     initialCameraPosition: CameraPosition(
-        //       target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-        //       zoom: 15,
-        //     ),
-        //   myLocationEnabled: true,
-        //   myLocationButtonEnabled: true,
-        // ),
+      body: Stack(
+        children: [
+          pages[_currentIndex],
+          // Center(
+          //   child: GoogleMap(
+          //     onMapCreated: _onMapCreated,
+          //     initialCameraPosition: CameraPosition(
+          //       target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+          //       zoom: 15,
+          //     ),
+          //     myLocationEnabled: true,
+          //     myLocationButtonEnabled: true,
+          //   ),
+          // ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
@@ -233,71 +238,71 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
             label: 'Home',
             icon: _currentIndex == 0
                 ? SvgPicture.asset(
-                    'assets/svg/homeSelectedIcon.svg',
-                    width: 24,
-                    height: 24,
-                  )
+              'assets/svg/homeSelectedIcon.svg',
+              width: 24,
+              height: 24,
+            )
                 : SvgPicture.asset(
-                    'assets/svg/homeIcon.svg',
-                    width: 24,
-                    height: 24,
-                  ),
+              'assets/svg/homeIcon.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
           BottomNavigationBarItem(
             label: 'Activity',
             icon: _currentIndex == 1
                 ? SvgPicture.asset(
-                    'assets/svg/activitySelectedIcon.svg',
-                    width: 24,
-                    height: 24,
-                  )
+              'assets/svg/activitySelectedIcon.svg',
+              width: 24,
+              height: 24,
+            )
                 : SvgPicture.asset(
-                    'assets/svg/activityIcon.svg',
-                    width: 24,
-                    height: 24,
-                  ),
+              'assets/svg/activityIcon.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
           BottomNavigationBarItem(
             label: 'Notifications',
             icon: _currentIndex == 2
                 ? SvgPicture.asset(
-                    'assets/svg/notificationSelectedIcon.svg',
-                    width: 24,
-                    height: 24,
-                  )
+              'assets/svg/notificationSelectedIcon.svg',
+              width: 24,
+              height: 24,
+            )
                 : SvgPicture.asset(
-                    'assets/svg/notificationIcon.svg',
-                    width: 24,
-                    height: 24,
-                  ),
+              'assets/svg/notificationIcon.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
           BottomNavigationBarItem(
             label: 'Profile',
             icon: _currentIndex == 3
                 ? SvgPicture.asset(
-                    'assets/svg/accountSelectedIcon.svg',
-                    width: 24,
-                    height: 24,
-                  )
+              'assets/svg/accountSelectedIcon.svg',
+              width: 24,
+              height: 24,
+            )
                 : SvgPicture.asset(
-                    'assets/svg/profileIcon.svg',
-                    width: 24,
-                    height: 24,
-                  ),
+              'assets/svg/profileIcon.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
           BottomNavigationBarItem(
             label: 'Settings',
             icon: _currentIndex == 4
                 ? SvgPicture.asset(
-                    'assets/svg/settingsSelectedIcon.svg',
-                    width: 24,
-                    height: 24,
-                  )
+              'assets/svg/settingsSelectedIcon.svg',
+              width: 24,
+              height: 24,
+            )
                 : SvgPicture.asset(
-                    'assets/svg/settingsIcon.svg',
-                    width: 24,
-                    height: 24,
-                  ),
+              'assets/svg/settingsIcon.svg',
+              width: 24,
+              height: 24,
+            ),
           ),
         ],
       ),

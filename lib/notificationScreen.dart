@@ -56,19 +56,23 @@ class NotifScreenPageState extends State<NotifScreenStateful> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                    'Notifications'
-                ),
-              ),
-            )
-          ],
-        ),
+      body: Stack (
+        children: [
+          Center(
+            child: Column(
+              children: [
+                Flexible(
+                  child: Container(
+                    // padding: ,
+                    child: Text(
+                        'Notifications'
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Color(0xFFF2F2F2),
