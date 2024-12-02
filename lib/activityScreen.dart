@@ -47,7 +47,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
   final List<Widget> pages = [
     HomeScreen(),
     ActivityScreen(),
-    // NotificationScreen(),
+    NotificationScreen(),
     // ProfileScreen(),
     // SettingsScreen(),
   ];
