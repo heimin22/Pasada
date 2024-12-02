@@ -98,7 +98,7 @@ class CreateAccountScreen extends State<CAPage> {
                     fontSize: 12,
                   ),
                   floatingLabelStyle: TextStyle(
-                    color: Color(0xFF4AB00C),
+                    color: Color(0xFF5f3fc4),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -109,7 +109,7 @@ class CreateAccountScreen extends State<CAPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     ),
                   ),
                 ),
@@ -155,7 +155,7 @@ class CreateAccountScreen extends State<CAPage> {
                     fontSize: 12,
                   ),
                   floatingLabelStyle: const TextStyle(
-                    color: Color(0xFF4AB00C),
+                    color: Color(0xFF5f3fc4),
                   ),
                   enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
@@ -166,7 +166,7 @@ class CreateAccountScreen extends State<CAPage> {
                   ),
                   focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     ),
                   ),
                 ),
@@ -177,7 +177,7 @@ class CreateAccountScreen extends State<CAPage> {
               child: ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
+                  backgroundColor: const Color(0xFF5f3fc4),
                 ),
                 child: const Text(
                   'Continue',
@@ -203,7 +203,7 @@ class CreateAccountScreen extends State<CAPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -243,7 +243,7 @@ class CreateAccountScreen extends State<CAPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),

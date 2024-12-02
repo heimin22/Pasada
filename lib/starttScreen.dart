@@ -76,7 +76,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                   Navigator.pushNamed(context, 'createAccount');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
+                  backgroundColor: const Color(0xFF5f3fc4),
                   minimumSize: const Size(380, 50),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
@@ -102,7 +102,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
                   backgroundColor: const Color(0xFFF2F2F2),
                   minimumSize: const Size(380, 50),
                   side: const BorderSide(
-                    color: Color(0xFF4AB00C),
+                    color: Color(0xFF5f3fc4),
                     width: 2,
                   ),
                   shape: RoundedRectangleBorder(

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/selectionScreen.dart';
 import 'package:pasada_passenger_app/starttScreen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:pasada_passenger_app/selectionScreen.dart';
 
 void main() => runApp(const LoginAccountPage());
 
@@ -20,6 +23,8 @@ class LoginAccountPage extends StatelessWidget {
       home: const LoginPage(title: 'Log-in to your account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
+        'home': (BuildContext context) => const HomeScreen(),
+        'selection': (BuildContext context) => const selectionScreen(),
       },
     );
   }
@@ -64,6 +69,17 @@ class LoginScreen extends State<LoginPage> {
               child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
             Padding(
+              padding: EdgeInsets.only (bottom: 10.0, right: 108.0),
+              child: Text(
+                'Log-in to your account',
+                style: TextStyle(
+                  color: Color(0xFF121212),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+            Padding(
               padding: EdgeInsets.only(bottom: 25.0, right: 63.0),
               child: Text(
                 'Enter your email or mobile number to continue',
@@ -85,7 +101,7 @@ class LoginScreen extends State<LoginPage> {
                     fontSize: 12,
                   ),
                   floatingLabelStyle: TextStyle(
-                    color: Color(0xFF4AB00C),
+                    color: Color(0xFF5f3fc4),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -96,7 +112,7 @@ class LoginScreen extends State<LoginPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     ),
                   )
                 ),
@@ -150,7 +166,7 @@ class LoginScreen extends State<LoginPage> {
                   ),
                   focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     )
                   )
                 ),
@@ -159,12 +175,14 @@ class LoginScreen extends State<LoginPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, 'selection');
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
+                  backgroundColor: const Color(0xFF5f3fc4),
                 ),
                 child: const Text(
-                  'Continue',
+                  'Log-in',
                   style: TextStyle(
                     color: Color(0xFFF2F2F2),
                     fontWeight: FontWeight.w600,
@@ -187,7 +205,7 @@ class LoginScreen extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -227,7 +245,7 @@ class LoginScreen extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
