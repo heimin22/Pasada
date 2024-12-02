@@ -50,7 +50,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
     ActivityScreen(),
     NotificationScreen(),
     ProfileScreen(),
-    // SettingsScreen(),
+    SettingsScreen(),
   ];
 
   @override

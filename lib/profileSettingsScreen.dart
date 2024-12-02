@@ -50,7 +50,7 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
     ActivityScreen(),
     NotificationScreen(),
     ProfileScreen(),
-    // SettingsScreen(),
+    SettingsScreen(),
   ];
 
   @override
@@ -63,7 +63,7 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
               child: Container(
                 // padding: ,
                 child: Text(
-                    'Activity'
+                    'Profile'
                 ),
               ),
             )

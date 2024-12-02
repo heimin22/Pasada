@@ -186,7 +186,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
     ActivityScreen(),
     NotificationScreen(),
     ProfileScreen(),
-    // SettingsScreen(),
+    SettingsScreen(),
   ];
 
   @override
