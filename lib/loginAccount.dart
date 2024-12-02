@@ -98,7 +98,7 @@ class LoginScreen extends State<LoginPage> {
                     fontSize: 12,
                   ),
                   floatingLabelStyle: TextStyle(
-                    color: Color(0xFF4AB00C),
+                    color: Color(0xFF5f3fc4),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderSide: BorderSide(
@@ -109,7 +109,7 @@ class LoginScreen extends State<LoginPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     ),
                   )
                 ),
@@ -163,7 +163,7 @@ class LoginScreen extends State<LoginPage> {
                   ),
                   focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
-                      color: Color(0xFF4AB00C),
+                      color: Color(0xFF5f3fc4),
                     )
                   )
                 ),
@@ -176,7 +176,7 @@ class LoginScreen extends State<LoginPage> {
                   Navigator.pushNamed(context, 'home');
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4AB00C),
+                  backgroundColor: const Color(0xFF5f3fc4),
                 ),
                 child: const Text(
                   'Log-in',
@@ -202,7 +202,7 @@ class LoginScreen extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),
@@ -242,7 +242,7 @@ class LoginScreen extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4AB00C),
+                      backgroundColor: const Color(0xFF5f3fc4),
                       minimumSize: const Size(360, 50),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.0),

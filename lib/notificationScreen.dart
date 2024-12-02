@@ -89,7 +89,7 @@ class NotifScreenPageState extends State<NotifScreenStateful> {
           fontFamily: 'Inter',
           fontSize: 12,
         ),
-        selectedItemColor: Color(0xFF4AB00C),
+        selectedItemColor: Color(0xFF5f3fc4),
         items: [
           BottomNavigationBarItem(
             label: 'Home',
