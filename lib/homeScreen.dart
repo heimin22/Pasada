@@ -16,14 +16,14 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Home Screen',
+      title: 'Pasada',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF2F2F2),
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const HomeScreenStateful(title: 'Home Screen'),
+      home: const HomeScreenStateful(title: 'Pasada'),
       routes: <String, WidgetBuilder>{
 
       },
@@ -180,13 +180,14 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
      );
    }
 
-  // final List<Widget> pages = [
-  //   HomeScreen(),
-  //   // ActivityScreen(),
-  //   // NotificationScreen(),
-  //   // ProfileScreen(),
-  //   // SettingsScreen(),
-  // ];
+  final List<Widget> pages = [
+    HomeScreen(),
+    ActivityScreen(),
+    // NotificationScreen(),
+    // ProfileScreen(),
+    // SettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
      if (_currentLocation == null) {
