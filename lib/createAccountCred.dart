@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pasada_passenger_app/homeScreen.dart';
 import 'package:pasada_passenger_app/starttScreen.dart';
+import 'package:pasada_passenger_app/selectionScreen.dart';
 
 void main() => runApp(const CreateAccountCredPage());
 
@@ -22,7 +23,7 @@ class CreateAccountCredPage extends StatelessWidget {
       home: const CredPage(title: 'Create Account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
-        'home': (BuildContext context) => const HomeScreen(),
+        'selection': (BuildContext context) => const selectionScreen(),
       },
     );
   }
@@ -175,7 +176,7 @@ class _CredPageState extends State<CredPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: EdgeInsets.only(top: 15, left: 0),
+                      padding: EdgeInsets.only(top: 10, left: 0),
                       child: Checkbox(
                         value: isChecked,
                         activeColor: Color(0xFF5F3FC4),
@@ -200,21 +201,6 @@ class _CredPageState extends State<CredPage> {
                         ),
                       ),
                     ),
-                    // Container(
-                    //   padding: EdgeInsets.only(top: 20),
-                    //   child: ConstrainedBox(
-                    //     constraints: BoxConstraints(
-                    //       maxWidth: 320,
-                    //     ),
-                    //     child: Text(
-                    //       'By signing up, I have read an agree to Pasada’s Terms and Conditions and Privacy Policy',
-                    //       style: TextStyle(
-                    //           fontSize: 12,
-                    //           fontWeight: FontWeight.w400,
-                    //           color: Color(0xff121212)),
-                    //     ),
-                    //   ),
-                    // ),
                   ],
                 ),
               ),
@@ -222,27 +208,26 @@ class _CredPageState extends State<CredPage> {
               //LOG IN BUTTON
               Flexible(
                 child: Container(
-                  margin: const EdgeInsets.only(top: 120),
+                  margin: const EdgeInsets.only(top: 80),
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HomeScreen()),
-                      );
+                      Navigator.pushNamed(context, 'selection');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5F3FC4),
                       minimumSize: const Size(240, 45),
                       shadowColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
                     ),
                     child: const Text(
-                      'Continue',
+                      'Sign up',
                       style: TextStyle(
                         color: Color(0xFFF2F2F2),
                         fontWeight: FontWeight.w600,
                         fontSize: 20,
-                        fontFamily: 'Inter',
                       ),
                     ),
                   ),
