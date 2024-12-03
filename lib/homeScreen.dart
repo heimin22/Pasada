@@ -3,13 +3,18 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_passenger_app/notificationScreen.dart';
 import 'package:pasada_passenger_app/activityScreen.dart';
 import 'package:pasada_passenger_app/profileSettingsScreen.dart';
 import 'package:pasada_passenger_app/settingsScreen.dart';
 import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() => runApp(const HomeScreen());
+  // WidgetsFlutterBinding.ensureInitialized();
+  // await dotenv.load(fileName: ".env");
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -42,6 +47,7 @@ class HomeScreenStateful extends StatefulWidget {
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
+   // final String apiKey = dotenv.env['API_KEY']!;
    late GoogleMapController mapController;
    LocationData? _currentLocation;
    late Location _location;
@@ -86,32 +92,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
      }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+   void _onMapCreated(GoogleMapController controller) {
      mapController = controller;
-  }
-
-   // Future<void> _openGoogleMapsWithCurrentLocation(Location location) async {
-   //   try {
-   //   // get the user's current location
-   //   LocationData locationData = await location.getLocation();
-   //   // launch Waze
-   //   final latitude = locationData.latitude;
-   //   final longitude = locationData.longitude;
-   //
-   //   if (latitude != null && longitude != null) {
-   //     final url = 'https://www.google.com/maps/dir/?api=1&destination=<latitude>,<longitude>';
-   //     if (await canLaunch(url)) {
-   //       await launch(url);
-   //     } else {
-   //       _showError('Could not launch Google Maps');
-   //     }
-   //   } else {
-   //     _showError('Could not fetch location.');
-   //   }
-   // } catch (e) {
-   //   _showError(e.toString());
-   //   }
-   // }
+   }
 
    void _showPermissionDialog() {
     showDialog(
@@ -185,7 +168,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-     if (_currentLocation == null) {
+
+    // ensure that the location is fetched before building the map
+    if (_currentLocation == null) {
        return Scaffold(
          body: Center(child: CircularProgressIndicator()),
        );
@@ -194,6 +179,19 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       body: SafeArea(
         child: Stack(
           children: [
+            GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: LatLng(
+                  _currentLocation!.latitude!,
+                  _currentLocation!.longitude!,
+                ),
+                zoom: 15,
+              ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              mapType: MapType.normal,
+            ),
             // Floating search bar
             Positioned(
               top: screenHeight * 0.02, // 2% from the top of the screen

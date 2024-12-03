@@ -5,7 +5,9 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Pasada Passenger App</string>
+	<string>Pasada</string>
+	<key>GMSApiKey</key>
+	<string>AIzaSyBBxx4zox2QbVv1BB9_GTsf9ywp24-K9-g</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

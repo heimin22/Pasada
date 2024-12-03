@@ -29,11 +29,13 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   cupertino_icons: ^1.0.8
+  flutter_dotenv: ^5.2.1
   flutter:
     sdk: flutter
   flutter_animate: ^4.5.2
   flutter_svg: ^2.0.16
   google_maps_flutter: ^2.10.0
+  google_maps_flutter_android: ^2.14.11
   location: ^7.0.1
   url_launcher: ^6.3.1
   webview_flutter: ^4.10.0
@@ -77,6 +79,7 @@ flutter:
     - assets/svg/notificationSelectedIcon.svg
     - assets/svg/accountSelectedIcon.svg
     - assets/svg/settingsSelectedIcon.svg
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
