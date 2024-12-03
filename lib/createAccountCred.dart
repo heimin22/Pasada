@@ -38,9 +38,9 @@ class CredPage extends StatefulWidget {
 }
 
 class _CredPageState extends State<CredPage> {
+  bool isChecked = false;
   @override
   Widget build(BuildContext context) {
-    bool? isChecked = false;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
@@ -48,7 +48,7 @@ class _CredPageState extends State<CredPage> {
       body: Align(
         alignment: Alignment.centerLeft,
         child: Padding(
-          padding: const EdgeInsets.all(50),
+          padding: const EdgeInsets.all(40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -170,16 +170,52 @@ class _CredPageState extends State<CredPage> {
               ),
 
               Container(
-                margin: const EdgeInsets.only(top: 20),
                 alignment: Alignment.centerLeft,
-                child: Checkbox(
-                  value: isChecked,
-                  activeColor: Color(0xFF5F3FC4),
-                  onChanged: (newBool) {
-                    setState(() {
-                      isChecked = newBool!;
-                    });
-                  },
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.only(top: 15, left: 0),
+                      child: Checkbox(
+                        value: isChecked,
+                        activeColor: Color(0xFF5F3FC4),
+                        onChanged: (newBool) {
+                          setState(() {
+                            isChecked = newBool ?? false;
+                          });
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      // Ensures text wraps and doesn't push Checkbox
+                      child: Container(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Text(
+                          'By signing up, I have read and agree to Pasada’s Terms and Conditions and Privacy Policy',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xff121212),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Container(
+                    //   padding: EdgeInsets.only(top: 20),
+                    //   child: ConstrainedBox(
+                    //     constraints: BoxConstraints(
+                    //       maxWidth: 320,
+                    //     ),
+                    //     child: Text(
+                    //       'By signing up, I have read an agree to Pasada’s Terms and Conditions and Privacy Policy',
+                    //       style: TextStyle(
+                    //           fontSize: 12,
+                    //           fontWeight: FontWeight.w400,
+                    //           color: Color(0xff121212)),
+                    //     ),
+                    //   ),
+                    // ),
+                  ],
                 ),
               ),
 
@@ -201,7 +237,7 @@ class _CredPageState extends State<CredPage> {
                       shadowColor: Colors.black,
                     ),
                     child: const Text(
-                      'Log in',
+                      'Continue',
                       style: TextStyle(
                         color: Color(0xFFF2F2F2),
                         fontWeight: FontWeight.w600,
