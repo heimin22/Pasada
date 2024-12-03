@@ -196,7 +196,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
             Positioned(
               top: screenHeight * 0.02, // 2% from the top of the screen
               left: screenWidth * 0.05, // 5% padding from the left
-              right: screenWidth * 0.05, // 5% padding from the right
+              right: screenWidth * 0.15, // 5% padding from the right
               child: Material(
                 elevation: 3,
                 borderRadius: BorderRadius.circular(24),
