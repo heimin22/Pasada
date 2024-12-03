@@ -155,7 +155,7 @@ class LoginScreen extends State<LoginPage> {
                     fontSize: 12,
                   ),
                   floatingLabelStyle: const TextStyle(
-                    color: Color(0XFF4AB00C),
+                    color: Color(0XFF5f3fc4),
                   ),
                   enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(

@@ -22,6 +22,7 @@ class CreateAccountPage extends StatelessWidget {
       home: const CAPage(title: 'Create Account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
+        'cred': (BuildContext context) => const CreateAccountCredPage(),
       },
     );
   }
@@ -176,7 +177,9 @@ class CreateAccountScreen extends State<CAPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, 'cred');
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5f3fc4),
                 ),
