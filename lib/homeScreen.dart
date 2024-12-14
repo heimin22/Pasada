@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:flutter_svg/flutter_svg.dart';
+// import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pasada_passenger_app/notificationScreen.dart';
-import 'package:pasada_passenger_app/activityScreen.dart';
-import 'package:pasada_passenger_app/profileSettingsScreen.dart';
-import 'package:pasada_passenger_app/settingsScreen.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:pasada_passenger_app/notificationScreen.dart';
+// import 'package:pasada_passenger_app/activityScreen.dart';
+// import 'package:pasada_passenger_app/profileSettingsScreen.dart';
+// import 'package:pasada_passenger_app/settingsScreen.dart';
+// import 'package:pasada_passenger_app/homeScreen.dart';
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() => runApp(const HomeScreen());
   // WidgetsFlutterBinding.ensureInitialized();
@@ -236,15 +236,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
               ),
             ),
             // Displaying search input for testing purposes
-            Positioned(
-              top: screenHeight * 0.12,
-              left: screenWidth * 0.05,
-              right: screenWidth * 0.05,
-              child: Text(
-                _searchText.isNotEmpty ? 'You searched for: $_searchText' : '',
-                style: const TextStyle(color: Colors.black, fontSize: 16),
-              ),
-            ),
           ],
         ),
       ),

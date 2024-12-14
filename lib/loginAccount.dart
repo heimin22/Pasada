@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/selectionScreen.dart';
-import 'package:pasada_passenger_app/starttScreen.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/homeScreen.dart';
 import 'package:pasada_passenger_app/selectionScreen.dart';
@@ -42,8 +42,21 @@ class LoginPage extends StatefulWidget {
 class LoginScreen extends State<LoginPage> {
   final TextEditingController inputController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final String passwordSample = 'admin';
+  final String emailSample = 'fyketonel@gmail.com';
   bool isPasswordVisible = false;
   String errorMessage = '';
+
+  void checkPasswordEmail() {
+    if (passwordController.text == passwordSample && inputController.text == emailSample) {
+      Navigator.pushNamed(context, 'selection');
+    }
+    else {
+      setState(() {
+        errorMessage = 'Incorrect password or email. Please try again.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,22 +108,23 @@ class LoginScreen extends State<LoginPage> {
                   color: Color(0xFF121212),
                   fontSize: 14,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Enter your email or phone number',
-                  labelStyle: TextStyle(
+                  labelStyle: const TextStyle(
                     fontSize: 12,
                   ),
-                  floatingLabelStyle: TextStyle(
+                  errorText: errorMessage.isNotEmpty ? errorMessage : null,
+                  floatingLabelStyle: const TextStyle(
                     color: Color(0xFF5f3fc4),
                   ),
-                  enabledBorder: OutlineInputBorder(
+                  enabledBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
                       color: Color(0xFFC7C7C6),
                       width: 1.0,
                     ),
                     borderRadius: BorderRadius.all(Radius.circular(10.0)),
                   ),
-                  focusedBorder: OutlineInputBorder(
+                  focusedBorder: const OutlineInputBorder(
                     borderSide: BorderSide(
                       color: Color(0xFF5f3fc4),
                     ),
@@ -140,6 +154,7 @@ class LoginScreen extends State<LoginPage> {
                 ),
                 decoration: InputDecoration(
                   labelText: 'Enter your password',
+                  errorText: errorMessage.isNotEmpty ? errorMessage : null,
                   suffixIcon: IconButton(
                     color: const Color(0xFF121212),
                     onPressed: () {
@@ -176,7 +191,7 @@ class LoginScreen extends State<LoginPage> {
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, 'selection');
+                  checkPasswordEmail();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5f3fc4),
