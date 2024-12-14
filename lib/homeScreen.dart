@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:flutter_svg/flutter_svg.dart';
+// import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/notificationScreen.dart';
-import 'package:pasada_passenger_app/activityScreen.dart';
-import 'package:pasada_passenger_app/profileSettingsScreen.dart';
-import 'package:pasada_passenger_app/settingsScreen.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
+// import 'package:pasada_passenger_app/notificationScreen.dart';
+// import 'package:pasada_passenger_app/activityScreen.dart';
+// import 'package:pasada_passenger_app/profileSettingsScreen.dart';
+// import 'package:pasada_passenger_app/settingsScreen.dart';
+// import 'package:pasada_passenger_app/homeScreen.dart';
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() => runApp(const HomeScreen());
+  // WidgetsFlutterBinding.ensureInitialized();
+  // await dotenv.load(fileName: ".env");
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -42,9 +47,11 @@ class HomeScreenStateful extends StatefulWidget {
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
+   // final String apiKey = dotenv.env['API_KEY']!;
    late GoogleMapController mapController;
    LocationData? _currentLocation;
    late Location _location;
+   String _searchText = "";
 
    @override
    void initState() {
@@ -85,32 +92,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
      }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+   void _onMapCreated(GoogleMapController controller) {
      mapController = controller;
-  }
-
-   // Future<void> _openGoogleMapsWithCurrentLocation(Location location) async {
-   //   try {
-   //   // get the user's current location
-   //   LocationData locationData = await location.getLocation();
-   //   // launch Waze
-   //   final latitude = locationData.latitude;
-   //   final longitude = locationData.longitude;
-   //
-   //   if (latitude != null && longitude != null) {
-   //     final url = 'https://www.google.com/maps/dir/?api=1&destination=<latitude>,<longitude>';
-   //     if (await canLaunch(url)) {
-   //       await launch(url);
-   //     } else {
-   //       _showError('Could not launch Google Maps');
-   //     }
-   //   } else {
-   //     _showError('Could not fetch location.');
-   //   }
-   // } catch (e) {
-   //   _showError(e.toString());
-   //   }
-   // }
+   }
 
    void _showPermissionDialog() {
     showDialog(
@@ -182,34 +166,78 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   @override
   Widget build(BuildContext context) {
-     if (_currentLocation == null) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // ensure that the location is fetched before building the map
+    if (_currentLocation == null) {
        return Scaffold(
          body: Center(child: CircularProgressIndicator()),
        );
      }
     return Scaffold(
-      body: Center(
-        child: Column(
+      body: SafeArea(
+        child: Stack(
           children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                    'Home'
+            GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: LatLng(
+                  _currentLocation!.latitude!,
+                  _currentLocation!.longitude!,
+                ),
+                zoom: 15,
+              ),
+              myLocationEnabled: true,
+              myLocationButtonEnabled: true,
+              mapType: MapType.normal,
+            ),
+            // Floating search bar
+            Positioned(
+              top: screenHeight * 0.02, // 2% from the top of the screen
+              left: screenWidth * 0.05, // 5% padding from the left
+              right: screenWidth * 0.15, // 5% padding from the right
+              child: Material(
+                elevation: 3,
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  height:
+                  screenHeight * 0.06, // Adjust height based on screen size
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16), // Left padding
+                      const Icon(Icons.search, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          onChanged: (value) {
+                            setState(() {
+                              _searchText =
+                                  value; // Update state with search input
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search for routes',
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(
+                                color: Color(0xFFA2A2A2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16), // Right padding
+                    ],
+                  ),
                 ),
               ),
-            )
+            ),
+            // Displaying search input for testing purposes
           ],
         ),
-        // child: GoogleMap(
-        //   onMapCreated: _onMapCreated,
-        //   initialCameraPosition: CameraPosition(
-        //     target: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-        //     zoom: 15,
-        //   ),
-        //   myLocationEnabled: true,
-        //   myLocationButtonEnabled: true,
-        // ),
       ),
     );
   }

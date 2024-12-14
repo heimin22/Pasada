@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:pasada_passenger_app/starttScreen.dart';
+import 'package:pasada_passenger_app/main.dart';
+import 'package:pasada_passenger_app/createAccountCred.dart';
 
 void main() => runApp(const CreateAccountPage());
 
@@ -21,6 +22,7 @@ class CreateAccountPage extends StatelessWidget {
       home: const CAPage(title: 'Create Account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
+        'cred': (BuildContext context) => const CreateAccountCredPage(),
       },
     );
   }
@@ -175,7 +177,9 @@ class CreateAccountScreen extends State<CAPage> {
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamed(context, 'cred');
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5f3fc4),
                 ),

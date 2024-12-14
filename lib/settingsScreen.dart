@@ -45,18 +45,25 @@ class SettingsScreenStateful extends StatefulWidget {
 class SettingsScreenPageState extends State<SettingsScreenStateful> {
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
-      body: Center(
-        child: Column(
+      body: SafeArea(
+        child: Stack(
           children: [
-            Flexible(
-              child: Container(
-                // padding: ,
-                child: Text(
-                    'Settings'
+            Positioned(
+              top: screenHeight * 0.03,
+              left: screenWidth * 0.05,
+              right: screenWidth * 0.18,
+              child: Text(
+                'Settings',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF121212),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
