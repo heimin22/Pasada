@@ -2,9 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/createAccount.dart';
 import 'package:pasada_passenger_app/loginAccount.dart';
+import 'package:flutter/foundation.dart';
+import 'package:pasada_passenger_app/databaseSetup.dart';
 
-void main() => runApp(const PasadaPassenger());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure initialization for async tasks
+  // Call the database tester before running the app
+  var dbService = DatabaseService();
+  bool isConnected = await dbService.connectToDatabase();
 
+  if (kDebugMode) {
+    print(isConnected
+        ? 'Verifier: The database connection is confirmed as successful.'
+        : 'Verifier: Failed to connect to the database.');
+  }
+  runApp(const PasadaPassenger());
+}
+  
 class PasadaPassenger extends StatelessWidget {
   const PasadaPassenger({super.key});
 
