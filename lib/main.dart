@@ -8,8 +8,7 @@ import 'package:pasada_passenger_app/databaseSetup.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure initialization for async tasks
   // Call the database tester before running the app
-  var dbService = DatabaseService();
-  bool isConnected = await dbService.connectToDatabase();
+  bool isConnected = await APIService.checkDatabaseConnection();
 
   if (kDebugMode) {
     print(isConnected
