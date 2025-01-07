@@ -4,19 +4,33 @@ import 'package:pasada_passenger_app/createAccount.dart';
 import 'package:pasada_passenger_app/loginAccount.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pasada_passenger_app/databaseSetup.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() async {
+const supabaseUrl = 'https://otbwhitwrmnfqgpmnjvf.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YndoaXR3cm1uZnFncG1uanZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTk5MzQsImV4cCI6MjA0ODk3NTkzNH0.f8JOv0YvKPQy8GWYGIdXfkIrKcqw0733QY36wJjG1Fw';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure initialization for async tasks
   // Call the database tester before running the app
-  bool isConnected = await APIService.checkDatabaseConnection();
 
-  if (kDebugMode) {
-    print(isConnected
-        ? 'Verifier: The database connection is confirmed as successful.'
-        : 'Verifier: Failed to connect to the database.');
-  }
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
+    realtimeClientOptions: const RealtimeClientOptions(
+      logLevel: RealtimeLogLevel.info,
+    ),
+    storageOptions: const StorageClientOptions(
+      retryAttempts: 10,
+    ),
+  );
+
   runApp(const PasadaPassenger());
 }
+
+final supabase = Supabase.instance.client;
   
 class PasadaPassenger extends StatelessWidget {
   const PasadaPassenger({super.key});

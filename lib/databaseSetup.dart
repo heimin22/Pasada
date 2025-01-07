@@ -12,50 +12,47 @@ import 'package:pasada_passenger_app/settingsScreen.dart';
 import 'package:postgres/postgres.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class APIService {
-  static const String baseUrl = "http://localhost:3000";
+class DatabaseService {
+  // initialize supabase client
+  final supabase = Supabase.instance.client;
 
-  // health check request
-  static Future<bool> checkDatabaseConnection() async {
+  // check database connection
+  Future<bool> checkDatabaseConnection() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/health'));
+      // test database connection: query table
+      final response = await supabase
+          .from('sampleAccount') // table name
+          .select()
+          .limit(1);
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if(kDebugMode) {
-          print('Verifier: Database connection success');
-          print('Timestamp: ${data['timestamp']}');
-        }
+      // if response is successful but no data, return true
+      if (response.isEmpty) {
+        if (kDebugMode) print('Database connection successful: No data found');
         return true;
       }
-      else {
-        if (kDebugMode) {
-          print('Verifier: Database connection failed');
-        }
-        return false;
-      }
+      // if response is successful, return true
+      if (kDebugMode) print('Database connection successful');
+      return true;
     }
     catch (e) {
-      if (kDebugMode) {
-        print('Verifier: Error checking database connection: $e');
-      }
+      if (kDebugMode) print('Error connecting to the database: $e');
       return false;
     }
   }
 
-  // login request
-  static Future<Map<String, dynamic>> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'email': email, 'password': password}),
-    );
+  Future<List<Map<String, dynamic>>> fetchData() async {
+    try {
+      final response = await supabase
+          .from('sampleAccount')
+          .select();
 
-    if (response.statusCode == 200){
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to login');
+      return response;
+    }
+    catch (e) {
+      if (kDebugMode) print('Error inserting data: $e');
+      throw Exception('Failed to insert data');
     }
   }
 }
