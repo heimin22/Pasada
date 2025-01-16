@@ -1,17 +1,47 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  // supabase credentials
-  /*static const supabaseUrl = 'https://otbwhitwrmnfqgpmnjvf.supabase.co';
-  static const supabaseKey = String.fromEnvironment(
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YndoaXR3cm1uZnFncG1uanZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTk5MzQsImV4cCI6MjA0ODk3NTkzNH0.f8JOv0YvKPQy8GWYGIdXfkIrKcqw0733QY36wJjG1Fw');*/
-
   // supabase client instance
   final SupabaseClient supabase = Supabase.instance.client;
 
   // singleton pattern
   static final AuthService _instance = AuthService.internal();
+
+  // internet connection
+  final Connectivity connectivity = Connectivity();
+  late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
+
+  void initState() {
+    checkInitialConnectivity();
+    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+
+  }
+
+  Future<void> checkInitialConnectivity() async {
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void updateConnectionStatus(List<ConnectivityResult> result) {
+    if (result == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void showNoInternetToast() {
+    Fluttertoast.showToast(
+      msg: 'No internet connection detected',
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Color(0xFFF2F2F2),
+      textColor: Color(0xFF121212),
+      fontSize: 16.0,
+    );
+  }
 
   factory AuthService() {
     return _instance;
@@ -23,33 +53,15 @@ class AuthService {
     }
   }
 
-  // sign up with email and password
-  /*
-    This is an initial function that needs to be tested!
-   */
-  /*Future<void> signUp(String email, String password) async {
-    try {
-      final response = await supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
-
-      if (response.user != null) {
-        if (kDebugMode) print('Sign-up successful: ${response.user!.email}');
-      }
-      else {
-        throw Exception('Sign-up failed');
-      }
-    }
-    catch (e) {
-      if (kDebugMode) print('Error during sign-up: $e');
-      throw Exception('Failed to sign up');
-    }
-  }*/
-
-
   // login with email and password
   Future<AuthResponse> login(String email, String password) async {
+
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      showNoInternetToast();
+      throw Exception("No internet connection");
+
+    }
     try {
       return await supabase.auth.signInWithPassword(
         email: email,

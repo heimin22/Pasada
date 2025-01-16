@@ -34,6 +34,8 @@ dependencies:
   supabase_flutter: ^2.8.2
   supabase: ^2.6.1
   cupertino_icons: ^1.0.8
+  fluttertoast: ^8.2.10
+  connectivity_plus: ^6.1.1
   flutter_dotenv: ^5.2.1
   flutter_animate: ^4.5.2
   flutter_svg: ^2.0.16

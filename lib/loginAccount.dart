@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -62,22 +66,48 @@ class LoginScreen extends State<LoginPage> {
   // loading
   bool isLoading = false;
 
+  // internet connection
+  final Connectivity connectivity = Connectivity();
+  late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
+
+  void initState() {
+    super.initState();
+    checkInitialConnectivity();
+    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+  }
+
+  Future<void> checkInitialConnectivity() async {
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void updateConnectionStatus(List<ConnectivityResult> result) {
+    if (result == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void showNoInternetToast() {
+    Fluttertoast.showToast(
+      msg: 'No internet connection detected',
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Color(0xFFF2F2F2),
+      textColor: Color(0xFF121212),
+      fontSize: 16.0,
+    );
+  }
+
   Future<void> login() async {
     final email = emailController.text;
     final password = passwordController.text;
-    // setState(() {
-    //   errorMessage = '';
-    //   isLoading = true;
-    // });
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+
     try {
       await _authService.supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
-      // await Supabase.instance.client.auth.signInWithPassword(
-      //   email: emailController.text.trim(),
-      //   password: passwordController.text,
-      // );
 
       if (mounted) {
         // successful login
@@ -107,6 +137,7 @@ class LoginScreen extends State<LoginPage> {
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
+    connectivitySubscription.cancel();
     super.dispose();
   }
 
