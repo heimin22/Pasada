@@ -1,9 +1,16 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:pasada_passenger_app/authService.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/selectionScreen.dart';
+
 
 void main() => runApp(const LoginAccountPage());
 
@@ -40,14 +47,101 @@ class LoginPage extends StatefulWidget {
 }
 
 class LoginScreen extends State<LoginPage> {
-  final TextEditingController inputController = TextEditingController();
+  // text controllers
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final String passwordSample = 'admin';
-  final String emailSample = 'fyketonel@gmail.com';
+
+  // get auth service
+  final AuthService _authService = AuthService();
+
+  // session
+  final session = supabase.auth.currentSession;
+
+  // password visibility
   bool isPasswordVisible = false;
+
+  // error message
   String errorMessage = '';
 
-  void checkPasswordEmail() {
+  // loading
+  bool isLoading = false;
+
+  // internet connection
+  final Connectivity connectivity = Connectivity();
+  late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
+
+  void initState() {
+    super.initState();
+    checkInitialConnectivity();
+    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+  }
+
+  Future<void> checkInitialConnectivity() async {
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void updateConnectionStatus(List<ConnectivityResult> result) {
+    if (result == ConnectivityResult.none) showNoInternetToast();
+  }
+
+  void showNoInternetToast() {
+    Fluttertoast.showToast(
+      msg: 'No internet connection detected',
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.BOTTOM,
+      timeInSecForIosWeb: 1,
+      backgroundColor: Color(0xFFF2F2F2),
+      textColor: Color(0xFF121212),
+      fontSize: 16.0,
+    );
+  }
+
+  Future<void> login() async {
+    final email = emailController.text;
+    final password = passwordController.text;
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+
+    try {
+      await _authService.supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (mounted) {
+        // successful login
+        Navigator.pushReplacementNamed(context, 'selection');
+      }
+    }
+    on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+    catch (err) {
+      setState(() => errorMessage = 'An unexpected error occurred');
+    }
+    finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    connectivitySubscription.cancel();
+    super.dispose();
+  }
+
+  /*void checkPasswordEmail() {
     if (passwordController.text == passwordSample && inputController.text == emailSample) {
       Navigator.pushNamed(context, 'selection');
     }
@@ -56,7 +150,7 @@ class LoginScreen extends State<LoginPage> {
         errorMessage = 'Incorrect password or email. Please try again.';
       });
     }
-  }
+  }*/
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +160,7 @@ class LoginScreen extends State<LoginPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // Go back to main screen button
             Container(
               margin: const EdgeInsets.only(top: 35.0, right: 360.0),
               child: IconButton(
@@ -75,12 +170,14 @@ class LoginScreen extends State<LoginPage> {
                 icon: Icon(Icons.arrow_back),
               ),
             ),
+            // Logo
             Container (
               margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
               height: 80,
               width: 80,
               child: SvgPicture.asset('assets/svg/Ellipse.svg'),
             ),
+            // Login to your account text
             Padding(
               padding: EdgeInsets.only (bottom: 10.0, right: 108.0),
               child: Text(
@@ -92,6 +189,7 @@ class LoginScreen extends State<LoginPage> {
                 ),
               ),
             ),
+            // Text field for entering email
             Padding(
               padding: EdgeInsets.only(bottom: 25.0, right: 63.0),
               child: Text(
@@ -103,7 +201,7 @@ class LoginScreen extends State<LoginPage> {
               margin: const EdgeInsets.only(left: 35.0, right: 39.0, bottom: 25.0),
               height: 50,
               child: TextField(
-                controller: inputController,
+                controller: emailController,
                 style: const TextStyle(
                   color: Color(0xFF121212),
                   fontSize: 14,
@@ -132,6 +230,7 @@ class LoginScreen extends State<LoginPage> {
                 ),
               ),
             ),
+            // Text field for password
             Container(
               margin: const EdgeInsets.only(bottom: 15.0, right: 307.0),
               child: const Text(
@@ -187,22 +286,35 @@ class LoginScreen extends State<LoginPage> {
                 ),
               ),
             ),
+            // Login button
             Padding(
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ElevatedButton(
-                onPressed: () {
-                  checkPasswordEmail();
-                },
+                onPressed: isLoading ? null : login,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5f3fc4),
-                ),
-                child: const Text(
-                  'Log-in',
-                  style: TextStyle(
-                    color: Color(0xFFF2F2F2),
-                    fontWeight: FontWeight.w600,
+                  minimumSize: const Size(360, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.0),
                   ),
                 ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFF5F5F5),
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Log-in',
+                        style: TextStyle(
+                          color: Color(0xFFF2F2F2),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                        ),
+                      ),
               ),
             ),
             Container(
