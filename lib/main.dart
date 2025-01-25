@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/createAccount.dart';
 import 'package:pasada_passenger_app/loginAccount.dart';
@@ -11,6 +12,8 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks
+  await dotenv.load(fileName: ".env");
+
   // call the database tester before running the app
 
   // initialize supabase
