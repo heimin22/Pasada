@@ -4,7 +4,6 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Pasada"
-        android:name="${applicationName}"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -45,7 +44,8 @@
             android:value="2" />
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBBxx4zox2QbVv1BB9_GTsf9ywp24-K9-g"/>
+            android:value="${mapsApiKey}"/>
+<!--            android:value="AIzaSyBBxx4zox2QbVv1BB9_GTsf9ywp24-K9-g"/>-->
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

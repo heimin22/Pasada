@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/notificationScreen.dart';
-import 'package:pasada_passenger_app/activityScreen.dart';
-import 'package:pasada_passenger_app/profileSettingsScreen.dart';
-import 'package:pasada_passenger_app/settingsScreen.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
+import 'package:pasada_passenger_app/home/notificationScreen.dart';
+import 'package:pasada_passenger_app/home/activityScreen.dart';
+import 'package:pasada_passenger_app/home/profileSettingsScreen.dart';
+import 'package:pasada_passenger_app/home/settingsScreen.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
 
-void main() => runApp(const ProfileScreen());
+void main() => runApp(const SettingsScreen());
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class ProfileScreen extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const ProfileScreenStateful(title: 'Pasada'),
+      home: const SettingsScreenStateful(title:  'Pasada'),
       routes: <String, WidgetBuilder>{
 
       },
@@ -33,17 +33,16 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class ProfileScreenStateful extends StatefulWidget {
-  const ProfileScreenStateful({super.key, required this.title});
+class SettingsScreenStateful extends StatefulWidget {
+  const SettingsScreenStateful({super.key, required this.title});
 
   final String title;
 
   @override
-  State<ProfileScreenStateful> createState() => ProfileScreenPageState();
+  State<SettingsScreenStateful> createState() => SettingsScreenPageState();
 }
 
-class ProfileScreenPageState extends State<ProfileScreenStateful> {
-
+class SettingsScreenPageState extends State<SettingsScreenStateful> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -57,7 +56,7 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
               left: screenWidth * 0.05,
               right: screenWidth * 0.18,
               child: Text(
-                'Profile',
+                'Settings',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,

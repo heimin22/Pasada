@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 // import 'package:url_launcher/url_launcher.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/mapScreen.dart';
+import 'package:pasada_passenger_app/location/mapScreen.dart';
+import '../location/locationSearchScreen.dart';
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:pasada_passenger_app/notificationScreen.dart';
 // import 'package:pasada_passenger_app/activityScreen.dart';
@@ -32,6 +33,7 @@ class HomeScreen extends StatelessWidget {
       home: const HomeScreenStateful(title: 'Pasada'),
       routes: <String, WidgetBuilder>{
         'map' : (BuildContext context) => const MapScreen(),
+        'searchLocation' : (BuildContext context) => const SearchLocationScreen()
       },
     );
   }
@@ -64,35 +66,38 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
               top: screenHeight * 0.02, // 2% from the top of the screen
               left: screenWidth * 0.05, // 5% padding from the left
               right: screenWidth * 0.05, // 5% padding from the right
-              child: Material(
-                elevation: 3,
-                borderRadius: BorderRadius.circular(24),
-                child: Container(
-                  height:
-                  screenHeight * 0.06, // Adjust height based on screen size
-                  decoration: BoxDecoration(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, 'searchLocation');
+                },
+                style: ElevatedButton.styleFrom(
+                  elevation: 3,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
-                    color: Colors.white,
                   ),
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size(0, screenHeight * 0.06),
+                ),
+                // elevation: 3,
+                // borderRadius: BorderRadius.circular(24),
+                // child: Container(
+                //   height:
+                //   screenHeight * 0.06, // Adjust height based on screen size
+                //   decoration: BoxDecoration(
+                //     borderRadius: BorderRadius.circular(24),
+                //     color: Colors.white,
+                //   ),
                   child: Row(
                     children: [
                       const SizedBox(width: 16), // Left padding
                       const Icon(Icons.search, color: Colors.grey),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: TextField(
-                          onChanged: (value) {
-                            setState(() {
-                              _searchText =
-                                  value; // Update state with search input
-                            });
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'Search for routes',
-                            border: InputBorder.none,
-                            hintStyle: TextStyle(
-                                color: Color(0xFFA2A2A2),
-                            ),
+                        child: Text(
+                          'Where to?',
+                          style: TextStyle(
+                            color: const Color(0xFFA2A2A2),
                           ),
                         ),
                       ),
@@ -101,7 +106,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                   ),
                 ),
               ),
-            ),
             // Displaying search input for testing purposes
           ],
         ),

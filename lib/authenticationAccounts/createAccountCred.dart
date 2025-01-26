@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
-import 'package:pasada_passenger_app/main.dart';
-import 'package:pasada_passenger_app/selectionScreen.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
+import 'package:pasada_passenger_app/home/main.dart';
+import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
 void main() => runApp(const CreateAccountCredPage());
 
