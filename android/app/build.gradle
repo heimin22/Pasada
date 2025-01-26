@@ -5,6 +5,18 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+def getLocalProperties = {
+    Properties properties = new Properties()
+    def localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        properties.load(localPropertiesFile.newDataInputStream())
+    }
+    properties
+}
+
+def properties = getLocalProperties()
+def mapsApiKey = properties.getProperty("mapsApiKey", "")
+
 android {
     namespace = "com.example.pasada_passenger_app"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +40,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders = [mapsApiKey: mapsApiKey, applicationName: "io.flutter.app.FlutterApplication"]
     }
 
     buildTypes {
@@ -37,6 +51,7 @@ android {
             signingConfig = signingConfigs.debug
         }
     }
+
 }
 
 flutter {
