@@ -2,11 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/locationSearch.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pasada_passenger_app/networkUtilities.dart';
+import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
+import 'package:pasada_passenger_app/location/networkUtilities.dart';
+import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
-import 'selectionScreen.dart';
+import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
+
 
 class SearchLocationStateless extends StatelessWidget {
   const SearchLocationStateless({super.key});
@@ -23,12 +26,12 @@ class SearchLocationStateless extends StatelessWidget {
       ),
       home: const SearchLocationScreen(),
       routes: <String, WidgetBuilder>{
-        'selection': (BuildContext context) => const selectionScreen(),
+        'selection': (context) => const selectionScreen(),
+        'homeScreen': (context) => const HomeScreen(),
       },
     );
   }
 }
-
 
 class SearchLocationScreen extends StatefulWidget {
   const SearchLocationScreen({super.key});
@@ -38,6 +41,8 @@ class SearchLocationScreen extends StatefulWidget {
 }
 
 class _SearchLocationScreenState extends State<SearchLocationScreen> {
+
+  List<AutocompletePrediction> placePredictions = [];
 
   Future<void> placeAutocomplete(String query) async {
     final String apiKey = dotenv.env["MAPS_API_KEY"] ?? '';
@@ -58,7 +63,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     String? response = await NetworkUtility.fetchUrl(uri);
 
     if (response != null) {
-      if (kDebugMode) print(response);
+      PlaceAutocompleteResponse result = PlaceAutocompleteResponse.parseAutocompleteResult(response);
+      if (result.prediction != null) {
+        setState(() {
+          placePredictions = result.prediction!;
+        });
+      }
     }
   }
 
@@ -91,7 +101,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             backgroundColor: Color(0xFFDADADA),
             child: IconButton(
                 onPressed: () {
-                  Navigator.pushNamed(context, 'selection');
+                  Navigator.pushReplacementNamed(context, 'homeScreen');
                 },
                 icon: const Icon(Icons.close, color: Color(0xFF000000)),
             ),
@@ -105,7 +115,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: TextFormField(
-                onChanged: (value) {},
+                onChanged: (value) {
+                  placeAutocomplete(value);
+                },
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   fillColor: Color(0xFFf5f5f5),
@@ -135,7 +147,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             padding: const EdgeInsets.all(ShimmerEffect.defaultPadding),
             child: ElevatedButton.icon(
                 onPressed: () {
-                  placeAutocomplete("Manila");
                 },
                 icon: SvgPicture.asset(
                   'assets/svg/navigation.svg',
@@ -161,11 +172,16 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             thickness: 4,
             color: Color(0xFFE9E9E9),
           ),
-          LocationListTile(
-            press: () {},
-            location: 'STI College Caloocan',
+          Expanded(
+            child: ListView.builder(
+              itemCount: placePredictions.length,
+                itemBuilder: (context, index) => LocationListTile(
+                  press: () {},
+                  location: placePredictions[index].description!,
+                ),
+              ),
           ),
-        ],
+          ],
       )
     );
   }

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/createAccount.dart';
-import 'package:pasada_passenger_app/loginAccount.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:flutter/foundation.dart';
 // import 'package:pasada_passenger_app/databaseSetup.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

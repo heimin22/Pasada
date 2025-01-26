@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/selectionScreen.dart';
-import 'package:pasada_passenger_app/main.dart';
+import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/home/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/homeScreen.dart';
-import 'package:pasada_passenger_app/authService.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_passenger_app/selectionScreen.dart';
+import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
 
 void main() => runApp(const LoginAccountPage());
