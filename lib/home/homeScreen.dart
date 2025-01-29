@@ -49,7 +49,6 @@ class HomeScreenStateful extends StatefulWidget {
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
-  String _searchText = "";
 
   @override
   Widget build(BuildContext context) {
