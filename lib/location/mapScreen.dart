@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/location/locationButton.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -20,6 +21,20 @@ class MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     checkLocationPermissions();
+  }
+
+  void centerMapOnCurrentLocation() {
+    if (currentLocation != null && mapController != null) {
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(
+            currentLocation!.latitude!,
+            currentLocation!.longitude!,
+          ),
+          15.0,
+        ),
+      );
+    }
   }
 
   Future<void> checkLocationPermissions() async {
@@ -54,33 +69,31 @@ class MapScreenState extends State<MapScreen> {
           'Location Error',
           'Unable to fetch the current location. Please try again later.',
         );
-      }
-      else {
+      } else {
         setState(() {});
       }
-    }
-    catch (e) {
+    } catch (e) {
       showError('An error occurred while fetching the location.');
     }
   }
 
-  void onMapCreated(GoogleMapController controller) => mapController = controller;
+  void onMapCreated(GoogleMapController controller) =>
+      mapController = controller;
 
   // helper function for showing alert dialogs to reduce repetition
   void showAlertDialog(String title, String content) {
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Text(content),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Confirm'),
-            ),
-          ],
-        )
-    );
+              title: Text(title),
+              content: Text(content),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Confirm'),
+                ),
+              ],
+            ));
   }
 
   // specific error dialog using the helper function
@@ -98,7 +111,14 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
+      floatingActionButton: LocationFAB(
+        onPressed: centerMapOnCurrentLocation,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
       body: currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : GoogleMap(
@@ -107,6 +127,12 @@ class MapScreenState extends State<MapScreen> {
                 target: LatLng(
                     currentLocation!.latitude!, currentLocation!.longitude!),
                 zoom: 15.0,
+              ),
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+              padding: EdgeInsets.only(
+                bottom: screenHeight * 0.15,
+                right: screenWidth * 0.1,
               ),
             ),
     );

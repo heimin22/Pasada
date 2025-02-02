@@ -100,9 +100,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           CircleAvatar(
             backgroundColor: Color(0xFFDADADA),
             child: IconButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(context, 'homeScreen');
-                },
+                onPressed: () => Navigator.of(context).pop(),
                 icon: const Icon(Icons.close, color: Color(0xFF000000)),
             ),
           ),
