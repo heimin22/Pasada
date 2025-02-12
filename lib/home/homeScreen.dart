@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:math' show min,max;
+import 'package:flutter/foundation.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geolocator/geolocator.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
@@ -6,10 +11,15 @@ import 'package:geolocator/geolocator.dart';
 import 'package:location/location.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
+import 'package:pasada_passenger_app/location/networkUtilities.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
+import 'package:http/http.dart' as http;
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:pasada_passenger_app/notificationScreen.dart';
 // import 'package:pasada_passenger_app/activityScreen.dart';
@@ -17,10 +27,10 @@ import 'package:pasada_passenger_app/location/locationButton.dart';
 // import 'package:pasada_passenger_app/settingsScreen.dart';
 // import 'package:pasada_passenger_app/homeScreen.dart';
 // import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-void main() => runApp(const HomeScreen());
 // WidgetsFlutterBinding.ensureInitialized();
 // await dotenv.load(fileName: ".env");
+
+// stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -28,46 +38,79 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Pasada',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         scaffoldBackgroundColor: const Color(0xFFF2F2F2),
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const HomeScreenStateful(title: 'Pasada'),
+      home: const HomeScreenStateful(),
       routes: <String, WidgetBuilder>{
         'map': (BuildContext context) => const MapScreen(),
-        'searchLocation': (BuildContext context) => const SearchLocationScreen()
       },
     );
   }
 }
 
+// stateful na makakapagrebuild dynamically kapag nagbago yung data
 class HomeScreenStateful extends StatefulWidget {
-  const HomeScreenStateful({super.key, required this.title});
-
-  final String title;
+  const HomeScreenStateful({super.key});
 
   @override
+  // creates the mutable state para sa widget
   State<HomeScreenStateful> createState() => HomeScreenPageState();
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
-  final GlobalKey<MapScreenState> mapScreenKey = GlobalKey();
-  String pickupLocation = "Pick-up location";
-  String dropOffLocation = "Drop-off location";
-  // Position? currentPosition;
+  final GlobalKey<MapScreenState> mapScreenKey = GlobalKey<MapScreenState>(); // global key para maaccess si MapScreenState
+  // GoogleMapController? mapController;
+  SelectedLocation? selectedPickUpLocation;
+  SelectedLocation? selectedDropOffLocation;
+  // String pickUpAddress = "Pick-up location";
+  // String dropOffAddress = "Drop-off location";
+  // Set<Marker> markers = {};
+  // Polyline? routePolyline; // para to sa pagdraw ng way sa map through the location
+  bool isSearchingPickup = true; // true = pick-up, false - drop-off
+
+
+  // Future<void> navigateToSearch(BuildContext context, bool isPickUp) async {
+  //   final result = await Navigator.pushNamed(context, 'searchLocation');
   //
-  // Future<void> goToCurrentLocation() async {
-  //   try {
-  //     final position = await Geolocator.getCurrentPosition(
-  //       desiredAccuracy: LocationAccuracy.best,
-  //     );
-  //     setState(() => currentPosition = position);
-  //     print('Lat: ${position.latitude}, Lng: ${position.longitude}');
+  //   if (result != null) {
+  //     setState(() {
+  //       if (isPickUp) {
+  //         selectedPickUpLocation = result.latLng;
+  //         pickUpAddress = result.address;
+  //       }
+  //       else {
+  //         selectedDropOffLocation = result.latLng;
+  //         dropOffAddress = result.address;
+  //       }
+  //     });
   //   }
   // }
+
+  // void updateLocation(SelectedLocation location) {
+  //   setState(() {
+  //     if (isSearchingPickup) {
+  //       selectedPickUpLocation = location;
+  //     }
+  //     else {
+  //       selectedDropOffLocation = location;
+  //     }
+  //   });
+  // }
+
+  /// Update yung proper location base duon sa search type
+  void updateLocation(SelectedLocation location, bool isPickup) {
+    setState(() {
+      if (isPickup) {
+        selectedPickUpLocation = location;
+      } else {
+        selectedDropOffLocation = location;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +128,11 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
           
           return Stack(
             children: [
-              const MapScreen(key: ValueKey('mapScreen')),
+              MapScreen(
+                key: mapScreenKey,
+                pickUpLocation: selectedPickUpLocation?.coordinates,
+                dropOffLocation: selectedDropOffLocation?.coordinates,
+              ),
               
               // Search bar
               Positioned(
@@ -93,7 +140,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 left: responsivePadding,
                 right: responsivePadding,
                 child: buildSearchBar(context, screenWidth, screenHeight),
-              ),
+                ),
 
               // Location Container
               Positioned (
@@ -113,7 +160,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 bottom: bottomNavBarHeight + 120,
                 right: responsivePadding,
                 child: LocationFAB(
-                  onPressed: () => mapScreenKey.currentState?.centerMapOnCurrentLocation(),
+                  heroTag: 'homeLocationFAB',
+                  onPressed: () => mapScreenKey.currentState?.animateCameraToCurrentLocation(),
                   iconSize: screenWidth * 0.06,
                   buttonSize: screenWidth * 0.12,
                 ),
@@ -246,41 +294,85 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       ),
       child: Column(
         children: [
-          buildLocationRow(
-            Icons.my_location,
-            pickupLocation,
-            screenWidth,
-            iconSize,
-          ),
-          Divider(
-            height: screenWidth * 0.05
-          ),
-          buildLocationRow(
-            Icons.location_on,
-            dropOffLocation,
-            screenWidth,
-            iconSize,
+          buildLocationRow(Icons.my_location, selectedPickUpLocation, true, screenWidth, iconSize),
+          const Divider(),
+          buildLocationRow(Icons.my_location, selectedDropOffLocation, false, screenWidth, iconSize)
+          // InkWell(
+          //   onTap: () async {
+          //     setState(() => isSearchingPickup = true);
+          //     final result = await Navigator.pushNamed(context, 'searchLocation');
+          //     if (result is SelectedLocation) {
+          //       updateLocation(result);
+          //     }
+          //     // Navigator.pushNamed(context, 'searchLocation');
+          //   },
+          //   child: buildLocationRow(
+          //     Icons.my_location,
+          //     selectedPickUpLocation?.address ?? 'Pick-up location',
+          //     screenWidth,
+          //     iconSize,
+          //   ),
+          // ),
+          // Divider(
+          //   height: screenWidth * 0.05
+          // ),
+          // InkWell(
+          //   onTap: () async {
+          //     setState(() => isSearchingPickup = false);
+          //     final result = await Navigator.pushNamed(context, 'searchLocation');
+          //     if (result is SelectedLocation) {
+          //       updateLocation(result);
+          //     }
+          //     // Navigator.pushNamed(context, 'searchLocation');
+          //   },
+          //   child: buildLocationRow(
+          //     Icons.location_on,
+          //     selectedDropOffLocation?.address ?? 'Drop-off location',
+          //     screenWidth,
+          //     iconSize,
+          //   ),
+          // ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildLocationRow(IconData icon, SelectedLocation? location, bool isPickup, double screenWidth, double iconSize) {
+    return InkWell(
+      onTap: () => navigateToSearch(context, isPickup),
+      child: Row(
+        children: [
+          Icon(icon, size: iconSize, color: Colors.blue),
+          SizedBox(width: screenWidth * 0.03),
+          Expanded(
+            child: Text(
+              location?.address ?? (isPickup ? 'Pick-up location' : 'Drop-off location'),
+              style: TextStyle(
+                fontSize: screenWidth * 0.045,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget buildLocationRow(IconData icon, String text, double screenWidth, double iconSize) {
-    return Row(
-      children: [
-        Icon(icon, size: iconSize, color: Colors.blue),
-        SizedBox(width: screenWidth * 0.03),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: screenWidth * 0.045,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
+  void navigateToSearch(BuildContext context, bool isPickup) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SearchLocationScreen(isPickup: isPickup),
+      ),
     );
+    if (result != null && result is SelectedLocation) {
+      setState(() {
+        if (isPickup) {
+          selectedPickUpLocation = result;
+        } else {
+          selectedDropOffLocation = result;
+        }
+      });
+    }
   }
 }

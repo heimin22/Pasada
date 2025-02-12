@@ -8,6 +8,7 @@ class LocationFAB extends StatelessWidget {
   final double elevation;
   final double iconSize;
   final double buttonSize;
+  final Object? heroTag;
 
   const LocationFAB({
     super.key,
@@ -18,11 +19,13 @@ class LocationFAB extends StatelessWidget {
     this.elevation = 4.0,
     this.iconSize = 24,
     this.buttonSize = 48,
+    this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
     return FloatingActionButton(
+      heroTag: heroTag ?? UniqueKey(),
       onPressed: onPressed,
       backgroundColor: backgroundColor,
       elevation: elevation,
