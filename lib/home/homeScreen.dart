@@ -66,40 +66,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   // GoogleMapController? mapController;
   SelectedLocation? selectedPickUpLocation;
   SelectedLocation? selectedDropOffLocation;
-  // String pickUpAddress = "Pick-up location";
-  // String dropOffAddress = "Drop-off location";
-  // Set<Marker> markers = {};
-  // Polyline? routePolyline; // para to sa pagdraw ng way sa map through the location
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
 
-
-  // Future<void> navigateToSearch(BuildContext context, bool isPickUp) async {
-  //   final result = await Navigator.pushNamed(context, 'searchLocation');
-  //
-  //   if (result != null) {
-  //     setState(() {
-  //       if (isPickUp) {
-  //         selectedPickUpLocation = result.latLng;
-  //         pickUpAddress = result.address;
-  //       }
-  //       else {
-  //         selectedDropOffLocation = result.latLng;
-  //         dropOffAddress = result.address;
-  //       }
-  //     });
-  //   }
-  // }
-
-  // void updateLocation(SelectedLocation location) {
-  //   setState(() {
-  //     if (isSearchingPickup) {
-  //       selectedPickUpLocation = location;
-  //     }
-  //     else {
-  //       selectedDropOffLocation = location;
-  //     }
-  //   });
-  // }
 
   /// Update yung proper location base duon sa search type
   void updateLocation(SelectedLocation location, bool isPickup) {
@@ -171,81 +139,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
         },
       ),
     );
-    // return Scaffold(
-    //   body: SafeArea(
-    //     child: Stack(
-    //       children: [
-    //         MapScreen(key: mapScreenKey),
-    //         // Floating search bar
-    //         Positioned(
-    //           top: screenHeight * 0.02, // 2% from the top of the screen
-    //           left: screenWidth * 0.05, // 5% padding from the left
-    //           right: screenWidth * 0.05, // 5% padding from the right
-    //           child: ElevatedButton(
-    //             onPressed: () {
-    //               Navigator.pushNamed(context, 'searchLocation');
-    //             },
-    //             style: ElevatedButton.styleFrom(
-    //               elevation: 3,
-    //               backgroundColor: Color(0xFFF5F5F5),
-    //               shape: RoundedRectangleBorder(
-    //                 borderRadius: BorderRadius.circular(24),
-    //               ),
-    //               padding: EdgeInsets.zero,
-    //               minimumSize: Size(0, screenHeight * 0.06),
-    //             ),
-    //             child: Row(
-    //               children: [
-    //                 const SizedBox(width: 16), // Left padding
-    //                 const Icon(Icons.search, color: Colors.grey),
-    //                 const SizedBox(width: 8),
-    //                 Expanded(
-    //                   child: Text(
-    //                     'Where to?',
-    //                     style: TextStyle(
-    //                       color: const Color(0xFFA2A2A2),
-    //                     ),
-    //                   ),
-    //                 ),
-    //                 const SizedBox(width: 16), // Right padding
-    //               ],
-    //             ),
-    //           ),
-    //         ),
-    //         // Drop-off and Pick-up Location Container
-    //         Positioned(
-    //           top: screenHeight * 0.12,
-    //           left: screenWidth * 0.05,
-    //           right: screenWidth * 0.05,
-    //           child: Container(
-    //             padding: const EdgeInsets.all(16),
-    //             decoration: BoxDecoration(
-    //               borderRadius: BorderRadius.circular(12),
-    //               color: Color(0xFFF5F5F5),
-    //               boxShadow: [
-    //                 BoxShadow(
-    //                   color: Colors.black12,
-    //                   spreadRadius: 2,
-    //                   blurRadius: 10,
-    //                   offset: const Offset(0, 2),
-    //                 )
-    //               ],
-    //             ),
-    //             // child: Column(
-    //             //   mainAxisSize: MainAxisSize.min,
-    //             //   children: [
-    //             //     _buildLocationRow(
-    //             //
-    //             //     )
-    //             //   ],
-    //             // ),
-    //           ),
-    //         )
-    //         // Displaying search input for testing purposes
-    //       ],
-    //     ),
-    //   ),
-    // );
   }
 
   Widget buildSearchBar (BuildContext context, double screenWidth, double screenHeight) {
@@ -297,41 +190,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
           buildLocationRow(Icons.my_location, selectedPickUpLocation, true, screenWidth, iconSize),
           const Divider(),
           buildLocationRow(Icons.my_location, selectedDropOffLocation, false, screenWidth, iconSize)
-          // InkWell(
-          //   onTap: () async {
-          //     setState(() => isSearchingPickup = true);
-          //     final result = await Navigator.pushNamed(context, 'searchLocation');
-          //     if (result is SelectedLocation) {
-          //       updateLocation(result);
-          //     }
-          //     // Navigator.pushNamed(context, 'searchLocation');
-          //   },
-          //   child: buildLocationRow(
-          //     Icons.my_location,
-          //     selectedPickUpLocation?.address ?? 'Pick-up location',
-          //     screenWidth,
-          //     iconSize,
-          //   ),
-          // ),
-          // Divider(
-          //   height: screenWidth * 0.05
-          // ),
-          // InkWell(
-          //   onTap: () async {
-          //     setState(() => isSearchingPickup = false);
-          //     final result = await Navigator.pushNamed(context, 'searchLocation');
-          //     if (result is SelectedLocation) {
-          //       updateLocation(result);
-          //     }
-          //     // Navigator.pushNamed(context, 'searchLocation');
-          //   },
-          //   child: buildLocationRow(
-          //     Icons.location_on,
-          //     selectedDropOffLocation?.address ?? 'Drop-off location',
-          //     screenWidth,
-          //     iconSize,
-          //   ),
-          // ),
         ],
       ),
     );

@@ -15,33 +15,6 @@ import 'package:http/http.dart' as http;
 import 'selectedLocation.dart';
 
 
-// class SearchLocationStateless extends StatefulWidget {
-//   const SearchLocationStateless({super.key});
-//
-//   @override
-//   State<SearchLocationStateless> createState() => _SearchLocationStatelessState();
-// }
-//
-// class _SearchLocationStatelessState extends State<SearchLocationStateless> {
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Pasada',
-//       debugShowCheckedModeBanner: false,
-//       theme: ThemeData(
-//         scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-//         fontFamily: 'Inter',
-//         useMaterial3: true,
-//       ),
-//       home: const SearchLocationScreen(isPickup: true),
-//       routes: <String, WidgetBuilder>{
-//         'selection': (context) => const selectionScreen(),
-//         'homeScreen': (context) => const HomeScreen(),
-//       },
-//     );
-//   }
-// }
-
 class SearchLocationScreen extends StatefulWidget {
   // final Function(SelectedLocation)? onLocationSelected;
   final bool isPickup;
@@ -146,22 +119,24 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     }
   }
 
-    // String? response = await NetworkUtility.fetchUrl(uri);
-    // if (response != null) {
-    //   PlaceAutocompleteResponse result =
-    //   PlaceAutocompleteResponse.parseAutocompleteResult(response);
-    //   if (result.prediction != null) {
-    //     setState(() => placePredictions = result.prediction ?? []);
-    //   }
-    // }
 
     void onPlaceSelected(AutocompletePrediction prediction) async {
-      final apiKey = dotenv.env['MAPS_API_KEY']!;
-      final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeID}&key=$apiKey',
+      final apiKey = dotenv.env['MAPS_API_KEY'] ?? '';
+      if (apiKey.isEmpty) return;
+      final uri = Uri.https(
+        "maps.googleapis.com",
+        "maps/api/place/details/json",
+        {
+          "place_id": prediction.placeID, // Ensure correct property name
+          "key": apiKey,
+          "fields": "geometry,name"
+        },
       );
+      // final url = Uri.parse(
+      //   'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeID}&key=$apiKey',
+      // );
 
-      final response = await NetworkUtility.fetchUrl(url);
+      final response = await NetworkUtility.fetchUrl(uri);
       if (response != null) {
         final data = json.decode(response);
         final location = data['result']['geometry']['location'];
@@ -173,95 +148,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           ),
         );
     }
-  // Future<SelectedLocation> getPlaceDetails(String placeID) async {
-  //   final String apiKey = dotenv.env["MAPS_API_KEY"] ?? '';
-  //   if (apiKey.isEmpty) throw Exception('API key is missing');
-  //   if (placeID.isEmpty) throw Exception('Place ID is empty');
-  //
-  //   Uri uri = Uri.https(
-  //     "maps.googleapis.com",
-  //     "maps/api/place/details/json", // decoder path
-  //     {
-  //       "place_id": placeID,
-  //       "fields": 'formatted_address,geometry', // query parameter
-  //       "key": apiKey, //
-  //     },
-  //   );
-  //
-  //   if (kDebugMode) print('API Request URL: $uri');
-  //
-  //   final response = await NetworkUtility.fetchUrl(uri);
-  //   if (response == null) throw Exception('No response from API');
-  //
-  //   final decoded = json.decode(response);
-  //   if (decoded['status'] != 'OK') throw Exception('API Error: ${decoded['status']}');
-  //
-  //   final result = decoded['result'];
-  //   if (result == null) throw Exception('No result in response');
-  //
-  //   return SelectedLocation(
-  //       placeID: placeID,
-  //       address: result['formatted_address'],
-  //       latitude: result['geometry']['location']['lat'],
-  //       longitude: result['geometry']['location']['lng'],
-  //   );
-
-    // final response = await NetworkUtility.fetchUrl(uri);
-    // if (kDebugMode) print(uri);
-    // if (response != null) {
-    //   final decoded = json.decode(response);
-    //   final result = decoded['result'];
-    //
-    // throw Exception('Failed to get place details');
-
-    // if (response != null) {
-    //   PlaceAutocompleteResponse result = PlaceAutocompleteResponse.parseAutocompleteResult(response);
-    //   if (result.prediction != null) {
-    //     setState(() {
-    //       placePredictions = result.prediction!;
-    //     });
-    //   }
-    // }
   }
-
-
-  // void onPlaceSelected(AutocompletePrediction prediction) async {
-  //   try {
-  //     final location = await getPlaceDetails(prediction.placeID!);
-  //     // homeScreenState?.updateLocation(location);
-  //
-  //     // null-aware check before updating the location
-  //     if (homeScreenState != null) {
-  //       homeScreenState!.updateLocation(location);
-  //     }
-  //     else {
-  //       if (kDebugMode) print('Warning: HomeScreenState is null');
-  //     }
-  //
-  //     // update search screen title base sa sinesearch natin
-  //     final isPickup = homeScreenState?.isSearchingPickup ?? true;
-  //     final searchType = isPickup ? 'Pick-up' : 'Drop-off';
-  //
-  //     // show ng success message
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('$searchType location updated'),
-  //         duration: Duration(seconds: 2),
-  //       ),
-  //     );
-  //
-  //     Navigator.pop(context, location);
-  //   }
-  //   catch (e) {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text('Error selecting location: ${e.toString()}'),
-  //         backgroundColor: Colors.red,
-  //       ),
-  //     );
-  //
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {

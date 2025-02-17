@@ -13,10 +13,6 @@ import 'selectedLocation.dart';
 import 'package:pasada_passenger_app/home/homeScreen.dart';
 
 class MapScreen extends StatefulWidget {
-  // dito ipapass yung pickup/dropoff locations duon sa search screen.
-  // final Function(GoogleMapController)? onMapCreated;
-  // final Set<Marker>? markers;
-  // final Polyline? polyline;
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
 
@@ -171,7 +167,7 @@ class MapScreenState extends State<MapScreen> {
 
       /// retrieve yung API key duon sa dotenv
       final String? apiKey = dotenv.env["MAPS_API_KEY"];
-      if (apiKey == null) {
+      if (apiKey == null || apiKey.isEmpty) {
         showDebugToast("Missing API Key");
         return;
       }
@@ -305,10 +301,6 @@ class MapScreenState extends State<MapScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      // floatingActionButton: LocationFAB (
-      //   onPressed: centerMapOnCurrentLocation,
-      // ),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.miniEndTop,
       body: currentLocation == null
           ? const Center(child: CircularProgressIndicator())
           : GoogleMap(
