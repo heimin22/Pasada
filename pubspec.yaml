@@ -50,6 +50,7 @@ dependencies:
   dio: ^5.7.0
   get: ^4.6.6
   flutter_google_maps_webservices: ^1.1.1
+  flutter_polyline_points: ^2.1.0
   http: ^1.2.2
 
 dev_dependencies:
@@ -102,6 +103,7 @@ flutter:
     - assets/svg/settingsSelectedIcon.svg
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
+    - assets/svg/pickupPin.svg
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
