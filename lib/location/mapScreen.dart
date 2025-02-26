@@ -5,12 +5,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:get/get.dart';
+// import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:pasada_passenger_app/location/locationButton.dart';
-import 'selectedLocation.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
+// import 'package:pasada_passenger_app/location/locationButton.dart';
+// import 'selectedLocation.dart';
+// import 'package:pasada_passenger_app/home/homeScreen.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -26,7 +26,7 @@ class MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
-  final String apiKey = dotenv.env['MAPS_API_KEY']!;
+  final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
 
   // Markers para sa pick-up and drop-off
   Marker? selectedPickupMarker;
@@ -131,7 +131,7 @@ class MapScreenState extends State<MapScreen> {
     if (currentLocation == null) return;
     final GoogleMapController controller = await mapController.future;
     final currentLatLng =
-        LatLng(currentLocation!.latitude!, currentLocation!.longitude!);
+        LatLng(currentLocation!.latitude, currentLocation!.longitude);
     controller.animateCamera(
       CameraUpdate.newCameraPosition(
         CameraPosition(target: currentLatLng, zoom: 14),
@@ -166,7 +166,7 @@ class MapScreenState extends State<MapScreen> {
       debugPrint('Start: $start\nEnd: $destination');
 
       /// retrieve yung API key duon sa dotenv
-      final String? apiKey = dotenv.env["MAPS_API_KEY"];
+      final String? apiKey = dotenv.env["ANDROID_MAPS_API_KEY"];
       if (apiKey == null || apiKey.isEmpty) {
         showDebugToast("Missing API Key");
         return;
@@ -207,18 +207,6 @@ class MapScreenState extends State<MapScreen> {
     catch (e) {
       showDebugToast('Error: ${e.toString()}');
     }
-    // create the polyline and update the state.
-    // final PolylineId id = const PolylineId("route");
-    // final Polyline polyline = Polyline(
-    //   polylineId: id,
-    //   color: Color(0xFF5f3fc4),
-    //   points: polylineCoordinates,
-    //   width: 8,
-    // );
-    //
-    // setState(() {
-    //   polylines[id] = polyline;
-    // });
   }
 
   void showDebugToast(String message) {
@@ -292,11 +280,10 @@ class MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     // combine na lahat ng markers
-    final markers = <Marker> {
-      if (selectedPickupMarker != null) selectedPickupMarker!,
-      if (selectedDropOffMarker != null) selectedDropOffMarker!,
-    };
-
+    // final markers = <Marker> {
+    //   if (selectedPickupMarker != null) selectedPickupMarker!,
+    //   if (selectedDropOffMarker != null) selectedDropOffMarker!,
+    // };
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 

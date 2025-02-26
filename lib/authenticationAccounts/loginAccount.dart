@@ -48,7 +48,7 @@ class LoginScreen extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   // get auth service
-  final AuthService _authService = AuthService();
+  final AuthService authService = AuthService();
 
   // session
   final session = supabase.auth.currentSession;
@@ -100,7 +100,7 @@ class LoginScreen extends State<LoginPage> {
     if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
 
     try {
-      await _authService.supabase.auth.signInWithPassword(
+      await authService.supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
@@ -141,72 +141,64 @@ class LoginScreen extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.all(50),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // buildbackButton(),
-              buildHeader(),
-              buildPassengerEmailNumberText(),
-              buildPassengerEmailNumberInput(),
-              buildPassengerPassText(),
-              buildPassengerPassInput(),
-              buildLogInButton(),
-              // buildLoginWithGoogleButton(),
-              // Container(
-              //   // Viber Button
-              //   margin: EdgeInsets.only(bottom: 20.0),
-              //   child: Center(
-              //     child: ConstrainedBox(
-              //       constraints: BoxConstraints(
-              //         maxWidth: 360,
-              //       ),
-              //       child: ElevatedButton(
-              //         onPressed: () {},
-              //         style: ElevatedButton.styleFrom(
-              //           backgroundColor: const Color(0xFF5f3fc4),
-              //           minimumSize: const Size(360, 50),
-              //           shape: RoundedRectangleBorder(
-              //             borderRadius: BorderRadius.circular(10.0),
-              //           ),
-              //         ),
-              //         child: Row(
-              //           mainAxisAlignment: MainAxisAlignment.center,
-              //           children: [
-              //             SvgPicture.asset(
-              //               'assets/svg/viberIcon.svg',
-              //               height: 30,
-              //               width: 30,
-              //             ),
-              //             const SizedBox(width: 25),
-              //             const Text(
-              //               'Continue with Viber',
-              //               style: TextStyle(
-              //                 color: Color(0xFFF2F2F2),
-              //                 fontSize: 20,
-              //                 fontWeight: FontWeight.w600,
-              //               ),
-              //             ),
-              //           ],
-              //         ),
-              //       ),
-              //     ),
-              //   ),
-              // ),
-            ],
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.07,
+              left: MediaQuery.of(context).size.height * 0.01,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: buildBackButton(),
+            ),
           ),
-        ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.01,
+                  left: MediaQuery.of(context).size.height * 0.035,
+                  right: MediaQuery.of(context).size.height * 0.035,
+                  bottom: MediaQuery.of(context).size.height * 0.035,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    buildHeader(),
+                    buildPassengerEmailNumberText(),
+                    buildPassengerEmailNumberInput(),
+                    buildPassengerPassText(),
+                    buildPassengerPassInput(),
+                    buildForgotPassword(),
+                    buildLogInButton(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Container buildBackButton() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      child: IconButton(
+        onPressed: () {
+          Navigator.pushNamed(context, 'start');
+        },
+        icon: Icon(Icons.arrow_back),
       ),
     );
   }
 
   Container buildPassengerPassInput() {
     return Container(
-      margin: const EdgeInsets.only(top: 10),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: SizedBox(
         width: double.infinity,
         height: 45,
@@ -235,7 +227,7 @@ class LoginScreen extends State<LoginPage> {
               fontSize: 12,
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0XFF5f3fc4),
+              color: Color(0XFF00CC58),
             ),
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
@@ -246,7 +238,7 @@ class LoginScreen extends State<LoginPage> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF5f3fc4),
+                color: Color(0xFF00CC58),
               ),
             ),
           ),
@@ -257,7 +249,7 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerEmailNumberInput() {
     return Container(
-      margin: const EdgeInsets.only(top: 10),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: SizedBox(
         width: double.infinity,
         height: 45,
@@ -274,7 +266,7 @@ class LoginScreen extends State<LoginPage> {
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
-              color: Color(0xFF5f3fc4),
+              color: Color(0xFF00CC58),
             ),
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
@@ -285,7 +277,7 @@ class LoginScreen extends State<LoginPage> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF5f3fc4),
+                color: Color(0xFF00CC58),
               ),
             ),
           ),
@@ -318,7 +310,7 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerEmailNumberText() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.05),
       child: const Row(
         children: [
           Text(
@@ -341,12 +333,12 @@ class LoginScreen extends State<LoginPage> {
   Flexible buildLogInButton() {
     return Flexible(
       child: Container(
-        margin: const EdgeInsets.only(top: 120),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
         width: double.infinity,
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF5f3fc4),
+            backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
@@ -374,30 +366,36 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
+  Container buildForgotPassword() {
+    return Container(
+      margin: EdgeInsets.only(
+        top: MediaQuery.of(context).size.height * 0.02,
+        left: MediaQuery.of(context).size.height * 0.003,
+      ),
+      child: Text(
+        "Forgot Password?",
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF121212),
+        ),
+      ),
+    );
+  }
+
   Column buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
+          alignment: Alignment.centerLeft,
           margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-          alignment: Alignment.centerLeft,
-          child: IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, 'start');
-            },
-            icon: Icon(Icons.arrow_back),
-          ),
-        ),
-        Container(
-          alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.only(top: 50),
-          // margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
           height: 80,
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
         Container(
-          margin: const EdgeInsets.only(top: 30),
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Log-in to your account',
             style: TextStyle(

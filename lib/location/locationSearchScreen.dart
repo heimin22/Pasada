@@ -9,9 +9,9 @@ import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
-import 'package:pasada_passenger_app/home/selectionScreen.dart';
+// import 'package:pasada_passenger_app/home/selectionScreen.dart';
 import 'package:pasada_passenger_app/home/homeScreen.dart';
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 import 'selectedLocation.dart';
 
 
@@ -95,7 +95,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       return;
     }
 
-    final String apiKey = dotenv.env["MAPS_API_KEY"] ?? '';
+    final String apiKey = dotenv.env["ANDROID_MAPS_API_KEY"] ?? '';
     if (apiKey.isEmpty) {
       if (kDebugMode) print("API Key is not configured!");
       return;
@@ -121,7 +121,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
 
     void onPlaceSelected(AutocompletePrediction prediction) async {
-      final apiKey = dotenv.env['MAPS_API_KEY'] ?? '';
+      final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
       if (apiKey.isEmpty) return;
       final uri = Uri.https(
         "maps.googleapis.com",
@@ -132,9 +132,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           "fields": "geometry,name"
         },
       );
-      // final url = Uri.parse(
-      //   'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeID}&key=$apiKey',
-      // );
 
       final response = await NetworkUtility.fetchUrl(uri);
       if (response != null) {

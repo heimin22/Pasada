@@ -75,97 +75,134 @@ class PasadaHomePageState extends State<PasadaHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // pasada logo
-            Container(
-              margin: const EdgeInsets.only(top: 130.0),
-              height: 130,
-              width: 130,
-              child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+      resizeToAvoidBottomInset: false,
+      body: SingleChildScrollView(
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.2,
             ),
-
-            // text 'hi there'
-            Container(
-              margin: const EdgeInsets.only(top: 70.0),
-              child: const Text(
-                'Hi there!',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                buildHeader(),
+                SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                buildCreateAccount(),
+                buildLoginAccount(),
+              ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
 
-            // text 'welcome to pasada'
-            const SizedBox(height: 8),
-            Padding(
-              padding: EdgeInsets.only(bottom: 30.0),
-              child: Text(
-                'Welcome to Pasada',
-              ),
+  Column buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          alignment: Alignment.center,
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+          height: 130,
+          width: 130,
+          child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+        ),
+        Container(
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          child: const Text(
+            'Kumusta!',
+            style: TextStyle(
+              fontSize: 40,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF121212),
             ),
-
-            // create account button
-            Container(
-              margin: const EdgeInsets.only(top: 180.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, 'createAccount');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5f3fc4),
-                  minimumSize: const Size(380, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                ),
-
-                // create account text
-                child: const Text(
-                  'Create an account',
-                  style: TextStyle(
-                    color: Color(0xFFF2F2F2),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
+          ),
+        ),
+        Container(
+          margin: EdgeInsets.only(
+            top: MediaQuery.of(context).size.height * 0.01,
+          ),
+          child: const Text(
+            'Welcome sa Pasada!',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 16,
+              color: Color(0xFF121212),
             ),
+          ),
+        )
+      ],
+    );
+  }
 
-            // login account button
-            Container(
-              margin: const EdgeInsets.only(top: 20.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, 'loginAccount');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF2F2F2),
-                  minimumSize: const Size(380, 50),
-                  side: const BorderSide(
-                    color: Color(0xFF5f3fc4),
-                    width: 2,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                ),
-
-                // login text
-                child: const Text(
-                  'Log-in',
-                  style: TextStyle(
-                    color: Color(0xFF121212),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                  ),
-                ),
-              ),
+  Flexible buildCreateAccount() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).size.height * 0.02,
+          left: MediaQuery.of(context).size.height * 0.02,
+          right: MediaQuery.of(context).size.height * 0.02,
+        ),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(context, 'createAccount');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF121212),
+            minimumSize: const Size(360, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
             ),
-          ],
+          ),
+          child: const Text(
+            'Create an Account',
+            style: TextStyle(
+              color: Color(0xFFF2F2F2),
+              fontWeight: FontWeight.w600,
+              fontSize: 20
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Flexible buildLoginAccount() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).size.height * 0.02,
+          left: MediaQuery.of(context).size.height * 0.02,
+          right: MediaQuery.of(context).size.height * 0.02,
+        ),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.pushNamed(context, 'loginAccount');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFF2F2F2),
+            minimumSize: const Size(360, 50),
+            side: const BorderSide(
+              color: Color(0xFF00CC58),
+              width: 2,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
+          child: const Text(
+            'Log-in',
+            style: TextStyle(
+                color: Color(0xFF121212),
+                fontWeight: FontWeight.w600,
+                fontSize: 20
+            ),
+          ),
         ),
       ),
     );
