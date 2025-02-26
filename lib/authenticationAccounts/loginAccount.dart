@@ -333,7 +333,7 @@ class LoginScreen extends State<LoginPage> {
   Flexible buildLogInButton() {
     return Flexible(
       child: Container(
-        margin: const EdgeInsets.only(top: 120),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
         width: double.infinity,
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
@@ -389,14 +389,13 @@ class LoginScreen extends State<LoginPage> {
       children: [
         Container(
           alignment: Alignment.centerLeft,
-          margin: const EdgeInsets.only(top: 50),
-          // margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
           height: 80,
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
         Container(
-          margin: const EdgeInsets.only(top: 30),
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Log-in to your account',
             style: TextStyle(

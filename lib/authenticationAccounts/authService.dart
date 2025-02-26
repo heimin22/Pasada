@@ -74,6 +74,13 @@ class AuthService {
     }
   }
 
+  Future<AuthResponse> SignUp(String email, String password) async {
+    return await supabase.auth.signUp(
+      email: email,
+      password: password,
+    );
+  }
+
   // logout
   Future<void> logout() async {
     try {
@@ -87,7 +94,7 @@ class AuthService {
   }
 
   // get current user email
-  String? getCurrentUserEnail() {
+  String? getCurrentUserEmail() {
     final session = supabase.auth.currentSession;
     final user = session?.user;
     return user?.email;

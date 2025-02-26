@@ -1,4 +1,4 @@
-import 'package:flutter_google_maps_webservices/places.dart';
+// import 'package:flutter_google_maps_webservices/places.dart';
 
 class AutocompletePrediction {
   // ito yung human-readable name ng returned result. pwepwede ring business name ng establishment

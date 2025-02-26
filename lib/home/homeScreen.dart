@@ -1,25 +1,25 @@
-import 'dart:convert';
-import 'dart:math' show min,max;
-import 'package:flutter/foundation.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+// import 'dart:convert';
+// import 'dart:math' show min,max;
+// import 'package:flutter/foundation.dart';
+// import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:geolocator/geolocator.dart';
+// import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:url_launcher/url_launcher.dart';
-import 'package:location/location.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/home/selectionScreen.dart';
-import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
+// import 'package:geolocator/geolocator.dart';
+// // import 'package:flutter_svg/flutter_svg.dart';
+// // import 'package:url_launcher/url_launcher.dart';
+// import 'package:location/location.dart';
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:pasada_passenger_app/home/selectionScreen.dart';
+// import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
-import 'package:pasada_passenger_app/location/networkUtilities.dart';
+// import 'package:pasada_passenger_app/location/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/location/locationButton.dart';
-import 'package:http/http.dart' as http;
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:pasada_passenger_app/location/locationButton.dart';
+// import 'package:http/http.dart' as http;
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:pasada_passenger_app/notificationScreen.dart';
 // import 'package:pasada_passenger_app/activityScreen.dart';
@@ -82,8 +82,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+    // final screenHeight = MediaQuery.of(context).size.height;
+    // final screenWidth = MediaQuery.of(context).size.width;
     
     return Scaffold(
       body: LayoutBuilder(

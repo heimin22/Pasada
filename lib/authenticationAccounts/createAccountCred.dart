@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
+// import 'package:flutter_animate/flutter_animate.dart';
+// import 'package:pasada_passenger_app/home/homeScreen.dart';
 import 'package:pasada_passenger_app/home/main.dart';
 import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
@@ -41,9 +41,10 @@ class CredPage extends StatefulWidget {
 class _CredPageState extends State<CredPage> {
   bool isChecked = false;
   @override
+
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
+    // final screenHeight = MediaQuery.of(context).size.height;
+    // final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Align(
