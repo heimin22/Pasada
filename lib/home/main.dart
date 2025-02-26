@@ -74,6 +74,15 @@ class PasadaHomePage extends StatefulWidget {
 class PasadaHomePageState extends State<PasadaHomePage> {
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args!['accountCreated'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Account created successfully!')),
+        );
+        ModalRoute.of(context)?.settings.arguments != null;
+      }
+    });
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: SingleChildScrollView(

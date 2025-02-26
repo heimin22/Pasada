@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pasada_passenger_app/home/main.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
@@ -28,6 +30,7 @@ class CreateAccountPage extends StatelessWidget {
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'cred': (BuildContext context) => const CreateAccountCredPage(),
+        'login': (BuildContext context) => const LoginAccountPage(),
       },
     );
   }
@@ -99,6 +102,26 @@ class CreateAccountScreen extends State<CAPage> {
     // preprepare na yung data
     final email = emailController.text;
     final password = passwordController.text;
+
+    // attempt na masign-up
+    try {
+      await authService.SignUp(email,password);
+      // kapag successful yung pagregister ng account
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        'start',
+        (route) => false,
+        arguments: {'accountCreated': true}, // pass success argument
+      );
+    }
+    catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+
+      // pop the register page
+      Navigator.pop(context);
+    }
   }
 
   // @override
@@ -357,24 +380,31 @@ class CreateAccountScreen extends State<CAPage> {
         margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
         width: double.infinity,
         child: ElevatedButton(
-            onPressed: (){
-              Navigator.pushNamed(context, 'cred');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF121212),
-              minimumSize: const Size(360, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-            ),
-          child: const Text(
-            'Continue',
-            style: TextStyle(
-              color: Color(0xFFF2F2F2),
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
+          onPressed: isLoading ? null : SigningUp,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF121212),
+            minimumSize: const Size(360, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
             ),
           ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFF5F5F5),
+                    strokeWidth: 2,
+                  ),
+                )
+              : const Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                ),
         ),
       ),
     );
