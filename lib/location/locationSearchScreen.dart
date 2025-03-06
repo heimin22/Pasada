@@ -37,57 +37,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   void onSearchChanged() => placeAutocomplete(searchController.text);
 
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   // Find the HomeScreenPageState from the widget tree
-  //   final modalRoute = ModalRoute.of(context);
-  //   if (modalRoute != null) {
-  //     final navigator = Navigator.of(context);
-  //     // Check if the navigator's key is a GlobalKey
-  //     if (navigator.widget.key is GlobalKey) {
-  //       final GlobalKey navKey = navigator.widget.key as GlobalKey;
-  //       final navigatorState = navKey.currentState as NavigatorState;
-  //       // **Safe check to ensure pages list is not empty before accessing first element**
-  //       if (navigatorState.widget.pages.isNotEmpty) {
-  //         final homeScreenPage = navigatorState.widget.pages.first;
-  //         if (homeScreenPage.key is GlobalKey<HomeScreenPageState>) {
-  //           // Cast to GlobalKey<HomeScreenPageState> only if the key is of the correct type
-  //           final homeScreenKey = homeScreenPage.key as GlobalKey<HomeScreenPageState>;
-  //           homeScreenState = homeScreenKey.currentState;
-  //         } else {
-  //           print("Warning: First page key is not GlobalKey<HomeScreenPageState>");
-  //         }
-  //       } else {
-  //         print("Warning: Navigator pages list is empty, cannot access first page.");
-  //       }
-  //     } else {
-  //       print("Warning: Navigator key is not a GlobalKey.");
-  //     }
-  //   }
-  // }
-
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   // hahanapin yung HomeScreenPageState from the widget tree
-  //   final modalRoute = ModalRoute.of(context);
-  //   if (modalRoute != null) {
-  //     final navigator = Navigator.of(context);
-  //     if (navigator.widget.key is GlobalKey) {
-  //       final GlobalKey navKey = navigator.widget.key as GlobalKey;
-  //       final navigatorState = navKey.currentState as NavigatorState;
-  //       if (navigatorState.widget.pages.isNotEmpty) {
-  //         final homeScreenPage = navigatorState.widget.pages.first;
-  //         if (homeScreenPage.key is GlobalKey<HomeScreenPageState>) {
-  //           final homeScreen = navigatorState.widget.pages.first.key
-  //           as GlobalKey<HomeScreenPageState>;
-  //         }
-  //       }
-  //       homeScreenState = homeScreen.currentState;
-  //     }
-  //   }
-  // }
 
   Future<void> placeAutocomplete(String query) async {
     if (query.isEmpty) {
@@ -149,8 +98,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final isPickup = homeScreenState?.isSearchingPickup ?? true;
-    // final searchType = isPickup ? 'Pick-up' : 'Drop-off';
     return Scaffold(
         appBar: AppBar(
           leading: Padding(
@@ -252,7 +199,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 itemCount: placePredictions.length,
                 itemBuilder: (context, index) => LocationListTile(
                   press: () => onPlaceSelected(placePredictions[index]),
-                  location: placePredictions[index].description!,
+                  location: placePredictions[index].description?.toString() ?? 'Unknown',
                 ),
               ),
             ),

@@ -50,6 +50,7 @@ class HomeScreen extends StatelessWidget {
       home: const HomeScreenStateful(),
       routes: <String, WidgetBuilder>{
         'map': (BuildContext context) => const MapScreen(),
+        'searchLocation': (BuildContext context) => const SearchLocationScreen(isPickup: true),
       },
     );
   }
@@ -145,8 +146,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                     // Location FAB
                     LocationFAB(
                       heroTag: "homeLocationFAB",
-                      onPressed: () => mapScreenKey.currentState
-                          ?.animateCameraToCurrentLocation(),
+                      onPressed: () => mapScreenKey.currentState,
                       iconSize: iconSize,
                       buttonSize: screenWidth * 0.12,
                     ),
@@ -237,14 +237,14 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       onTap: () => navigateToSearch(context, isPickup),
       child: Row(
         children: [
-          Icon(icon, size: iconSize, color: Colors.blue),
+          Icon(icon, size: iconSize, color: Colors.green),
           SizedBox(width: screenWidth * 0.03),
           Expanded(
             child: Text(
               location?.address ??
                   (isPickup ? 'Pick-up location' : 'Drop-off location'),
               style: TextStyle(
-                fontSize: screenWidth * 0.045,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),

@@ -15,7 +15,7 @@ class LocationFAB extends StatelessWidget {
     required this.onPressed,
     this.icon = Icons.gps_fixed,
     this.backgroundColor = Colors.white,
-    this.iconColor = Colors.blue,
+    this.iconColor = Colors.green,
     this.elevation = 4.0,
     this.iconSize = 24,
     this.buttonSize = 48,

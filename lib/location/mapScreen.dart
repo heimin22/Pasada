@@ -58,6 +58,14 @@ class MapScreenState extends State<MapScreen> {
     getLocationUpdates();
   }
 
+  void calculateRoute() {
+    if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
+      showDebugToast('Select both locations first.');
+      return;
+    }
+    generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+  }
+
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
@@ -121,7 +129,6 @@ class MapScreenState extends State<MapScreen> {
           setState(() {
             currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
           });
-          animateCameraToCurrentLocation();
         }
       });
     }
@@ -130,33 +137,13 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
-  // animate yung camera sa current location
-  Future<void> animateCameraToCurrentLocation() async {
-    if (currentLocation == null) return;
-    final GoogleMapController controller = await mapController.future;
-    final currentLatLng =
-        LatLng(currentLocation!.latitude, currentLocation!.longitude);
-    controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(target: currentLatLng, zoom: 14),
-      ),
-    );
-  }
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
     if (pickup != null) selectedPickupLatLng = pickup;
-      // selectedPickupMarker = Marker(
-      //   markerId: const MarkerId("pickup"),
-      //   position: pickup,
-      //   icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      // );
+
     if (dropoff != null) selectedDropOffLatLng = dropoff;
-      // selectedDropOffMarker = Marker(
-      //   markerId: const MarkerId("dropoff"),
-      //   position: dropoff,
-      //   icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      // );
+
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
       generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
@@ -174,7 +161,7 @@ class MapScreenState extends State<MapScreen> {
         }
         return;
       }
-      Fluttertoast.showToast(msg: "Generating route");
+
       final polylinePoints = PolylinePoints();
 
       // routes API request
@@ -183,8 +170,8 @@ class MapScreenState extends State<MapScreen> {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
           'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-          'X-Goog-FieldMask': 'routes.distanceMeters',
-          'X-Goog-FieldMask': 'routes.duration',
+          // 'X-Goog-FieldMask': 'routes.distanceMeters',
+          // 'X-Goog-FieldMask': 'routes.duration',
         };
         final body = jsonEncode({
           'origin': {
@@ -192,22 +179,24 @@ class MapScreenState extends State<MapScreen> {
               'latLng': {
                 'latitude': start.latitude,
                 'longitude': start.longitude,
-              }
-            }
+              },
+            },
           },
           'destination': {
-            'location:': {
+            'location': {
               'latLng': {
                 'latitude': destination.latitude,
                 'longitude': destination.longitude,
-              }
-            }
+              },
+            },
           },
           'travelMode': 'DRIVE',
           'polylineEncoding': 'ENCODED_POLYLINE',
           'computeAlternativeRoutes': false,
           'routingPreference': 'TRAFFIC_AWARE',
         });
+
+        debugPrint('Request Body: $body');
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response = await NetworkUtility.postUrl(uri, headers: headers, body: body);
@@ -222,9 +211,28 @@ class MapScreenState extends State<MapScreen> {
 
       final data = json.decode(response);
 
+      // add ng response validation
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        showDebugToast('No routes found');
+        if (kDebugMode) {
+          print('No routes found');
+        }
+        return;
+      }
+
+      // null checking for nested properties
+      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
+      if (polyline == null) {
+        showDebugToast('No polyline found in the response');
+        if (kDebugMode) {
+          print('No polyline found in the response');
+        }
+        return;
+      }
+
       if (response != null) {
         final data = json.decode(response);
-        if (data.containsKey('routes')) {
+        if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline = polylinePoints.decodePolyline(polyline);
           List<LatLng> polylineCoordinates = decodedPolyline.map((point) => LatLng(point.latitude, point.longitude)).toList();
@@ -265,7 +273,6 @@ class MapScreenState extends State<MapScreen> {
 
   void onMapCreated(GoogleMapController controller) {
     mapController.complete(controller);
-    animateCameraToCurrentLocation();
   }
 
   // helper function for showing alert dialogs to reduce repetition
@@ -328,28 +335,32 @@ class MapScreenState extends State<MapScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      body: currentLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : GoogleMap(
-              onMapCreated: (controller) => mapController.complete(controller),
-              initialCameraPosition: CameraPosition(
-                target: currentLocation!,
-                zoom: 15.0,
-              ),
-              markers: buildMarkers(),
-              polylines: Set<Polyline>.of(polylines.values),
-              // markers: widget.markers ?? {},
-              // polylines: widget.polyline != null ? {widget.polyline!} : {},
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              myLocationEnabled: true,
-              trafficEnabled: true,
-              myLocationButtonEnabled: false,
-              padding: EdgeInsets.only(
-                bottom: screenHeight * 0.15,
-                right: screenWidth * 0.1,
-              ),
-            ),
+      body: RepaintBoundary(
+        child: currentLocation == null
+            ? const Center(child: CircularProgressIndicator())
+            : GoogleMap(
+          onMapCreated: (controller) => mapController.complete(controller),
+          initialCameraPosition: CameraPosition(
+            target: currentLocation!,
+            zoom: 15.0,
+          ),
+          markers: buildMarkers(),
+          polylines: Set<Polyline>.of(polylines.values),
+          mapType: MapType.normal,
+          buildingsEnabled: false,
+          myLocationButtonEnabled: false,
+          indoorViewEnabled: false,
+          zoomControlsEnabled: false,
+          mapToolbarEnabled: false,
+          trafficEnabled: false,
+          rotateGesturesEnabled: true,
+          myLocationEnabled: true,
+          padding: EdgeInsets.only(
+            bottom: screenHeight * 0.15,
+            right: screenWidth * 0.1,
+          ),
+        ),
+      )
     );
   }
 }
