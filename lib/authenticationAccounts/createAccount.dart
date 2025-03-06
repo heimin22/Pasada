@@ -67,35 +67,6 @@ class CreateAccountScreen extends State<CAPage> {
 
   // internet connection
   final Connectivity connectivity = Connectivity();
-  // late StreamSubscription<ConnectivityResult> connectivitySubscription;
-  //
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   checkInitialConnectivity();
-  //   connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus) as StreamSubscription<ConnectivityResult>;
-  // }
-  //
-  // Future<void> checkInitialConnectivity() async {
-  //   final connectivityResult = await connectivity.checkConnectivity();
-  //   if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
-  // }
-  //
-  // void updateConnectionStatus(List<ConnectivityResult> result) {
-  //   if (result == ConnectivityResult.none) showNoInternetToast();
-  // }
-  //
-  // void showNoInternetToast() {
-  //   Fluttertoast.showToast(
-  //     msg: 'No internet connection detected',
-  //     toastLength: Toast.LENGTH_LONG,
-  //     gravity: ToastGravity.BOTTOM,
-  //     timeInSecForIosWeb: 1,
-  //     backgroundColor: Color(0xFFF2F2F2),
-  //     textColor: Color(0xFF121212),
-  //     fontSize: 16.0,
-  //   );
-  // }
 
   // sign up
   Future<void> SigningUp() async {
@@ -123,14 +94,6 @@ class CreateAccountScreen extends State<CAPage> {
       Navigator.pop(context);
     }
   }
-
-  // @override
-  // void dispose() {
-  //   emailController.dispose();
-  //   passwordController.dispose();
-  //   connectivitySubscription.cancel();
-  //   super.dispose();
-  // }
 
   @override
   Widget build(BuildContext context) {
