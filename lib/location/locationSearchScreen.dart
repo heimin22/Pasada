@@ -120,30 +120,30 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   }
 
 
-    void onPlaceSelected(AutocompletePrediction prediction) async {
-      final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
-      if (apiKey.isEmpty) return;
-      final uri = Uri.https(
-        "maps.googleapis.com",
-        "maps/api/place/details/json",
-        {
-          "place_id": prediction.placeID, // Ensure correct property name
-          "key": apiKey,
-          "fields": "geometry,name"
-        },
-      );
+  void onPlaceSelected(AutocompletePrediction prediction) async {
+    final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
+    if (apiKey.isEmpty) return;
+    final uri = Uri.https(
+      "maps.googleapis.com",
+      "maps/api/place/details/json",
+      {
+        "place_id": prediction.placeID, // Ensure correct property name
+        "key": apiKey,
+        "fields": "geometry,name"
+      },
+    );
 
-      final response = await NetworkUtility.fetchUrl(uri);
-      if (response != null) {
-        final data = json.decode(response);
-        final location = data['result']['geometry']['location'];
-        Navigator.pop(
-          context,
-          SelectedLocation(
-            address: prediction.description!,
-            coordinates: LatLng(location['lat'], location['lng']),
-          ),
-        );
+    final response = await NetworkUtility.fetchUrl(uri);
+    if (response != null) {
+      final data = json.decode(response);
+      final location = data['result']['geometry']['location'];
+      Navigator.pop(
+        context,
+        SelectedLocation(
+          address: prediction.description!,
+          coordinates: LatLng(location['lat'], location['lng']),
+        ),
+      );
     }
   }
 

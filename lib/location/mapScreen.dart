@@ -1,13 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:http/http.dart' as http;
 // import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+
+import 'networkUtilities.dart';
 // import 'package:pasada_passenger_app/location/locationButton.dart';
 // import 'selectedLocation.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
@@ -162,47 +166,88 @@ class MapScreenState extends State<MapScreen> {
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey == null) {
+        showDebugToast('API key not found');
+        if (kDebugMode) {
+          print('API key not found');
+        }
+        return;
+      }
       Fluttertoast.showToast(msg: "Generating route");
-      debugPrint('Start: $start\nEnd: $destination');
-
-      /// retrieve yung API key duon sa dotenv
-      final String? apiKey = dotenv.env["ANDROID_MAPS_API_KEY"];
-      if (apiKey == null || apiKey.isEmpty) {
-        showDebugToast("Missing API Key");
-        return;
-      }
-
       final polylinePoints = PolylinePoints();
-      PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: apiKey,
-        request: PolylineRequest(
-          origin: PointLatLng(start.latitude, start.longitude),
-          destination: PointLatLng(destination.latitude, destination.longitude),
-          mode: TravelMode.driving,
-        ),
-      );
 
-      if (result.points.isEmpty) {
-        showDebugToast('No route found: ${result.errorMessage}');
+      // routes API request
+      final uri = Uri.parse('https://routes.googleapis.com/directions/v2:computeRoutes');
+        final headers = {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+          'X-Goog-FieldMask': 'routes.distanceMeters',
+          'X-Goog-FieldMask': 'routes.duration',
+        };
+        final body = jsonEncode({
+          'origin': {
+            'location': {
+              'latLng': {
+                'latitude': start.latitude,
+                'longitude': start.longitude,
+              }
+            }
+          },
+          'destination': {
+            'location:': {
+              'latLng': {
+                'latitude': destination.latitude,
+                'longitude': destination.longitude,
+              }
+            }
+          },
+          'travelMode': 'DRIVE',
+          'polylineEncoding': 'ENCODED_POLYLINE',
+          'computeAlternativeRoutes': false,
+          'routingPreference': 'TRAFFIC_AWARE',
+        });
+
+      // ito naman na yung gagamitin yung NetworkUtility
+      final response = await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        showDebugToast('No response from the server');
+        if (kDebugMode) {
+          print('No response from the server');
+        }
         return;
       }
 
-      final polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
+      final data = json.decode(response);
 
-      setState(() {
-        polylines = {
-          const PolylineId("route"): Polyline(
-            polylineId: const PolylineId("route"),
-            color: const Color(0xFF5f3fc4),
-            points: polylineCoordinates,
-            width: 8,
-          )
-        };
-      });
+      if (response != null) {
+        final data = json.decode(response);
+        if (data.containsKey('routes')) {
+          final polyline = data['routes'][0]['polyline']['encodedPolyline'];
+          List<PointLatLng> decodedPolyline = polylinePoints.decodePolyline(polyline);
+          List<LatLng> polylineCoordinates = decodedPolyline.map((point) => LatLng(point.latitude, point.longitude)).toList();
 
-      showDebugToast('Route generated with ${polylineCoordinates.length} points');
+          setState(() {
+            polylines = {
+              const PolylineId('route'): Polyline(
+                polylineId: const PolylineId('route'),
+                points: polylineCoordinates,
+                color: Colors.green,
+                width: 8,
+              )
+            };
+          });
+
+          showDebugToast('Route generated successfully');
+          return;
+        }
+      }
+      showDebugToast('Failed to generate route');
+      if(kDebugMode) {
+        print('Failed to generate route: $response');
+      }
     }
     catch (e) {
       showDebugToast('Error: ${e.toString()}');
