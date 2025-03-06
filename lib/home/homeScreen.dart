@@ -3,6 +3,7 @@
 // import 'package:flutter/foundation.dart';
 // import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
@@ -179,22 +180,30 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
         elevation: 3,
         backgroundColor: Color(0xFFF5F5F5),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(screenWidth * 0.03),
+          borderRadius: BorderRadius.circular(screenWidth * 0.10),
         ),
         padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
         minimumSize: Size(double.infinity, screenHeight * 0.065),
       ),
       child: Row(
         children: [
-          Icon(Icons.search,
-              size: screenWidth * 0.06, color: Color(0xFF505050)),
-          SizedBox(width: screenWidth * 0.03),
+          /// add icon through svg asset
+          IconButton(
+            onPressed: () => Navigator.pushNamed(context, 'searchLocation'),
+            icon: SvgPicture.asset(
+              'assets/svg/pinpickup.svg',
+              height: 18,
+              width: 18,
+            ),
+          ),
+          SizedBox(width: screenWidth * 0.01),
           Expanded(
             child: Text(
-              'Where to?',
+              'Pick-up at?',
               style: TextStyle(
-                fontSize: screenWidth * 0.045,
-                color: Color(0xFF505050),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6D6D6D),
               ),
             ),
           )
@@ -205,6 +214,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   Widget buildLocationContainer(BuildContext context, double screenWidth,
       double padding, double iconSize) {
+    String svgAssetPickup = 'assets/svg/pinpickup.svg';
+    String svgAssetDropOff = 'assets/svg/locationPin.svg';
+
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
@@ -221,23 +233,26 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          buildLocationRow(Icons.my_location, selectedPickUpLocation, true,
-              screenWidth, iconSize),
+          buildLocationRow(svgAssetPickup, selectedPickUpLocation, true, screenWidth, iconSize),
           const Divider(),
-          buildLocationRow(Icons.my_location, selectedDropOffLocation, false,
+          buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
               screenWidth, iconSize)
         ],
       ),
     );
   }
 
-  Widget buildLocationRow(IconData icon, SelectedLocation? location,
+  Widget buildLocationRow(String svgAsset, SelectedLocation? location,
       bool isPickup, double screenWidth, double iconSize) {
     return InkWell(
       onTap: () => navigateToSearch(context, isPickup),
       child: Row(
         children: [
-          Icon(icon, size: iconSize, color: Colors.green),
+          SvgPicture.asset(
+            svgAsset,
+            height: 24,
+            width: 24,
+          ),
           SizedBox(width: screenWidth * 0.03),
           Expanded(
             child: Text(
@@ -245,7 +260,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                   (isPickup ? 'Pick-up location' : 'Drop-off location'),
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
