@@ -279,11 +279,6 @@ class MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // combine na lahat ng markers
-    // final markers = <Marker> {
-    //   if (selectedPickupMarker != null) selectedPickupMarker!,
-    //   if (selectedDropOffMarker != null) selectedDropOffMarker!,
-    // };
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
