@@ -76,7 +76,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      if (args!['accountCreated'] == true) {
+      if (args?['accountCreated'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Account created successfully!')),
         );
