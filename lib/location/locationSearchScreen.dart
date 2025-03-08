@@ -103,7 +103,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           leading: Padding(
             padding: const EdgeInsets.only(left: 17),
             child: CircleAvatar(
-              backgroundColor: Color(0xFFDADADA),
+              backgroundColor: Color(0xFFf5f5f5),
               radius: 15,
               child: SvgPicture.asset(
                 'assets/svg/navigation.svg',
@@ -204,6 +204,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               ),
             ),
           ],
-        ));
+        ),
+    );
   }
+
+
+
 }

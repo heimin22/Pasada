@@ -246,23 +246,58 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       bool isPickup, double screenWidth, double iconSize) {
     return InkWell(
       onTap: () => navigateToSearch(context, isPickup),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SvgPicture.asset(
-            svgAsset,
-            height: 24,
-            width: 24,
-          ),
-          SizedBox(width: screenWidth * 0.03),
-          Expanded(
-            child: Text(
-              location?.address ??
-                  (isPickup ? 'Pick-up location' : 'Drop-off location'),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+          if (isPickup) ...[
+            Row(
+              children: [
+                Text(
+                  "Total Fare: ",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: Color(0xFF121212),
+                  ),
+                ),
+              ],
             ),
+            SizedBox(height: screenWidth * 0.02),
+            Row(
+              children: [
+                Text(
+                  "Passenger Count: ",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: Color(0xFF121212),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: screenWidth * 0.08)
+          ],
+          Row(
+            children: [
+              SvgPicture.asset(
+                svgAsset,
+                height: 24,
+                width: 24,
+              ),
+              SizedBox(width: screenWidth * 0.03),
+              Expanded(
+                child: Text(
+                  location?.address ??
+                      (isPickup ? 'Pick-up location' : 'Drop-off location'),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
