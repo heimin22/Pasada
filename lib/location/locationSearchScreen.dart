@@ -145,15 +145,23 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                     placeAutocomplete(value);
                   },
                   textInputAction: TextInputAction.search,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF121212),
+                  ),
                   decoration: InputDecoration(
                     fillColor: Color(0xFFf5f5f5),
                     border: InputBorder.none,
                     hintText: 'Search location',
                     hintStyle: TextStyle(
                       fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
                     ),
                     prefixIcon: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       child: SvgPicture.asset(
                         'assets/svg/locationPin.svg',
                         height: 12,
@@ -201,6 +209,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
                 label: const Text(
                   'Use My Current Location',
+                  style: TextStyle(
+                    color: Color(0xFF121212),
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFFDADADA),
@@ -269,6 +282,13 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     }
     return null;
   }
+
+  Widget pinFromTheMaps() {
+    return Container(
+
+    );
+  }
+
 
   @override
   void dispose() {

@@ -134,17 +134,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 bottomPadding: (containerHeight + bottomNavBarHeight + 4) /
                     MediaQuery.of(context).size.height,
               ),
-              // Search bar
-              // Positioned(
-              //   top: screenHeight * 0.08,
-              //   left: responsivePadding,
-              //   right: responsivePadding,
-              //   child: buildSearchBar(
-              //     context,
-              //     screenWidth,
-              //     screenHeight,
-              //   ),
-              // ),
 
               Positioned(
                 bottom: bottomNavBarHeight,
@@ -183,46 +172,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget buildSearchBar(
-      BuildContext context, double screenWidth, double screenHeight) {
-    return ElevatedButton(
-      onPressed: () => Navigator.pushNamed(context, 'searchLocation'),
-      style: ElevatedButton.styleFrom(
-        elevation: 3,
-        backgroundColor: Color(0xFFF5F5F5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(screenWidth * 0.10),
-        ),
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04),
-        minimumSize: Size(double.infinity, screenHeight * 0.065),
-      ),
-      child: Row(
-        children: [
-          /// add icon through svg asset
-          IconButton(
-            onPressed: () => Navigator.pushNamed(context, 'searchLocation'),
-            icon: SvgPicture.asset(
-              'assets/svg/pinpickup.svg',
-              height: 18,
-              width: 18,
-            ),
-          ),
-          SizedBox(width: screenWidth * 0.01),
-          Expanded(
-            child: Text(
-              'Pick-up at?',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6D6D6D),
-              ),
-            ),
-          )
-        ],
       ),
     );
   }
@@ -345,8 +294,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   }
 
   void navigateToSearch(BuildContext context, bool isPickup) async {
-    final result = await Navigator.push(
-      context,
+    final result = await Navigator.of(
+      context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => SearchLocationScreen(isPickup: isPickup),
       ),
