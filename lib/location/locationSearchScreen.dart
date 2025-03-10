@@ -100,6 +100,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      /// searching location label
         appBar: AppBar(
           backgroundColor: Color(0xFFF5F5F5),
           elevation: 4,
@@ -168,6 +169,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               thickness: 4,
               color: Color(0xFFE9E9E9),
             ),
+            if (widget.isPickup) ...[
             Padding(
               padding: const EdgeInsets.all(16.0),
               // padding: const EdgeInsets.all(ShimmerEffect.defaultPadding) ,
@@ -177,20 +179,21 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
                   // get current position
                   try {
-                    final LocationData locationData = await locationService.getLocation();
-                    final LatLng currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+                    final LocationData locationData =
+                        await locationService.getLocation();
+                    final LatLng currentLatLng =
+                        LatLng(locationData.latitude!, locationData.longitude!);
 
                     // get address using reverse geocoding
-                    final SelectedLocation? currentLocation = await reverseGeocode(currentLatLng);
+                    final SelectedLocation? currentLocation =
+                        await reverseGeocode(currentLatLng);
 
                     if (currentLocation != null && mounted) {
                       Navigator.pop(context, currentLocation);
                     }
-                  }
-                  catch (e) {
+                  } catch (e) {
                     debugPrint("Error getting location: $e");
                   }
-
                 },
                 icon: SvgPicture.asset(
                   'assets/svg/navigation.svg',
@@ -212,7 +215,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
-            const Divider(
+          ],
+          const Divider(
               height: 0,
               thickness: 4,
               color: Color(0xFFE9E9E9),
