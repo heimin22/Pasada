@@ -4,6 +4,7 @@
 // import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:pasada_passenger_app/home/main.dart';
 
 // import 'package:flutter_dotenv/flutter_dotenv.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
@@ -51,7 +52,8 @@ class HomeScreen extends StatelessWidget {
       home: const HomeScreenStateful(),
       routes: <String, WidgetBuilder>{
         'map': (BuildContext context) => const MapScreen(),
-        'searchLocation': (BuildContext context) => const SearchLocationScreen(isPickup: true),
+        'searchLocation': (BuildContext context) =>
+            const SearchLocationScreen(isPickup: true),
       },
     );
   }
@@ -76,6 +78,12 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   SelectedLocation? selectedDropOffLocation;
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
 
+  List<String> splitLocation(String location) {
+    final List<String> parts = location.split(',');
+    if (parts.length < 2) return [location, ''];
+    return [parts[0], parts.sublist(1).join(', ')];
+  }
+
   /// Update yung proper location base duon sa search type
   void updateLocation(SelectedLocation location, bool isPickup) {
     setState(() {
@@ -96,7 +104,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   }
 
   void measureContainer() {
-    final RenderBox? box = containerKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? box =
+        containerKey.currentContext?.findRenderObject() as RenderBox?;
     if (box != null) {
       setState(() {
         containerHeight = box.size.height;
@@ -122,7 +131,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 key: mapScreenKey,
                 pickUpLocation: selectedPickUpLocation?.coordinates,
                 dropOffLocation: selectedDropOffLocation?.coordinates,
-                bottomPadding: (containerHeight + bottomNavBarHeight + 4) / MediaQuery.of(context).size.height,
+                bottomPadding: (containerHeight + bottomNavBarHeight + 4) /
+                    MediaQuery.of(context).size.height,
               ),
               // Search bar
               Positioned(
@@ -233,7 +243,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          buildLocationRow(svgAssetPickup, selectedPickUpLocation, true, screenWidth, iconSize),
+          buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
+              screenWidth, iconSize),
           const Divider(),
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
               screenWidth, iconSize)
@@ -244,6 +255,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   Widget buildLocationRow(String svgAsset, SelectedLocation? location,
       bool isPickup, double screenWidth, double iconSize) {
+    // split address into two parts
+    List<String> locationParts = location != null ? splitLocation(location.address) : ['' , ''];
+
     return InkWell(
       onTap: () => navigateToSearch(context, isPickup),
       child: Column(
@@ -257,7 +271,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
-                    fontSize: 18,
+                    fontSize: 15,
                     color: Color(0xFF121212),
                   ),
                 ),
@@ -271,7 +285,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
-                    fontSize: 18,
+                    fontSize: 16,
                     color: Color(0xFF121212),
                   ),
                 ),
@@ -288,13 +302,34 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
               ),
               SizedBox(width: screenWidth * 0.03),
               Expanded(
-                child: Text(
-                  location?.address ??
-                      (isPickup ? 'Pick-up location' : 'Drop-off location'),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    /// Landmark
+                    Text(
+                      location != null
+                          ? locationParts[0]
+                          : (isPickup ? 'Pick-up location' : 'Drop-off location'),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF121212),
+                      ),
+                    ),
+                    /// Address
+                    if (locationParts[1].isNotEmpty) ...[
+                      Text(
+                        locationParts[1],
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF515151),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],

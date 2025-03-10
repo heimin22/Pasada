@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
@@ -171,7 +172,26 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               padding: const EdgeInsets.all(16.0),
               // padding: const EdgeInsets.all(ShimmerEffect.defaultPadding) ,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () async {
+                  final Location locationService = Location();
+
+                  // get current position
+                  try {
+                    final LocationData locationData = await locationService.getLocation();
+                    final LatLng currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+
+                    // get address using reverse geocoding
+                    final SelectedLocation? currentLocation = await reverseGeocode(currentLatLng);
+
+                    if (currentLocation != null && mounted) {
+                      Navigator.pop(context, currentLocation);
+                    }
+                  }
+                  catch (e) {
+                    debugPrint("Error getting location: $e");
+                  }
+
+                },
                 icon: SvgPicture.asset(
                   'assets/svg/navigation.svg',
                   height: 16,
@@ -217,6 +237,34 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     );
   }
 
+  Future<SelectedLocation?> reverseGeocode(LatLng position) async {
+    final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
+    final uri = Uri.https("maps.googleapis.com", "maps/api/geocode/json", {
+      "latlng": "${position.latitude},${position.longitude}",
+      "key": apiKey,
+    });
 
+    try {
+      final response = await NetworkUtility.fetchUrl(uri);
+      if (response == null) return null;
 
+      final data = json.decode(response);
+      if (data['results'] != null && data['results'].isNotEmpty) {
+        return SelectedLocation(
+          address: data['results'][0]['formatted_address'],
+          coordinates: position,
+        );
+      }
+    } catch (e) {
+      debugPrint("Error in reverseGeocode: $e");
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    searchController.removeListener(onSearchChanged);
+    searchController.dispose();
+    super.dispose();
+  }
 }
