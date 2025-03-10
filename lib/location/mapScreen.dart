@@ -21,8 +21,9 @@ import 'networkUtilities.dart';
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
+  final double bottomPadding;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation});
+  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13});
 
   @override
   State<MapScreen> createState() => MapScreenState();
@@ -354,6 +355,10 @@ class MapScreenState extends State<MapScreen> {
                 ),
                 markers: buildMarkers(),
                 polylines: Set<Polyline>.of(polylines.values),
+                padding: EdgeInsets.only(
+                  bottom: screenHeight * widget.bottomPadding,
+                  left: screenWidth * 0.04,
+                ),
                 mapType: MapType.normal,
                 buildingsEnabled: false,
                 myLocationButtonEnabled: false,
@@ -363,10 +368,6 @@ class MapScreenState extends State<MapScreen> {
                 trafficEnabled: false,
                 rotateGesturesEnabled: true,
                 myLocationEnabled: true,
-                padding: EdgeInsets.only(
-                  bottom: screenHeight * 0.15,
-                  right: screenWidth * 0.3,
-                ),
               ),
       ),
     );

@@ -122,8 +122,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 key: mapScreenKey,
                 pickUpLocation: selectedPickUpLocation?.coordinates,
                 dropOffLocation: selectedDropOffLocation?.coordinates,
+                bottomPadding: (containerHeight + bottomNavBarHeight + 4) / MediaQuery.of(context).size.height,
               ),
-
               // Search bar
               Positioned(
                 top: screenHeight * 0.08,

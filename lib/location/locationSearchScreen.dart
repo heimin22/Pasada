@@ -100,6 +100,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
+          backgroundColor: Color(0xFFF5F5F5),
+          elevation: 4,
           leading: Padding(
             padding: const EdgeInsets.only(left: 17),
             child: CircleAvatar(
@@ -115,17 +117,17 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           title: Text(
             'Set ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
             style: TextStyle(
-              color: Color(0xFF000000),
+              color: Color(0xFF121212),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
           actions: [
             CircleAvatar(
-              backgroundColor: Color(0xFFDADADA),
+              backgroundColor: Color(0xFFF5F5F5),
               child: IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Color(0xFF000000)),
+                icon: const Icon(Icons.close, color: Color(0xFF121212)),
               ),
             ),
             const SizedBox(width: 16)
@@ -166,7 +168,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               color: Color(0xFFE9E9E9),
             ),
             Padding(
-              padding: const EdgeInsets.all(ShimmerEffect.defaultPadding),
+              padding: const EdgeInsets.all(16.0),
+              // padding: const EdgeInsets.all(ShimmerEffect.defaultPadding) ,
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: SvgPicture.asset(
@@ -195,11 +198,17 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               color: Color(0xFFE9E9E9),
             ),
             Expanded(
-              child: ListView.builder(
-                itemCount: placePredictions.length,
-                itemBuilder: (context, index) => LocationListTile(
-                  press: () => onPlaceSelected(placePredictions[index]),
-                  location: placePredictions[index].description?.toString() ?? 'Unknown',
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width,
+                child: ListView.builder(
+                  itemCount: placePredictions.length,
+                  itemBuilder: (context, index) => SizedBox(
+                    height: 57,
+                    child: LocationListTile(
+                      press: () => onPlaceSelected(placePredictions[index]),
+                      location: placePredictions[index].description?.toString() ?? 'Unknown',
+                    ),
+                  ),
                 ),
               ),
             ),
