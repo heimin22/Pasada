@@ -249,6 +249,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       if (response == null) return null;
 
       final data = json.decode(response);
+      if (data['status'] == 'REQUEST_DENIED') {
+        debugPrint("Request denied: ${data['error_message']}");
+        return null;
+      }
+
       if (data['results'] != null && data['results'].isNotEmpty) {
         return SelectedLocation(
           address: data['results'][0]['formatted_address'],

@@ -53,6 +53,9 @@ class MapScreenState extends State<MapScreen> {
   // optional, show a marker sa current location
   LatLng? currentPosition;
 
+  // animation ng location to kapag pinindot yung Location FAB
+  bool isAnimatingLocation = false;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +87,17 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
+  void pulseCurrentLocationMarker() {
+    setState(() => isAnimatingLocation = true);
+
+    // reset ng animation after ng delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => isAnimatingLocation = false);
+      }
+    });
+  }
+
   Future<void> initLocation() async {
     await location.getLocation().then((location) {
       setState(() =>
@@ -93,6 +107,21 @@ class MapScreenState extends State<MapScreen> {
       setState(() =>
           currentLocation = LatLng(location.latitude!, location.longitude!));
     });
+  }
+
+  // animate yung camera papunta sa current location ng user
+  Future<void> animateToLocation(LatLng target) async {
+    final GoogleMapController controller = await mapController.future;
+    controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: target,
+          zoom: 17.0,
+        )
+      ),
+    );
+
+    pulseCurrentLocationMarker();
   }
 
   Future<void> getLocationUpdates() async {

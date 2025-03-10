@@ -135,16 +135,16 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                     MediaQuery.of(context).size.height,
               ),
               // Search bar
-              Positioned(
-                top: screenHeight * 0.08,
-                left: responsivePadding,
-                right: responsivePadding,
-                child: buildSearchBar(
-                  context,
-                  screenWidth,
-                  screenHeight,
-                ),
-              ),
+              // Positioned(
+              //   top: screenHeight * 0.08,
+              //   left: responsivePadding,
+              //   right: responsivePadding,
+              //   child: buildSearchBar(
+              //     context,
+              //     screenWidth,
+              //     screenHeight,
+              //   ),
+              // ),
 
               Positioned(
                 bottom: bottomNavBarHeight,
@@ -157,7 +157,12 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                     // Location FAB
                     LocationFAB(
                       heroTag: "homeLocationFAB",
-                      onPressed: () => mapScreenKey.currentState,
+                      onPressed: () {
+                        final mapState = mapScreenKey.currentState;
+                        if (mapState != null && mapState.currentLocation != null) {
+                          mapState.animateToLocation(mapState.currentLocation!);
+                        }
+                      },
                       iconSize: iconSize,
                       buttonSize: screenWidth * 0.12,
                     ),
