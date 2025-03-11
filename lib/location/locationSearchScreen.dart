@@ -285,10 +285,51 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   Widget pinFromTheMaps() {
     return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF121212),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal:16, vertical: 12),
+      child: ElevatedButton(
+        onPressed: () {
 
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Color(0xFFF5F5F5),
+          foregroundColor: const Color(0xFF121212),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(0)
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.map, size: 20,),
+            const SizedBox(width: 8),
+            Text(
+              "Choose on Maps",
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Color(0xFF121212),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-
 
   @override
   void dispose() {
