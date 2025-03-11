@@ -180,7 +180,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
       double padding, double iconSize) {
     String svgAssetPickup = 'assets/svg/pinpickup.svg';
     String svgAssetDropOff = 'assets/svg/locationPin.svg';
-
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(

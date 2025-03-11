@@ -154,7 +154,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   decoration: InputDecoration(
                     fillColor: Color(0xFFf5f5f5),
                     border: InputBorder.none,
-                    hintText: 'Search location',
+                    hintText: 'Search Location',
                     hintStyle: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -216,7 +216,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFDADADA),
+                  backgroundColor: Color(0xFFFFCE21),
                   foregroundColor: Color(0xFF000000),
                   elevation: 0,
                   padding:
@@ -249,6 +249,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
+            pinFromTheMaps(),
           ],
         ),
     );
@@ -288,11 +289,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
         boxShadow: [
           BoxShadow(
-            color: Color(0xFF121212),
-            blurRadius: 8,
+            color: Color(0xFFD2D2D2),
+            blurRadius: 10,
             spreadRadius: 2,
           ),
         ],
@@ -314,14 +315,14 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.map, size: 20,),
+            Icon(Icons.map, size: 20),
             const SizedBox(width: 8),
             Text(
-              "Choose on Maps",
+              "Pin on Maps",
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w600,
-                fontSize: 13,
+                fontSize: 15,
                 color: Color(0xFF121212),
               ),
             ),

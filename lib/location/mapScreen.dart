@@ -280,7 +280,7 @@ class MapScreenState extends State<MapScreen> {
               const PolylineId('route'): Polyline(
                 polylineId: const PolylineId('route'),
                 points: polylineCoordinates,
-                color: Colors.green,
+                color: Color(0xFFD7481D),
                 width: 8,
               )
             };
