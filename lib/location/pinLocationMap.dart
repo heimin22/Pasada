@@ -170,7 +170,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final responsivePadding = screenWidth * 0.02;
+    final fabVerticalSpacing = 10.0;
 
     if (isLoading) {
       return Scaffold(
@@ -185,6 +188,16 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     return Scaffold(
       body: Stack(
         children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.07,
+              left: MediaQuery.of(context).size.height * 0.01,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: buildBackButton(),
+            ),
+          ),
           GoogleMap(
             onMapCreated: (controller) => mapController = controller,
             initialCameraPosition: CameraPosition(
@@ -207,18 +220,25 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
 
           Positioned(
-            right: 20,
-            bottom: MediaQuery.of(context).size.height * 0.03,
-            child: LocationFAB(
-              onPressed: animateToCurrentLocation,
-              icon: Icons.gps_fixed,
-              iconColor: const Color(0xFF067837),
-              backgroundColor: Colors.white,
-              buttonSize: 48,
-              heroTag: "pinLocationFAB",
+            right: responsivePadding,
+            bottom: screenHeight * 0.13 + fabVerticalSpacing,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                LocationFAB (
+                  heroTag: "pinLocationFAB",
+                  onPressed: animateToCurrentLocation,
+                  icon: Icons.gps_fixed,
+                  iconColor: const Color(0xFF067837),
+                  backgroundColor: Colors.white,
+                  buttonSize: screenWidth * 0.12,
+                  iconSize: screenWidth * 0.06,
+                ),
+                SizedBox(height: fabVerticalSpacing),
+              ],
             ),
           ),
-
           Align(
             alignment: Alignment.bottomCenter,
             child: pinnedLocationContainer(screenWidth),

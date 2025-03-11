@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/networkUtilities.dart';
+import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
 // import 'package:pasada_passenger_app/home/selectionScreen.dart';
@@ -301,7 +302,15 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       padding: const EdgeInsets.symmetric(horizontal:16, vertical: 12),
       child: ElevatedButton(
         onPressed: () {
-
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PinLocationStateful(isPickup: widget.isPickup),
+            ),
+          ).then((result) {
+            if (result != null && result is SelectedLocation) {
+              Navigator.pop(context, result);
+            }
+          });
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Color(0xFFF5F5F5),
