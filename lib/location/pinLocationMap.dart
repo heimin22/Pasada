@@ -188,14 +188,19 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     return Scaffold(
       body: Stack(
         children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height * 0.07,
-              left: MediaQuery.of(context).size.height * 0.01,
-            ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: buildBackButton(),
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.07,
+            left: MediaQuery.of(context).size.width * 0.03, // Use width for horizontal positioning
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white, // Add background
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
+                color: Color(0xFFF5F5F5),
+              ),
             ),
           ),
           GoogleMap(
@@ -244,18 +249,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             child: pinnedLocationContainer(screenWidth),
           ),
         ],
-      ),
-    );
-  }
-
-  Container buildBackButton() {
-    return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-      child: IconButton(
-        onPressed: () {
-          Navigator.pushNamed(context, 'start');
-        },
-        icon: Icon(Icons.arrow_back),
       ),
     );
   }
