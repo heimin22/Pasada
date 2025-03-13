@@ -92,7 +92,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
     isMapReady = true;
-    getCurrentLocation();
+
+    Future.delayed(Duration(milliseconds: 300), () {
+      getCurrentLocation();
+    });
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -138,6 +141,20 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   }
 
+  // try natin gumawa ng method para mas accurate yung sentro ng map
+  Future<LatLng> getMapCenter() async {
+    if (!isMapReady || mapController == null) {
+      return currentLocation ?? const LatLng(14.617494, 120.971770);
+    }
+
+    final visibleRegion = await mapController!.getVisibleRegion();
+    // calculate natin yung exact center
+    final centerLat = (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2;
+    final centerLng = (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2;
+
+    return LatLng(centerLat, centerLng);
+  }
+
   // papalitan ko yung snapToLandmark method kasi ang panget gago
   // try ko yung sa implementation ng Grab
   Future<void> fetchLocationAtCenter() async {
@@ -152,14 +169,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         addressNotifier.value = "Searching...";
       });
 
+      final center = await getMapCenter();
 
-      final visibleRegion = await mapController!.getVisibleRegion();
-      final center = LatLng(
-        (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) /
-            2,
-        (visibleRegion.northeast.longitude +
-            visibleRegion.southwest.longitude) / 2,
-      );
+      debugPrint("Map Center: ${center.latitude}, ${center.longitude}");
 
       // update pinnedLocation duon sa center ng map
       /// PUTANGINAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -263,8 +275,15 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   Future<void> animateToCurrentLocation() async {
     try {
+      setState(() => isLoading = true);
+
       final locationData = await locationService.getLocation();
       final currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+
+      setState(() {
+        currentLocation = currentLatLng;
+        isLoading = false;
+      });
 
       await mapController.animateCamera(
         CameraUpdate.newLatLngZoom(
@@ -274,6 +293,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
     catch (e) {
       debugPrint("Error in animateToCurrentLocation: $e");
+      setState(() => isLoading = false);
     }
   }
 
@@ -318,7 +338,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             ),
             onMapCreated: onMapCreated,
             onTap: (position) {
-              mapController.animateCamera(
+              mapController?.animateCamera(
                 CameraUpdate.newLatLng(position),
               );
             },
@@ -335,21 +355,19 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                 setState(() => isFindingLandmark = false);
               }
             },
-            onCameraIdle: fetchLocationAtCenter,
+            onCameraIdle: () {
+              fetchLocationAtCenter();
+            },
           ),
 
-          // center pin marker
-          Positioned(
-            left: MediaQuery.of(context).size.width / 2 - 24,
-            top: MediaQuery.of(context).size.height / 2 - 48,
-            child: AnimatedSwitcher(
-              duration: Duration(milliseconds: 500),
-              child: isSnapping
-                ? CircularProgressIndicator(color: Color(0xFF067837))
-                  : Icon(
-                    Icons.location_pin,
-                    color: Color(0xFFFFCE21),
-                    size: 48,
+          Center(
+            child: Container(
+              // Offset it slightly to account for bottom sheet
+              margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.15),
+              child: Icon(
+                Icons.location_pin,
+                color: Color(0xFFFFCE21),
+                size: 48,
               ),
             ),
           ),
