@@ -1,21 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/location/landmarkServices.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import '../location/locationSearchScreen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/networkUtilities.dart';
-import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
-import 'locationListTile.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -74,6 +67,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   // landmark name
   String landmarkName = '';
 
+  LatLng? snappedLocation;
+  bool isSnapping = false;
+  bool isMapReady = false;
+
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
     if (parts.length < 2) return [location, ''];
@@ -94,7 +91,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
-    updateLocation();
+    isMapReady = true;
+    getCurrentLocation();
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -140,30 +138,98 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   }
 
+  // papalitan ko yung snapToLandmark method kasi ang panget gago
+  // try ko yung sa implementation ng Grab
+  Future<void> fetchLocationAtCenter() async {
+    if (!isMapReady || mapController == null) {
+      debugPrint("Map not ready");
+      return;
+    }
+
+    try {
+      setState(() {
+        isFindingLandmark = true;
+        addressNotifier.value = "Searching...";
+      });
+
+
+      final visibleRegion = await mapController!.getVisibleRegion();
+      final center = LatLng(
+        (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) /
+            2,
+        (visibleRegion.northeast.longitude +
+            visibleRegion.southwest.longitude) / 2,
+      );
+
+      // update pinnedLocation duon sa center ng map
+      /// PUTANGINAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+      setState(() => pinnedLocation = center);
+
+      // try to get a landmark first para mas maayos yung UX
+      final landmark = await LandmarkService.getNearestLandmark(center);
+
+      if (landmark != null && mounted) {
+        // nakahanap ng landmark, pero wag muna igalaw yung mapa duon
+        // update lang muna ng information display
+        setState(() {
+          landmarkName = landmark['name'];
+          addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
+          isFindingLandmark = false;
+        });
+        return;
+      }
+
+      // kapag walang nahanap na landmark, fall back to reverse geocoding
+      final location = await reverseGeocode(center);
+      if (mounted) {
+        setState(() {
+          addressNotifier.value =
+              location?.address ?? "Unable to find location";
+          isFindingLandmark = false;
+        });
+      }
+    }
+    catch (e) {
+      debugPrint("Error fetching location: $e");
+      if (mounted) {
+        setState(() {
+          addressNotifier.value = "Error finding location";
+          isFindingLandmark = false;
+        });
+      }
+    }
+  }
+
   Future<void> getCurrentLocation() async {
     try {
       // get current location
-      LocationData locationData = await locationService.getLocation();
-      setState(() {
-        currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
-        isLoading = false;
-      });
+      final LocationData locationData = await locationService.getLocation();
+      final newLocation = LatLng(
+        locationData.latitude! ?? 14.617494,
+        locationData.longitude! ?? 120.971770,
+      );
 
-      // initialize map position
-      if (currentLocation != null) {
-        mapController.animateCamera(
+      if (mounted) {
+        setState(() {
+          pinnedLocation = newLocation;
+          currentLocation = newLocation;
+          isLoading = false;
+        });
+      }
+
+      if (isMapReady && mapController != null) {
+        await mapController!.animateCamera(
           CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: currentLocation!,
-              zoom: 15,
-            ),
+            CameraPosition(target: newLocation, zoom: 15),
           ),
         );
+
+        fetchLocationAtCenter(); // Initial snap after load
       }
     }
     catch (e) {
       debugPrint("Error in getCurrentLocation: $e");
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -205,10 +271,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           currentLatLng, 17,
         ),
       );
-
-      // force update after animation completes
-      await Future.delayed(Duration(milliseconds: 500));
-      updateLocation();
     }
     catch (e) {
       debugPrint("Error in animateToCurrentLocation: $e");
@@ -255,28 +317,40 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               bottom: MediaQuery.of(context).size.height * 0.3,
             ),
             onMapCreated: onMapCreated,
-            onTap: handleMapTap,
+            onTap: (position) {
+              mapController.animateCamera(
+                CameraUpdate.newLatLng(position),
+              );
+            },
             initialCameraPosition: CameraPosition(
               target: currentLocation ?? const LatLng(14.617494, 120.971770),
               zoom: 15,
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
-            onCameraMove: (_) {
-              if (isFindingLandmark) return;
-              updateLocation();
+            onCameraMove: (position) {
+              // don't do anything when the camera is moving
+              // prevent na rin para walang jumping/snapping during movement
+              if (isFindingLandmark) {
+                setState(() => isFindingLandmark = false);
+              }
             },
-            onCameraIdle: () => updateLocation(),
+            onCameraIdle: fetchLocationAtCenter,
           ),
 
           // center pin marker
           Positioned(
             left: MediaQuery.of(context).size.width / 2 - 24,
             top: MediaQuery.of(context).size.height / 2 - 48,
-            child: Icon(
-              Icons.location_pin,
-              size: 48,
-              color: Color(0xFFFFCE21),
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: 500),
+              child: isSnapping
+                ? CircularProgressIndicator(color: Color(0xFF067837))
+                  : Icon(
+                    Icons.location_pin,
+                    color: Color(0xFFFFCE21),
+                    size: 48,
+              ),
             ),
           ),
 
@@ -331,11 +405,33 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              if (pinnedLocation != null) {
+              // check kapag nagsesearch pa rin
+              if (isFindingLandmark) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text("Still finding location, please wait a moment..."),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
+
+              // check kapag may valid location na mapapass back
+              if (pinnedLocation != null && addressNotifier.value.isNotEmpty && addressNotifier.value != "Searching..." && addressNotifier.value != "Searching for location..." && addressNotifier.value != "Unable to find location") {
+                Navigator.pop(context, SelectedLocation(address: addressNotifier.value, coordinates: pinnedLocation!));
+              }
+              else if (pinnedLocation != null) {
+                // may coordinates pero walang readable address
+                // use na lang ng generic address pukingina niyan
                 Navigator.pop(context, SelectedLocation(address: addressNotifier.value, coordinates: pinnedLocation!));
               }
               else {
-                addressNotifier.value = "Unable to find location";
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Unable to confirm this location. Please try a different area.'),
+                      duration: Duration(seconds: 3),
+                    )
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -356,84 +452,48 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   Widget buildLocationInfo() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (isFindingLandmark)
-          Row(
-            children: [
-              CircularProgressIndicator(color: Color(0xFF067837)),
-              SizedBox(width: 8),
-              Text("Finding nearest landmark...",
-                  style: TextStyle(color: Color(0xFF515151)))
-            ],
-          )
-        else if (landmarkName.isNotEmpty)
-          Text(landmarkName,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF121212),
-              )),
-        ValueListenableBuilder(
-            valueListenable: addressNotifier,
-            builder: (context, address, _) {
-              return Text(address,
-                  style: TextStyle(fontSize: 14, color: Color(0xFF515151)));
-            }),
-        if (pinnedLocation != null)
-          Text(
-            '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
-            '${pinnedLocation!.longitude.toStringAsFixed(6)}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF515151).withOpacity(0.7),
-            ),
-          ),
-      ],
+    return ValueListenableBuilder(
+      valueListenable: addressNotifier,
+      builder: (context, address, _) {
+        final bool isSearching = address == "Searching..." ||
+            address == "Searching for location..." ||
+            isFindingLandmark;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isSearching)
+              Row(
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF067837),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    "Finding location...",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF515151),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(
+                address.isNotEmpty ? address : "Move the map to select a location",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: address.isNotEmpty ? Color(0xFF121212) : Color(0xFF515151),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
-  // Widget buildLocationInfo() {
-  //   return ValueListenableBuilder(
-  //     valueListenable: addressNotifier,
-  //     builder: (context, address, _) {
-  //       final parts = splitLocation(address);
-  //       return Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           if (pinnedLocation != null) ...[
-  //               Text(
-  //                 '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
-  //                 '${pinnedLocation!.longitude.toStringAsFixed(6)}',
-  //                 style: const TextStyle(
-  //                   fontSize: 12,
-  //                   fontWeight: FontWeight.w700,
-  //                   color: Color(0xFF515151),
-  //                 ),
-  //               ),
-  //               SizedBox(height: 8),
-  //             ],
-  //             Text(
-  //               parts[0],
-  //             style: const TextStyle(
-  //               fontSize: 16,
-  //               fontWeight: FontWeight.w700,
-  //               color: Color(0xFF121212),
-  //             ),
-  //           ),
-  //           if (parts[1].isNotEmpty) ...[
-  //             Text(
-  //               parts[1],
-  //               style: const TextStyle(
-  //                 fontSize: 14,
-  //                 color: Color(0xFF515151)
-  //               ),
-  //             )
-  //           ],
-  //         ],
-  //       );
-  //     }
-  //   );
-  // }
 }
 
