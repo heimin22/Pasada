@@ -76,15 +76,32 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     mapController = controller;
     updateLocation();
   }
+
+  void handleMapTap(LatLng tappedPosition) async {
+    setState(() {
+      pinnedLocation = tappedPosition;
+      addressNotifier.value = "Searching...";
+    });
+
+    final location = await reverseGeocode(tappedPosition);
+    if (location != null) {
+      setState(() {
+        addressNotifier.value = location.address;
+        selectedPinnedLocation = location;
+      });
+    }
+    else {
+      setState(() => addressNotifier.value = "Location not found. Try again.");
+    }
+  }
   
   Future<void> updateLocation() async {
     if (mapController == null) return;
-    
-    final center = await mapController!.getLatLng(
-      ScreenCoordinate(
-          x: MediaQuery.of(context).size.width ~/ 2,
-          y: MediaQuery.of(context).size.height ~/ 2,
-      ),
+
+    final visibleRegion = await mapController!.getVisibleRegion();
+    final center  = LatLng(
+        (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
+        (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2,
     );
 
     final location = await reverseGeocode(center);
@@ -157,11 +174,15 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       final locationData = await locationService.getLocation();
       final currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
 
-      mapController.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: currentLatLng, zoom: 17)
+      await mapController.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          currentLatLng, 17,
         ),
       );
+
+      // force update after animation completes
+      await Future.delayed(Duration(milliseconds: 500));
+      updateLocation();
     }
     catch (e) {
       debugPrint("Error in animateToCurrentLocation: $e");
@@ -204,7 +225,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             ),
           ),
           GoogleMap(
-            onMapCreated: (controller) => mapController = controller,
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.3,
+            ),
+            onMapCreated: onMapCreated,
+            onTap: handleMapTap,
             initialCameraPosition: CameraPosition(
               target: currentLocation ?? const LatLng(14.617494, 120.971770),
               zoom: 15,
@@ -216,7 +241,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
 
           // center pin marker
-          const Center(
+          Positioned(
+            left: MediaQuery.of(context).size.width / 2 - 24,
+            top: MediaQuery.of(context).size.height / 2 - 48,
             child: Icon(
               Icons.location_pin,
               size: 48,
@@ -275,8 +302,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              if (selectedPinnedLocation != null) {
-                Navigator.pop(context, selectedPinnedLocation);
+              if (pinnedLocation != null) {
+                Navigator.pop(context, SelectedLocation(address: addressNotifier.value, coordinates: pinnedLocation!));
+              }
+              else {
+                addressNotifier.value = "Unable to find location";
               }
             },
             style: ElevatedButton.styleFrom(
@@ -304,8 +334,20 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              parts[0],
+            if (pinnedLocation != null) ...[
+                Text(
+                  '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
+                  '${pinnedLocation!.longitude.toStringAsFixed(6)}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF515151),
+                  ),
+                ),
+                SizedBox(height: 8),
+              ],
+              Text(
+                parts[0],
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -320,7 +362,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                   color: Color(0xFF515151)
                 ),
               )
-            ]
+            ],
           ],
         );
       }
