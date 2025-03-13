@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:pasada_passenger_app/location/landmarkServices.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
@@ -45,14 +46,33 @@ class PinLocationStateful extends StatefulWidget {
 }
 
 class _PinLocationStatefulState extends State<PinLocationStateful> {
+  // global key for the map
   final GlobalKey<MapScreenState> mapScreenKey = GlobalKey<MapScreenState>();
+
+  // map controller for map settings
   late GoogleMapController mapController;
+
+  // current location and pinned location
   LatLng? currentLocation;
   LatLng? pinnedLocation;
+
+  // location services
   final Location locationService = Location();
+
+  // selected pinned location
   SelectedLocation? selectedPinnedLocation;
+
+  // placeholder value for the location handler
   final ValueNotifier<String> addressNotifier = ValueNotifier('');
+
+  // loading ba nigga? (flag)
   bool isLoading = true;
+
+  // finding landmark flag
+  bool isFindingLandmark = false;
+
+  // landmark name
+  String landmarkName = '';
 
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
@@ -79,20 +99,26 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   void handleMapTap(LatLng tappedPosition) async {
     setState(() {
+      isFindingLandmark = true;
       pinnedLocation = tappedPosition;
       addressNotifier.value = "Searching...";
     });
 
-    final location = await reverseGeocode(tappedPosition);
-    if (location != null) {
+    await Future.delayed(Duration(seconds: 1));
+
+    final landmark = await LandmarkService.getNearestLandmark(tappedPosition);
+    if (landmark != null) {
       setState(() {
-        addressNotifier.value = location.address;
-        selectedPinnedLocation = location;
+        pinnedLocation = landmark['location'];
+        landmarkName = landmark['name'];
+        addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
       });
     }
     else {
-      setState(() => addressNotifier.value = "Location not found. Try again.");
+      final location = await reverseGeocode(tappedPosition);
+      addressNotifier.value = location?.address ?? "Unable to find location";
     }
+    setState(() => isFindingLandmark = false);
   }
   
   Future<void> updateLocation() async {
@@ -236,7 +262,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             ),
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
-            onCameraMove: (_) => updateLocation(),
+            onCameraMove: (_) {
+              if (isFindingLandmark) return;
+              updateLocation();
+            },
             onCameraIdle: () => updateLocation(),
           ),
 
@@ -327,46 +356,84 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   Widget buildLocationInfo() {
-    return ValueListenableBuilder(
-      valueListenable: addressNotifier,
-      builder: (context, address, _) {
-        final parts = splitLocation(address);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (pinnedLocation != null) ...[
-                Text(
-                  '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
-                  '${pinnedLocation!.longitude.toStringAsFixed(6)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF515151),
-                  ),
-                ),
-                SizedBox(height: 8),
-              ],
-              Text(
-                parts[0],
-              style: const TextStyle(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isFindingLandmark)
+          Row(
+            children: [
+              CircularProgressIndicator(color: Color(0xFF067837)),
+              SizedBox(width: 8),
+              Text("Finding nearest landmark...",
+                  style: TextStyle(color: Color(0xFF515151)))
+            ],
+          )
+        else if (landmarkName.isNotEmpty)
+          Text(landmarkName,
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF121212),
-              ),
+              )),
+        ValueListenableBuilder(
+            valueListenable: addressNotifier,
+            builder: (context, address, _) {
+              return Text(address,
+                  style: TextStyle(fontSize: 14, color: Color(0xFF515151)));
+            }),
+        if (pinnedLocation != null)
+          Text(
+            '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
+            '${pinnedLocation!.longitude.toStringAsFixed(6)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF515151).withOpacity(0.7),
             ),
-            if (parts[1].isNotEmpty) ...[
-              Text(
-                parts[1],
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFF515151)
-                ),
-              )
-            ],
-          ],
-        );
-      }
+          ),
+      ],
     );
   }
+  // Widget buildLocationInfo() {
+  //   return ValueListenableBuilder(
+  //     valueListenable: addressNotifier,
+  //     builder: (context, address, _) {
+  //       final parts = splitLocation(address);
+  //       return Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           if (pinnedLocation != null) ...[
+  //               Text(
+  //                 '${pinnedLocation!.latitude.toStringAsFixed(6)}, '
+  //                 '${pinnedLocation!.longitude.toStringAsFixed(6)}',
+  //                 style: const TextStyle(
+  //                   fontSize: 12,
+  //                   fontWeight: FontWeight.w700,
+  //                   color: Color(0xFF515151),
+  //                 ),
+  //               ),
+  //               SizedBox(height: 8),
+  //             ],
+  //             Text(
+  //               parts[0],
+  //             style: const TextStyle(
+  //               fontSize: 16,
+  //               fontWeight: FontWeight.w700,
+  //               color: Color(0xFF121212),
+  //             ),
+  //           ),
+  //           if (parts[1].isNotEmpty) ...[
+  //             Text(
+  //               parts[1],
+  //               style: const TextStyle(
+  //                 fontSize: 14,
+  //                 color: Color(0xFF515151)
+  //               ),
+  //             )
+  //           ],
+  //         ],
+  //       );
+  //     }
+  //   );
+  // }
 }
 
