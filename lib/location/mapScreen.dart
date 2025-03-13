@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
+
 // import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 import 'networkUtilities.dart';
+
 // import 'package:pasada_passenger_app/location/locationButton.dart';
 // import 'selectedLocation.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
@@ -19,8 +21,9 @@ import 'networkUtilities.dart';
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
+  final double bottomPadding;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation});
+  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13});
 
   @override
   State<MapScreen> createState() => MapScreenState();
@@ -49,6 +52,9 @@ class MapScreenState extends State<MapScreen> {
 
   // optional, show a marker sa current location
   LatLng? currentPosition;
+
+  // animation ng location to kapag pinindot yung Location FAB
+  bool isAnimatingLocation = false;
 
   @override
   void initState() {
@@ -81,13 +87,41 @@ class MapScreenState extends State<MapScreen> {
     }
   }
 
+  void pulseCurrentLocationMarker() {
+    setState(() => isAnimatingLocation = true);
+
+    // reset ng animation after ng delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => isAnimatingLocation = false);
+      }
+    });
+  }
+
   Future<void> initLocation() async {
     await location.getLocation().then((location) {
-      setState(() => currentLocation = LatLng(location.latitude!, location.longitude!));
+      setState(() =>
+          currentLocation = LatLng(location.latitude!, location.longitude!));
     });
     location.onLocationChanged.listen((location) {
-      setState(() => currentLocation = LatLng(location.latitude!, location.longitude!));
+      setState(() =>
+          currentLocation = LatLng(location.latitude!, location.longitude!));
     });
+  }
+
+  // animate yung camera papunta sa current location ng user
+  Future<void> animateToLocation(LatLng target) async {
+    final GoogleMapController controller = await mapController.future;
+    controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: target,
+          zoom: 17.0,
+        )
+      ),
+    );
+
+    pulseCurrentLocationMarker();
   }
 
   Future<void> getLocationUpdates() async {
@@ -121,29 +155,28 @@ class MapScreenState extends State<MapScreen> {
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       setState(() {
-        currentLocation = LatLng(locationData.latitude!, locationData.longitude!);
+        currentLocation =
+            LatLng(locationData.latitude!, locationData.longitude!);
       });
       // listen sa location updates
       location.onLocationChanged.listen((LocationData newLocation) {
         if (newLocation.latitude != null && newLocation.longitude != null) {
           setState(() {
-            currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
+            currentLocation =
+                LatLng(newLocation.latitude!, newLocation.longitude!);
           });
         }
       });
-    }
-    catch (e) {
+    } catch (e) {
       showError('An error occurred while fetching the location.');
     }
   }
-
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
     if (pickup != null) selectedPickupLatLng = pickup;
 
     if (dropoff != null) selectedDropOffLatLng = dropoff;
-
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
       generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
@@ -165,41 +198,43 @@ class MapScreenState extends State<MapScreen> {
       final polylinePoints = PolylinePoints();
 
       // routes API request
-      final uri = Uri.parse('https://routes.googleapis.com/directions/v2:computeRoutes');
-        final headers = {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-          // 'X-Goog-FieldMask': 'routes.distanceMeters',
-          // 'X-Goog-FieldMask': 'routes.duration',
-        };
-        final body = jsonEncode({
-          'origin': {
-            'location': {
-              'latLng': {
-                'latitude': start.latitude,
-                'longitude': start.longitude,
-              },
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+        // 'X-Goog-FieldMask': 'routes.distanceMeters',
+        // 'X-Goog-FieldMask': 'routes.duration',
+      };
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': start.latitude,
+              'longitude': start.longitude,
             },
           },
-          'destination': {
-            'location': {
-              'latLng': {
-                'latitude': destination.latitude,
-                'longitude': destination.longitude,
-              },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': destination.latitude,
+              'longitude': destination.longitude,
             },
           },
-          'travelMode': 'DRIVE',
-          'polylineEncoding': 'ENCODED_POLYLINE',
-          'computeAlternativeRoutes': false,
-          'routingPreference': 'TRAFFIC_AWARE',
-        });
+        },
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
 
-        debugPrint('Request Body: $body');
+      debugPrint('Request Body: $body');
 
       // ito naman na yung gagamitin yung NetworkUtility
-      final response = await NetworkUtility.postUrl(uri, headers: headers, body: body);
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
         showDebugToast('No response from the server');
@@ -234,15 +269,18 @@ class MapScreenState extends State<MapScreen> {
         final data = json.decode(response);
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-          List<PointLatLng> decodedPolyline = polylinePoints.decodePolyline(polyline);
-          List<LatLng> polylineCoordinates = decodedPolyline.map((point) => LatLng(point.latitude, point.longitude)).toList();
+          List<PointLatLng> decodedPolyline =
+              polylinePoints.decodePolyline(polyline);
+          List<LatLng> polylineCoordinates = decodedPolyline
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
 
           setState(() {
             polylines = {
               const PolylineId('route'): Polyline(
                 polylineId: const PolylineId('route'),
                 points: polylineCoordinates,
-                color: Colors.green,
+                color: Color(0xFFD7481D),
                 width: 8,
               )
             };
@@ -253,11 +291,10 @@ class MapScreenState extends State<MapScreen> {
         }
       }
       showDebugToast('Failed to generate route');
-      if(kDebugMode) {
+      if (kDebugMode) {
         print('Failed to generate route: $response');
       }
-    }
-    catch (e) {
+    } catch (e) {
       showDebugToast('Error: ${e.toString()}');
     }
   }
@@ -278,17 +315,17 @@ class MapScreenState extends State<MapScreen> {
   // helper function for showing alert dialogs to reduce repetition
   void showAlertDialog(String title, String content) {
     showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-              title: Text(title),
-              content: Text(content),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Confirm'),
-                ),
-              ],
-            ),
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -339,28 +376,29 @@ class MapScreenState extends State<MapScreen> {
         child: currentLocation == null
             ? const Center(child: CircularProgressIndicator())
             : GoogleMap(
-          onMapCreated: (controller) => mapController.complete(controller),
-          initialCameraPosition: CameraPosition(
-            target: currentLocation!,
-            zoom: 15.0,
-          ),
-          markers: buildMarkers(),
-          polylines: Set<Polyline>.of(polylines.values),
-          mapType: MapType.normal,
-          buildingsEnabled: false,
-          myLocationButtonEnabled: false,
-          indoorViewEnabled: false,
-          zoomControlsEnabled: false,
-          mapToolbarEnabled: false,
-          trafficEnabled: false,
-          rotateGesturesEnabled: true,
-          myLocationEnabled: true,
-          padding: EdgeInsets.only(
-            bottom: screenHeight * 0.15,
-            right: screenWidth * 0.1,
-          ),
-        ),
-      )
+                onMapCreated: (controller) =>
+                    mapController.complete(controller),
+                initialCameraPosition: CameraPosition(
+                  target: currentLocation!,
+                  zoom: 15.0,
+                ),
+                markers: buildMarkers(),
+                polylines: Set<Polyline>.of(polylines.values),
+                padding: EdgeInsets.only(
+                  bottom: screenHeight * widget.bottomPadding,
+                  left: screenWidth * 0.04,
+                ),
+                mapType: MapType.normal,
+                buildingsEnabled: false,
+                myLocationButtonEnabled: false,
+                indoorViewEnabled: false,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                trafficEnabled: false,
+                rotateGesturesEnabled: true,
+                myLocationEnabled: true,
+              ),
+      ),
     );
   }
 }

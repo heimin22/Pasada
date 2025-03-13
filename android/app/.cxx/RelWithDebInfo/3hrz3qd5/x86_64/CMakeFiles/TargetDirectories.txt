@@ -1,0 +1,2 @@
+C:/Projects/Pasada/pasada_passenger_app/android/app/.cxx/RelWithDebInfo/3hrz3qd5/x86_64/CMakeFiles/edit_cache.dir
+C:/Projects/Pasada/pasada_passenger_app/android/app/.cxx/RelWithDebInfo/3hrz3qd5/x86_64/CMakeFiles/rebuild_cache.dir
