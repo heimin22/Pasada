@@ -390,7 +390,7 @@ class MapScreenState extends State<MapScreen> {
                 markers: buildMarkers(),
                 polylines: Set<Polyline>.of(polylines.values),
                 padding: EdgeInsets.only(
-                  bottom: screenHeight * widget.bottomPadding,
+                  bottom: screenHeight * (widget.bottomPadding + 0.05),
                   left: screenWidth * 0.04,
                 ),
                 mapType: MapType.normal,
@@ -398,7 +398,7 @@ class MapScreenState extends State<MapScreen> {
                 myLocationButtonEnabled: false,
                 indoorViewEnabled: false,
                 zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
+                mapToolbarEnabled: true,
                 trafficEnabled: false,
                 rotateGesturesEnabled: true,
                 myLocationEnabled: true,

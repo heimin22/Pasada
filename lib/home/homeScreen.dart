@@ -131,7 +131,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 key: mapScreenKey,
                 pickUpLocation: selectedPickUpLocation?.coordinates,
                 dropOffLocation: selectedDropOffLocation?.coordinates,
-                bottomPadding: (containerHeight + bottomNavBarHeight + 4) /
+                bottomPadding: (containerHeight + bottomNavBarHeight + 70) /
                     MediaQuery.of(context).size.height,
               ),
 
