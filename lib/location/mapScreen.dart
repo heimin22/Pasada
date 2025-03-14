@@ -374,7 +374,12 @@ class MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: RepaintBoundary(
         child: currentLocation == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF067837),
+                ),
+              )
             : GoogleMap(
                 onMapCreated: (controller) =>
                     mapController.complete(controller),
