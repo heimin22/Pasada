@@ -45,8 +45,6 @@ class SettingsScreenStateful extends StatefulWidget {
 class SettingsScreenPageState extends State<SettingsScreenStateful> {
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       body: SafeArea(
         child: Stack(
