@@ -14,16 +14,14 @@ import 'package:location/location.dart';
 
 import 'networkUtilities.dart';
 
-// import 'package:pasada_passenger_app/location/locationButton.dart';
-// import 'selectedLocation.dart';
-// import 'package:pasada_passenger_app/home/homeScreen.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
   final double bottomPadding;
+  final Function(String)? onEtaUpdated;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13});
+  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13, this.onEtaUpdated});
 
   @override
   State<MapScreen> createState() => MapScreenState();
@@ -55,6 +53,8 @@ class MapScreenState extends State<MapScreen> {
 
   // animation ng location to kapag pinindot yung Location FAB
   bool isAnimatingLocation = false;
+
+  String? etaText;
 
   @override
   void initState() {
@@ -203,7 +203,7 @@ class MapScreenState extends State<MapScreen> {
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.duration',
         // 'X-Goog-FieldMask': 'routes.distanceMeters',
         // 'X-Goog-FieldMask': 'routes.duration',
       };
@@ -287,6 +287,12 @@ class MapScreenState extends State<MapScreen> {
           });
 
           showDebugToast('Route generated successfully');
+
+          final durationText = data['routes'][0]['legs']?[0]['duration']?['text'] ?? 'N/A';
+          setState(() => etaText = durationText);
+          if (widget.onEtaUpdated != null) {
+            widget.onEtaUpdated!(durationText);
+          }
           return;
         }
       }

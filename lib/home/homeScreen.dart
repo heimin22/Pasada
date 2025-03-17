@@ -76,6 +76,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   // GoogleMapController? mapController;
   SelectedLocation? selectedPickUpLocation;
   SelectedLocation? selectedDropOffLocation;
+  String etaText = '--';
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
 
   List<String> splitLocation(String location) {
@@ -133,6 +134,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 dropOffLocation: selectedDropOffLocation?.coordinates,
                 bottomPadding: (containerHeight + bottomNavBarHeight + 70) /
                     MediaQuery.of(context).size.height,
+                onEtaUpdated: (eta) {
+                  setState(() => etaText = eta);
+                },
               ),
 
               Positioned(
@@ -240,6 +244,30 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
                     color: Color(0xFF121212),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: screenWidth * 0.02),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "ETA: ",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: Color(0xFF121212),
+                  ),
+                ),
+                Text(
+                  etaText,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Color(0xFF515151),
                   ),
                 ),
               ],
