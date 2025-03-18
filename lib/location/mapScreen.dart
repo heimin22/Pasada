@@ -203,7 +203,7 @@ class MapScreenState extends State<MapScreen> {
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.duration',
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
         // 'X-Goog-FieldMask': 'routes.distanceMeters',
         // 'X-Goog-FieldMask': 'routes.duration',
       };
@@ -267,6 +267,8 @@ class MapScreenState extends State<MapScreen> {
 
       if (response != null) {
         final data = json.decode(response);
+        print('API Response: $data');
+        print('Routes; ${data['routes']}');
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
@@ -288,11 +290,34 @@ class MapScreenState extends State<MapScreen> {
 
           showDebugToast('Route generated successfully');
 
-          final durationText = data['routes'][0]['legs']?[0]['duration']?['text'] ?? 'N/A';
+          final legs = data['routes'][0]['legs'];
+          if (legs is! List || legs.isEmpty) {
+            debugPrint('Legs data is invalid: $legs');
+            setState(() => etaText = 'N/A');
+            return;
+          }
+
+          final firstLeg = legs[0];
+          final duration = firstLeg['duration'];
+          if (duration is! String || !duration.endsWith('s')) {
+            debugPrint('Invalid duration format: $duration');
+            setState(() => etaText = 'N/A');
+            return;
+          }
+
+          final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
+          final durationSeconds = int.tryParse(secondsString) ?? 0;
+          final durationText = formatDuration(durationSeconds);
+
           setState(() => etaText = durationText);
           if (widget.onEtaUpdated != null) {
             widget.onEtaUpdated!(durationText);
           }
+
+          // debug testing
+          debugPrint('API Response: ${json.encode(data)}'); // Full response
+          debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
+          debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
           return;
         }
       }
@@ -303,6 +328,25 @@ class MapScreenState extends State<MapScreen> {
     } catch (e) {
       showDebugToast('Error: ${e.toString()}');
     }
+  }
+
+  String formatDuration(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+
+    return hours > 0
+        ? '${hours}h ${minutes}m'
+        : minutes > 0
+            ? '$minutes mins'
+            : '<1 min';
+    //
+    // if (hours > 0) {
+    //   return '${hours}h ${minutes}m';
+    // } else if (minutes > 0) {
+    //   return '$minutes mins';
+    // } else {
+    //   return 'Less than a min';
+    // }
   }
 
   void showDebugToast(String message) {

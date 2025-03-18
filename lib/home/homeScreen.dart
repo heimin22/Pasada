@@ -278,8 +278,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
             children: [
               SvgPicture.asset(
                 svgAsset,
-                height: 24,
-                width: 24,
+                height: 18,
+                width: 18,
               ),
               SizedBox(width: screenWidth * 0.03),
               Expanded(
