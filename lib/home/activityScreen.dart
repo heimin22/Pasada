@@ -64,7 +64,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
       left: screenWidth * 0.05,
       right: screenWidth * 0.18,
       child: Text(
-        'Settings',
+        'Activity',
         style: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,

@@ -65,7 +65,7 @@ class ProfileScreenPageState extends State<ProfileScreenStateful> {
       left: screenWidth * 0.05,
       right: screenWidth * 0.18,
       child: Text(
-        'Settings',
+        'Profile',
         style: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
