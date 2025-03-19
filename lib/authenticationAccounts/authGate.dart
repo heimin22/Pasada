@@ -9,6 +9,7 @@ authenticated - main page
 
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -37,7 +38,8 @@ class AuthGate extends StatelessWidget {
           return selectionScreen();
         }
         else {
-          return LoginAccountPage();
+          return const PasadaHomePage(title: 'Pasada');
+          // return LoginAccountPage();
         }
       },
     );

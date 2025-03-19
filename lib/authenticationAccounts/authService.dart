@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthService {
   // supabase client instance
@@ -55,7 +57,6 @@ class AuthService {
 
   // login with email and password
   Future<AuthResponse> login(String email, String password) async {
-
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       showNoInternetToast();
@@ -74,6 +75,7 @@ class AuthService {
     }
   }
 
+  // sign up with email and password
   Future<AuthResponse> SignUp(String email, String password) async {
     return await supabase.auth.signUp(
       email: email,
@@ -98,5 +100,16 @@ class AuthService {
     final session = supabase.auth.currentSession;
     final user = session?.user;
     return user?.email;
+  }
+
+  // generate or retrieve device ID
+  Future<String> getDeviceID() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? deviceID = prefs.getString('deviceID');
+    if (deviceID == null) {
+      deviceID = const Uuid().v4();
+      await prefs.setString('deviceID', deviceID);
+    }
+    return deviceID;
   }
 }

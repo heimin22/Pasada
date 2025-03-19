@@ -7,6 +7,8 @@ import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:pasada_passenger_app/databaseSetup.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'authenticationAccounts/authGate.dart';
+
 const supabaseUrl = 'https://otbwhitwrmnfqgpmnjvf.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YndoaXR3cm1uZnFncG1uanZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTk5MzQsImV4cCI6MjA0ODk3NTkzNH0.f8JOv0YvKPQy8GWYGIdXfkIrKcqw0733QY36wJjG1Fw';
 
@@ -50,7 +52,8 @@ class PasadaPassenger extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const PasadaHomePage(title: 'Pasada'),
+      // home: const PasadaHomePage(title: 'Pasada'),
+      home: const AuthGate(),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'createAccount': (BuildContext context) => const CreateAccountPage(),
