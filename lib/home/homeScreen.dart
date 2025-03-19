@@ -1,39 +1,12 @@
-// import 'dart:convert';
-// import 'dart:math' show min,max;
-// import 'package:flutter/foundation.dart';
-// import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-// import 'package:pasada_passenger_app/main.dart';
-
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:geolocator/geolocator.dart';
-// // import 'package:flutter_svg/flutter_svg.dart';
-// // import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:pasada_passenger_app/home/selectionScreen.dart';
-// import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
-
-// import 'package:pasada_passenger_app/location/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
 
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:pasada_passenger_app/location/locationButton.dart';
-// import 'package:http/http.dart' as http;
-// import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'package:pasada_passenger_app/notificationScreen.dart';
-// import 'package:pasada_passenger_app/activityScreen.dart';
-// import 'package:pasada_passenger_app/profileSettingsScreen.dart';
-// import 'package:pasada_passenger_app/settingsScreen.dart';
-// import 'package:pasada_passenger_app/homeScreen.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// WidgetsFlutterBinding.ensureInitialized();
-// await dotenv.load(fileName: ".env");
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -69,20 +42,20 @@ class HomeScreenStateful extends StatefulWidget {
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful> {
-  final GlobalKey containerKey = GlobalKey();
-  double containerHeight = 0.0;
+  final GlobalKey containerKey = GlobalKey(); // container key for the location container
+  double containerHeight = 0.0; // container height idk might reimplement this
   final GlobalKey<MapScreenState> mapScreenKey =
       GlobalKey<MapScreenState>(); // global key para maaccess si MapScreenState
-  // GoogleMapController? mapController;
-  SelectedLocation? selectedPickUpLocation;
-  SelectedLocation? selectedDropOffLocation;
-  String etaText = '--';
+  SelectedLocation? selectedPickUpLocation; // variable for the selected pick up location
+  SelectedLocation? selectedDropOffLocation; // variable for the selected drop off location
+  String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
 
+  // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
-    final List<String> parts = location.split(',');
-    if (parts.length < 2) return [location, ''];
-    return [parts[0], parts.sublist(1).join(', ')];
+    final List<String> parts = location.split(','); // split by comma
+    if (parts.length < 2) return [location, '']; // kapag exact address si location then leave as is
+    return [parts[0], parts.sublist(1).join(', ')]; // sa unahan o ibabaw yung landmark which is yung parts[0] the rest is sa baba which is yung parts.sublist(1). tapos join(',')  na lang
   }
 
   /// Update yung proper location base duon sa search type
@@ -138,7 +111,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                   setState(() => etaText = eta);
                 },
               ),
-
               Positioned(
                 bottom: bottomNavBarHeight,
                 left: responsivePadding,
@@ -152,7 +124,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                       heroTag: "homeLocationFAB",
                       onPressed: () {
                         final mapState = mapScreenKey.currentState;
-                        if (mapState != null && mapState.currentLocation != null) {
+                        if (mapState != null &&
+                            mapState.currentLocation != null) {
                           mapState.animateToLocation(mapState.currentLocation!);
                         }
                       },
