@@ -50,6 +50,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
   SelectedLocation? selectedDropOffLocation; // variable for the selected drop off location
   String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
+  DateTime? lastBackPressTime;
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
@@ -89,7 +90,28 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false, // bawal navigation pops
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop) {
+          final now = DateTime.now();
+          final difference = lastBackPressTime != null
+              ? now.difference(lastBackPressTime!)
+              : Duration(seconds: 3);
+
+          if (difference > Duration(seconds: 2)) {
+            lastBackPressTime = now;
+            Fluttertoast.showToast(
+              msg: "Press back again to exit.",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+            );
+          } else {
+            SystemNavigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
           final screenWidth = constraints.maxWidth;
@@ -150,6 +172,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
           );
         },
       ),
+    ),
     );
   }
 
