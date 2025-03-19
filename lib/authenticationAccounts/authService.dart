@@ -51,23 +51,26 @@ class AuthService {
 
   AuthService.internal() {
     if (kDebugMode) {
-      print('Supabase Client Initialized: ${supabase}');
+      print('Supabase Client Initialized: $supabase');
     }
   }
 
   // login with email and password
   Future<AuthResponse> login(String email, String password) async {
+    // checking internet connection of the device
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       showNoInternetToast();
       throw Exception("No internet connection");
-
     }
     try {
-      return await supabase.auth.signInWithPassword(
+      AuthResponse response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
+      String deviceID = await getDeviceID();
+      await supabase.from('profiles').update({'device_id': deviceID}).eq('id', response.user!.id);
+      return response;
     }
     catch (e) {
       if (kDebugMode) print('Error during login: $e');
@@ -76,16 +79,32 @@ class AuthService {
   }
 
   // sign up with email and password
-  Future<AuthResponse> SignUp(String email, String password) async {
-    return await supabase.auth.signUp(
+  // update to store device ID
+  Future<AuthResponse> signUp(String email, String password) async {
+    AuthResponse response = await supabase.auth.signUp(
       email: email,
       password: password,
     );
+    if (response.user != null) {
+      String deviceID = await getDeviceID();
+      await supabase.from('profiles').insert({
+        'id': response.user!.id,
+        'email': response.user!.email,
+        'device_id': deviceID,
+      });
+    }
+    return response;
   }
 
   // logout
+  // update to remove device ID
   Future<void> logout() async {
     try {
+      // device ID handling for logging out
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        await supabase.from('profiles').update({'device_id': null}).eq('id', user.id);
+      }
       await supabase.auth.signOut();
       if (kDebugMode) print('Logout successful');
     }

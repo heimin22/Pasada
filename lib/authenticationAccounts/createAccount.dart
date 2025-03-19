@@ -75,7 +75,7 @@ class CreateAccountScreen extends State<CAPage> {
 
     // attempt na masign-up
     try {
-      await authService.SignUp(email,password);
+      await authService.signUp(email,password);
       // kapag successful yung pagregister ng account
       Navigator.pushNamedAndRemoveUntil(
         context,
