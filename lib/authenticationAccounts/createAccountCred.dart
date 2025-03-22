@@ -5,6 +5,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
+import 'createAccount.dart';
+
 void main() => runApp(const CreateAccountCredPage());
 
 class CreateAccountCredPage extends StatelessWidget {
@@ -23,6 +25,7 @@ class CreateAccountCredPage extends StatelessWidget {
       home: const CredPage(title: 'Create Account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
+        'backToEmail': (BuildContext context) => const CreateAccountPage(),
         'selection': (BuildContext context) => const selectionScreen(),
       },
     );
@@ -47,194 +50,270 @@ class _CredPageState extends State<CredPage> {
     // final screenWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-
-            //CONTENTS
-            children: [
-              //HEADER
-              Container(
-                alignment: Alignment.centerLeft,
-                // margin: const EdgeInsets.only(top: 60),
-                width: 80,
-                height: 80,
-                child: SvgPicture.asset('assets/svg/Ellipse.svg'),
-              ),
-              Container(
-                margin: const EdgeInsets.only(top: 30),
-                child: const Text(
-                  'Create your account',
-                  style: TextStyle(
-                    fontSize: 25,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                  ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.07,
+              left: MediaQuery.of(context).size.height * 0.01,
+            ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: buildBackButton(),
+            ),
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.01,
+                  left: MediaQuery.of(context).size.height * 0.035,
+                  right: MediaQuery.of(context).size.height * 0.035,
+                  bottom: MediaQuery.of(context).size.height * 0.035,
                 ),
-              ),
-              Container(
-                margin: const EdgeInsets.only(top: 15),
-                child: const Text(
-                  'Join the Pasada app and make your ride easier',
-                  style: TextStyle(color: Color(0xFF121212)),
-                ),
-              ),
-
-              //DRIVER ID PART
-              Container(
-                margin: const EdgeInsets.only(top: 35),
                 child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Text(
-                          'First Name',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    //INPUT
-                    Container(
-                      margin: const EdgeInsets.only(top: 10),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 45,
-                        child: TextField(
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(7.0),
-                            ),
-                            labelText: 'Enter your first name here',
-                            labelStyle: const TextStyle(
-                              fontSize: 14,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade200,
-                            contentPadding:
-                            const EdgeInsets.fromLTRB(15, 0, 115, 0),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              //PASSWORD PART
-              Container(
-                margin: const EdgeInsets.only(top: 20),
-                child: Column(
-                  children: [
-                    const Row(
-                      children: [
-                        Text(
-                          'Last Name',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    //INPUT
-                    Container(
-                      margin: const EdgeInsets.only(top: 10),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 45,
-                        child: TextField(
-                          obscureText: true,
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(7.0),
-                            ),
-                            labelText: 'Enter your last name here',
-                            labelStyle: const TextStyle(
-                              fontSize: 14,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey.shade200,
-                            contentPadding:
-                            const EdgeInsets.fromLTRB(15, 0, 115, 0),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              Container(
-                alignment: Alignment.centerLeft,
-                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: EdgeInsets.only(top: 10, left: 0),
-                      child: Checkbox(
-                        value: isChecked,
-                        activeColor: Color(0xFF5F3FC4),
-                        onChanged: (newBool) {
-                          setState(() {
-                            isChecked = newBool ?? false;
-                          });
-                        },
-                      ),
-                    ),
-                    Expanded(
-                      // Ensures text wraps and doesn't push Checkbox
-                      child: Container(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: Text(
-                          'By signing up, I have read and agree to Pasada’s Terms and Conditions and Privacy Policy',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xff121212),
-                          ),
-                        ),
-                      ),
-                    ),
+                    buildHeader(),
+                    buildPassengerFirstNameText(),
+                    buildPassengerFirstNameInput(),
+                    buildPassengerLastNameText(),
+                    buildPassengerLastNameInput(),
+                    buildTermsCheckbox(),
+                    buildCreateAccountButton(),
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-              //LOG IN BUTTON
-              Flexible(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 80),
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, 'selection');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF5F3FC4),
-                      minimumSize: const Size(240, 45),
-                      shadowColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                    ),
-                    child: const Text(
-                      'Sign up',
-                      style: TextStyle(
-                        color: Color(0xFFF2F2F2),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
+  Container buildBackButton() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      child: IconButton(
+        onPressed: () {
+          Navigator.pushNamed(context, 'backToEmail');
+        },
+        icon: Icon(Icons.arrow_back),
+      ),
+    );
+  }
+
+  Column buildHeader() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          margin: EdgeInsets.only(
+            top: MediaQuery.of(context).size.height * 0.01,
+          ),
+          alignment: Alignment.centerLeft,
+        ),
+        /// Logo
+        Container(
+          alignment: Alignment.centerLeft,
+          margin: EdgeInsets.only(
+            top: MediaQuery.of(context).size.height * 0.01,
+          ),
+          // margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
+          height: 80,
+          width: 80,
+          child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+        ),
+        /// Create your account text
+        Container(
+          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          child: const Text(
+            'Create your account',
+            style: TextStyle(
+              color: Color(0xFF121212),
+              fontWeight: FontWeight.w700,
+              fontSize: 24,
+            ),
+          ),
+        ),
+        const SizedBox(height: 3),
+        /// Join the Pasada... text
+        Container(
+          padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
+          child: Text(
+            'Join the Pasada app and make your ride easier',
+            style: TextStyle(color: Color(0xFF121212)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Container buildPassengerFirstNameText() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: Text(
+        'First Name',
+        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Container buildPassengerFirstNameInput() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+      child: SizedBox(
+        width: double.infinity,
+        height: 45,
+        child: TextField(
+          style: const TextStyle(
+            color: Color(0xFF121212),
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            labelText: 'Enter your first name',
+            labelStyle: const TextStyle(
+              fontSize: 12,
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: Color(0xFF121212),
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFFC7C7C6),
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFF121212),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Container buildPassengerLastNameText() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: Text(
+        'Last Name',
+        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Container buildPassengerLastNameInput() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+      child: SizedBox(
+        width: double.infinity,
+        height: 45,
+        child: TextField(
+          style: const TextStyle(
+            color: Color(0xFF121212),
+            fontSize: 14,
+          ),
+          decoration: InputDecoration(
+            labelText: 'Enter your last name',
+            labelStyle: const TextStyle(
+              fontSize: 12,
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: Color(0xFF121212),
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFFC7C7C6),
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFF121212),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Container buildTermsCheckbox() {
+    return Container(
+      alignment: Alignment.centerLeft,
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.only(top: 10, left: 0),
+            child: Checkbox(
+              value: isChecked,
+              activeColor: Color(0xFF00CC58),
+              onChanged: (newBool) {
+                setState(() {
+                  isChecked = newBool ?? false;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            // Ensures text wraps and doesn't push Checkbox
+            child: Container(
+              padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+              child: Text(
+                'By signing up, I have read and agree to Pasada’s Terms and Conditions and Privacy Policy',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xff121212),
                 ),
               ),
-            ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Flexible buildCreateAccountButton() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+        width: double.infinity,
+        child: ElevatedButton(
+          // onPressed: isLoading ? null : SigningUp,
+          onPressed: (){},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF121212),
+            minimumSize: const Size(360, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
+          // child: isLoading
+          //     ? const SizedBox(
+          //   width: 20,
+          //   height: 20,
+          //   child: CircularProgressIndicator(
+          //     color: Color(0xFFF5F5F5),
+          //     strokeWidth: 2,
+          //   ),
+          // )
+          child: const Text(
+            'Continue',
+            style: TextStyle(
+              color: Color(0xFFF2F2F2),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
           ),
         ),
       ),

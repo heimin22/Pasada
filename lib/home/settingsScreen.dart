@@ -55,6 +55,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         child: Stack(
           children: [
             settingsTitle(),
+            logoutButton(),
           ],
         ),
       ),
@@ -83,7 +84,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Positioned(
-      top: screenHeight * 0.03,
+      top: screenHeight * 0.08,
       left: screenWidth * 0.05,
       child: GestureDetector(
         onTap: () async {

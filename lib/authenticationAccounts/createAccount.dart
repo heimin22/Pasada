@@ -419,17 +419,4 @@ class CreateAccountScreen extends State<CAPage> {
       ),
     );
   }
-// bool validateEmailOrPhone(String input) {
-//   final emailRegex = RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$");
-//   if (emailRegex.hasMatch(input)) {
-//     return true;
-//   }
-//
-//   final phoneRegex = RegExp(r"^\d{10,}$");
-//   if (phoneRegex.hasMatch(input)) {
-//     return true;
-//   }
-//
-//   return false;
-// }
 }
