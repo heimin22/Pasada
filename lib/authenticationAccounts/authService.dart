@@ -103,7 +103,7 @@ class AuthService {
       // device ID handling for logging out
       final user = supabase.auth.currentUser;
       if (user != null) {
-        await supabase.from('profiles').update({'device_id': null}).eq('id', user.id);
+        await supabase.from('passenger').update({'device_ID': null}).eq('user_ID', user.id);
       }
       await supabase.auth.signOut();
       if (kDebugMode) print('Logout successful');
@@ -123,12 +123,40 @@ class AuthService {
 
   // generate or retrieve device ID
   Future<String> getDeviceID() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? deviceID = prefs.getString('deviceID');
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceID = prefs.getString('device_ID');
     if (deviceID == null) {
       deviceID = const Uuid().v4();
-      await prefs.setString('deviceID', deviceID);
+      await prefs.setString('device_ID', deviceID);
     }
     return deviceID;
   }
+
+  // update device information on login
+  Future<void> updateDeviceInfo(String userID) async {
+    final deviceID = await getDeviceID();
+    await supabase
+        .from('passengerTable')
+        .update({
+          'device_ID': deviceID,
+          'last_Login': DateTime.now().toIso8601String(),
+        })
+        .eq('user_ID', userID);
+  }
+
+  // validate device on app start
+  Future<void> validateDevice(String userID) async {
+    final currentDeviceID = await getDeviceID();
+    final responseProfile = await supabase
+        .from('passengerTable')
+        .select('device_ID')
+        .eq('user_ID', userID)
+        .single();
+
+    if(responseProfile['device_ID'] != currentDeviceID) {
+      await supabase.auth.signOut();
+      throw Exception('Session expired.');
+    }
+  }
+
 }
