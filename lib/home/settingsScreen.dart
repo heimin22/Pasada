@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
+
+import '../main.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
 // import 'package:url_launcher/url_launcher.dart';
@@ -27,7 +30,7 @@ class SettingsScreen extends StatelessWidget {
       ),
       home: const SettingsScreenStateful(title:  'Pasada'),
       routes: <String, WidgetBuilder>{
-
+        'start': (BuildContext context) => const PasadaPassenger(),
       },
     );
   }
@@ -43,6 +46,8 @@ class SettingsScreenStateful extends StatefulWidget {
 }
 
 class SettingsScreenPageState extends State<SettingsScreenStateful> {
+  final AuthService authService = AuthService();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,4 +79,35 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  Positioned logoutButton() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    return Positioned(
+      top: screenHeight * 0.03,
+      left: screenWidth * 0.05,
+      child: GestureDetector(
+        onTap: () async {
+          try {
+            await authService.logout();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              'start',
+              (route) => false,
+            );
+          } catch (e) {
+            debugPrint('Logout failed: $e');
+          }
+        },
+        child: Text(
+          'Log out',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFD7481D),
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+    );
+  }
 }

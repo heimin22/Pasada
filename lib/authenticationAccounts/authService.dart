@@ -20,8 +20,8 @@ class AuthService {
 
   void initState() {
     checkInitialConnectivity();
-    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
-
+    connectivitySubscription =
+        connectivity.onConnectivityChanged.listen(updateConnectionStatus);
   }
 
   Future<void> checkInitialConnectivity() async {
@@ -68,11 +68,15 @@ class AuthService {
         email: email,
         password: password,
       );
-      String deviceID = await getDeviceID();
-      await supabase.from('profiles').update({'device_id': deviceID}).eq('id', response.user!.id);
+
+      if (response.user != null) {
+        await updateDeviceInfo(response.user!.id);
+        await validateDevice(response.user!.id);
+      }
+      // String deviceID = await getDeviceID();
+      // await supabase.from('profiles').update({'device_id': deviceID}).eq('id', response.user!.id);
       return response;
-    }
-    catch (e) {
+    } catch (e) {
       if (kDebugMode) print('Error during login: $e');
       throw Exception('Failed to login');
     }
@@ -103,12 +107,14 @@ class AuthService {
       // device ID handling for logging out
       final user = supabase.auth.currentUser;
       if (user != null) {
-        await supabase.from('passenger').update({'device_ID': null}).eq('user_ID', user.id);
+        await supabase
+            .from('passenger')
+            .update({'device_ID': null})
+            .eq('user_ID', user.id);
       }
       await supabase.auth.signOut();
       if (kDebugMode) print('Logout successful');
-    }
-    catch (e) {
+    } catch (e) {
       if (kDebugMode) print('Error during logout: $e');
       throw Exception('Failed to logout');
     }
@@ -135,13 +141,10 @@ class AuthService {
   // update device information on login
   Future<void> updateDeviceInfo(String userID) async {
     final deviceID = await getDeviceID();
-    await supabase
-        .from('passengerTable')
-        .update({
-          'device_ID': deviceID,
-          'last_Login': DateTime.now().toIso8601String(),
-        })
-        .eq('user_ID', userID);
+    await supabase.from('passengerTable').update({
+      'device_ID': deviceID,
+      'last_Login': DateTime.now().toIso8601String(),
+    }).eq('user_ID', userID);
   }
 
   // validate device on app start
@@ -153,10 +156,9 @@ class AuthService {
         .eq('user_ID', userID)
         .single();
 
-    if(responseProfile['device_ID'] != currentDeviceID) {
+    if (responseProfile['device_ID'] != currentDeviceID) {
       await supabase.auth.signOut();
       throw Exception('Session expired.');
     }
   }
-
 }
