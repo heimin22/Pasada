@@ -84,10 +84,9 @@ class CreateAccountScreen extends State<CAPage> {
     try {
       await authService.signUp(email,password);
       // kapag successful yung pagregister ng account
-      Navigator.pushNamedAndRemoveUntil(
+      Navigator.pushNamed(
         context,
         'cred',
-        (route) => false,
         arguments: {'email': emailController.text}, // pass success argument
       );
     }

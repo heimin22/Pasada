@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'authenticationAccounts/authGate.dart';
@@ -77,6 +78,7 @@ class PasadaPassenger extends StatelessWidget {
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'createAccount': (BuildContext context) => const CreateAccountPage(),
+        'cred': (context) => CreateAccountCredPage(),
         'loginAccount': (BuildContext context) => const LoginAccountPage(),
       },
     );

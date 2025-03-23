@@ -8,8 +8,6 @@ import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
 import 'createAccount.dart';
 
-void main() => runApp(const CreateAccountCredPage());
-
 class CreateAccountCredPage extends StatelessWidget {
   const CreateAccountCredPage({super.key});
 
@@ -23,7 +21,7 @@ class CreateAccountCredPage extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const CredPage(title: 'Create Account', email: '',),
+      home: const CredPage(title: 'Create Account', email: ''),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'backToEmail': (BuildContext context) => const CreateAccountPage(),
@@ -41,11 +39,19 @@ class CredPage extends StatefulWidget {
 
   static Route route() {
     return MaterialPageRoute(
-      builder: (context) => CredPage(
-          title: 'Create Account',
-          email: ModalRoute.of(context)!.settings.arguments as String,
-      ),
+      builder: (context) {
+        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+        return CredPage(title: 'Pasada', email: args['email'] as String);
+      }
     );
+
+  // static Route route() {
+  //   return MaterialPageRoute(
+  //     builder: (context) => CredPage(
+  //         title: 'Create Account',
+  //         email: ModalRoute.of(context)!.settings.arguments as String,
+  //     ),
+  //   );
   }
 
   @override
