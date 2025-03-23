@@ -8,28 +8,29 @@ import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
 import 'createAccount.dart';
 
-class CreateAccountCredPage extends StatelessWidget {
-  const CreateAccountCredPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const CredPage(title: 'Create Account', email: ''),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'backToEmail': (BuildContext context) => const CreateAccountPage(),
-        'selection': (BuildContext context) => const selectionScreen(),
-      },
-    );
-  }
-}
+// class CreateAccountCredPage extends StatelessWidget {
+//   const CreateAccountCredPage({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return CredPage.route();
+//     // return MaterialApp(
+//     //   title: 'Pasada',
+//     //   debugShowCheckedModeBanner: false,
+//     //   theme: ThemeData(
+//     //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+//     //     fontFamily: 'Inter',
+//     //     useMaterial3: true,
+//     //   ),
+//     //   home: const CredPage(title: 'Create Account', email: ''),
+//     //   routes: <String, WidgetBuilder>{
+//     //     'start': (BuildContext context) => const PasadaPassenger(),
+//     //     'backToEmail': (BuildContext context) => const CreateAccountPage(),
+//     //     'selection': (BuildContext context) => const selectionScreen(),
+//     //   },
+//     // );
+//   }
+// }
 
 class CredPage extends StatefulWidget {
   final String email;
@@ -42,6 +43,7 @@ class CredPage extends StatefulWidget {
       builder: (context) {
         final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
         return CredPage(title: 'Pasada', email: args['email'] as String);
+        print('Route arguments: ${ModalRoute.of(context)?.settings.arguments}');
       }
     );
 
@@ -63,11 +65,12 @@ class _CredPageState extends State<CredPage> {
   final lastNameController = TextEditingController();
   final contactController = TextEditingController();
   bool isChecked = false;
-  @override
 
+  @override
   Widget build(BuildContext context) {
     // final screenHeight = MediaQuery.of(context).size.height;
     // final screenWidth = MediaQuery.of(context).size.width;
+    print('Building CredPage with email: ${widget.email}');
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Column(

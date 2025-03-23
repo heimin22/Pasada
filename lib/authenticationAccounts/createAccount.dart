@@ -82,15 +82,16 @@ class CreateAccountScreen extends State<CAPage> {
 
     // attempt na masign-up
     try {
-      await authService.signUp(email,password);
+      await authService.signUp(email, password);
       // kapag successful yung pagregister ng account
+      debugPrint('Attempting navigation to cred screen');
       Navigator.pushNamed(
         context,
         'cred',
-        arguments: {'email': emailController.text}, // pass success argument
-      );
-    }
-    catch (e) {
+        // pass success argument
+        arguments: {'email': emailController.text},
+      ).then((_) => debugPrint('Navigation completed'));
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
