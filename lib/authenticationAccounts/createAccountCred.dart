@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
@@ -22,7 +23,7 @@ class CreateAccountCredPage extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const CredPage(title: 'Create Account'),
+      home: const CredPage(title: 'Create Account', email: '',),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'backToEmail': (BuildContext context) => const CreateAccountPage(),
@@ -33,15 +34,28 @@ class CreateAccountCredPage extends StatelessWidget {
 }
 
 class CredPage extends StatefulWidget {
-  const CredPage({super.key, required this.title});
-
+  final String email;
   final String title;
+
+  const CredPage({super.key, required this.title, required this.email});
+
+  static Route route() {
+    return MaterialPageRoute(
+      builder: (context) => CredPage(
+          title: 'Create Account',
+          email: ModalRoute.of(context)!.settings.arguments as String,
+      ),
+    );
+  }
 
   @override
   State<CredPage> createState() => _CredPageState();
 }
 
 class _CredPageState extends State<CredPage> {
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final contactController = TextEditingController();
   bool isChecked = false;
   @override
 
@@ -67,7 +81,7 @@ class _CredPageState extends State<CredPage> {
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.01,
+                  top: MediaQuery.of(context).size.height * 0.10,
                   left: MediaQuery.of(context).size.height * 0.035,
                   right: MediaQuery.of(context).size.height * 0.035,
                   bottom: MediaQuery.of(context).size.height * 0.035,
@@ -81,6 +95,8 @@ class _CredPageState extends State<CredPage> {
                     buildPassengerFirstNameInput(),
                     buildPassengerLastNameText(),
                     buildPassengerLastNameInput(),
+                    buildPassengerContactNumberText(),
+                    buildPassengerContactNumberInput(),
                     buildTermsCheckbox(),
                     buildCreateAccountButton(),
                   ],
@@ -215,12 +231,58 @@ class _CredPageState extends State<CredPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
+          controller: lastNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
             fontSize: 14,
           ),
           decoration: InputDecoration(
             labelText: 'Enter your last name',
+            labelStyle: const TextStyle(
+              fontSize: 12,
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: Color(0xFF121212),
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFFC7C7C6),
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFF121212),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Container buildPassengerContactNumberText() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: Text(
+        'Contact Number',
+        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Container buildPassengerContactNumberInput() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+      child: SizedBox(
+        width: double.infinity,
+        height: 45,
+        child: TextField(
+          controller: contactController,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            labelText: 'Enter your contact number',
             labelStyle: const TextStyle(
               fontSize: 12,
             ),
@@ -290,7 +352,53 @@ class _CredPageState extends State<CredPage> {
         width: double.infinity,
         child: ElevatedButton(
           // onPressed: isLoading ? null : SigningUp,
-          onPressed: (){},
+          onPressed: () async{
+            if (!isChecked) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please accept the terms and conditions.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+
+            // validate required fields
+            final firstName = firstNameController.text.trim();
+            final lastName = lastNameController.text.trim();
+            final contactNumber = contactController.text.trim();
+            final email = widget.email;
+
+            if (firstName.isEmpty || lastName.isEmpty || contactNumber.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please fill in all required fields.'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+
+            try {
+              final authService = AuthService();
+              await authService.updateUserInfo(
+                  firstName, lastName, contactNumber, email);
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                'selection', (route) => false,
+              );
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Error saving details: $e"),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),
@@ -298,15 +406,6 @@ class _CredPageState extends State<CredPage> {
               borderRadius: BorderRadius.circular(10.0),
             ),
           ),
-          // child: isLoading
-          //     ? const SizedBox(
-          //   width: 20,
-          //   height: 20,
-          //   child: CircularProgressIndicator(
-          //     color: Color(0xFFF5F5F5),
-          //     strokeWidth: 2,
-          //   ),
-          // )
           child: const Text(
             'Continue',
             style: TextStyle(

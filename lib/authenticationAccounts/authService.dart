@@ -91,10 +91,10 @@ class AuthService {
     );
     if (response.user != null) {
       String deviceID = await getDeviceID();
-      await supabase.from('profiles').insert({
+      await supabase.from('passengerTable').insert({
         'id': response.user!.id,
-        'email': response.user!.email,
-        'device_id': deviceID,
+        'passenger_Email': response.user!.email,
+        'device_ID': deviceID,
       });
     }
     return response;
@@ -108,7 +108,7 @@ class AuthService {
       final user = supabase.auth.currentUser;
       if (user != null) {
         await supabase
-            .from('passenger')
+            .from('passengerTable')
             .update({'device_ID': null})
             .eq('user_ID', user.id);
       }
@@ -136,6 +136,27 @@ class AuthService {
       await prefs.setString('device_ID', deviceID);
     }
     return deviceID;
+  }
+
+  // update user information
+  Future<void> updateUserInfo(String firstName, String lastName, String contactNumber, String email) async {
+    final user = supabase.auth.currentUser;
+
+    if (user != null) {
+      final response = await supabase.from('passengerTable').update({
+        'first_Name': firstName,
+        'last_Name': lastName,
+        'contact_Number': contactNumber,
+        'passenger_Email': email,
+      }).eq('user_ID', user.id);
+
+      if (response.error != null) {
+        throw Exception(response.error!.message);
+      }
+    }
+    else {
+      throw Exception('User not found');
+    }
   }
 
   // update device information on login
