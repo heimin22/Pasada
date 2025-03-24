@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Pasada</string>
 	<key>GMSApiKey</key>
-	<string>AIzaSyBBxx4zox2QbVv1BB9_GTsf9ywp24-K9-g</string>
+	<string></string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

@@ -86,7 +86,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: IconButton(
         onPressed: () {
-          Navigator.pushNamed(context, 'backToEmail');
+          // navigate back to the previous screen
+          Navigator.pop(context);
         },
         icon: Icon(Icons.arrow_back),
       ),
