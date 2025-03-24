@@ -82,34 +82,71 @@ class AuthService {
     }
   }
 
-  // sign up with email and password
-  // update to store device ID
-  Future<AuthResponse> signUp(String email, String password, String firstName, String lastName, String contactNumber) async {
-    AuthResponse response = await supabase.auth.signUp(
+  // implement nga tayong bagong method nigga
+  // putangina hihiwalay ko na lang to para malupet
+  // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
+  Future<AuthResponse> signUpAuth(String email, String password) async {
+    return await supabase.auth.signUp(
       email: email,
       password: password,
     );
-    if (response.user != null) {
-      String? deviceID = await getDeviceID();
-      try {
-        // try to insert a new data sa table
-        await supabase.from('passengerTable').insert({
-          'user_id': response.user!.id,
-          'passenger_email': response.user!.email,
-          'device_id': deviceID,
-          'first_name': firstName,
-          'last_name' : lastName,
-          'contact_number': contactNumber,
-          'passenger_type': 'regular',
-        });
-        debugPrint('Inserted passenger data: user_id=${response.user!.id}, email=$email, device_id=$deviceID');
-      } catch (e) {
-        debugPrint('Error inserting passenger data: $e');
-        throw Exception('Failed to insert passenger data: $e');
-      }
-    }
-    return response;
   }
+
+  Future<void> saveUserData({
+    required String userID,
+    required String firstName,
+    required String lastName,
+    required String contactNumber,
+  }) async {
+    try {
+      await supabase.from('passenger_table').insert({
+        'user_id': userID,
+        'first_name': firstName,
+        'last_name': lastName,
+        'contact_number': contactNumber,
+      });
+    } catch (e) {
+      debugPrint('Error saving user data: $e');
+      rethrow;
+    }
+  }
+
+  // sign up with email and password
+  // update to store device ID
+  // Future<AuthResponse> signUp(
+  //   email,
+  //   password,
+  //   firstName,
+  //   lastName,
+  //   contactNumber,
+  // ) async {
+  //   try {
+  //     AuthResponse response = await supabase.auth.signUp(
+  //       email: email,
+  //       password: password,
+  //     );
+  //     if (response.user != null) {
+  //       // String? deviceID = await getDeviceID();
+  //       // try to insert a new data sa table
+  //       await supabase.from('passenger_table').insert({
+  //         'user_id': response.user!.id,
+  //         'first_name': firstName,
+  //         'last_name' : lastName,
+  //         'passenger_email': email,
+  //         'contact_number': contactNumber,
+  //         // 'device_id': deviceID,
+  //         // 'passenger_type': 'regular',
+  //         // 'created_at': DateTime.now().toIso8601String(),
+  //         // 'last_login': DateTime.now().toIso8601String(),
+  //       });
+  //       debugPrint('Inserted passenger data: user_id=${response.user!.id}, email=$email');
+  //     }
+  //     return response;
+  //   } catch (e) {
+  //     debugPrint('Error inserting passenger data: $e');
+  //     throw Exception('Failed to sign up: $e');
+  //   }
+  // }
 
   // logout
   // update to remove device ID
@@ -119,7 +156,7 @@ class AuthService {
       final user = supabase.auth.currentUser;
       if (user != null) {
         await supabase
-            .from('passengerTable')
+            .from('passenger_table')
             .update({'device_id': null})
             .eq('user_id', user.id);
       }
@@ -155,7 +192,7 @@ class AuthService {
 
     if (user != null) {
       try {
-        final response = await supabase.from('passengerTable').update({
+        final response = await supabase.from('passenger_table').update({
           'first_name': firstName,
           'last_name': lastName,
           'contact_number': contactNumber,
@@ -165,9 +202,9 @@ class AuthService {
         if (response.error != null) {
           throw Exception(response.error!.message);
         }
-        debugPrint('Updated passengerTable: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
+        debugPrint('Updated passenger_table: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
       } catch (e) {
-        debugPrint('Error updating passengerTable: $e');
+        debugPrint('Error updating passenger_table: $e');
         rethrow;
       }
     } else {
@@ -178,7 +215,7 @@ class AuthService {
   // update device information on login
   Future<void> updateDeviceInfo(String userID) async {
     final deviceID = await getDeviceID();
-    await supabase.from('passengerTable').update({
+    await supabase.from('passenger_table').update({
       'device_id': deviceID,
       'last_Login': DateTime.now().toIso8601String(),
     }).eq('user_id', userID);
@@ -188,7 +225,7 @@ class AuthService {
   Future<void> validateDevice(String userID) async {
     final currentDeviceID = await getDeviceID();
     final responseProfile = await supabase
-        .from('passengerTable')
+        .from('passenger_table')
         .select('device_id')
         .eq('user_id', userID)
         .single();

@@ -358,11 +358,11 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             try {
               final authService = AuthService();
               await authService.signUp(
+                email,
+                password,
                 firstName,
                 lastName,
                 contactNumber,
-                email,
-                password,
               );
               Navigator.pushNamedAndRemoveUntil(
                 context,
