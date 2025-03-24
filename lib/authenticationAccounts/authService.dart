@@ -84,18 +84,29 @@ class AuthService {
 
   // sign up with email and password
   // update to store device ID
-  Future<AuthResponse> signUp(String email, String password) async {
+  Future<AuthResponse> signUp(String email, String password, String firstName, String lastName, String contactNumber) async {
     AuthResponse response = await supabase.auth.signUp(
       email: email,
       password: password,
     );
     if (response.user != null) {
-      String deviceID = await getDeviceID();
-      await supabase.from('passengerTable').insert({
-        'id': response.user!.id,
-        'passenger_Email': response.user!.email,
-        'device_ID': deviceID,
-      });
+      String? deviceID = await getDeviceID();
+      try {
+        // try to insert a new data sa table
+        await supabase.from('passengerTable').insert({
+          'user_id': response.user!.id,
+          'passenger_email': response.user!.email,
+          'device_id': deviceID,
+          'first_name': firstName,
+          'last_name' : lastName,
+          'contact_number': contactNumber,
+          'passenger_type': 'regular',
+        });
+        debugPrint('Inserted passenger data: user_id=${response.user!.id}, email=$email, device_id=$deviceID');
+      } catch (e) {
+        debugPrint('Error inserting passenger data: $e');
+        throw Exception('Failed to insert passenger data: $e');
+      }
     }
     return response;
   }
@@ -109,8 +120,8 @@ class AuthService {
       if (user != null) {
         await supabase
             .from('passengerTable')
-            .update({'device_ID': null})
-            .eq('user_ID', user.id);
+            .update({'device_id': null})
+            .eq('user_id', user.id);
       }
       await supabase.auth.signOut();
       if (kDebugMode) print('Logout successful');
@@ -130,10 +141,10 @@ class AuthService {
   // generate or retrieve device ID
   Future<String> getDeviceID() async {
     final prefs = await SharedPreferences.getInstance();
-    String? deviceID = prefs.getString('device_ID');
+    String? deviceID = prefs.getString('device_id');
     if (deviceID == null) {
       deviceID = const Uuid().v4();
-      await prefs.setString('device_ID', deviceID);
+      await prefs.setString('device_id', deviceID);
     }
     return deviceID;
   }
@@ -143,18 +154,23 @@ class AuthService {
     final user = supabase.auth.currentUser;
 
     if (user != null) {
-      final response = await supabase.from('passengerTable').update({
-        'first_Name': firstName,
-        'last_Name': lastName,
-        'contact_Number': contactNumber,
-        'passenger_Email': email,
-      }).eq('user_ID', user.id);
+      try {
+        final response = await supabase.from('passengerTable').update({
+          'first_name': firstName,
+          'last_name': lastName,
+          'contact_number': contactNumber,
+          'passenger_email': email,
+        }).eq('user_id', user.id);
 
-      if (response.error != null) {
-        throw Exception(response.error!.message);
+        if (response.error != null) {
+          throw Exception(response.error!.message);
+        }
+        debugPrint('Updated passengerTable: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
+      } catch (e) {
+        debugPrint('Error updating passengerTable: $e');
+        rethrow;
       }
-    }
-    else {
+    } else {
       throw Exception('User not found');
     }
   }
@@ -163,9 +179,9 @@ class AuthService {
   Future<void> updateDeviceInfo(String userID) async {
     final deviceID = await getDeviceID();
     await supabase.from('passengerTable').update({
-      'device_ID': deviceID,
+      'device_id': deviceID,
       'last_Login': DateTime.now().toIso8601String(),
-    }).eq('user_ID', userID);
+    }).eq('user_id', userID);
   }
 
   // validate device on app start
@@ -173,11 +189,11 @@ class AuthService {
     final currentDeviceID = await getDeviceID();
     final responseProfile = await supabase
         .from('passengerTable')
-        .select('device_ID')
-        .eq('user_ID', userID)
+        .select('device_id')
+        .eq('user_id', userID)
         .single();
 
-    if (responseProfile['device_ID'] != currentDeviceID) {
+    if (responseProfile['device_id'] != currentDeviceID) {
       await supabase.auth.signOut();
       throw Exception('Session expired.');
     }

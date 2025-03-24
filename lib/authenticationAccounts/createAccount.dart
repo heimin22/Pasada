@@ -17,32 +17,33 @@ class CreateAccountPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const CAPage(title: 'Create Account'),
-      onGenerateRoute: (settings) {
-        if (settings.name == 'cred') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (context) => CreateAccountCredPage(
-              title: 'Pasada',
-              email: args['email'],
-            ),
-          );
-        }
-      },
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        // 'cred': (BuildContext context) => const CreateAccountCredPage(title: 'Pasada', email: ''),
-        'login': (BuildContext context) => const LoginAccountPage(),
-      },
-    );
+    return const CAPage(title: 'Pasada');
+    // return MaterialApp(
+    //   title: 'Pasada',
+    //   debugShowCheckedModeBanner: false,
+    //   theme: ThemeData(
+    //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+    //     fontFamily: 'Inter',
+    //     useMaterial3: true,
+    //   ),
+    //   home: const CAPage(title: 'Create Account'),
+    //   onGenerateRoute: (settings) {
+    //     if (settings.name == 'cred') {
+    //       final args = settings.arguments as Map<String, dynamic>;
+    //       return MaterialPageRoute(
+    //         builder: (context) => CreateAccountCredPage(
+    //           title: 'Pasada',
+    //           email: args['email'],
+    //         ),
+    //       );
+    //     }
+    //   },
+    //   routes: <String, WidgetBuilder>{
+    //     'start': (BuildContext context) => const PasadaPassenger(),
+    //     // 'cred': (BuildContext context) => const CreateAccountCredPage(title: 'Pasada', email: ''),
+    //     'login': (BuildContext context) => const LoginAccountPage(),
+    //   },
+    // );
   }
 }
 
@@ -93,20 +94,19 @@ class CreateAccountScreen extends State<CAPage> {
 
     // attempt na masign-up
     try {
-      await authService.signUp(email, password);
       // kapag successful yung pagregister ng account
-      debugPrint('Attempting navigation to cred screen');
+      debugPrint('Sign-up successful, navigating to cred');
       Navigator.pushNamed(
         context,
         'cred',
         // pass success argument
-        arguments: {'email': emailController.text},
-      ).then((_) => debugPrint('Navigation completed'));
+        arguments: {'email': email, 'password': password},
+      );
+      debugPrint('Navigation completed');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
-
       // pop the register page
       Navigator.pop(context);
     }

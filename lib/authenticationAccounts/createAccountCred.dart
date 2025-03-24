@@ -14,23 +14,6 @@ class CreateAccountCredPage extends StatefulWidget {
 
   const CreateAccountCredPage({super.key, required this.title, required this.email});
 
-  // static Route route() {
-  //   return MaterialPageRoute(
-  //     builder: (context) {
-  //       final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-  //       return CredPage(title: 'Pasada', email: args['email'] as String);
-  //       print('Route arguments: ${ModalRoute.of(context)?.settings.arguments}');
-  //     }
-  //   );
-
-  // static Route route() {
-  //   return MaterialPageRoute(
-  //     builder: (context) => CredPage(
-  //         title: 'Create Account',
-  //         email: ModalRoute.of(context)!.settings.arguments as String,
-  //     ),
-  //   );
-
   @override
   State<CreateAccountCredPage> createState() => _CreateAccountCredPageState();
 }
@@ -45,52 +28,57 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   Widget build(BuildContext context) {
     // final screenHeight = MediaQuery.of(context).size.height;
     // final screenWidth = MediaQuery.of(context).size.width;
-    print('Building CredPage with email: ${widget.email}');
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height * 0.07,
-              left: MediaQuery.of(context).size.height * 0.01,
+    try {
+      debugPrint('Building CredPage with email: ${widget.email}');
+      return Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).size.height * 0.07,
+                left: MediaQuery.of(context).size.height * 0.01,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: buildBackButton(),
+              ),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: buildBackButton(),
-            ),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.10,
-                  left: MediaQuery.of(context).size.height * 0.035,
-                  right: MediaQuery.of(context).size.height * 0.035,
-                  bottom: MediaQuery.of(context).size.height * 0.035,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    buildHeader(),
-                    buildPassengerFirstNameText(),
-                    buildPassengerFirstNameInput(),
-                    buildPassengerLastNameText(),
-                    buildPassengerLastNameInput(),
-                    buildPassengerContactNumberText(),
-                    buildPassengerContactNumberInput(),
-                    buildTermsCheckbox(),
-                    buildCreateAccountButton(),
-                  ],
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height * 0.10,
+                    left: MediaQuery.of(context).size.height * 0.035,
+                    right: MediaQuery.of(context).size.height * 0.035,
+                    bottom: MediaQuery.of(context).size.height * 0.035,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      buildHeader(),
+                      buildPassengerFirstNameText(),
+                      buildPassengerFirstNameInput(),
+                      buildPassengerLastNameText(),
+                      buildPassengerLastNameInput(),
+                      buildPassengerContactNumberText(),
+                      buildPassengerContactNumberInput(),
+                      buildTermsCheckbox(),
+                      buildCreateAccountButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error building CreateAccountCredPage: $e');
+      return Scaffold(body: Center(child: Text('Error: $e')));
+    }
   }
 
   Container buildBackButton() {
@@ -346,12 +334,14 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               );
               return;
             }
-
             // validate required fields
             final firstName = firstNameController.text.trim();
             final lastName = lastNameController.text.trim();
             final contactNumber = contactController.text.trim();
             final email = widget.email;
+            // retrieve natin ung password na pinasa duon sa previous page
+            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+            final password = args['password'];
 
             if (firstName.isEmpty || lastName.isEmpty || contactNumber.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -365,9 +355,13 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
             try {
               final authService = AuthService();
-              await authService.updateUserInfo(
-                  firstName, lastName, contactNumber, email);
-
+              await authService.signUp(
+                firstName,
+                lastName,
+                contactNumber,
+                email,
+                password,
+              );
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 'selection', (route) => false,
@@ -391,7 +385,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             ),
           ),
           child: const Text(
-            'Continue',
+            'Sign-up',
             style: TextStyle(
               color: Color(0xFFF2F2F2),
               fontWeight: FontWeight.w600,
