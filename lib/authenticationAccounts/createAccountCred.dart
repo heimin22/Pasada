@@ -156,6 +156,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
+          controller: firstNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
             fontSize: 14,
