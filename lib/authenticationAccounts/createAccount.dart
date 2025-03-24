@@ -3,7 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
@@ -26,9 +26,20 @@ class CreateAccountPage extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const CAPage(title: 'Create Account'),
+      onGenerateRoute: (settings) {
+        if (settings.name == 'cred') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (context) => CreateAccountCredPage(
+              title: 'Pasada',
+              email: args['email'],
+            ),
+          );
+        }
+      },
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
-        'cred': (BuildContext context) => const CreateAccountCredPage(),
+        // 'cred': (BuildContext context) => const CreateAccountCredPage(title: 'Pasada', email: ''),
         'login': (BuildContext context) => const LoginAccountPage(),
       },
     );

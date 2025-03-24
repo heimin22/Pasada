@@ -80,7 +80,7 @@ class PasadaPassenger extends StatelessWidget {
         'createAccount': (BuildContext context) => const CreateAccountPage(),
         'cred': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          return CredPage(
+          return CreateAccountCredPage(
             title: 'Create Account',
             email: args['email'],
           );

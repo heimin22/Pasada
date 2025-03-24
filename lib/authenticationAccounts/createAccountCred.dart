@@ -3,49 +3,25 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
-import 'package:pasada_passenger_app/main.dart';
-import 'package:pasada_passenger_app/home/selectionScreen.dart';
+// import 'package:pasada_passenger_app/main.dart';
+// import 'package:pasada_passenger_app/home/selectionScreen.dart';
 
-import 'createAccount.dart';
+// import 'createAccount.dart';
 
-// class CreateAccountCredPage extends StatelessWidget {
-//   const CreateAccountCredPage({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return CredPage.route();
-//     // return MaterialApp(
-//     //   title: 'Pasada',
-//     //   debugShowCheckedModeBanner: false,
-//     //   theme: ThemeData(
-//     //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-//     //     fontFamily: 'Inter',
-//     //     useMaterial3: true,
-//     //   ),
-//     //   home: const CredPage(title: 'Create Account', email: ''),
-//     //   routes: <String, WidgetBuilder>{
-//     //     'start': (BuildContext context) => const PasadaPassenger(),
-//     //     'backToEmail': (BuildContext context) => const CreateAccountPage(),
-//     //     'selection': (BuildContext context) => const selectionScreen(),
-//     //   },
-//     // );
-//   }
-// }
-
-class CredPage extends StatefulWidget {
+class CreateAccountCredPage extends StatefulWidget {
   final String email;
   final String title;
 
-  const CredPage({super.key, required this.title, required this.email});
+  const CreateAccountCredPage({super.key, required this.title, required this.email});
 
-  static Route route() {
-    return MaterialPageRoute(
-      builder: (context) {
-        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-        return CredPage(title: 'Pasada', email: args['email'] as String);
-        print('Route arguments: ${ModalRoute.of(context)?.settings.arguments}');
-      }
-    );
+  // static Route route() {
+  //   return MaterialPageRoute(
+  //     builder: (context) {
+  //       final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+  //       return CredPage(title: 'Pasada', email: args['email'] as String);
+  //       print('Route arguments: ${ModalRoute.of(context)?.settings.arguments}');
+  //     }
+  //   );
 
   // static Route route() {
   //   return MaterialPageRoute(
@@ -54,13 +30,12 @@ class CredPage extends StatefulWidget {
   //         email: ModalRoute.of(context)!.settings.arguments as String,
   //     ),
   //   );
-  }
 
   @override
-  State<CredPage> createState() => _CredPageState();
+  State<CreateAccountCredPage> createState() => _CreateAccountCredPageState();
 }
 
-class _CredPageState extends State<CredPage> {
+class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   final firstNameController = TextEditingController();
   final lastNameController = TextEditingController();
   final contactController = TextEditingController();
