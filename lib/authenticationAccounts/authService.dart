@@ -72,12 +72,6 @@ class AuthService {
         password: password,
       );
 
-      // if (response.user != null) {
-      //   await updateDeviceInfo(response.user!.id);
-      //   await validateDevice(response.user!.id);
-      // }
-      // String deviceID = await getDeviceID();
-      // await supabase.from('profiles').update({'device_id': deviceID}).eq('id', response.user!.id);
       return response;
     } catch (e) {
       if (kDebugMode) print('Error during login: $e');

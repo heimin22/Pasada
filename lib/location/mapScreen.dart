@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
@@ -101,19 +102,41 @@ class MapScreenState extends State<MapScreen> {
     });
   }
 
+  // service status check helper
+  Future<bool> checkLocationService() async {
+    try {
+      bool serviceEnabled = await location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await location.requestService();
+      }
+      return serviceEnabled;
+    } on PlatformException {
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> initLocation() async {
-    await location.getLocation().then((location) {
-      if (mounted) {
-        setState(() =>
-        currentLocation = LatLng(location.latitude!, location.longitude!));
-      }
-    });
-    location.onLocationChanged.listen((location) {
-      if (mounted) {
-        setState(() =>
-        currentLocation = LatLng(location.latitude!, location.longitude!));
-      }
-    });
+    final serviceAvailable = await checkLocationService();
+    if (!serviceAvailable) {
+      if (mounted) showLocationErrorDialog();
+      return;
+    }
+
+    await getLocationUpdates();
+    // await location.getLocation().then((location) {
+    //   if (mounted) {
+    //     setState(() =>
+    //     currentLocation = LatLng(location.latitude!, location.longitude!));
+    //   }
+    // });
+    // location.onLocationChanged.listen((location) {
+    //   if (mounted) {
+    //     setState(() =>
+    //     currentLocation = LatLng(location.latitude!, location.longitude!));
+    //   }
+    // });
   }
 
   // animate yung camera papunta sa current location ng user
@@ -138,32 +161,38 @@ class MapScreenState extends State<MapScreen> {
       if (!serviceEnabled) {
         serviceEnabled = await location.requestService();
         if (!serviceEnabled) {
-          showAlertDialog(
-            'Enable Location Services',
-            'Location services are disabled. Please enable them to use this feature.',
-          );
-          return;
+          if (mounted) {
+            showAlertDialog(
+              'Enable Location Services',
+              'Location services are disabled. Please enable them to use this feature.',
+            );
+            return;
+          }
         }
       }
       // check ng location permissions
       PermissionStatus permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) {
-          showAlertDialog(
-            'Permission Required',
-            'This app needs location permission to work. Please allow it in your settings.',
-          );
-          return;
+      if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
+        final permission = await location.requestPermission();
+        if (permission != PermissionStatus.granted) {
+          if (mounted) {
+            showAlertDialog(
+              'Permission Required',
+              'This app needs location permission to work. Please allow it in your settings.',
+            );
+            return;
+          }
         }
       }
 
       // kuha ng current location
       LocationData locationData = await location.getLocation();
-      setState(() {
-        currentLocation =
-            LatLng(locationData.latitude!, locationData.longitude!);
-      });
+      if (mounted) {
+        setState(() {
+          currentLocation =
+              LatLng(locationData.latitude!, locationData.longitude!);
+        });
+      }
       // listen sa location updates
       location.onLocationChanged.listen((LocationData newLocation) {
         if (newLocation.latitude != null && newLocation.longitude != null) {
@@ -181,10 +210,18 @@ class MapScreenState extends State<MapScreen> {
           });
         }
       });
+    } on PlatformException catch (e) {
+      if (mounted) {
+        showError(
+            'Location Error: ${e.message ?? "Service status unavailable"}');
+      }
+      debugPrint('PlatformException: ${e.code} - ${e.message}');
     } catch (e) {
-      showError('An error occurred while fetching the location.');
+      // showError('An error occurred while fetching the location.');
+      if (mounted) showError(e.toString());
     }
   }
+
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
@@ -229,8 +266,6 @@ class MapScreenState extends State<MapScreen> {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
         'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
-        // 'X-Goog-FieldMask': 'routes.distanceMeters',
-        // 'X-Goog-FieldMask': 'routes.duration',
       };
       final body = jsonEncode({
         'origin': {
