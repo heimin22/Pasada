@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -60,8 +61,8 @@ class MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    currentLocation = const LatLng(14.617494, 120.971770); /// default coords for testing
     initLocation();
-    // listen for location updates (if kailangan ng current position)
     getLocationUpdates();
   }
 
@@ -204,6 +205,11 @@ class MapScreenState extends State<MapScreen> {
   }
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      showDebugToast('No internet connection');
+      return;
+    }
     try {
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey == null) {

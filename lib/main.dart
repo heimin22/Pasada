@@ -32,28 +32,6 @@ Future<void> main() async {
     ),
   );
 
-  // check device ID on startup
-  // final session = supabase.auth.currentSession;
-  // if (session != null) {
-  //   try {
-  //     final authService = AuthService();
-  //     // await authService.validateDevice(session.user.id);
-  //     // await authService.updateDeviceInfo(session.user.id);
-  //   } catch (e) {
-  //     await supabase.auth.signOut();
-  //   }
-  //   // final authService = AuthService();
-  //   // String currentDeviceID = await authService.getDeviceID();
-  //   // var profile = await supabase
-  //   //     .from('profiles')
-  //   //     .select()
-  //   //     .eq('id', session.user.id)
-  //   //     .single();
-  //   // if (profile['device_id'] != currentDeviceID) {
-  //   //   await supabase.auth.signOut();
-  //   // }
-  // }
-
   runApp(const PasadaPassenger());
 }
 

@@ -3,12 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 
 import '../home/selectionScreen.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
-// import 'package:pasada_passenger_app/home/homeScreen.dart';
-// import 'package:pasada_passenger_app/main.dart';
-// import 'package:pasada_passenger_app/home/selectionScreen.dart';
-
-// import 'createAccount.dart';
 
 class CreateAccountCredPage extends StatefulWidget {
   final String email;
@@ -369,13 +363,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                 },
               );
               if (authResponse.user != null) {
-                // await authService.saveUserData(
-                //   userID: authResponse.user!.id,
-                //   email: email,
-                //   firstName: firstName,
-                //   lastName: lastName,
-                //   contactNumber: contactNumber,
-                // );
+                debugPrint('User signed up: ${authResponse.user!.email}');
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const selectionScreen())
