@@ -357,17 +357,24 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
             try {
               final authService = AuthService();
-              await authService.signUp(
+              final authResponse = await authService.signUpAuth(
                 email,
                 password,
-                firstName,
-                lastName,
-                contactNumber,
               );
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                'selection', (route) => false,
-              );
+
+              if (authResponse.user != null) {
+                await authService.saveUserData(
+                  userID: authResponse.user!.id,
+                  firstName: firstName,
+                  lastName: lastName,
+                  email: email,
+                  contactNumber: contactNumber,
+                );
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  'selection', (route) => false,
+                );
+              }
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -376,6 +383,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                     duration: Duration(seconds: 3),
                   ),
                 );
+                debugPrint('Error saving details: $e');
               }
             }
           },

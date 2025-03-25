@@ -94,8 +94,10 @@ class CreateAccountScreen extends State<CAPage> {
 
     // attempt na masign-up
     try {
+      // create uesr muna sa Supabase Authentication
+      // final authResponse = await authService.signUpAuth(email, password);
       // kapag successful yung pagregister ng account
-      debugPrint('Sign-up successful, navigating to cred');
+      debugPrint('Navigating to cred');
       Navigator.pushNamed(
         context,
         'cred',

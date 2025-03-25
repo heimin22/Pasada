@@ -94,17 +94,30 @@ class AuthService {
 
   Future<void> saveUserData({
     required String userID,
+    required String email,
     required String firstName,
     required String lastName,
     required String contactNumber,
   }) async {
     try {
-      await supabase.from('passenger_table').insert({
+      // await supabase.from('passenger_table').insert({
+      //   'user_id': userID,
+      //   'passenger_email': email,
+      //   'first_name': firstName,
+      //   'last_name': lastName,
+      //   'contact_number': contactNumber,
+      // });
+
+      final data = {
         'user_id': userID,
+        'passenger_email': email,
         'first_name': firstName,
         'last_name': lastName,
         'contact_number': contactNumber,
-      });
+      };
+
+      await supabase.from('passenger_table').insert(data);
+
     } catch (e) {
       debugPrint('Error saving user data: $e');
       rethrow;
