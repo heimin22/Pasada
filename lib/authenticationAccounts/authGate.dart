@@ -14,6 +14,8 @@ import 'package:pasada_passenger_app/main.dart';
 // import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../home/selectionScreen.dart';
+
 class AuthGate extends StatelessWidget {
   const AuthGate ({super.key});
 
@@ -38,16 +40,8 @@ class AuthGate extends StatelessWidget {
         final session = snapshot.data?.session;
 
         return session != null
-            ? const HomeScreen()
+            ? const selectionScreen()
             : const PasadaHomePage(title: 'Pasada');
-
-        // if (session != null) {
-        //   return selectionScreen();
-        // }
-        // else {
-        //   return const PasadaHomePage(title: 'Pasada');
-        //   // return LoginAccountPage();
-        // }
       },
     );
   }

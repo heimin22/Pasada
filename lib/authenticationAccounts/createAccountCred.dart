@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
+
+import '../home/selectionScreen.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
 // import 'package:pasada_passenger_app/main.dart';
@@ -357,17 +359,26 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
             try {
               final authService = AuthService();
-              final authResponse = await authService.signUpAuth(email, password);
+              final authResponse = await authService.signUpAuth(
+                email,
+                password,
+                data: {
+                  'first_name': firstName,
+                  'last_name': lastName,
+                  'contact_number': contactNumber,
+                },
+              );
               if (authResponse.user != null) {
-                await authService.saveUserData(
-                  userID: authResponse.user!.id,
-                  email: email,
-                  firstName: firstName,
-                  lastName: lastName,
-                  contactNumber: contactNumber,
-                );
-                Navigator.pushNamedAndRemoveUntil(
-                  context, 'selection', (route) => false,
+                // await authService.saveUserData(
+                //   userID: authResponse.user!.id,
+                //   email: email,
+                //   firstName: firstName,
+                //   lastName: lastName,
+                //   contactNumber: contactNumber,
+                // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const selectionScreen())
                 );
               }
             } catch (e) {

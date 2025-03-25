@@ -88,72 +88,14 @@ class AuthService {
   // implement nga tayong bagong method nigga
   // putangina hihiwalay ko na lang to para malupet
   // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
-  Future<AuthResponse> signUpAuth(String email, String password) async {
+  Future<AuthResponse> signUpAuth(String email, String password, {Map<String, dynamic>? data}) async {
     return await supabase.auth.signUp(
       email: email,
       password: password,
+      data: data,
     );
   }
 
-  Future<void> saveUserData({
-    required String userID,
-    required String email,
-    required String firstName,
-    required String lastName,
-    required String contactNumber,
-  }) async {
-    try {
-      final data = {
-        'id': userID,
-        'passenger_email': email,
-        'first_name': firstName,
-        'last_name': lastName,
-        'contact_number': contactNumber,
-      };
-
-      await passengersDatabase.insert(data);
-    } catch (e) {
-      debugPrint('Error saving user data: $e');
-      rethrow;
-    }
-  }
-
-  // sign up with email and password
-  // update to store device ID
-  // Future<AuthResponse> signUp(
-  //   email,
-  //   password,
-  //   firstName,
-  //   lastName,
-  //   contactNumber,
-  // ) async {
-  //   try {
-  //     AuthResponse response = await supabase.auth.signUp(
-  //       email: email,
-  //       password: password,
-  //     );
-  //     if (response.user != null) {
-  //       // String? deviceID = await getDeviceID();
-  //       // try to insert a new data sa table
-  //       await supabase.from('passenger_table').insert({
-  //         'user_id': response.user!.id,
-  //         'first_name': firstName,
-  //         'last_name' : lastName,
-  //         'passenger_email': email,
-  //         'contact_number': contactNumber,
-  //         // 'device_id': deviceID,
-  //         // 'passenger_type': 'regular',
-  //         // 'created_at': DateTime.now().toIso8601String(),
-  //         // 'last_login': DateTime.now().toIso8601String(),
-  //       });
-  //       debugPrint('Inserted passenger data: user_id=${response.user!.id}, email=$email');
-  //     }
-  //     return response;
-  //   } catch (e) {
-  //     debugPrint('Error inserting passenger data: $e');
-  //     throw Exception('Failed to sign up: $e');
-  //   }
-  // }
 
   // logout
   // update to remove device ID

@@ -32,6 +32,7 @@ class MapScreenState extends State<MapScreen> {
   LatLng? currentLocation; // Location Data
   final Location location = Location();
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+  StreamSubscription<LocationData>? locationSubscription;
 
   // Markers para sa pick-up and drop-off
   Marker? selectedPickupMarker;
@@ -88,6 +89,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void pulseCurrentLocationMarker() {
+    if (!mounted) return;
     setState(() => isAnimatingLocation = true);
 
     // reset ng animation after ng delay
@@ -100,12 +102,16 @@ class MapScreenState extends State<MapScreen> {
 
   Future<void> initLocation() async {
     await location.getLocation().then((location) {
-      setState(() =>
-          currentLocation = LatLng(location.latitude!, location.longitude!));
+      if (mounted) {
+        setState(() =>
+        currentLocation = LatLng(location.latitude!, location.longitude!));
+      }
     });
     location.onLocationChanged.listen((location) {
-      setState(() =>
-          currentLocation = LatLng(location.latitude!, location.longitude!));
+      if (mounted) {
+        setState(() =>
+        currentLocation = LatLng(location.latitude!, location.longitude!));
+      }
     });
   }
 
@@ -138,7 +144,6 @@ class MapScreenState extends State<MapScreen> {
           return;
         }
       }
-
       // check ng location permissions
       PermissionStatus permissionGranted = await location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
@@ -167,6 +172,14 @@ class MapScreenState extends State<MapScreen> {
           });
         }
       });
+
+      locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
+        if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
+          setState(() {
+            currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
+          });
+        }
+      });
     } catch (e) {
       showError('An error occurred while fetching the location.');
     }
@@ -182,6 +195,12 @@ class MapScreenState extends State<MapScreen> {
       generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
     }
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
@@ -267,8 +286,8 @@ class MapScreenState extends State<MapScreen> {
 
       if (response != null) {
         final data = json.decode(response);
-        print('API Response: $data');
-        print('Routes; ${data['routes']}');
+        debugPrint('API Response: $data');
+        debugPrint('Routes; ${data['routes']}');
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
@@ -276,17 +295,18 @@ class MapScreenState extends State<MapScreen> {
           List<LatLng> polylineCoordinates = decodedPolyline
               .map((point) => LatLng(point.latitude, point.longitude))
               .toList();
-
-          setState(() {
-            polylines = {
-              const PolylineId('route'): Polyline(
-                polylineId: const PolylineId('route'),
-                points: polylineCoordinates,
-                color: Color(0xFFD7481D),
-                width: 8,
-              )
-            };
-          });
+          if (mounted) {
+            setState(() {
+              polylines = {
+                const PolylineId('route'): Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: polylineCoordinates,
+                  color: Color(0xFFD7481D),
+                  width: 8,
+                )
+              };
+            });
+          }
 
           showDebugToast('Route generated successfully');
 
