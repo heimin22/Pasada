@@ -18,6 +18,9 @@ class AuthService {
   final Connectivity connectivity = Connectivity();
   late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
 
+  // database passengers
+  final passengersDatabase = Supabase.instance.client.from('passenger');
+
   void initState() {
     checkInitialConnectivity();
     connectivitySubscription =
@@ -69,10 +72,10 @@ class AuthService {
         password: password,
       );
 
-      if (response.user != null) {
-        await updateDeviceInfo(response.user!.id);
-        await validateDevice(response.user!.id);
-      }
+      // if (response.user != null) {
+      //   await updateDeviceInfo(response.user!.id);
+      //   await validateDevice(response.user!.id);
+      // }
       // String deviceID = await getDeviceID();
       // await supabase.from('profiles').update({'device_id': deviceID}).eq('id', response.user!.id);
       return response;
@@ -100,24 +103,15 @@ class AuthService {
     required String contactNumber,
   }) async {
     try {
-      // await supabase.from('passenger_table').insert({
-      //   'user_id': userID,
-      //   'passenger_email': email,
-      //   'first_name': firstName,
-      //   'last_name': lastName,
-      //   'contact_number': contactNumber,
-      // });
-
       final data = {
-        'user_id': userID,
+        'id': userID,
         'passenger_email': email,
         'first_name': firstName,
         'last_name': lastName,
         'contact_number': contactNumber,
       };
 
-      await supabase.from('passenger_table').insert(data);
-
+      await passengersDatabase.insert(data);
     } catch (e) {
       debugPrint('Error saving user data: $e');
       rethrow;
@@ -166,13 +160,13 @@ class AuthService {
   Future<void> logout() async {
     try {
       // device ID handling for logging out
-      final user = supabase.auth.currentUser;
-      if (user != null) {
-        await supabase
-            .from('passenger_table')
-            .update({'device_id': null})
-            .eq('user_id', user.id);
-      }
+      // final user = supabase.auth.currentUser;
+      // if (user != null) {
+      //   await supabase
+      //       .from('passenger');
+      //       // .update({'device_id': null})
+      //       // .eq('user_id', user.id);
+      // }
       await supabase.auth.signOut();
       if (kDebugMode) print('Logout successful');
     } catch (e) {
@@ -200,52 +194,52 @@ class AuthService {
   }
 
   // update user information
-  Future<void> updateUserInfo(String firstName, String lastName, String contactNumber, String email) async {
-    final user = supabase.auth.currentUser;
-
-    if (user != null) {
-      try {
-        final response = await supabase.from('passenger_table').update({
-          'first_name': firstName,
-          'last_name': lastName,
-          'contact_number': contactNumber,
-          'passenger_email': email,
-        }).eq('user_id', user.id);
-
-        if (response.error != null) {
-          throw Exception(response.error!.message);
-        }
-        debugPrint('Updated passenger_table: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
-      } catch (e) {
-        debugPrint('Error updating passenger_table: $e');
-        rethrow;
-      }
-    } else {
-      throw Exception('User not found');
-    }
-  }
+  // Future<void> updateUserInfo(String firstName, String lastName, String contactNumber, String email) async {
+  //   final user = supabase.auth.currentUser;
+  //
+  //   if (user != null) {
+  //     try {
+  //       final response = await supabase.from('passengers').update({
+  //         'first_name': firstName,
+  //         'last_name': lastName,
+  //         'contact_number': contactNumber,
+  //         'passenger_email': email,
+  //       }).eq('user_id', user.id);
+  //
+  //       if (response.error != null) {
+  //         throw Exception(response.error!.message);
+  //       }
+  //       debugPrint('Updated passenger_table: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
+  //     } catch (e) {
+  //       debugPrint('Error updating passenger_table: $e');
+  //       rethrow;
+  //     }
+  //   } else {
+  //     throw Exception('User not found');
+  //   }
+  // }
 
   // update device information on login
-  Future<void> updateDeviceInfo(String userID) async {
-    final deviceID = await getDeviceID();
-    await supabase.from('passenger_table').update({
-      'device_id': deviceID,
-      'last_Login': DateTime.now().toIso8601String(),
-    }).eq('user_id', userID);
-  }
+  // Future<void> updateDeviceInfo(String userID) async {
+  //   final deviceID = await getDeviceID();
+  //   await supabase.from('passengers').update({
+  //     'device_id': deviceID,
+  //     'last_Login': DateTime.now().toIso8601String(),
+  //   }).eq('user_id', userID);
+  // }
 
   // validate device on app start
-  Future<void> validateDevice(String userID) async {
-    final currentDeviceID = await getDeviceID();
-    final responseProfile = await supabase
-        .from('passenger_table')
-        .select('device_id')
-        .eq('user_id', userID)
-        .single();
-
-    if (responseProfile['device_id'] != currentDeviceID) {
-      await supabase.auth.signOut();
-      throw Exception('Session expired.');
-    }
-  }
+  // Future<void> validateDevice(String userID) async {
+  //   final currentDeviceID = await getDeviceID();
+  //   final responseProfile = await supabase
+  //       .from('passenger')
+  //       .select('device_id')
+  //       .eq('user_id', userID)
+  //       .single();
+  //
+  //   if (responseProfile['device_id'] != currentDeviceID) {
+  //     await supabase.auth.signOut();
+  //     throw Exception('Session expired.');
+  //   }
+  // }
 }

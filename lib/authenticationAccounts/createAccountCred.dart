@@ -357,22 +357,17 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
             try {
               final authService = AuthService();
-              final authResponse = await authService.signUpAuth(
-                email,
-                password,
-              );
-
+              final authResponse = await authService.signUpAuth(email, password);
               if (authResponse.user != null) {
                 await authService.saveUserData(
                   userID: authResponse.user!.id,
+                  email: email,
                   firstName: firstName,
                   lastName: lastName,
-                  email: email,
                   contactNumber: contactNumber,
                 );
                 Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  'selection', (route) => false,
+                  context, 'selection', (route) => false,
                 );
               }
             } catch (e) {
