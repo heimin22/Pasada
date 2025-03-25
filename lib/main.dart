@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
+import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
-// import 'package:flutter/foundation.dart';
-// import 'package:pasada_passenger_app/databaseSetup.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'authenticationAccounts/authGate.dart';
+import 'authenticationAccounts/authService.dart';
 
 const supabaseUrl = 'https://otbwhitwrmnfqgpmnjvf.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90YndoaXR3cm1uZnFncG1uanZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMzOTk5MzQsImV4cCI6MjA0ODk3NTkzNH0.f8JOv0YvKPQy8GWYGIdXfkIrKcqw0733QY36wJjG1Fw';
@@ -31,6 +32,28 @@ Future<void> main() async {
     ),
   );
 
+  // check device ID on startup
+  // final session = supabase.auth.currentSession;
+  // if (session != null) {
+  //   try {
+  //     final authService = AuthService();
+  //     // await authService.validateDevice(session.user.id);
+  //     // await authService.updateDeviceInfo(session.user.id);
+  //   } catch (e) {
+  //     await supabase.auth.signOut();
+  //   }
+  //   // final authService = AuthService();
+  //   // String currentDeviceID = await authService.getDeviceID();
+  //   // var profile = await supabase
+  //   //     .from('profiles')
+  //   //     .select()
+  //   //     .eq('id', session.user.id)
+  //   //     .single();
+  //   // if (profile['device_id'] != currentDeviceID) {
+  //   //   await supabase.auth.signOut();
+  //   // }
+  // }
+
   runApp(const PasadaPassenger());
 }
 
@@ -50,10 +73,18 @@ class PasadaPassenger extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const PasadaHomePage(title: 'Pasada'),
+      // home: const PasadaHomePage(title: 'Pasada'),
+      home: const AuthGate(),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
         'createAccount': (BuildContext context) => const CreateAccountPage(),
+        'cred': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return CreateAccountCredPage(
+            title: 'Create Account',
+            email: args['email'],
+          );
+        },
         'loginAccount': (BuildContext context) => const LoginAccountPage(),
       },
     );

@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
@@ -18,21 +17,33 @@ class CreateAccountPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const CAPage(title: 'Create Account'),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'cred': (BuildContext context) => const CreateAccountCredPage(),
-        'login': (BuildContext context) => const LoginAccountPage(),
-      },
-    );
+    return const CAPage(title: 'Pasada');
+    // return MaterialApp(
+    //   title: 'Pasada',
+    //   debugShowCheckedModeBanner: false,
+    //   theme: ThemeData(
+    //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+    //     fontFamily: 'Inter',
+    //     useMaterial3: true,
+    //   ),
+    //   home: const CAPage(title: 'Create Account'),
+    //   onGenerateRoute: (settings) {
+    //     if (settings.name == 'cred') {
+    //       final args = settings.arguments as Map<String, dynamic>;
+    //       return MaterialPageRoute(
+    //         builder: (context) => CreateAccountCredPage(
+    //           title: 'Pasada',
+    //           email: args['email'],
+    //         ),
+    //       );
+    //     }
+    //   },
+    //   routes: <String, WidgetBuilder>{
+    //     'start': (BuildContext context) => const PasadaPassenger(),
+    //     // 'cred': (BuildContext context) => const CreateAccountCredPage(title: 'Pasada', email: ''),
+    //     'login': (BuildContext context) => const LoginAccountPage(),
+    //   },
+    // );
   }
 }
 
@@ -49,6 +60,7 @@ class CreateAccountScreen extends State<CAPage> {
   // text controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
 
   // get auth service
   final AuthService authService = AuthService();
@@ -73,23 +85,30 @@ class CreateAccountScreen extends State<CAPage> {
     // preprepare na yung data
     final email = emailController.text;
     final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
+
+    if (password != confirmPassword) {
+      setState(() => errorMessage = 'Passwords do not match.');
+      return;
+    }
 
     // attempt na masign-up
     try {
-      await authService.SignUp(email,password);
+      // create uesr muna sa Supabase Authentication
+      // final authResponse = await authService.signUpAuth(email, password);
       // kapag successful yung pagregister ng account
-      Navigator.pushNamedAndRemoveUntil(
+      debugPrint('Navigating to cred');
+      Navigator.pushNamed(
         context,
-        'start',
-        (route) => false,
-        arguments: {'accountCreated': true}, // pass success argument
+        'cred',
+        // pass success argument
+        arguments: {'email': email, 'password': password},
       );
-    }
-    catch (e) {
+      debugPrint('Navigation completed');
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
-
       // pop the register page
       Navigator.pop(context);
     }
@@ -132,6 +151,8 @@ class CreateAccountScreen extends State<CAPage> {
                     buildPassengerEmailNumberInput(),
                     buildPassengerPassText(),
                     buildPassengerPassInput(),
+                    buildConfirmPassText(),
+                    buildConfirmPassInput(),
                     buildCreateAccountButton(),
                     buildOrDesign(),
                     buildSignUpGoogle(),
@@ -337,6 +358,70 @@ class CreateAccountScreen extends State<CAPage> {
     );
   }
 
+  Container buildConfirmPassText() {
+    return Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+        child: const Row(
+          children: [
+          Text(
+          'Confirm your ',
+          style: TextStyle(color: Color(0xFF121212)),
+        ),
+          Text(
+            'password.',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+          ],
+        ),
+    );
+  }
+
+  Container buildConfirmPassInput() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+      child: SizedBox(
+        width: double.infinity,
+        height: 45,
+        child: TextField(
+          controller: confirmPasswordController,
+          obscureText: !isPasswordVisible,
+          decoration: InputDecoration(
+            labelText: 'Confirm your password',
+            errorText: errorMessage.isNotEmpty ? errorMessage : null,
+            suffixIcon: IconButton(
+              color: const Color(0xFF121212),
+              onPressed: () {
+                setState(() {
+                  isPasswordVisible = !isPasswordVisible;
+                });
+              },
+              icon: Icon(
+                isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              ),
+            ),
+            labelStyle: const TextStyle(
+              fontSize: 12,
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: Color(0XFF121212),
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFF121212),
+                width: 1.0,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Color(0xFF121212),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Flexible buildCreateAccountButton() {
     return Flexible(
       child: Container(
@@ -420,17 +505,4 @@ class CreateAccountScreen extends State<CAPage> {
       ),
     );
   }
-// bool validateEmailOrPhone(String input) {
-//   final emailRegex = RegExp(r"^[^\s@]+@[^\s@]+\.[^\s@]+$");
-//   if (emailRegex.hasMatch(input)) {
-//     return true;
-//   }
-//
-//   final phoneRegex = RegExp(r"^\d{10,}$");
-//   if (phoneRegex.hasMatch(input)) {
-//     return true;
-//   }
-//
-//   return false;
-// }
 }

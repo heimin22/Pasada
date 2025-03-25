@@ -8,9 +8,13 @@ authenticated - main page
 */
 
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/home/selectionScreen.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
+import 'package:pasada_passenger_app/home/homeScreen.dart';
+// import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/main.dart';
+// import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../home/selectionScreen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate ({super.key});
@@ -31,14 +35,13 @@ class AuthGate extends StatelessWidget {
         }
 
         // check if there is a valid session currently
-        final session = snapshot.hasData ? snapshot.data!.session : null;
+        // final session = snapshot.hasData ? snapshot.data!.session : null;
 
-        if (session != null) {
-          return selectionScreen();
-        }
-        else {
-          return LoginAccountPage();
-        }
+        final session = snapshot.data?.session;
+
+        return session != null
+            ? const selectionScreen()
+            : const PasadaHomePage(title: 'Pasada');
       },
     );
   }

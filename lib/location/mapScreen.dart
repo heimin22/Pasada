@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:http/http.dart' as http;
+// import 'package:http/http.dart' as http;
 
 // import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -14,16 +14,14 @@ import 'package:location/location.dart';
 
 import 'networkUtilities.dart';
 
-// import 'package:pasada_passenger_app/location/locationButton.dart';
-// import 'selectedLocation.dart';
-// import 'package:pasada_passenger_app/home/homeScreen.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
   final double bottomPadding;
+  final Function(String)? onEtaUpdated;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13});
+  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13, this.onEtaUpdated});
 
   @override
   State<MapScreen> createState() => MapScreenState();
@@ -34,6 +32,7 @@ class MapScreenState extends State<MapScreen> {
   LatLng? currentLocation; // Location Data
   final Location location = Location();
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+  StreamSubscription<LocationData>? locationSubscription;
 
   // Markers para sa pick-up and drop-off
   Marker? selectedPickupMarker;
@@ -55,6 +54,8 @@ class MapScreenState extends State<MapScreen> {
 
   // animation ng location to kapag pinindot yung Location FAB
   bool isAnimatingLocation = false;
+
+  String? etaText;
 
   @override
   void initState() {
@@ -88,6 +89,7 @@ class MapScreenState extends State<MapScreen> {
   }
 
   void pulseCurrentLocationMarker() {
+    if (!mounted) return;
     setState(() => isAnimatingLocation = true);
 
     // reset ng animation after ng delay
@@ -100,12 +102,16 @@ class MapScreenState extends State<MapScreen> {
 
   Future<void> initLocation() async {
     await location.getLocation().then((location) {
-      setState(() =>
-          currentLocation = LatLng(location.latitude!, location.longitude!));
+      if (mounted) {
+        setState(() =>
+        currentLocation = LatLng(location.latitude!, location.longitude!));
+      }
     });
     location.onLocationChanged.listen((location) {
-      setState(() =>
-          currentLocation = LatLng(location.latitude!, location.longitude!));
+      if (mounted) {
+        setState(() =>
+        currentLocation = LatLng(location.latitude!, location.longitude!));
+      }
     });
   }
 
@@ -138,7 +144,6 @@ class MapScreenState extends State<MapScreen> {
           return;
         }
       }
-
       // check ng location permissions
       PermissionStatus permissionGranted = await location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
@@ -167,6 +172,14 @@ class MapScreenState extends State<MapScreen> {
           });
         }
       });
+
+      locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
+        if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
+          setState(() {
+            currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
+          });
+        }
+      });
     } catch (e) {
       showError('An error occurred while fetching the location.');
     }
@@ -182,6 +195,12 @@ class MapScreenState extends State<MapScreen> {
       generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
     }
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
@@ -203,7 +222,7 @@ class MapScreenState extends State<MapScreen> {
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
         // 'X-Goog-FieldMask': 'routes.distanceMeters',
         // 'X-Goog-FieldMask': 'routes.duration',
       };
@@ -267,6 +286,8 @@ class MapScreenState extends State<MapScreen> {
 
       if (response != null) {
         final data = json.decode(response);
+        debugPrint('API Response: $data');
+        debugPrint('Routes; ${data['routes']}');
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
@@ -274,19 +295,49 @@ class MapScreenState extends State<MapScreen> {
           List<LatLng> polylineCoordinates = decodedPolyline
               .map((point) => LatLng(point.latitude, point.longitude))
               .toList();
-
-          setState(() {
-            polylines = {
-              const PolylineId('route'): Polyline(
-                polylineId: const PolylineId('route'),
-                points: polylineCoordinates,
-                color: Color(0xFFD7481D),
-                width: 8,
-              )
-            };
-          });
+          if (mounted) {
+            setState(() {
+              polylines = {
+                const PolylineId('route'): Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: polylineCoordinates,
+                  color: Color(0xFFD7481D),
+                  width: 8,
+                )
+              };
+            });
+          }
 
           showDebugToast('Route generated successfully');
+
+          final legs = data['routes'][0]['legs'];
+          if (legs is! List || legs.isEmpty) {
+            debugPrint('Legs data is invalid: $legs');
+            setState(() => etaText = 'N/A');
+            return;
+          }
+
+          final firstLeg = legs[0];
+          final duration = firstLeg['duration'];
+          if (duration is! String || !duration.endsWith('s')) {
+            debugPrint('Invalid duration format: $duration');
+            setState(() => etaText = 'N/A');
+            return;
+          }
+
+          final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
+          final durationSeconds = int.tryParse(secondsString) ?? 0;
+          final durationText = formatDuration(durationSeconds);
+
+          setState(() => etaText = durationText);
+          if (widget.onEtaUpdated != null) {
+            widget.onEtaUpdated!(durationText);
+          }
+
+          // debug testing
+          debugPrint('API Response: ${json.encode(data)}'); // Full response
+          debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
+          debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
           return;
         }
       }
@@ -297,6 +348,25 @@ class MapScreenState extends State<MapScreen> {
     } catch (e) {
       showDebugToast('Error: ${e.toString()}');
     }
+  }
+
+  String formatDuration(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+
+    return hours > 0
+        ? '${hours}h ${minutes}m'
+        : minutes > 0
+            ? '$minutes mins'
+            : '<1 min';
+    //
+    // if (hours > 0) {
+    //   return '${hours}h ${minutes}m';
+    // } else if (minutes > 0) {
+    //   return '$minutes mins';
+    // } else {
+    //   return 'Less than a min';
+    // }
   }
 
   void showDebugToast(String message) {
@@ -374,7 +444,12 @@ class MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: RepaintBoundary(
         child: currentLocation == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF067837),
+                ),
+              )
             : GoogleMap(
                 onMapCreated: (controller) =>
                     mapController.complete(controller),
@@ -385,7 +460,7 @@ class MapScreenState extends State<MapScreen> {
                 markers: buildMarkers(),
                 polylines: Set<Polyline>.of(polylines.values),
                 padding: EdgeInsets.only(
-                  bottom: screenHeight * widget.bottomPadding,
+                  bottom: screenHeight * (widget.bottomPadding + 0.05),
                   left: screenWidth * 0.04,
                 ),
                 mapType: MapType.normal,
@@ -393,7 +468,7 @@ class MapScreenState extends State<MapScreen> {
                 myLocationButtonEnabled: false,
                 indoorViewEnabled: false,
                 zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
+                mapToolbarEnabled: true,
                 trafficEnabled: false,
                 rotateGesturesEnabled: true,
                 myLocationEnabled: true,
