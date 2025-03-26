@@ -13,7 +13,7 @@ import '../main.dart';
 // import 'package:pasada_passenger_app/home/settingsScreen.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
 
-void main() => runApp(const SettingsScreen());
+// void main() => runApp(const SettingsScreen());
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -90,10 +90,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         onTap: () async {
           try {
             await authService.logout();
-            Navigator.pushNamedAndRemoveUntil(
+            Navigator.push(
               context,
-              'start',
-              (route) => false,
+              MaterialPageRoute(builder: (context) => PasadaPassenger()),
             );
           } catch (e) {
             debugPrint('Logout failed: $e');

@@ -6,11 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-// import 'package:http/http.dart' as http;
 
-// import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
@@ -23,13 +20,19 @@ class MapScreen extends StatefulWidget {
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13, this.onEtaUpdated});
+  const MapScreen({
+    super.key,
+    this.pickUpLocation,
+    this.dropOffLocation,
+    this.bottomPadding = 0.07,
+    this.onEtaUpdated,
+  });
 
   @override
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> {
+class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
@@ -40,31 +43,45 @@ class MapScreenState extends State<MapScreen> {
   Marker? selectedPickupMarker;
   Marker? selectedDropOffMarker;
 
-  // polylines map
+  // polylines sa mapa nigga
   Map<PolylineId, Polyline> polylines = {};
 
   // mauupdate ito kapag nakapagsearch na ng location si user
   LatLng? selectedPickupLatLng;
   LatLng? selectedDropOffLatLng;
 
-  // ito muna yung fallback positions kung kailangan (hindi pa naman final ito niggas)
-  static const LatLng defaultSource = LatLng(14.617494, 120.971770);
-  static const LatLng defaultDestination = LatLng(14.619620, 120.971219);
-
-  // optional, show a marker sa current location
+  // null muna ito until mafetch yung current location
   LatLng? currentPosition;
 
   // animation ng location to kapag pinindot yung Location FAB
+  // animation flag
   bool isAnimatingLocation = false;
 
+  // ETA text lang naman to nigga
   String? etaText;
+
 
   @override
   void initState() {
     super.initState();
-    currentLocation = const LatLng(14.617494, 120.971770); /// default coords for testing
+    WidgetsBinding.instance.addObserver(this);
+    /// default coords for testing
+    // currentLocation = const LatLng(14.617494, 120.971770);
     initLocation();
     getLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      initLocation();
+    }
   }
 
   void calculateRoute() {
@@ -75,6 +92,7 @@ class MapScreenState extends State<MapScreen> {
     generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
+  @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
@@ -221,12 +239,6 @@ class MapScreenState extends State<MapScreen> {
       generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
     }
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
-  }
-
-  @override
-  void dispose() {
-    locationSubscription?.cancel();
-    super.dispose();
   }
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
@@ -434,7 +446,11 @@ class MapScreenState extends State<MapScreen> {
             child: const Text('Confirm'),
           ),
           TextButton(
-            onPressed: () => initLocation(),
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await initLocation();
+              getLocationUpdates();
+            },
             child: const Text('Retry'),
           ),
         ],
@@ -495,7 +511,7 @@ class MapScreenState extends State<MapScreen> {
                 markers: buildMarkers(),
                 polylines: Set<Polyline>.of(polylines.values),
                 padding: EdgeInsets.only(
-                  bottom: screenHeight * (widget.bottomPadding + 0.05),
+                  bottom: screenHeight * widget.bottomPadding,
                   left: screenWidth * 0.04,
                 ),
                 mapType: MapType.normal,
