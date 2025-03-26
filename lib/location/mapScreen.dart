@@ -125,18 +125,6 @@ class MapScreenState extends State<MapScreen> {
     }
 
     await getLocationUpdates();
-    // await location.getLocation().then((location) {
-    //   if (mounted) {
-    //     setState(() =>
-    //     currentLocation = LatLng(location.latitude!, location.longitude!));
-    //   }
-    // });
-    // location.onLocationChanged.listen((location) {
-    //   if (mounted) {
-    //     setState(() =>
-    //     currentLocation = LatLng(location.latitude!, location.longitude!));
-    //   }
-    // });
   }
 
   // animate yung camera papunta sa current location ng user
@@ -400,14 +388,6 @@ class MapScreenState extends State<MapScreen> {
         : minutes > 0
             ? '$minutes mins'
             : '<1 min';
-    //
-    // if (hours > 0) {
-    //   return '${hours}h ${minutes}m';
-    // } else if (minutes > 0) {
-    //   return '$minutes mins';
-    // } else {
-    //   return 'Less than a min';
-    // }
   }
 
   void showDebugToast(String message) {
@@ -442,9 +422,23 @@ class MapScreenState extends State<MapScreen> {
 
   // specific error dialog using the helper function
   void showLocationErrorDialog() {
-    showAlertDialog(
-      'Location Error',
-      'Unable to fetch the current location. Please try again later.',
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Error'),
+        content: const Text(
+            'Location services are disabled. Please enable them to use this feature.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Confirm'),
+          ),
+          TextButton(
+            onPressed: () => initLocation(),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
