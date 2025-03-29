@@ -391,7 +391,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
           Positioned(
             right: responsivePadding,
-            bottom: screenHeight * 0.13 + fabVerticalSpacing,
+            bottom: bottomContainerHeight + fabVerticalSpacing,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
