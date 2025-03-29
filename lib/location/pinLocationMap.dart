@@ -71,6 +71,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   bool isSnapping = false;
   bool isMapReady = false;
 
+  // for the google logo's responsiveness
+  late double bottomContainerHeight = 0.0;
+  final GlobalKey bottomContainerKey = GlobalKey();
+
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
     if (parts.length < 2) return [location, ''];
@@ -304,6 +308,17 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     final responsivePadding = screenWidth * 0.02;
     final fabVerticalSpacing = 10.0;
 
+    // measuring container height
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (bottomContainerKey.currentContext != null) {
+        final RenderBox box = bottomContainerKey.currentContext!.findRenderObject() as RenderBox;
+        final newHeight = box.size.height;
+        if (newHeight != bottomContainerHeight) {
+          setState(() => bottomContainerHeight = newHeight);
+        }
+      }
+    });
+
     if (isLoading) {
       return Scaffold(
         body: Center(
@@ -334,7 +349,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
           GoogleMap(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.3,
+              bottom: MediaQuery.of(context).size.height * 0.14,
             ),
             onMapCreated: onMapCreated,
             onTap: (position) {

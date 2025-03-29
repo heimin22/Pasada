@@ -58,7 +58,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       {
         "input": query,
         "key": apiKey,
-        "components": "country:PH", // Optional: limit to Philippines
+        "components": "country:PH", // limit to Philippines
       },
     );
 
@@ -69,7 +69,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       setState(() => placePredictions = result.prediction ?? []);
     }
   }
-
 
   void onPlaceSelected(AutocompletePrediction prediction) async {
     final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
