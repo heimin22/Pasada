@@ -68,6 +68,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         selectedDropOffLocation = location;
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
   @override
@@ -97,7 +98,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   void measureContainer() {
     final RenderBox? box =
         containerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box != null) {
+    if (box != null && mounted) {
       setState(() {
         containerHeight = box.size.height;
       });
@@ -114,7 +115,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           final difference = lastBackPressTime != null
               ? now.difference(lastBackPressTime!)
               : Duration(seconds: 3);
-
           if (difference > Duration(seconds: 2)) {
             lastBackPressTime = now;
             Fluttertoast.showToast(
@@ -136,7 +136,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           final iconSize = screenWidth * 0.06;
           final bottomNavBarHeight = 20.0;
           final double fabVerticalSpacing = 10.0;
-
           return Stack(
             children: [
               MapScreen(
@@ -147,6 +146,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     MediaQuery.of(context).size.height,
                 onEtaUpdated: (eta) {
                   setState(() => etaText = eta);
+                  WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
                 },
               ),
               Positioned(
@@ -183,7 +183,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           );
         },

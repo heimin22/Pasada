@@ -5,10 +5,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 // import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pasada_passenger_app/main.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
 
 void main() => runApp(const CreateAccountPage());
 

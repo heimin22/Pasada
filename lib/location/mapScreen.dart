@@ -92,11 +92,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     // intiate the location and get the location updates
     if (state == AppLifecycleState.resumed) {
       initializeLocation();
-      // WidgetsBinding.instance.addPostFrameCallback((_) {
-      //   initLocation();
-      // });
-      // initLocation();
-      // getLocationUpdates();
     }
   }
 
@@ -108,6 +103,11 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
+    }
+    // check if the bottom padding has changed my nigger
+    if (widget.bottomPadding != oldWidget.bottomPadding) {
+      setState(() {});
+      // updateMapPadding(); // call method para maupdate yung padding motherfucker
     }
   }
 
@@ -145,10 +145,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   // replace ko yung initLocation ko ng ganito
   Future<void> initializeLocation() async {
     if (isLocationInitialized || !mounted) return;
-
-    // // reset location data to force fresh check
-    // setState(() => currentLocation = null);
-    // isLocationInitialized();
 
     // service check
     final serviceReady = await checkLocationService();
@@ -283,7 +279,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       if (mounted) showError('Location Error: ${e.toString()}');
     }
   }
-
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
