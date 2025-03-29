@@ -88,14 +88,58 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
       left: screenWidth * 0.05,
       child: GestureDetector(
         onTap: () async {
+          final navigator = Navigator.of(context);
+          final rootNavigator = Navigator.of(context, rootNavigator: true);
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
           try {
-            await authService.logout();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => PasadaPassenger()),
+            final confirmLogout = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: const Text('Log out?'),
+                content: const Text('Are you sure you want to log out?'),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: const Text('Logout'),
+                  )
+                ],
+              ),
             );
+            if (confirmLogout ?? false) {
+              if (!context.mounted) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (loadingDialogContext) => const PopScope(
+                  canPop: false,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF067837),
+                    ),
+                  ),
+                ),
+              );
+              await authService.logout();
+              if (!context.mounted) return;
+              navigator.pop();
+              rootNavigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => PasadaPassenger()),
+                (Route<dynamic> route) => false,
+              );
+            }
           } catch (e) {
-            debugPrint('Logout failed: $e');
+            if (context.mounted) {
+              Navigator.of(context).pop();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Logout failed: ${e.toString()}')),
+              );
+            }
           }
         },
         child: Text(
@@ -104,7 +148,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             fontSize: 15,
             fontWeight: FontWeight.w600,
             color: const Color(0xFFD7481D),
-            decoration: TextDecoration.underline,
           ),
         ),
       ),
