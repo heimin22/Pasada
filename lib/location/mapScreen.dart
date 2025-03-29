@@ -146,9 +146,9 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   Future<void> initializeLocation() async {
     if (isLocationInitialized || !mounted) return;
 
-    // reset location data to force fresh check
-    setState(() => currentLocation = null);
-    isLocationInitialized = false;
+    // // reset location data to force fresh check
+    // setState(() => currentLocation = null);
+    // isLocationInitialized();
 
     // service check
     final serviceReady = await checkLocationService();

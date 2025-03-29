@@ -36,7 +36,6 @@ class AuthGate extends StatelessWidget {
         //     mapState.initializeLocation();
         //   }
         // });
-        //
 
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {

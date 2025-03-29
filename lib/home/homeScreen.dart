@@ -75,7 +75,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     // TODO: implement initState
     super.initState();
     // magmemeasure dapat ito after ng first frame
-    WidgetsBinding.instance.addObserver(this);
+    // WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
