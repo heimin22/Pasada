@@ -74,6 +74,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   // for the google logo's responsiveness
   late double bottomContainerHeight = 0.0;
   final GlobalKey bottomContainerKey = GlobalKey();
+  final fabVerticalSpacing = 10.0;
 
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
@@ -306,7 +307,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final responsivePadding = screenWidth * 0.02;
-    final fabVerticalSpacing = 10.0;
 
     // measuring container height
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -349,7 +349,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
           GoogleMap(
             padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.14,
+              bottom: bottomContainerHeight + MediaQuery.of(context).size.height * 0.01,
             ),
             onMapCreated: onMapCreated,
             onTap: (position) {
@@ -361,8 +361,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               target: currentLocation ?? const LatLng(14.617494, 120.971770),
               zoom: 15,
             ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
+            myLocationEnabled: false,
+            zoomControlsEnabled: false,
+            indoorViewEnabled: false,
+            myLocationButtonEnabled: true,
             onCameraMove: (position) {
               // don't do anything when the camera is moving
               // prevent na rin para walang jumping/snapping during movement
@@ -409,15 +411,16 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: pinnedLocationContainer(screenWidth),
+            child: pinnedLocationContainer(screenWidth, key: bottomContainerKey),
           ),
         ],
       ),
     );
   }
 
-  Widget pinnedLocationContainer(double screenWidth) {
+  Widget pinnedLocationContainer(double screenWidth, {Key? key}) {
     return Container(
+      key: key,
       width: screenWidth,
       decoration: BoxDecoration(
         color: const Color(0xFFF5F5F5),
