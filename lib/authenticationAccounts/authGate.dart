@@ -15,6 +15,7 @@ import 'package:pasada_passenger_app/main.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../home/selectionScreen.dart';
+import '../location/mapScreen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate ({super.key});
@@ -27,6 +28,15 @@ class AuthGate extends StatelessWidget {
 
       // build appropriate page based on auth state
       builder: (context, snapshot) {
+        // add location pre-check
+        // WidgetsBinding.instance.addPostFrameCallback((_) {
+        //   final mapState = context.findAncestorStateOfType<MapScreenState>();
+        //   // mapState?.initializeLocation();
+        //   if (mapState != null && !mapState.isLocationInitialized) {
+        //     mapState.initializeLocation();
+        //   }
+        // });
+
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
