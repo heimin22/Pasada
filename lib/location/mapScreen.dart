@@ -104,6 +104,11 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
     }
+    // check if the bottom padding has changed my nigger
+    if (widget.bottomPadding != oldWidget.bottomPadding) {
+      setState(() {});
+      // updateMapPadding(); // call method para maupdate yung padding motherfucker
+    }
   }
 
   void calculateRoute() {
@@ -274,7 +279,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       if (mounted) showError('Location Error: ${e.toString()}');
     }
   }
-
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
