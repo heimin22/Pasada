@@ -18,32 +18,6 @@ class CreateAccountPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const CAPage(title: 'Pasada');
-    // return MaterialApp(
-    //   title: 'Pasada',
-    //   debugShowCheckedModeBanner: false,
-    //   theme: ThemeData(
-    //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-    //     fontFamily: 'Inter',
-    //     useMaterial3: true,
-    //   ),
-    //   home: const CAPage(title: 'Create Account'),
-    //   onGenerateRoute: (settings) {
-    //     if (settings.name == 'cred') {
-    //       final args = settings.arguments as Map<String, dynamic>;
-    //       return MaterialPageRoute(
-    //         builder: (context) => CreateAccountCredPage(
-    //           title: 'Pasada',
-    //           email: args['email'],
-    //         ),
-    //       );
-    //     }
-    //   },
-    //   routes: <String, WidgetBuilder>{
-    //     'start': (BuildContext context) => const PasadaPassenger(),
-    //     // 'cred': (BuildContext context) => const CreateAccountCredPage(title: 'Pasada', email: ''),
-    //     'login': (BuildContext context) => const LoginAccountPage(),
-    //   },
-    // );
   }
 }
 

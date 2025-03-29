@@ -146,6 +146,10 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   Future<void> initializeLocation() async {
     if (isLocationInitialized || !mounted) return;
 
+    // reset location data to force fresh check
+    setState(() => currentLocation = null);
+    isLocationInitialized = false;
+
     // service check
     final serviceReady = await checkLocationService();
     if (!serviceReady) return;
@@ -179,19 +183,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     }
   }
 
-  // initiate the location and get the location updates
-  // Future<void> initLocation() async {
-  //   await Future.delayed(const Duration(milliseconds: 300));
-  //   final serviceAvailable = await checkLocationService();
-  //   // if (!serviceAvailable) {
-  //   //   if (mounted) showLocationErrorDialog();
-  //   //   return;
-  //   // }
-  //
-  //   if (!serviceAvailable) return;
-  //   await getLocationUpdates();
-  // }
-
   Future<bool> verifyLocationPermissions() async {
     final status = await location.hasPermission();
     if (status == PermissionStatus.granted) return true;
@@ -205,13 +196,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       return false;
     }
     return true;
-
-    // if (status != PermissionStatus.granted) {
-    //   final newStatus = await location.requestPermission();
-    //   if (newStatus != PermissionStatus.granted && mounted) {
-    //     showLocationErrorDialog();
-    //   }
-    // }
   }
 
   // animate yung camera papunta sa current location ng user
@@ -571,6 +555,12 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!isLocationInitialized) {
+        initializeLocation();
+      }
+    });
 
     return Scaffold(
       body: RepaintBoundary(

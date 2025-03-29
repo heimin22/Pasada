@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
@@ -28,6 +29,16 @@ Future<void> main() async {
       retryAttempts: 10,
     ),
   );
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp
+  ]);
+
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
+    statusBarBrightness: Brightness.light, // For iOS light mode
+  ));
 
   runApp(const PasadaPassenger());
 }
