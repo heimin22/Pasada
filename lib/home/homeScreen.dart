@@ -127,7 +127,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
                 key: mapScreenKey,
                 pickUpLocation: selectedPickUpLocation?.coordinates,
                 dropOffLocation: selectedDropOffLocation?.coordinates,
-                bottomPadding: (containerHeight + bottomNavBarHeight + 70) /
+                bottomPadding: (containerHeight + bottomNavBarHeight) /
                     MediaQuery.of(context).size.height,
                 onEtaUpdated: (eta) {
                   setState(() => etaText = eta);

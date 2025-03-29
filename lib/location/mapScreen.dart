@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-// import 'package:http/http.dart' as http;
 
-// import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
@@ -21,13 +20,19 @@ class MapScreen extends StatefulWidget {
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
 
-  const MapScreen({super.key, this.pickUpLocation, this.dropOffLocation, this.bottomPadding = 0.13, this.onEtaUpdated});
+  const MapScreen({
+    super.key,
+    this.pickUpLocation,
+    this.dropOffLocation,
+    this.bottomPadding = 0.07,
+    this.onEtaUpdated,
+  });
 
   @override
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> {
+class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
@@ -38,31 +43,45 @@ class MapScreenState extends State<MapScreen> {
   Marker? selectedPickupMarker;
   Marker? selectedDropOffMarker;
 
-  // polylines map
+  // polylines sa mapa nigga
   Map<PolylineId, Polyline> polylines = {};
 
   // mauupdate ito kapag nakapagsearch na ng location si user
   LatLng? selectedPickupLatLng;
   LatLng? selectedDropOffLatLng;
 
-  // ito muna yung fallback positions kung kailangan (hindi pa naman final ito niggas)
-  static const LatLng defaultSource = LatLng(14.617494, 120.971770);
-  static const LatLng defaultDestination = LatLng(14.619620, 120.971219);
-
-  // optional, show a marker sa current location
+  // null muna ito until mafetch yung current location
   LatLng? currentPosition;
 
   // animation ng location to kapag pinindot yung Location FAB
+  // animation flag
   bool isAnimatingLocation = false;
 
+  // ETA text lang naman to nigga
   String? etaText;
+
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    /// default coords for testing
+    // currentLocation = const LatLng(14.617494, 120.971770);
     initLocation();
-    // listen for location updates (if kailangan ng current position)
     getLocationUpdates();
+  }
+
+  @override
+  void dispose() {
+    locationSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      initLocation();
+    }
   }
 
   void calculateRoute() {
@@ -73,6 +92,7 @@ class MapScreenState extends State<MapScreen> {
     generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
+  @override
   void didUpdateWidget(MapScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
@@ -100,19 +120,29 @@ class MapScreenState extends State<MapScreen> {
     });
   }
 
+  // service status check helper
+  Future<bool> checkLocationService() async {
+    try {
+      bool serviceEnabled = await location.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await location.requestService();
+      }
+      return serviceEnabled;
+    } on PlatformException {
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> initLocation() async {
-    await location.getLocation().then((location) {
-      if (mounted) {
-        setState(() =>
-        currentLocation = LatLng(location.latitude!, location.longitude!));
-      }
-    });
-    location.onLocationChanged.listen((location) {
-      if (mounted) {
-        setState(() =>
-        currentLocation = LatLng(location.latitude!, location.longitude!));
-      }
-    });
+    final serviceAvailable = await checkLocationService();
+    if (!serviceAvailable) {
+      if (mounted) showLocationErrorDialog();
+      return;
+    }
+
+    await getLocationUpdates();
   }
 
   // animate yung camera papunta sa current location ng user
@@ -137,32 +167,38 @@ class MapScreenState extends State<MapScreen> {
       if (!serviceEnabled) {
         serviceEnabled = await location.requestService();
         if (!serviceEnabled) {
-          showAlertDialog(
-            'Enable Location Services',
-            'Location services are disabled. Please enable them to use this feature.',
-          );
-          return;
+          if (mounted) {
+            showAlertDialog(
+              'Enable Location Services',
+              'Location services are disabled. Please enable them to use this feature.',
+            );
+            return;
+          }
         }
       }
       // check ng location permissions
       PermissionStatus permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) {
-          showAlertDialog(
-            'Permission Required',
-            'This app needs location permission to work. Please allow it in your settings.',
-          );
-          return;
+      if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
+        final permission = await location.requestPermission();
+        if (permission != PermissionStatus.granted) {
+          if (mounted) {
+            showAlertDialog(
+              'Permission Required',
+              'This app needs location permission to work. Please allow it in your settings.',
+            );
+            return;
+          }
         }
       }
 
       // kuha ng current location
       LocationData locationData = await location.getLocation();
-      setState(() {
-        currentLocation =
-            LatLng(locationData.latitude!, locationData.longitude!);
-      });
+      if (mounted) {
+        setState(() {
+          currentLocation =
+              LatLng(locationData.latitude!, locationData.longitude!);
+        });
+      }
       // listen sa location updates
       location.onLocationChanged.listen((LocationData newLocation) {
         if (newLocation.latitude != null && newLocation.longitude != null) {
@@ -180,10 +216,18 @@ class MapScreenState extends State<MapScreen> {
           });
         }
       });
+    } on PlatformException catch (e) {
+      if (mounted) {
+        showError(
+            'Location Error: ${e.message ?? "Service status unavailable"}');
+      }
+      debugPrint('PlatformException: ${e.code} - ${e.message}');
     } catch (e) {
-      showError('An error occurred while fetching the location.');
+      // showError('An error occurred while fetching the location.');
+      if (mounted) showError(e.toString());
     }
   }
+
 
   // ito yung method para sa pick-up and drop-off location
   void updateLocations({LatLng? pickup, LatLng? dropoff}) {
@@ -197,13 +241,12 @@ class MapScreenState extends State<MapScreen> {
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
-  @override
-  void dispose() {
-    locationSubscription?.cancel();
-    super.dispose();
-  }
-
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      showDebugToast('No internet connection');
+      return;
+    }
     try {
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey == null) {
@@ -223,8 +266,6 @@ class MapScreenState extends State<MapScreen> {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
         'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
-        // 'X-Goog-FieldMask': 'routes.distanceMeters',
-        // 'X-Goog-FieldMask': 'routes.duration',
       };
       final body = jsonEncode({
         'origin': {
@@ -359,14 +400,6 @@ class MapScreenState extends State<MapScreen> {
         : minutes > 0
             ? '$minutes mins'
             : '<1 min';
-    //
-    // if (hours > 0) {
-    //   return '${hours}h ${minutes}m';
-    // } else if (minutes > 0) {
-    //   return '$minutes mins';
-    // } else {
-    //   return 'Less than a min';
-    // }
   }
 
   void showDebugToast(String message) {
@@ -401,9 +434,27 @@ class MapScreenState extends State<MapScreen> {
 
   // specific error dialog using the helper function
   void showLocationErrorDialog() {
-    showAlertDialog(
-      'Location Error',
-      'Unable to fetch the current location. Please try again later.',
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Error'),
+        content: const Text(
+            'Location services are disabled. Please enable them to use this feature.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Confirm'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await initLocation();
+              getLocationUpdates();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -460,7 +511,7 @@ class MapScreenState extends State<MapScreen> {
                 markers: buildMarkers(),
                 polylines: Set<Polyline>.of(polylines.values),
                 padding: EdgeInsets.only(
-                  bottom: screenHeight * (widget.bottomPadding + 0.05),
+                  bottom: screenHeight * widget.bottomPadding,
                   left: screenWidth * 0.04,
                 ),
                 mapType: MapType.normal,
