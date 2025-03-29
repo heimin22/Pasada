@@ -60,36 +60,34 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   // ETA text lang naman to nigga
   String? etaText;
 
-
+  // Override methods
+  /// state of the app
   @override
   void initState() {
+    // make sure the widgets binding with an instance of observer is here
+    // call the initLocation() method too
+    // then get the location updates
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    /// default coords for testing
-    // currentLocation = const LatLng(14.617494, 120.971770);
     initLocation();
     getLocationUpdates();
   }
 
+  /// disposing of functions
   @override
   void dispose() {
+    // location subscription should be cancelled
     locationSubscription?.cancel();
     super.dispose();
   }
+
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       initLocation();
+      getLocationUpdates();
     }
-  }
-
-  void calculateRoute() {
-    if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
-      showDebugToast('Select both locations first.');
-      return;
-    }
-    generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
   @override
@@ -99,6 +97,14 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
     }
+  }
+
+  void calculateRoute() {
+    if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
+      showDebugToast('Select both locations first.');
+      return;
+    }
+    generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
   void handleLocationUpdates() {
@@ -126,22 +132,28 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
       bool serviceEnabled = await location.serviceEnabled();
       if (!serviceEnabled) {
         serviceEnabled = await location.requestService();
+        if (!serviceEnabled) {
+          if (mounted) showLocationErrorDialog();
+          return false;
+        }
       }
-      return serviceEnabled;
+      return true;
     } on PlatformException {
+      if (mounted) showError('Service Error: ${e.message ?? 'Unknown'}');
       return false;
     } catch (e) {
+      if (mounted) showError('Failed to check location services.');
       return false;
     }
   }
 
   Future<void> initLocation() async {
+    await Future.delayed(const Duration(milliseconds: 300));
     final serviceAvailable = await checkLocationService();
     if (!serviceAvailable) {
       if (mounted) showLocationErrorDialog();
       return;
     }
-
     await getLocationUpdates();
   }
 
