@@ -41,7 +41,7 @@ class HomeScreenStateful extends StatefulWidget {
   State<HomeScreenStateful> createState() => HomeScreenPageState();
 }
 
-class HomeScreenPageState extends State<HomeScreenStateful> {
+class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver{
   final GlobalKey containerKey = GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
   final GlobalKey<MapScreenState> mapScreenKey =
@@ -75,7 +75,23 @@ class HomeScreenPageState extends State<HomeScreenStateful> {
     // TODO: implement initState
     super.initState();
     // magmemeasure dapat ito after ng first frame
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // TODO: implement didChangeAppLifecycleState
+    if (state == AppLifecycleState.resumed) {
+      mapScreenKey.currentState?.initializeLocation();
+    }
   }
 
   void measureContainer() {
