@@ -3,9 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 // import 'package:url_launcher/url_launcher.dart';
 // import 'package:location/location.dart';
 // import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/home/notificationScreen.dart';
 import 'package:pasada_passenger_app/home/activityScreen.dart';
-import 'package:pasada_passenger_app/home/profileSettingsScreen.dart';
 import 'package:pasada_passenger_app/home/settingsScreen.dart';
 import 'package:pasada_passenger_app/home/homeScreen.dart';
 
@@ -22,8 +20,6 @@ class selectionState extends State<selectionScreen> {
   final List<Widget> pages = const [
     HomeScreen(),
     ActivityScreen(),
-    NotificationScreen(),
-    ProfileScreen(),
     SettingsScreen(),
   ];
 
@@ -66,9 +62,7 @@ class selectionState extends State<selectionScreen> {
       items: [
         _buildNavItem(0, 'Home', 'homeSelectedIcon.svg', 'homeIcon.svg'),
         _buildNavItem(1, 'Activity', 'activitySelectedIcon.svg', 'activityIcon.svg'),
-        _buildNavItem(2, 'Notifications', 'notificationSelectedIcon.svg', 'notificationIcon.svg'),
-        _buildNavItem(3, 'Profile', 'accountSelectedIcon.svg', 'profileIcon.svg'),
-        _buildNavItem(4, 'Settings', 'settingsSelectedIcon.svg', 'settingsIcon.svg'),
+        _buildNavItem(2, 'Settings', 'settingsSelectedIcon.svg', 'settingsIcon.svg'),
       ],
     );
   }
