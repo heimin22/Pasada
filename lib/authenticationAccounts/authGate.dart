@@ -28,14 +28,6 @@ class AuthGate extends StatelessWidget {
 
       // build appropriate page based on auth state
       builder: (context, snapshot) {
-        // add location pre-check
-        // WidgetsBinding.instance.addPostFrameCallback((_) {
-        //   final mapState = context.findAncestorStateOfType<MapScreenState>();
-        //   // mapState?.initializeLocation();
-        //   if (mapState != null && !mapState.isLocationInitialized) {
-        //     mapState.initializeLocation();
-        //   }
-        // });
 
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {

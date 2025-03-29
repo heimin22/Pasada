@@ -68,6 +68,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         selectedDropOffLocation = location;
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
   @override
@@ -114,7 +115,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           final difference = lastBackPressTime != null
               ? now.difference(lastBackPressTime!)
               : Duration(seconds: 3);
-
           if (difference > Duration(seconds: 2)) {
             lastBackPressTime = now;
             Fluttertoast.showToast(
@@ -183,7 +183,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           );
         },

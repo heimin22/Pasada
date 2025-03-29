@@ -92,11 +92,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     // intiate the location and get the location updates
     if (state == AppLifecycleState.resumed) {
       initializeLocation();
-      // WidgetsBinding.instance.addPostFrameCallback((_) {
-      //   initLocation();
-      // });
-      // initLocation();
-      // getLocationUpdates();
     }
   }
 
@@ -145,10 +140,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   // replace ko yung initLocation ko ng ganito
   Future<void> initializeLocation() async {
     if (isLocationInitialized || !mounted) return;
-
-    // // reset location data to force fresh check
-    // setState(() => currentLocation = null);
-    // isLocationInitialized();
 
     // service check
     final serviceReady = await checkLocationService();
