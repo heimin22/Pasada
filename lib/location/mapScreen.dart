@@ -60,6 +60,10 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   // ETA text lang naman to nigga
   String? etaText;
 
+  // Class variable for location initialization
+  bool isLocationInitialized = false;
+  bool errorDialogVisible = false;
+
   // Override methods
   /// state of the app
   @override
@@ -69,8 +73,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     // then get the location updates
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    initLocation();
-    getLocationUpdates();
+    initializeLocation();
+    // getLocationUpdates();
   }
 
   /// disposing of functions
@@ -78,20 +82,28 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void dispose() {
     // location subscription should be cancelled
     locationSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // here once the app is opened,
+    // intiate the location and get the location updates
     if (state == AppLifecycleState.resumed) {
-      initLocation();
-      getLocationUpdates();
+      initializeLocation();
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   initLocation();
+      // });
+      // initLocation();
+      // getLocationUpdates();
     }
   }
 
   @override
   void didUpdateWidget(MapScreen oldWidget) {
+    // get the location from previous widget
+    // then call the handleLocationUpdates
     super.didUpdateWidget(oldWidget);
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
         widget.dropOffLocation != oldWidget.dropOffLocation) {
@@ -100,13 +112,16 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   }
 
   void calculateRoute() {
+    //  make sure there's a null check before placing polylines
     if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
       showDebugToast('Select both locations first.');
       return;
     }
+    // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
     generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
+  // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
@@ -114,6 +129,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     }
   }
 
+  // animate yung current location marker
   void pulseCurrentLocationMarker() {
     if (!mounted) return;
     setState(() => isAnimatingLocation = true);
@@ -126,35 +142,76 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     });
   }
 
+  // replace ko yung initLocation ko ng ganito
+  Future<void> initializeLocation() async {
+    if (isLocationInitialized || !mounted) return;
+
+    // service check
+    final serviceReady = await checkLocationService();
+    if (!serviceReady) return;
+
+    // permission check
+    final permissionGranted = await verifyLocationPermissions();
+    if (!permissionGranted) return;
+
+    // fetch updates
+    await getLocationUpdates();
+    isLocationInitialized = true;
+  }
+
   // service status check helper
   Future<bool> checkLocationService() async {
     try {
+      // serviceEnabled variable to check the location services
       bool serviceEnabled = await location.serviceEnabled();
       if (!serviceEnabled) {
+        // if not enabled then request for the activation
         serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          if (mounted) showLocationErrorDialog();
+        if (!serviceEnabled && mounted) {
+          showLocationErrorDialog();
           return false;
         }
       }
       return true;
-    } on PlatformException {
+    } on PlatformException catch (e) {
       if (mounted) showError('Service Error: ${e.message ?? 'Unknown'}');
-      return false;
-    } catch (e) {
-      if (mounted) showError('Failed to check location services.');
       return false;
     }
   }
 
-  Future<void> initLocation() async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    final serviceAvailable = await checkLocationService();
-    if (!serviceAvailable) {
-      if (mounted) showLocationErrorDialog();
-      return;
+  // initiate the location and get the location updates
+  // Future<void> initLocation() async {
+  //   await Future.delayed(const Duration(milliseconds: 300));
+  //   final serviceAvailable = await checkLocationService();
+  //   // if (!serviceAvailable) {
+  //   //   if (mounted) showLocationErrorDialog();
+  //   //   return;
+  //   // }
+  //
+  //   if (!serviceAvailable) return;
+  //   await getLocationUpdates();
+  // }
+
+  Future<bool> verifyLocationPermissions() async {
+    final status = await location.hasPermission();
+    if (status == PermissionStatus.granted) return true;
+
+    final newStatus = await location.requestPermission();
+    if (newStatus != PermissionStatus.granted && mounted) {
+      showAlertDialog(
+        'Permission Required',
+        'Enable location permissions device settings',
+      );
+      return false;
     }
-    await getLocationUpdates();
+    return true;
+
+    // if (status != PermissionStatus.granted) {
+    //   final newStatus = await location.requestPermission();
+    //   if (newStatus != PermissionStatus.granted && mounted) {
+    //     showLocationErrorDialog();
+    //   }
+    // }
   }
 
   // animate yung camera papunta sa current location ng user
@@ -168,75 +225,78 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
         )
       ),
     );
-
     pulseCurrentLocationMarker();
   }
 
   Future<void> getLocationUpdates() async {
     try {
-      // check if yung location services ay available
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          if (mounted) {
-            showAlertDialog(
-              'Enable Location Services',
-              'Location services are disabled. Please enable them to use this feature.',
-            );
-            return;
-          }
-        }
-      }
-      // check ng location permissions
-      PermissionStatus permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
-        final permission = await location.requestPermission();
-        if (permission != PermissionStatus.granted) {
-          if (mounted) {
-            showAlertDialog(
-              'Permission Required',
-              'This app needs location permission to work. Please allow it in your settings.',
-            );
-            return;
-          }
-        }
-      }
+      // if (!await checkLocationService()) return;
+      //
+      // // check if yung location services ay available
+      // bool serviceEnabled = await location.serviceEnabled();
+      // if (!serviceEnabled) {
+      //   serviceEnabled = await location.requestService();
+      //   if (!serviceEnabled) {
+      //     if (mounted) {
+      //       showAlertDialog(
+      //         'Enable Location Services',
+      //         'Location services are disabled. Please enable them to use this feature.',
+      //       );
+      //       return;
+      //     }
+      //   }
+      // }
+      // // check ng location permissions
+      // PermissionStatus permissionGranted = await location.hasPermission();
+      // if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
+      //   final permission = await location.requestPermission();
+      //   if (permission != PermissionStatus.granted) {
+      //     if (mounted) {
+      //       showAlertDialog(
+      //         'Permission Required',
+      //         'This app needs location permission to work. Please allow it in your settings.',
+      //       );
+      //       return;
+      //     }
+      //   }
+      // }
 
       // kuha ng current location
       LocationData locationData = await location.getLocation();
-      if (mounted) {
-        setState(() {
-          currentLocation =
-              LatLng(locationData.latitude!, locationData.longitude!);
-        });
-      }
-      // listen sa location updates
-      location.onLocationChanged.listen((LocationData newLocation) {
-        if (newLocation.latitude != null && newLocation.longitude != null) {
-          setState(() {
-            currentLocation =
-                LatLng(newLocation.latitude!, newLocation.longitude!);
-          });
-        }
+      if (!mounted) return;
+
+      setState(() => currentLocation = LatLng(locationData.latitude!, locationData.longitude!));
+
+      final controller = await mapController.future;
+      controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+
+      locationSubscription = location.onLocationChanged
+        .where((data) => data.latitude != null && data.longitude != null)
+        .listen((newLocation) {
+          if (!mounted) return;
+          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
       });
 
-      locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
-        if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
-          setState(() {
-            currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
-          });
-        }
-      });
-    } on PlatformException catch (e) {
-      if (mounted) {
-        showError(
-            'Location Error: ${e.message ?? "Service status unavailable"}');
-      }
-      debugPrint('PlatformException: ${e.code} - ${e.message}');
+      // listen sa location updates
+      // location.onLocationChanged.listen((LocationData newLocation) {
+      //   if (newLocation.latitude != null && newLocation.longitude != null) {
+      //     setState(() {
+      //       currentLocation =
+      //           LatLng(newLocation.latitude!, newLocation.longitude!);
+      //     });
+      //   }
+      // });
+
+      // locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
+      //   // if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
+      //   //   setState(() {
+      //   //     currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
+      //   //   });
+      //   // }
+      // });
     } catch (e) {
       // showError('An error occurred while fetching the location.');
-      if (mounted) showError(e.toString());
+      if (mounted) showError('Location Error: ${e.toString()}');
     }
   }
 
@@ -446,24 +506,32 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   // specific error dialog using the helper function
   void showLocationErrorDialog() {
+    if (errorDialogVisible) return;
+    errorDialogVisible = true;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Location Error'),
-        content: const Text(
-            'Location services are disabled. Please enable them to use this feature.'),
+        content: const Text('Enable location services to continue.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Confirm'),
+            onPressed: () {
+              errorDialogVisible = false;
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
-              await initLocation();
-              getLocationUpdates();
+              // Navigator.of(context).pop();
+              // await initLocation();
+              // if (mounted) getLocationUpdates();
+              errorDialogVisible = false;
+              Navigator.pop(context);
+              await initializeLocation();
             },
-            child: const Text('Retry'),
+            child: const Text('Enable'),
           ),
         ],
       ),
