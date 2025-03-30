@@ -55,8 +55,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
       body: SafeArea(
         child: Stack(
           children: [
-            settingsTitle(),
-            logoutButton(),
+            buildPassengerProfile(),
+            const SizedBox(height: 20),
+            buildSettingsSection(),
+            // const SizedBox(height: 20),
           ],
         ),
       ),
@@ -64,7 +66,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   }
 
   // settings title header
-  Positioned settingsTitle() {
+  Widget settingsTitle() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Positioned(
@@ -89,14 +91,16 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     return Container (
       width: double.infinity,
       color: Color(0xFFF5F5F5),
+      height: 105,
       padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.05,
+        horizontal: screenWidth * 0.06,
         vertical: screenHeight * 0.03,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: screenWidth * 0.08,
+            radius: screenWidth * 0.07,
             backgroundColor: const Color(0xFF00CC58),
             child: Icon(
               Icons.person,
@@ -200,7 +204,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: screenWidth * 0.05,
-              vertical: 14,
+              vertical: 5,
             ),
             child: Row(
               children: [
@@ -208,9 +212,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                   child: Text(
                     title,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: isDestructive ? Color(0xFFD7481D) : Theme.of(context).textTheme.bodyMedium?.color,
-                      fontWeight: isDestructive ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -238,11 +242,15 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         left: screenWidth * 0.05,
         right: screenWidth * 0.05,
         top: 15,
-        bottom: 8,
+        bottom: 18,
       ),
       child: Text(
         title,
-        style: Theme.of(context).textTheme.titleLarge,
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF121212),
+        ),
       ),
     );
   }
