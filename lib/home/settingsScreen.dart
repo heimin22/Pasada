@@ -284,7 +284,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         );
         await authService.logout();
         if (!context.mounted) return;
-        navigator.pop();
+        rootNavigator.pop();
         rootNavigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => PasadaPassenger()),
               (Route<dynamic> route) => false,
