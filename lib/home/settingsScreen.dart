@@ -78,7 +78,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     return Container (
       width: double.infinity,
       color: Color(0xFFF5F5F5),
-      height: 105,
+      height: screenHeight * 0.13,
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.06,
         vertical: screenHeight * 0.03,
@@ -95,10 +95,11 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               color: const Color(0xFFDEDEDE),
             ),
           ),
-          SizedBox(width: screenWidth * 0.04),
+          SizedBox(width: screenWidth * 0.06),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: screenHeight * 0.008),
               const Text(
                 'Fyke Tonel',
                 style: TextStyle(
@@ -292,7 +293,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     } catch (e) {
       if (context.mounted) {
         Navigator.of(context).pop();
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logout failed: ${e.toString()}')),
         );
