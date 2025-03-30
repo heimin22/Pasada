@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
+import 'package:postgres/postgres.dart';
 
 import '../main.dart';
 // import 'package:flutter_svg/flutter_svg.dart';
@@ -76,6 +77,70 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
           fontWeight: FontWeight.w700,
           color: Color(0xFF121212),
         ),
+      ),
+    );
+  }
+
+  Widget buildPassengerProfile() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    return Container (
+      width: double.infinity, 
+      color: Color(0xFFF5F5F5),
+      padding: EdgeInsets.symmetric(
+        horizontal: screenWidth * 0.05,
+        vertical: screenHeight * 0.03,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: screenWidth * 0.08,
+            backgroundColor: const Color(0xFF00CC58),
+            child: Icon(
+              Icons.person,
+              size: screenWidth * 0.1,
+              color: const Color(0xFFDEDEDE),
+            ),
+          ),
+          SizedBox(width: screenWidth * 0.04),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Fyke Tonel',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF121212)
+                ),
+              ),
+              SizedBox(height: screenHeight * 0.005),
+              InkWell(
+                onTap: () {
+                  debugPrint('Edit profile tapped');
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Edit profile',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF121212),
+                      ),
+                    ),
+                    SizedBox(width: screenWidth * 0.01),
+                    Icon(
+                      Icons.arrow_forward,
+                      size: 15,
+                      color: Color(0xFF121212),
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
