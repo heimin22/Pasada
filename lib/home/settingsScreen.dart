@@ -149,7 +149,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   // settings section widget
   Widget buildSettingsSection() {
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
@@ -158,6 +157,31 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            buildSectionHeader('My Account', screenWidth),
+            buildSettingsListItem('Change your password', screenWidth, () {
+              debugPrint('Change Password tapped');
+              // TODO: dapat may function na ito sa susunod my nigger
+            }),
+            buildSettingsListItem('Delete my account', screenWidth, () {
+              debugPrint('Delete Account tapped');
+              // TODO: dapat may function na ito sa susunod my nigger
+            }),
+            buildSettingsListItem("Log out", screenWidth, () {
+              debugPrint('Log out tapped');
+              showLogoutDialog();
+            }, isDestructive: true),
+
+            const SizedBox(height: 25),
+
+            buildSectionHeader('General', screenWidth),
+            buildSettingsListItem('Preferences', screenWidth, (){
+              debugPrint('Preferences tapped');
+              // TODO: dapat may function na ito sa susunod my nigger
+            }),
+            buildSettingsListItem('Contact Support', screenWidth, (){
+              debugPrint('Contact support tapped');
+              // TODO: dapat may function na ito sa susunod my nigger
+            }),
           ],
         ),
       ),
