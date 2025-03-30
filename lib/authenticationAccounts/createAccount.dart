@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 // import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 // import 'package:flutter_animate/flutter_animate.dart';
@@ -44,7 +45,7 @@ class CreateAccountScreen extends State<CAPage> {
   bool isPasswordVisible = false;
 
   // error message
-  String errorMessage = ' ';
+  String errorMessage = '';
 
   // loading
   bool isLoading = false;
@@ -54,21 +55,43 @@ class CreateAccountScreen extends State<CAPage> {
 
   // sign up
   Future<void> SigningUp() async {
-    // preprepare na yung data
+    // clear previous errors
+    setState(() => errorMessage = '');
+
+    // controllers
     final email = emailController.text;
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
+    if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Please fill in all fields.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+        return;
+      }
+    }
+
     if (password != confirmPassword) {
-      setState(() => errorMessage = 'Passwords do not match.');
-      return;
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Please fill in all fields.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+        return;
+      }
     }
 
     // attempt na masign-up
     try {
-      // create uesr muna sa Supabase Authentication
-      // final authResponse = await authService.signUpAuth(email, password);
-      // kapag successful yung pagregister ng account
+      setState(() => isLoading = true);
       debugPrint('Navigating to cred');
       Navigator.pushNamed(
         context,
@@ -79,10 +102,19 @@ class CreateAccountScreen extends State<CAPage> {
       debugPrint('Navigation completed');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+        Fluttertoast.showToast(
+          msg: 'Error: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+        );
       }
       // pop the register page
       Navigator.pop(context);
+    }
+    finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -206,12 +238,12 @@ class CreateAccountScreen extends State<CAPage> {
             style: TextStyle(color: Color(0xFF121212)),
           ),
           Text(
-            'email or phone number',
+            'email',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           Text(
             ' to continue',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(color: Color(0xFF121212)),
           ),
         ],
       ),
@@ -231,24 +263,23 @@ class CreateAccountScreen extends State<CAPage> {
             fontSize: 14,
           ),
           decoration: InputDecoration(
-            labelText: 'Enter your email or phone number',
+            labelText: 'Enter your email',
             labelStyle: const TextStyle(
               fontSize: 12,
             ),
-            errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
               color: Color(0xFF121212),
             ),
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
+                color: Color(0xFF121212),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFF00CC58),
               ),
             ),
           ),
@@ -294,7 +325,6 @@ class CreateAccountScreen extends State<CAPage> {
           ),
           decoration: InputDecoration(
             labelText: 'Enter your password',
-            errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
               color: const Color(0xFF121212),
               onPressed: () {
@@ -321,7 +351,7 @@ class CreateAccountScreen extends State<CAPage> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFF00CC58),
               ),
             ),
           ),
@@ -358,7 +388,6 @@ class CreateAccountScreen extends State<CAPage> {
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Confirm your password',
-            errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
               color: const Color(0xFF121212),
               onPressed: () {
@@ -385,7 +414,7 @@ class CreateAccountScreen extends State<CAPage> {
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFF00CC58),
               ),
             ),
           ),
