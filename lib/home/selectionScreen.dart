@@ -62,7 +62,7 @@ class selectionState extends State<selectionScreen> {
       items: [
         _buildNavItem(0, 'Home', 'homeSelectedIcon.svg', 'homeIcon.svg'),
         _buildNavItem(1, 'Activity', 'activitySelectedIcon.svg', 'activityIcon.svg'),
-        _buildNavItem(2, 'Settings', 'settingsSelectedIcon.svg', 'settingsIcon.svg'),
+        _buildNavItem(2, 'Account', 'profileSelectedIcon.svg', 'profileIcon.svg'),
       ],
     );
   }
