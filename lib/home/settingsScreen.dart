@@ -145,6 +145,43 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  Widget buildSettingsSection() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      child: Container(
+        color: Color(0xFFF5F5F5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructicve = false}) {
+    return Column(
+
+    )
+  }
+
+  Widget buildSectionHeader(String title, double screenWidth) {
+    return Padding (
+      padding: EdgeInsets.only(
+        left: screenWidth * 0.05,
+        right: screenWidth * 0.05,
+        top: 15,
+        bottom: 8,
+      ),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+    );
+  }
+
   Positioned logoutButton() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
