@@ -161,10 +161,44 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
-  Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructicve = false}) {
+  Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructive = false}) {
     return Column(
-
-    )
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth * 0.05,
+              vertical: 14,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDestructive ? Color(0xFFD7481D) : Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight: isDestructive ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF121212),
+                  size: 22,
+                )
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+            child: const Divider(),
+          )
+        ),
+      ],
+    );
   }
 
   Widget buildSectionHeader(String title, double screenWidth) {
