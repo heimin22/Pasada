@@ -63,6 +63,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  // settings title header
   Positioned settingsTitle() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -81,11 +82,12 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  // profile section widget
   Widget buildPassengerProfile() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     return Container (
-      width: double.infinity, 
+      width: double.infinity,
       color: Color(0xFFF5F5F5),
       padding: EdgeInsets.symmetric(
         horizontal: screenWidth * 0.05,
@@ -145,6 +147,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  // settings section widget
   Widget buildSettingsSection() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -161,6 +164,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  // dito yung mga helper widgets my nigger
+
+  // dito yung mga single tappable list items para sa settings ng sections
   Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructive = false}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -192,15 +198,16 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-            child: const Divider(),
-          )
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
+          child: const Divider(),
         ),
       ],
     );
   }
 
+  // builds the header for a settings section
   Widget buildSectionHeader(String title, double screenWidth) {
     return Padding (
       padding: EdgeInsets.only(
@@ -216,6 +223,63 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     );
   }
 
+  // logout dialog
+  void showLogoutDialog() async {
+    final AuthService authService = AuthService();
+    final navigator = Navigator.of(context);
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    try {
+      final confirmLogout = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Log out?'),
+          content: const Text('Are you sure you want to log out?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Logout'),
+            )
+          ],
+        ),
+      );
+      if (confirmLogout ?? false) {
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (loadingDialogContext) => const PopScope(
+            canPop: false,
+            child: Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Color(0xFF067837),
+              ),
+            ),
+          ),
+        );
+        await authService.logout();
+        if (!context.mounted) return;
+        navigator.pop();
+        rootNavigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => PasadaPassenger()),
+              (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Logout failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
   Positioned logoutButton() {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -226,7 +290,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         onTap: () async {
           final navigator = Navigator.of(context);
           final rootNavigator = Navigator.of(context, rootNavigator: true);
-          final scaffoldMessenger = ScaffoldMessenger.of(context);
           try {
             final confirmLogout = await showDialog<bool>(
               context: context,
