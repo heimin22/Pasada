@@ -195,7 +195,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   Widget buildLocationContainer(BuildContext context, double screenWidth,
       double padding, double iconSize) {
     String svgAssetPickup = 'assets/svg/pinpickup.svg';
-    String svgAssetDropOff = 'assets/svg/locationPin.svg';
+    String svgAssetDropOff = 'assets/svg/pindropoff.svg';
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
@@ -216,7 +216,37 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
               screenWidth, iconSize),
           const Divider(),
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
-              screenWidth, iconSize)
+              screenWidth, iconSize),
+          SizedBox(height: screenWidth * 0.04),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (selectedPickUpLocation != null && selectedDropOffLocation != null)
+              ? () {
+                // TODO: Lalagyan na to ng function sa susunod nigga
+              }
+              : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00CC58),
+                disabledBackgroundColor: Color(0xFFD3D3D3),
+                foregroundColor: Color(0xFFF5F5F5),
+                disabledForegroundColor: Color(0xFFF5F5F5),
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Confirm Booking',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  // color: Color(0xFFF5F5F5),
+                ),
+              ),
+            ),
+          )
         ],
       ),
     );
@@ -224,6 +254,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
 
   Widget buildLocationRow(String svgAsset, SelectedLocation? location,
       bool isPickup, double screenWidth, double iconSize) {
+    double iconSize = isPickup ? 15 : 15;
     // split address into two parts
     List<String> locationParts = location != null ? splitLocation(location.address) : ['' , ''];
 
@@ -237,20 +268,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
               children: [
                 Text(
                   "Total Fare: ",
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Color(0xFF121212),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: screenWidth * 0.02),
-            Row(
-              children: [
-                Text(
-                  "Passenger Count: ",
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
@@ -290,8 +307,8 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
             children: [
               SvgPicture.asset(
                 svgAsset,
-                height: 18,
-                width: 18,
+                height: iconSize,
+                width: iconSize,
               ),
               SizedBox(width: screenWidth * 0.03),
               Expanded(

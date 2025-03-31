@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:pasada_passenger_app/home/activityScreen.dart';
 import 'package:pasada_passenger_app/home/settingsScreen.dart';
 import 'package:pasada_passenger_app/home/homeScreen.dart';
@@ -15,77 +13,125 @@ class selectionScreen extends StatefulWidget {
 }
 
 class selectionState extends State<selectionScreen> {
-  int _currentIndex = 0;
+  int currentIndex = 0;
+  int previousIndex = 0;
+  final GlobalKey<CurvedNavigationBarState> bottomNavigationKey = GlobalKey();
 
   final List<Widget> pages = const [
-    HomeScreen(),
-    ActivityScreen(),
-    SettingsScreen(),
+    HomeScreen(key: ValueKey('Home')),
+    ActivityScreen(key: ValueKey('Activity')),
+    SettingsScreen(key: ValueKey('Settings')),
   ];
+
+  Color getNavBarColor() {
+    switch (currentIndex) {
+      case 0:
+        return const Color(0xFF00CC58);
+      case 1:
+        return const Color(0xFFFFCE21);
+      case 2:
+        return const Color(0xFFD7481D);
+      default:
+        return const Color(0xFF00CC58);
+    }
+  }
+
+  Color getIconColor() {
+    switch (currentIndex) {
+      case 0:
+        return const Color(0xFF067837);
+      case 1:
+        return const Color(0xFFFFCE21);
+      case 2:
+        return const Color(0xFFD7481D);
+      default:
+        return const Color(0xFF067837);
+    }
+  }
+
 
   void onTap (int newIndex) {
     setState(() {
-      _currentIndex = newIndex;
+      previousIndex = currentIndex;
+      currentIndex = newIndex;
     });
+  }
+
+  Widget buildCurvedNavItem(int index) {
+    String selectedIcon, unselectedIcon;
+    switch (index) {
+      case 0:
+        selectedIcon = 'homeSelectedIcon.svg';
+        unselectedIcon = 'homeIcon.svg';
+        break;
+      case 1:
+        selectedIcon = 'activitySelectedIcon.svg';
+        unselectedIcon = 'activityIcon.svg';
+        break;
+      case 2:
+        selectedIcon = 'profileSelectedIcon.svg';
+        unselectedIcon = 'profileIcon.svg';
+        break;
+      default:
+        selectedIcon = '';
+        unselectedIcon = '';
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SvgPicture.asset(
+          'assets/svg/${currentIndex == index ? selectedIcon : unselectedIcon}',
+          colorFilter: currentIndex == index
+              ? ColorFilter.mode(getIconColor(), BlendMode.srcIn)
+              : null,
+          width: 24,
+          height: 24,
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
-      body: IndexedStack( // Use IndexedStack to preserve state
-        index: _currentIndex,
-        children: pages,
-      ),
-      bottomNavigationBar: _buildBottomNavBar(),
-    );
-  }
+      backgroundColor: Color(0xFFF5F5F5),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200), // matched dapat yung animation duration so bottom nav bar
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // slide animation
+          final bool isForward = currentIndex > previousIndex;
+          final Offset begin = isForward
+              ? const Offset(1.0, 0.0) // enter from right para sa forward navigation
+              : const Offset(-1.0, 0.0); // enter from left para sa backward navigation
 
-  BottomNavigationBar _buildBottomNavBar() {
-    return BottomNavigationBar(
-      backgroundColor: const Color(0xFFF2F2F2),
-      currentIndex: _currentIndex,
-      onTap: onTap,
-      showSelectedLabels: true,
-      showUnselectedLabels: false,
-      selectedLabelStyle: const TextStyle(
-        color: Color(0xFF121212),
-        fontFamily: 'Inter',
-        fontSize: 12,
+            return SlideTransition(
+              position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.fastOutSlowIn,
+                ),
+              ),
+              child: child,
+            );
+          },
+        child: pages[currentIndex],
       ),
-      unselectedLabelStyle: const TextStyle(
-        fontFamily: 'Inter',
-        fontSize: 12,
-      ),
-      selectedItemColor: const Color(0xff067837),
-      type: BottomNavigationBarType.fixed,
-      items: [
-        _buildNavItem(0, 'Home', 'homeSelectedIcon.svg', 'homeIcon.svg'),
-        _buildNavItem(1, 'Activity', 'activitySelectedIcon.svg', 'activityIcon.svg'),
-        _buildNavItem(2, 'Account', 'profileSelectedIcon.svg', 'profileIcon.svg'),
-      ],
-    );
-  }
+      bottomNavigationBar: CurvedNavigationBar(
+        key: bottomNavigationKey,
+        items: [
+          buildCurvedNavItem(0),
+          buildCurvedNavItem(1),
+          buildCurvedNavItem(2),
+        ],
+        index: currentIndex,
+        color: const Color(0xFFF5F5F5),
+        backgroundColor: getNavBarColor(),
+        buttonBackgroundColor: Color(0xFFF5F5F5),
 
-  BottomNavigationBarItem _buildNavItem(
-      int index,
-      String label,
-      String selectedIcon,
-      String unselectedIcon
-      ) {
-    return BottomNavigationBarItem(
-      label: label,
-      icon: _currentIndex == index
-          ? SvgPicture.asset(
-        'assets/svg/$selectedIcon',
-        colorFilter: ColorFilter.mode(Color(0xff067837), BlendMode.srcIn),
-        width: 24,
-        height: 24,
-      )
-          : SvgPicture.asset(
-        'assets/svg/$unselectedIcon',
-        width: 24,
-        height: 24,
+        onTap: onTap,
+        animationCurve: Curves.fastOutSlowIn,
+        animationDuration: const Duration(milliseconds: 400),
+        height: 75.0,
       ),
     );
   }

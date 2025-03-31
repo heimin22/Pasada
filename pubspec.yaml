@@ -33,7 +33,7 @@ dependencies:
   postgres: ^3.4.7
   supabase_flutter: ^2.8.2
   supabase: ^2.6.1
-  shared_preferences: ^2.5.2
+  shared_preferences: ^2.5.3
   uuid: ^4.5.1
   cupertino_icons: ^1.0.8
   fluttertoast: ^8.2.10
@@ -51,6 +51,7 @@ dependencies:
   webview_flutter: ^4.10.0
   dio: ^5.7.0
   get: ^4.6.6
+  curved_navigation_bar: ^1.0.6
   flutter_google_maps_webservices: ^1.1.1
   flutter_polyline_points: ^2.1.0
   http: ^1.2.2
@@ -97,6 +98,7 @@ flutter:
     - assets/svg/activityIcon.svg
     - assets/svg/notificationIcon.svg
     - assets/svg/profileIcon.svg
+    - assets/svg/profileSelectedIcon.svg
     - assets/svg/settingsIcon.svg
     - assets/svg/homeSelectedIcon.svg
     - assets/svg/activitySelectedIcon.svg
@@ -107,6 +109,7 @@ flutter:
     - assets/svg/navigation.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
+    - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
     - .env
 
