@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
@@ -41,7 +44,7 @@ class HomeScreenStateful extends StatefulWidget {
   State<HomeScreenStateful> createState() => HomeScreenPageState();
 }
 
-class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver{
+class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final GlobalKey containerKey = GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
   final GlobalKey<MapScreenState> mapScreenKey =
@@ -51,6 +54,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
+  // keep state alive my nigger
+  @override
+  bool get wantKeepAlive => true;
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
@@ -105,8 +111,61 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     }
   }
 
+  void navigateToSearch(BuildContext context, bool isPickup) async {
+    final result = await Navigator.of(
+        context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => SearchLocationScreen(isPickup: isPickup),
+      ),
+    );
+    if (result != null && result is SelectedLocation) {
+      setState(() {
+        if (isPickup) {
+          selectedPickUpLocation = result;
+        } else {
+          selectedDropOffLocation = result;
+        }
+      });
+    }
+  }
+
+  // saving location to avoid getting removed through navigation
+  Future<void> saveLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (selectedPickUpLocation != null) {
+      prefs.setString('pickup', jsonEncode(selectedPickUpLocation!.toJson()));
+    }
+    if (selectedDropOffLocation != null) {
+      prefs.setString('dropoff', jsonEncode(selectedDropOffLocation!.toJson()));
+    }
+  }
+
+  // loading location
+  Future<void> loadLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    final pickupJson = prefs.getString('pickup');
+    final dropoffJson = prefs.getString('dropoff');
+
+    if (pickupJson != null) {
+      selectedPickUpLocation = SelectedLocation.fromJson(jsonDecode(pickupJson));
+    }
+    if (dropoffJson != null) {
+      selectedDropOffLocation = SelectedLocation.fromJson(jsonDecode(dropoffJson));
+    }
+
+    if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        mapScreenKey.currentState?.generatePolylineBetween(
+          selectedPickUpLocation!.coordinates,
+          selectedDropOffLocation!.coordinates,
+        );
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return PopScope(
       canPop: false, // bawal navigation pops
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -347,23 +406,5 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         ],
       ),
     );
-  }
-
-  void navigateToSearch(BuildContext context, bool isPickup) async {
-    final result = await Navigator.of(
-      context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) => SearchLocationScreen(isPickup: isPickup),
-      ),
-    );
-    if (result != null && result is SelectedLocation) {
-      setState(() {
-        if (isPickup) {
-          selectedPickUpLocation = result;
-        } else {
-          selectedDropOffLocation = result;
-        }
-      });
-    }
   }
 }
