@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
@@ -157,6 +158,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           controller: firstNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -205,6 +208,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           controller: lastNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -255,19 +260,40 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         height: 45,
         child: TextField(
           controller: contactController,
-          style: TextStyle(
-            color: Color(0xFF121212),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Inter'
-          ),
           keyboardType: TextInputType.phone,
-          decoration: InputDecoration(
-            prefixText: '+63 | ',
-            prefixStyle: TextStyle(
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          style: TextStyle(
               color: Color(0xFF121212),
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Inter',
+              fontFamily: 'Inter'
+          ),
+          decoration: InputDecoration(
+            prefix: Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/svg/phFlag.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    '+63 |',
+                    style: TextStyle(
+                      color: Color(0xFF121212),
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
             ),
             labelText: 'Enter your contact number (e.g., 9123456789)',
             labelStyle: const TextStyle(
