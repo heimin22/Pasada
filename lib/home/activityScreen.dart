@@ -1,14 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:pasada_passenger_app/homeScreen.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:pasada_passenger_app/notificationScreen.dart';
-// import 'package:pasada_passenger_app/activityScreen.dart';
-// import 'package:pasada_passenger_app/profileSettingsScreen.dart';
-// import 'package:pasada_passenger_app/settingsScreen.dart';
-// import 'package:pasada_passenger_app/homeScreen.dart';
 
 void main() => runApp(const ActivityScreen());
 

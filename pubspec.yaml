@@ -109,6 +109,7 @@ flutter:
     - assets/svg/navigation.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
+    - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
     - .env
 
