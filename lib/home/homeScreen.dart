@@ -99,6 +99,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      loadLocation();
       mapScreenKey.currentState?.initializeLocation();
     }
   }
@@ -132,7 +133,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   }
 
   // saving location to avoid getting removed through navigation
-  Future<void> saveLocation() async {
+  void saveLocation() async {
     final prefs = await SharedPreferences.getInstance();
     if (selectedPickUpLocation != null) {
       prefs.setString(
@@ -145,7 +146,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     }
     if (selectedDropOffLocation != null) {
       prefs.setString(
-        'pickup',
+        'dropoff',
         jsonEncode(SelectedLocation(
           selectedDropOffLocation!.address,
           selectedDropOffLocation!.coordinates,
@@ -155,29 +156,34 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   }
 
   // loading location
-  Future<void> loadLocation() async {
+  void loadLocation() async {
     final prefs = await SharedPreferences.getInstance();
     final pickupJson = prefs.getString('pickup');
     final dropoffJson = prefs.getString('dropoff');
 
-    if (pickupJson != null) {
-      final data = jsonDecode(pickupJson);
-      setState(() {
-        selectedPickUpLocation = SelectedLocation(
-          data['address'],
-          LatLng(data['lat'], data['lng'])
-        );
-      });
-    }
-    if (dropoffJson != null) {
-      final data = jsonDecode(dropoffJson);
-      setState(() {
-        selectedDropOffLocation = SelectedLocation(
-            data['address'],
-            LatLng(data['lat'], data['lng'])
-        );
-      });
-    }
+    setState(() {
+      selectedPickUpLocation = _loadLocation(prefs, 'pickup');
+      selectedDropOffLocation = _loadLocation(prefs, 'dropoff');
+    });
+
+    // if (pickupJson != null) {
+    //   final data = jsonDecode(pickupJson);
+    //   setState(() {
+    //     selectedPickUpLocation = SelectedLocation(
+    //       data['address'],
+    //       LatLng(data['lat'], data['lng'])
+    //     );
+    //   });
+    // }
+    // if (dropoffJson != null) {
+    //   final data = jsonDecode(dropoffJson);
+    //   setState(() {
+    //     selectedDropOffLocation = SelectedLocation(
+    //         data['address'],
+    //         LatLng(data['lat'], data['lng'])
+    //     );
+    //   });
+    // }
 
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -187,6 +193,11 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         );
       });
     }
+  }
+
+  SelectedLocation? _loadLocation(SharedPreferences prefs, String key) {
+    final json = prefs.getString(key);
+    return json != null ? SelectedLocation.fromJson(jsonDecode(json)) : null;
   }
 
   @override

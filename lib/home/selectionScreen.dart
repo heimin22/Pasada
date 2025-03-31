@@ -12,22 +12,37 @@ class selectionScreen extends StatefulWidget {
   selectionState createState() => selectionState();
 }
 
+class PersistentHomeScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const HomeScreen(key: PageStorageKey('Home'));
+  }
+}
+
+class PersistentActivityScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const ActivityScreen(key: PageStorageKey('Activity'));
+  }
+}
+
+class PersistentProfileScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const SettingsScreen(key: PageStorageKey('Settings'));
+  }
+}
+
 class selectionState extends State<selectionScreen> {
   int currentIndex = 0;
   int previousIndex = 0;
   final GlobalKey<CurvedNavigationBarState> bottomNavigationKey = GlobalKey();
-  late final List<Widget> pages;
 
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    pages = [
-      HomeScreen(key: ValueKey('Home')),
-      ActivityScreen(key: ValueKey('Activity')),
-      SettingsScreen(key: ValueKey('Settings')),
-    ];
-  }
+  late final List<Widget> pages = [
+    PersistentHomeScreen(),
+    PersistentActivityScreen(),
+    PersistentProfileScreen(),
+  ];
 
   Color getNavBarColor() {
     switch (currentIndex) {

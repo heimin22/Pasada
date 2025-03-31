@@ -32,12 +32,15 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
+class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin{
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
   StreamSubscription<LocationData>? locationSubscription;
+
+  @override
+  bool get wantKeepAlive => true;
 
   // Markers para sa pick-up and drop-off
   Marker? selectedPickupMarker;
