@@ -23,6 +23,33 @@ class selectionState extends State<selectionScreen> {
     SettingsScreen(key: ValueKey('Settings')),
   ];
 
+  Color getNavBarColor() {
+    switch (currentIndex) {
+      case 0:
+        return const Color(0xFF00CC58);
+      case 1:
+        return const Color(0xFFFFCE21);
+      case 2:
+        return const Color(0xFFD7481D);
+      default:
+        return const Color(0xFF00CC58);
+    }
+  }
+
+  Color getIconColor() {
+    switch (currentIndex) {
+      case 0:
+        return const Color(0xFF067837);
+      case 1:
+        return const Color(0xFFFFCE21);
+      case 2:
+        return const Color(0xFFD7481D);
+      default:
+        return const Color(0xFF067837);
+    }
+  }
+
+
   void onTap (int newIndex) {
     setState(() {
       previousIndex = currentIndex;
@@ -55,7 +82,7 @@ class selectionState extends State<selectionScreen> {
         SvgPicture.asset(
           'assets/svg/${currentIndex == index ? selectedIcon : unselectedIcon}',
           colorFilter: currentIndex == index
-              ? ColorFilter.mode(Color(0xff067837), BlendMode.srcIn)
+              ? ColorFilter.mode(getIconColor(), BlendMode.srcIn)
               : null,
           width: 24,
           height: 24,
@@ -69,7 +96,7 @@ class selectionState extends State<selectionScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F5),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 400), // matched dapat yung animation duration so bottom nav bar
+        duration: const Duration(milliseconds: 200), // matched dapat yung animation duration so bottom nav bar
         transitionBuilder: (Widget child, Animation<double> animation) {
           // slide animation
           final bool isForward = currentIndex > previousIndex;
@@ -98,7 +125,7 @@ class selectionState extends State<selectionScreen> {
         ],
         index: currentIndex,
         color: const Color(0xFFF5F5F5),
-        backgroundColor: Color(0xFF00CC58),
+        backgroundColor: getNavBarColor(),
         buttonBackgroundColor: Color(0xFFF5F5F5),
 
         onTap: onTap,
