@@ -86,7 +86,7 @@ class selectionState extends State<selectionScreen> {
         buttonBackgroundColor: Color(0xFFF5F5F5),
 
         onTap: onTap,
-        animationCurve: Curves.easeOutCubic,
+        animationCurve: Curves.fastOutSlowIn,
         animationDuration: const Duration(milliseconds: 400),
         height: 75.0,
       ),
