@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:js_interop';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
@@ -80,7 +80,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     // magmemeasure dapat ito after ng first frame
     // WidgetsBinding.instance.addObserver(this);
@@ -93,14 +92,12 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
 
   @override
   void dispose() {
-    // TODO: implement dispose
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // TODO: implement didChangeAppLifecycleState
     if (state == AppLifecycleState.resumed) {
       mapScreenKey.currentState?.initializeLocation();
     }
@@ -138,10 +135,22 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   Future<void> saveLocation() async {
     final prefs = await SharedPreferences.getInstance();
     if (selectedPickUpLocation != null) {
-      prefs.setString('pickup', jsonEncode(selectedPickUpLocation!.toJson()));
+      prefs.setString(
+        'pickup',
+        jsonEncode(SelectedLocation(
+          selectedPickUpLocation!.address,
+          selectedPickUpLocation!.coordinates,
+        ).toJson()),
+      );
     }
     if (selectedDropOffLocation != null) {
-      prefs.setString('dropoff', jsonEncode(selectedDropOffLocation!.toJson()));
+      prefs.setString(
+        'pickup',
+        jsonEncode(SelectedLocation(
+          selectedDropOffLocation!.address,
+          selectedDropOffLocation!.coordinates,
+        ).toJson()),
+      );
     }
   }
 
@@ -152,10 +161,22 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     final dropoffJson = prefs.getString('dropoff');
 
     if (pickupJson != null) {
-      selectedPickUpLocation = SelectedLocation.fromJson(jsonDecode(pickupJson));
+      final data = jsonDecode(pickupJson);
+      setState(() {
+        selectedPickUpLocation = SelectedLocation(
+          data['address'],
+          LatLng(data['lat'], data['lng'])
+        );
+      });
     }
     if (dropoffJson != null) {
-      selectedDropOffLocation = SelectedLocation.fromJson(jsonDecode(dropoffJson));
+      final data = jsonDecode(dropoffJson);
+      setState(() {
+        selectedDropOffLocation = SelectedLocation(
+            data['address'],
+            LatLng(data['lat'], data['lng'])
+        );
+      });
     }
 
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
