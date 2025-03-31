@@ -216,7 +216,37 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
               screenWidth, iconSize),
           const Divider(),
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
-              screenWidth, iconSize)
+              screenWidth, iconSize),
+          SizedBox(height: screenWidth * 0.04),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (selectedPickUpLocation != null && selectedDropOffLocation != null)
+              ? () {
+
+              }
+              : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00CC58),
+                disabledBackgroundColor: Color(0xFFD3D3D3),
+                foregroundColor: Color(0xFFF5F5F5),
+                disabledForegroundColor: Color(0xFFF5F5F5),
+                padding: EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Confirm Booking',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  // color: Color(0xFFF5F5F5),
+                ),
+              ),
+            ),
+          )
         ],
       ),
     );

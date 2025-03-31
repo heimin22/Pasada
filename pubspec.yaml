@@ -51,6 +51,7 @@ dependencies:
   webview_flutter: ^4.10.0
   dio: ^5.7.0
   get: ^4.6.6
+  curved_navigation_bar: ^1.0.6
   flutter_google_maps_webservices: ^1.1.1
   flutter_polyline_points: ^2.1.0
   http: ^1.2.2
