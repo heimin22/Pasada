@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/home/activityScreen.dart';
 import 'package:pasada_passenger_app/home/settingsScreen.dart';
 import 'package:pasada_passenger_app/home/homeScreen.dart';
@@ -16,18 +13,20 @@ class selectionScreen extends StatefulWidget {
 }
 
 class selectionState extends State<selectionScreen> {
-  int _currentIndex = 0;
-  final GlobalKey<CurvedNavigationBarState> _bottomNavigationKey = GlobalKey();
+  int currentIndex = 0;
+  int previousIndex = 0;
+  final GlobalKey<CurvedNavigationBarState> bottomNavigationKey = GlobalKey();
 
   final List<Widget> pages = const [
-    HomeScreen(),
-    ActivityScreen(),
-    SettingsScreen(),
+    HomeScreen(key: ValueKey('Home')),
+    ActivityScreen(key: ValueKey('Activity')),
+    SettingsScreen(key: ValueKey('Settings')),
   ];
 
   void onTap (int newIndex) {
     setState(() {
-      _currentIndex = newIndex;
+      previousIndex = currentIndex;
+      currentIndex = newIndex;
     });
   }
 
@@ -54,8 +53,8 @@ class selectionState extends State<selectionScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SvgPicture.asset(
-          'assets/svg/${_currentIndex == index ? selectedIcon : unselectedIcon}',
-          colorFilter: _currentIndex == index
+          'assets/svg/${currentIndex == index ? selectedIcon : unselectedIcon}',
+          colorFilter: currentIndex == index
               ? ColorFilter.mode(Color(0xff067837), BlendMode.srcIn)
               : null,
           width: 24,
@@ -69,20 +68,37 @@ class selectionState extends State<selectionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F5),
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 400), // matched dapat yung animation duration so bottom nav bar
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // slide animation
+          final bool isForward = currentIndex > previousIndex;
+          final Offset begin = isForward
+              ? const Offset(1.0, 0.0) // enter from right para sa forward navigation
+              : const Offset(-1.0, 0.0); // enter from left para sa backward navigation
+
+            return SlideTransition(
+              position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.fastOutSlowIn,
+                ),
+              ),
+              child: child,
+            );
+          },
+        child: pages[currentIndex],
       ),
       bottomNavigationBar: CurvedNavigationBar(
-        key: _bottomNavigationKey,
+        key: bottomNavigationKey,
         items: [
           buildCurvedNavItem(0),
           buildCurvedNavItem(1),
           buildCurvedNavItem(2),
         ],
-        index: _currentIndex,
-        color: const Color(0xFF00CC58),
-        backgroundColor: Color(0xFFF5F5F5),
+        index: currentIndex,
+        color: const Color(0xFFF5F5F5),
+        backgroundColor: Color(0xFF00CC58),
         buttonBackgroundColor: Color(0xFFF5F5F5),
 
         onTap: onTap,
