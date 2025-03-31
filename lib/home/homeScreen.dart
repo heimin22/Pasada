@@ -18,20 +18,21 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const HomeScreenStateful(),
-      routes: <String, WidgetBuilder>{
-        'map': (BuildContext context) => const MapScreen(),
-        'searchLocation': (BuildContext context) =>
-            const SearchLocationScreen(isPickup: true),
-      },
-    );
+    return const HomeScreenStateful();
+    // return MaterialApp(
+    //   debugShowCheckedModeBanner: false,
+    //   theme: ThemeData(
+    //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+    //     fontFamily: 'Inter',
+    //     useMaterial3: true,
+    //   ),
+    //   home: const HomeScreenStateful(),
+    //   routes: <String, WidgetBuilder>{
+    //     'map': (BuildContext context) => const MapScreen(),
+    //     'searchLocation': (BuildContext context) =>
+    //         const SearchLocationScreen(isPickup: true),
+    //   },
+    // );
   }
 }
 

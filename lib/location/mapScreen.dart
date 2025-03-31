@@ -39,6 +39,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
   StreamSubscription<LocationData>? locationSubscription;
 
+  bool isScreenActive = true;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -75,8 +77,13 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     // call the initLocation() method too
     // then get the location updates
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    initializeLocation();
+    // WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        initializeLocation();
+        handleLocationUpdates();
+      }
+    });
     // getLocationUpdates();
   }
 
@@ -85,7 +92,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   void dispose() {
     // location subscription should be cancelled
     locationSubscription?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
+    // WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -93,9 +100,16 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // here once the app is opened,
     // intiate the location and get the location updates
-    if (state == AppLifecycleState.resumed) {
-      initializeLocation();
+    isScreenActive = state == AppLifecycleState.resumed;
+    if (isScreenActive) {
+      handleLocationUpdates();
     }
+    else {
+      locationSubscription?.pause();
+    }
+    // if (state == AppLifecycleState.resumed) {
+    //   initializeLocation();
+    // }
   }
 
   @override
@@ -108,10 +122,10 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       handleLocationUpdates();
     }
     // check if the bottom padding has changed my nigger
-    if (widget.bottomPadding != oldWidget.bottomPadding) {
-      setState(() {});
-      // updateMapPadding(); // call method para maupdate yung padding motherfucker
-    }
+    // if (widget.bottomPadding != oldWidget.bottomPadding) {
+    //   setState(() {});
+    //   // updateMapPadding(); // call method para maupdate yung padding motherfucker
+    // }
   }
 
   void calculateRoute() {
@@ -126,6 +140,13 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
   // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
+    locationSubscription = location.onLocationChanged
+      .where((data) => data.latitude != null && data.longitude != null)
+      .listen((newLocation) {
+        if (mounted && isScreenActive) {
+          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
+        }
+    });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
       showDebugToast('Generating route');

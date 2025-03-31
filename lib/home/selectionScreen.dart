@@ -12,30 +12,66 @@ class selectionScreen extends StatefulWidget {
   selectionState createState() => selectionState();
 }
 
-class PersistentHomeScreen extends StatelessWidget {
+class PersistentHomeScreen extends StatefulWidget {
+  const PersistentHomeScreen({super.key});
+
+  @override
+  State<PersistentHomeScreen> createState() => PersistentHomeScreenState();
+}
+
+class PersistentHomeScreenState extends State<PersistentHomeScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return const HomeScreen(key: PageStorageKey('Home'));
   }
 }
 
-class PersistentActivityScreen extends StatelessWidget {
+class PersistentActivityScreen extends StatefulWidget {
+  const PersistentActivityScreen({super.key});
+
+  @override
+  State<PersistentActivityScreen> createState() => _PersistentActivityScreenState();
+}
+
+class _PersistentActivityScreenState extends State<PersistentActivityScreen> with AutomaticKeepAliveClientMixin{
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return const ActivityScreen(key: PageStorageKey('Activity'));
   }
 }
 
-class PersistentProfileScreen extends StatelessWidget {
+class PersistentProfileScreen extends StatefulWidget {
+  const PersistentProfileScreen({super.key});
+
+  @override
+  State<PersistentProfileScreen> createState() => _PersistentProfileScreenState();
+}
+
+class _PersistentProfileScreenState extends State<PersistentProfileScreen> with AutomaticKeepAliveClientMixin{
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return const SettingsScreen(key: PageStorageKey('Settings'));
   }
 }
 
+
+
 class selectionState extends State<selectionScreen> {
   int currentIndex = 0;
   int previousIndex = 0;
+  final PageStorageBucket bucket = PageStorageBucket();
   final GlobalKey<CurvedNavigationBarState> bottomNavigationKey = GlobalKey();
 
   late final List<Widget> pages = [
@@ -113,17 +149,27 @@ class selectionState extends State<selectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFF5F5F5),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200), // matched dapat yung animation duration so bottom nav bar
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          // slide animation
-          final bool isForward = currentIndex > previousIndex;
-          final Offset begin = isForward
-              ? const Offset(1.0, 0.0) // enter from right para sa forward navigation
-              : const Offset(-1.0, 0.0); // enter from left para sa backward navigation
-
+    return PageStorage(
+      bucket: bucket,
+      child: Scaffold(
+        backgroundColor: Color(0xFFF5F5F5),
+        body: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          // matched dapat yung animation duration so bottom nav bar
+          child: Container(
+              key: ValueKey(currentIndex),
+              child: Offstage(
+                offstage: currentIndex != pages.indexOf(pages[currentIndex]),
+                child: pages[currentIndex],
+              )),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            // slide animation
+            final bool isForward = currentIndex > previousIndex;
+            final Offset begin = isForward
+                ? const Offset(
+                1.0, 0.0) // enter from right para sa forward navigation
+                : const Offset(
+                -1.0, 0.0); // enter from left para sa backward navigation
             return SlideTransition(
               position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
                 CurvedAnimation(
@@ -137,31 +183,28 @@ class selectionState extends State<selectionScreen> {
               ),
             );
           },
-        child: Container(
-          key: ValueKey(currentIndex),
-          child: pages[currentIndex],
         ),
-      ),
-      bottomNavigationBar: CurvedNavigationBar(
-        key: bottomNavigationKey,
-        items: [
-          buildCurvedNavItem(0),
-          buildCurvedNavItem(1),
-          buildCurvedNavItem(2),
-        ],
-        index: currentIndex,
-        color: const Color(0xFFF5F5F5),
-        backgroundColor: getNavBarColor(),
-        buttonBackgroundColor: Color(0xFFF5F5F5),
-        onTap: (newIndex) {
-          setState(() {
-            previousIndex = currentIndex;
-            currentIndex = newIndex;
-          });
-        },
-        animationCurve: Curves.fastOutSlowIn,
-        animationDuration: const Duration(milliseconds: 400),
-        height: 75.0,
+        bottomNavigationBar: CurvedNavigationBar(
+          key: bottomNavigationKey,
+          items: [
+            buildCurvedNavItem(0),
+            buildCurvedNavItem(1),
+            buildCurvedNavItem(2),
+          ],
+          index: currentIndex,
+          color: const Color(0xFFF5F5F5),
+          backgroundColor: getNavBarColor(),
+          buttonBackgroundColor: Color(0xFFF5F5F5),
+          onTap: (newIndex) {
+            setState(() {
+              previousIndex = currentIndex;
+              currentIndex = newIndex;
+            });
+          },
+          animationCurve: Curves.fastOutSlowIn,
+          animationDuration: const Duration(milliseconds: 400),
+          height: 75.0,
+        ),
       ),
     );
   }
