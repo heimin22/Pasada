@@ -98,6 +98,7 @@ flutter:
     - assets/svg/activityIcon.svg
     - assets/svg/notificationIcon.svg
     - assets/svg/profileIcon.svg
+    - assets/svg/profileSelectedIcon.svg
     - assets/svg/settingsIcon.svg
     - assets/svg/homeSelectedIcon.svg
     - assets/svg/activitySelectedIcon.svg
