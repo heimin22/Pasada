@@ -106,8 +106,8 @@ class CreateAccountScreen extends State<CAPage> {
           msg: 'Error: $e',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.black,
-          textColor: Colors.white,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
         );
       }
       // pop the register page
