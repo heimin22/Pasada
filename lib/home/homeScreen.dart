@@ -74,6 +74,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         selectedDropOffLocation = location;
       }
     });
+    saveLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
@@ -83,7 +84,11 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     super.initState();
     // magmemeasure dapat ito after ng first frame
     // WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // load saved locations on initializations
+      loadLocation();
+      measureContainer();
+    });
   }
 
   @override
