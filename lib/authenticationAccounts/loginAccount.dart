@@ -207,6 +207,8 @@ class LoginScreen extends State<LoginPage> {
           obscureText: !isPasswordVisible,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -257,6 +259,8 @@ class LoginScreen extends State<LoginPage> {
           controller: emailController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -318,12 +322,12 @@ class LoginScreen extends State<LoginPage> {
             style: TextStyle(color: Color(0xFF121212)),
           ),
           Text(
-            'email or phone number',
+            'email',
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           Text(
             ' to continue',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(color: Color(0xFF121212)),
           ),
         ],
       ),

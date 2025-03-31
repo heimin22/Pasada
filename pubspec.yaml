@@ -107,6 +107,7 @@ flutter:
     - assets/svg/navigation.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
+    - assets/svg/phFlag.svg
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
 
 import '../home/selectionScreen.dart';
@@ -156,6 +158,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           controller: firstNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -204,6 +208,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           controller: lastNameController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
           decoration: InputDecoration(
@@ -237,7 +243,11 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
       child: Text(
         'Contact Number',
-        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: Color(0xFF121212),
+          fontWeight: FontWeight.w700,
+          fontFamily: 'Inter',
+        ),
       ),
     );
   }
@@ -251,10 +261,44 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         child: TextField(
           controller: contactController,
           keyboardType: TextInputType.phone,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(10),
+          ],
+          style: TextStyle(
+              color: Color(0xFF121212),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter'
+          ),
           decoration: InputDecoration(
-            labelText: 'Enter your contact number',
+            prefix: Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/svg/phFlag.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    '+63 |',
+                    style: TextStyle(
+                      color: Color(0xFF121212),
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            labelText: 'Enter your contact number (e.g., 9123456789)',
             labelStyle: const TextStyle(
               fontSize: 12,
+              fontFamily: 'Inter',
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0xFF121212),
@@ -335,13 +379,13 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             // validate required fields
             final firstName = firstNameController.text.trim();
             final lastName = lastNameController.text.trim();
-            final contactNumber = contactController.text.trim();
+            final contactDigits = contactController.text.trim();
             final email = widget.email;
             // retrieve natin ung password na pinasa duon sa previous page
             final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
             final password = args['password'];
 
-            if (firstName.isEmpty || lastName.isEmpty || contactNumber.isEmpty) {
+            if (firstName.isEmpty || lastName.isEmpty || contactDigits.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Please fill in all required fields.'),
@@ -351,8 +395,22 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               return;
             }
 
+            if (contactDigits.length != 10) {
+              if (mounted) {
+                Fluttertoast.showToast(
+                  msg: 'Phone number must be 10 digits',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  textColor: Color(0xFF121212),
+                );
+              }
+            }
+
             try {
               final authService = AuthService();
+              final contactNumber = '+63$contactDigits';
+
               final authResponse = await authService.signUpAuth(
                 email,
                 password,
@@ -371,11 +429,12 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               }
             } catch (e) {
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text("Error saving details: $e"),
-                    duration: Duration(seconds: 3),
-                  ),
+                Fluttertoast.showToast(
+                  msg: 'Error saving details: $e',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  textColor: Color(0xFF121212),
                 );
                 debugPrint('Error saving details: $e');
               }
