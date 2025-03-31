@@ -15,7 +15,7 @@ class SelectedLocation {
   factory SelectedLocation.fromJson(Map<String, dynamic> json) {
     return SelectedLocation(
       json['address'],
-      LatLng(json['let'], json['lng']),
+      LatLng(json['lat'], json['lng']),
     );
   }
 

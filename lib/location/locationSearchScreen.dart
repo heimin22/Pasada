@@ -90,8 +90,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       Navigator.pop(
         context,
         SelectedLocation(
-          address: prediction.description!,
-          coordinates: LatLng(location['lat'], location['lng']),
+          prediction.description!,
+          LatLng(location['lat'], location['lng']),
         ),
       );
     }
@@ -197,7 +197,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                         await reverseGeocode(currentLatLng);
 
                     if (currentLocation != null && mounted) {
-                      Navigator.pop(context, currentLocation);
+                      Navigator.pop(context, SelectedLocation(
+                        currentLocation.address,
+                        currentLocation.coordinates,
+                      ));
                     }
                   } catch (e) {
                     debugPrint("Error getting location: $e");
@@ -274,8 +277,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
       if (data['results'] != null && data['results'].isNotEmpty) {
         return SelectedLocation(
-          address: data['results'][0]['formatted_address'],
-          coordinates: position,
+          data['results'][0]['formatted_address'],
+          position,
         );
       }
     } catch (e) {

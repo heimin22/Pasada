@@ -16,12 +16,18 @@ class selectionState extends State<selectionScreen> {
   int currentIndex = 0;
   int previousIndex = 0;
   final GlobalKey<CurvedNavigationBarState> bottomNavigationKey = GlobalKey();
+  late final List<Widget> pages;
 
-  final List<Widget> pages = const [
-    HomeScreen(key: ValueKey('Home')),
-    ActivityScreen(key: ValueKey('Activity')),
-    SettingsScreen(key: ValueKey('Settings')),
-  ];
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    pages = [
+      HomeScreen(key: ValueKey('Home')),
+      ActivityScreen(key: ValueKey('Activity')),
+      SettingsScreen(key: ValueKey('Settings')),
+    ];
+  }
 
   Color getNavBarColor() {
     switch (currentIndex) {
@@ -48,7 +54,6 @@ class selectionState extends State<selectionScreen> {
         return const Color(0xFF067837);
     }
   }
-
 
   void onTap (int newIndex) {
     setState(() {
@@ -111,10 +116,16 @@ class selectionState extends State<selectionScreen> {
                   curve: Curves.fastOutSlowIn,
                 ),
               ),
-              child: child,
+              child: FadeTransition(
+                opacity: animation,
+                child: child,
+              ),
             );
           },
-        child: pages[currentIndex],
+        child: Container(
+          key: ValueKey(currentIndex),
+          child: pages[currentIndex],
+        ),
       ),
       bottomNavigationBar: CurvedNavigationBar(
         key: bottomNavigationKey,
@@ -127,8 +138,12 @@ class selectionState extends State<selectionScreen> {
         color: const Color(0xFFF5F5F5),
         backgroundColor: getNavBarColor(),
         buttonBackgroundColor: Color(0xFFF5F5F5),
-
-        onTap: onTap,
+        onTap: (newIndex) {
+          setState(() {
+            previousIndex = currentIndex;
+            currentIndex = newIndex;
+          });
+        },
         animationCurve: Curves.fastOutSlowIn,
         animationDuration: const Duration(milliseconds: 400),
         height: 75.0,
