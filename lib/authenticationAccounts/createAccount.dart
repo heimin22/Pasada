@@ -257,11 +257,13 @@ class CreateAccountScreen extends State<CAPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
-          controller: emailController,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
+          controller: emailController,
           decoration: InputDecoration(
             labelText: 'Enter your email',
             labelStyle: const TextStyle(
@@ -317,12 +319,14 @@ class CreateAccountScreen extends State<CAPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
-          controller: passwordController,
-          obscureText: !isPasswordVisible,
           style: const TextStyle(
             color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
             fontSize: 14,
           ),
+          controller: passwordController,
+          obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Enter your password',
             suffixIcon: IconButton(
@@ -384,6 +388,12 @@ class CreateAccountScreen extends State<CAPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
+          style: const TextStyle(
+            color: Color(0xFF121212),
+            fontWeight: FontWeight.w600,
+            fontFamily: 'Inter',
+            fontSize: 14,
+          ),
           controller: confirmPasswordController,
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
