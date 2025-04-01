@@ -26,9 +26,10 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     required String title,
     required String value,
     Widget? leadingIcon,
+    bool enabled = true,
   }) {
     return RadioListTile<String>(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 3.0),
       title: Text(
         title,
         style: const TextStyle(
@@ -39,26 +40,28 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
       ),
       value: value,
       groupValue: selectPaymentMethod,
-      onChanged: (String? newValue) {
+      onChanged: enabled ? (String? newValue) {
         if (newValue != null) {
           setState(() {
             selectPaymentMethod = newValue;
           });
           Navigator.pop(context, newValue);
         }
-      },
+      } : null,
       // use the provided leading icon
       secondary: Radio<String>(
         value: value,
         groupValue: selectPaymentMethod,
-        onChanged: (String? newValue) {
-          if (newValue != null) {
-            setState(() {
-              selectPaymentMethod = newValue;
-            });
-            Navigator.pop(context, newValue);
-          }
-        },
+        onChanged: enabled
+            ? (String? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectPaymentMethod = newValue;
+                  });
+                  Navigator.pop(context, newValue);
+                }
+              }
+            : null,
         activeColor: Color(0xFF00CC58),
       ),
       // dito yung icon
@@ -114,7 +117,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
             leadingIcon: const Icon(Icons.money, color: Color(0xFF00CC58)),
           ),
           buildSectionHeader('Cashless'),
-          // Paymongo option
+          // Paymongo option (disabled)
           buildPaymentOption(
             title: 'Paymongo',
             value: 'Paymongo',
@@ -125,6 +128,19 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(Icons.credit_card, color: Color(0xFF00CC58));
               },
+            ),
+            enabled: false,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'Cashless payment will be available soon.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                color: Color(0xFF515151),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
