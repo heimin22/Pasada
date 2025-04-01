@@ -66,8 +66,6 @@ class _PersistentProfileScreenState extends State<PersistentProfileScreen> with 
   }
 }
 
-
-
 class selectionState extends State<selectionScreen> {
   int currentIndex = 0;
   int previousIndex = 0;
@@ -153,36 +151,9 @@ class selectionState extends State<selectionScreen> {
       bucket: bucket,
       child: Scaffold(
         backgroundColor: Color(0xFFF5F5F5),
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          // matched dapat yung animation duration so bottom nav bar
-          child: Container(
-              key: ValueKey(currentIndex),
-              child: Offstage(
-                offstage: currentIndex != pages.indexOf(pages[currentIndex]),
-                child: pages[currentIndex],
-              )),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            // slide animation
-            final bool isForward = currentIndex > previousIndex;
-            final Offset begin = isForward
-                ? const Offset(
-                1.0, 0.0) // enter from right para sa forward navigation
-                : const Offset(
-                -1.0, 0.0); // enter from left para sa backward navigation
-            return SlideTransition(
-              position: Tween<Offset>(begin: begin, end: Offset.zero).animate(
-                CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.fastOutSlowIn,
-                ),
-              ),
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            );
-          },
+        body: IndexedStack(
+          index: currentIndex,
+          children: pages,
         ),
         bottomNavigationBar: CurvedNavigationBar(
           key: bottomNavigationKey,
