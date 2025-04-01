@@ -48,6 +48,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
 
   // state variable for the payment method
   String? selectedPaymentMethod;
+  final double iconSize = 24;
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
@@ -287,12 +288,14 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           // payment method widget
           InkWell(
             onTap: () async {
-              final result = await Navigator.push(
+              final result = await Navigator.push<String>(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const PaymentMethodScreen(),
+                  builder: (context) => PaymentMethodScreen(
+                    currentSelection: selectedPaymentMethod,
+                  ),
                   fullscreenDialog: true,
-                )
+                ),
               );
               if (result != null && mounted) {
                 setState(() => selectedPaymentMethod = result);
@@ -305,7 +308,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                   Icon(Icons.payment, size: iconSize, color: Color(0xFF00CC58)),
                   SizedBox(width: screenWidth * 0.02),
                   Text(
-                    selectedPaymentMethod ?? 'Cash',
+                    selectedPaymentMethod ?? 'Select Payment Method',
                     style: TextStyle(
                       fontSize: 14,
                       fontFamily: 'Inter',
@@ -313,7 +316,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                       color: Color(0xFF121212),
                     ),
                   ),
-                  Spacer(),
+                  const Spacer(),
                   Icon(Icons.chevron_right, size: iconSize, color: Color(0xFF515151)),
                 ],
               ),

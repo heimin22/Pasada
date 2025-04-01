@@ -114,7 +114,6 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
             leadingIcon: const Icon(Icons.money, color: Color(0xFF00CC58)),
           ),
           buildSectionHeader('Cashless'),
-
           // Paymongo option
           buildPaymentOption(
             title: 'Paymongo',
@@ -127,14 +126,6 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 return const Icon(Icons.credit_card, color: Color(0xFF00CC58));
               },
             ),
-          ),
-          ListTile(
-            title: const Text('Cash'),
-            onTap: () => Navigator.pop(context, 'Cash'),
-          ),
-          ListTile(
-            title: const Text('Cashless'),
-            onTap: () => Navigator.pop(context, 'Cashless'),
           ),
         ],
       ),
