@@ -61,6 +61,28 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
         },
         activeColor: Color(0xFF00CC58),
       ),
+      // dito yung icon
+      controlAffinity: ListTileControlAffinity.leading, // para mapunta yung radio button sa right
+      // leading property sa right icon
+      // leading: leadingIcon,
+      selected: selectPaymentMethod == value,
+      activeColor: Color(0xFF067837),
+    );
+  }
+
+  // helper para sa section headers
+  Widget buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF515151),
+          fontFamily: 'Inter',
+        ),
+      ),
     );
   }
 
@@ -69,16 +91,43 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Select Payment Method',
+          'Payment Methods',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 18,
             fontWeight: FontWeight.w700,
+            color: Color(0xFF121212),
           ),
         ),
+        backgroundColor: Color(0xFFf5F5F5),
+        foregroundColor: Color(0xFF121212),
+        elevation: 1.0,
       ),
+      backgroundColor: Color(0xFFF2F2F2),
       body: ListView (
         children: [
+          // Cash option
+          buildSectionHeader('Cash Payment'),
+          buildPaymentOption(
+            title: 'Cash',
+            value: 'Cash',
+            leadingIcon: const Icon(Icons.money, color: Color(0xFF00CC58)),
+          ),
+          buildSectionHeader('Cashless'),
+
+          // Paymongo option
+          buildPaymentOption(
+            title: 'Paymongo',
+            value: 'Paymongo',
+            leadingIcon: Image.asset(
+              'assets/svg/paymongo_logo.svg',
+              width: 24,
+              height: 24,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.credit_card, color: Color(0xFF00CC58));
+              },
+            ),
+          ),
           ListTile(
             title: const Text('Cash'),
             onTap: () => Navigator.pop(context, 'Cash'),
