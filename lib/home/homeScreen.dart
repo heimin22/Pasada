@@ -19,20 +19,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const HomeScreenStateful();
-    // return MaterialApp(
-    //   debugShowCheckedModeBanner: false,
-    //   theme: ThemeData(
-    //     scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-    //     fontFamily: 'Inter',
-    //     useMaterial3: true,
-    //   ),
-    //   home: const HomeScreenStateful(),
-    //   routes: <String, WidgetBuilder>{
-    //     'map': (BuildContext context) => const MapScreen(),
-    //     'searchLocation': (BuildContext context) =>
-    //         const SearchLocationScreen(isPickup: true),
-    //   },
-    // );
   }
 }
 
@@ -58,6 +44,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   // keep state alive my nigger
   @override
   bool get wantKeepAlive => true;
+
+  // state variable for the payment method
+  String? selectedPaymentMethod;
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
@@ -159,32 +148,11 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   // loading location
   void loadLocation() async {
     final prefs = await SharedPreferences.getInstance();
-    final pickupJson = prefs.getString('pickup');
-    final dropoffJson = prefs.getString('dropoff');
 
     setState(() {
       selectedPickUpLocation = _loadLocation(prefs, 'pickup');
       selectedDropOffLocation = _loadLocation(prefs, 'dropoff');
     });
-
-    // if (pickupJson != null) {
-    //   final data = jsonDecode(pickupJson);
-    //   setState(() {
-    //     selectedPickUpLocation = SelectedLocation(
-    //       data['address'],
-    //       LatLng(data['lat'], data['lng'])
-    //     );
-    //   });
-    // }
-    // if (dropoffJson != null) {
-    //   final data = jsonDecode(dropoffJson);
-    //   setState(() {
-    //     selectedDropOffLocation = SelectedLocation(
-    //         data['address'],
-    //         LatLng(data['lat'], data['lng'])
-    //     );
-    //   });
-    // }
 
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -315,6 +283,42 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
               screenWidth, iconSize),
           SizedBox(height: screenWidth * 0.04),
+          // payment method widget
+          InkWell(
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PaymentMethodScreen(),
+                  fullscreenDialog: true,
+                )
+              );
+              if (result != null && mounted) {
+                setState(() => selectedPaymentMethod = result);
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Row(
+                children: [
+                  Icon(Icons.payment, size: iconSize, color: Color(0xFF00CC58)),
+                  SizedBox(width: screenWidth * 0.02),
+                  Text(
+                    selectedPaymentMethod ?? 'Cash',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF121212),
+                    ),
+                  ),
+                  Spacer(),
+                  Icon(Icons.chevron_right, size: iconSize, color: Color(0xFF515151)),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: screenWidth * 0.05),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

@@ -107,9 +107,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     else {
       locationSubscription?.pause();
     }
-    // if (state == AppLifecycleState.resumed) {
-    //   initializeLocation();
-    // }
   }
 
   @override
@@ -121,11 +118,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
     }
-    // check if the bottom padding has changed my nigger
-    // if (widget.bottomPadding != oldWidget.bottomPadding) {
-    //   setState(() {});
-    //   // updateMapPadding(); // call method para maupdate yung padding motherfucker
-    // }
   }
 
   void calculateRoute() {
