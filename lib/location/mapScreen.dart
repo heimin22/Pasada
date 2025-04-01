@@ -32,12 +32,17 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
+class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin{
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
   StreamSubscription<LocationData>? locationSubscription;
+
+  bool isScreenActive = true;
+
+  @override
+  bool get wantKeepAlive => true;
 
   // Markers para sa pick-up and drop-off
   Marker? selectedPickupMarker;
@@ -72,8 +77,13 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     // call the initLocation() method too
     // then get the location updates
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    initializeLocation();
+    // WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        initializeLocation();
+        handleLocationUpdates();
+      }
+    });
     // getLocationUpdates();
   }
 
@@ -82,7 +92,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void dispose() {
     // location subscription should be cancelled
     locationSubscription?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
+    // WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -90,8 +100,12 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // here once the app is opened,
     // intiate the location and get the location updates
-    if (state == AppLifecycleState.resumed) {
-      initializeLocation();
+    isScreenActive = state == AppLifecycleState.resumed;
+    if (isScreenActive) {
+      handleLocationUpdates();
+    }
+    else {
+      locationSubscription?.pause();
     }
   }
 
@@ -103,11 +117,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
-    }
-    // check if the bottom padding has changed my nigger
-    if (widget.bottomPadding != oldWidget.bottomPadding) {
-      setState(() {});
-      // updateMapPadding(); // call method para maupdate yung padding motherfucker
     }
   }
 
@@ -123,6 +132,13 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver {
 
   // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
+    locationSubscription = location.onLocationChanged
+      .where((data) => data.latitude != null && data.longitude != null)
+      .listen((newLocation) {
+        if (mounted && isScreenActive) {
+          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
+        }
+    });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
       showDebugToast('Generating route');

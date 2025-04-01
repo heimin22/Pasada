@@ -7,7 +7,6 @@ import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.da
 import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'authenticationAccounts/authGate.dart';
-import 'authenticationAccounts/authService.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks

@@ -1,20 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/authenticationAccounts/authService.dart';
-import 'package:postgres/postgres.dart';
-
 import '../main.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:pasada_passenger_app/home/homeScreen.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:pasada_passenger_app/home/notificationScreen.dart';
-// import 'package:pasada_passenger_app/home/activityScreen.dart';
-// import 'package:pasada_passenger_app/home/profileSettingsScreen.dart';
-// import 'package:pasada_passenger_app/home/settingsScreen.dart';
-// import 'package:pasada_passenger_app/home/homeScreen.dart';
 
-// void main() => runApp(const SettingsScreen());
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});

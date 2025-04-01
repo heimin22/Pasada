@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/home/paymentMethodScreen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
@@ -15,20 +19,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const HomeScreenStateful(),
-      routes: <String, WidgetBuilder>{
-        'map': (BuildContext context) => const MapScreen(),
-        'searchLocation': (BuildContext context) =>
-            const SearchLocationScreen(isPickup: true),
-      },
-    );
+    return const HomeScreenStateful();
   }
 }
 
@@ -41,7 +32,7 @@ class HomeScreenStateful extends StatefulWidget {
   State<HomeScreenStateful> createState() => HomeScreenPageState();
 }
 
-class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver{
+class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final GlobalKey containerKey = GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
   final GlobalKey<MapScreenState> mapScreenKey =
@@ -51,6 +42,13 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
+  // keep state alive my nigger
+  @override
+  bool get wantKeepAlive => true;
+
+  // state variable for the payment method
+  String? selectedPaymentMethod;
+  final double iconSize = 24;
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
@@ -68,29 +66,32 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         selectedDropOffLocation = location;
       }
     });
+    saveLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     // magmemeasure dapat ito after ng first frame
     // WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // load saved locations on initializations
+      loadLocation();
+      measureContainer();
+    });
   }
 
   @override
   void dispose() {
-    // TODO: implement dispose
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // TODO: implement didChangeAppLifecycleState
     if (state == AppLifecycleState.resumed) {
+      loadLocation();
       mapScreenKey.currentState?.initializeLocation();
     }
   }
@@ -105,8 +106,74 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
     }
   }
 
+  void navigateToSearch(BuildContext context, bool isPickup) async {
+    final result = await Navigator.of(
+        context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (context) => SearchLocationScreen(isPickup: isPickup),
+      ),
+    );
+    if (result != null && result is SelectedLocation) {
+      setState(() {
+        if (isPickup) {
+          selectedPickUpLocation = result;
+        } else {
+          selectedDropOffLocation = result;
+        }
+      });
+    }
+  }
+
+  // saving location to avoid getting removed through navigation
+  void saveLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (selectedPickUpLocation != null) {
+      prefs.setString(
+        'pickup',
+        jsonEncode(SelectedLocation(
+          selectedPickUpLocation!.address,
+          selectedPickUpLocation!.coordinates,
+        ).toJson()),
+      );
+    }
+    if (selectedDropOffLocation != null) {
+      prefs.setString(
+        'dropoff',
+        jsonEncode(SelectedLocation(
+          selectedDropOffLocation!.address,
+          selectedDropOffLocation!.coordinates,
+        ).toJson()),
+      );
+    }
+  }
+
+  // loading location
+  void loadLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      selectedPickUpLocation = _loadLocation(prefs, 'pickup');
+      selectedDropOffLocation = _loadLocation(prefs, 'dropoff');
+    });
+
+    if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        mapScreenKey.currentState?.generatePolylineBetween(
+          selectedPickUpLocation!.coordinates,
+          selectedDropOffLocation!.coordinates,
+        );
+      });
+    }
+  }
+
+  SelectedLocation? _loadLocation(SharedPreferences prefs, String key) {
+    final json = prefs.getString(key);
+    return json != null ? SelectedLocation.fromJson(jsonDecode(json)) : null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return PopScope(
       canPop: false, // bawal navigation pops
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -218,6 +285,44 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
               screenWidth, iconSize),
           SizedBox(height: screenWidth * 0.04),
+          // payment method widget
+          InkWell(
+            onTap: () async {
+              final result = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PaymentMethodScreen(
+                    currentSelection: selectedPaymentMethod,
+                  ),
+                  fullscreenDialog: true,
+                ),
+              );
+              if (result != null && mounted) {
+                setState(() => selectedPaymentMethod = result);
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Row(
+                children: [
+                  Icon(Icons.payment, size: iconSize, color: Color(0xFF00CC58)),
+                  SizedBox(width: screenWidth * 0.02),
+                  Text(
+                    selectedPaymentMethod ?? 'Select Payment Method',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF121212),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.chevron_right, size: iconSize, color: Color(0xFF515151)),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: screenWidth * 0.05),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -347,23 +452,5 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         ],
       ),
     );
-  }
-
-  void navigateToSearch(BuildContext context, bool isPickup) async {
-    final result = await Navigator.of(
-      context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (context) => SearchLocationScreen(isPickup: isPickup),
-      ),
-    );
-    if (result != null && result is SelectedLocation) {
-      setState(() {
-        if (isPickup) {
-          selectedPickUpLocation = result;
-        } else {
-          selectedDropOffLocation = result;
-        }
-      });
-    }
   }
 }

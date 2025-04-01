@@ -117,7 +117,14 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       setState(() {
         pinnedLocation = landmark['location'];
         landmarkName = landmark['name'];
-        addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
+        // addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
+       if (landmark != null) {
+         final selectedLoc = SelectedLocation(
+             "${landmark['name']}\n${landmark['address']}",
+             tappedPosition
+         );
+         Navigator.pop(context, selectedLoc);
+       }
       });
     }
     else {
@@ -190,7 +197,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         // update lang muna ng information display
         setState(() {
           landmarkName = landmark['name'];
-          addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
+          final selectedLoc = SelectedLocation(
+            "${landmark['name']}\n${landmark['address']}",
+            center,
+          );
+          addressNotifier.value = selectedLoc.address;
           isFindingLandmark = false;
         });
         return;
@@ -267,8 +278,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
       if (data['results'] != null && data['results'].isNotEmpty) {
         return SelectedLocation(
-          address: data['results'][0]['formatted_address'],
-          coordinates: position,
+          data['results'][0]['formatted_address'],
+          position
         );
       }
     }
@@ -304,7 +315,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final responsivePadding = screenWidth * 0.02;
 
@@ -451,15 +461,14 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                 );
                 return;
               }
-
               // check kapag may valid location na mapapass back
               if (pinnedLocation != null && addressNotifier.value.isNotEmpty && addressNotifier.value != "Searching..." && addressNotifier.value != "Searching for location..." && addressNotifier.value != "Unable to find location") {
-                Navigator.pop(context, SelectedLocation(address: addressNotifier.value, coordinates: pinnedLocation!));
+                Navigator.pop(context, SelectedLocation(addressNotifier.value, pinnedLocation!));
               }
               else if (pinnedLocation != null) {
                 // may coordinates pero walang readable address
                 // use na lang ng generic address pukingina niyan
-                Navigator.pop(context, SelectedLocation(address: addressNotifier.value, coordinates: pinnedLocation!));
+                Navigator.pop(context, SelectedLocation(addressNotifier.value, pinnedLocation!));
               }
               else {
                 ScaffoldMessenger.of(context).showSnackBar(

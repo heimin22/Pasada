@@ -41,12 +41,12 @@ dependencies:
   flutter_dotenv: ^5.2.1
   flutter_animate: ^4.5.2
   flutter_svg: ^2.0.16
-  google_maps_flutter: ^2.10.0
+  google_maps_flutter: ^2.12.1
   google_maps_flutter_android: ^2.14.11
   geolocator: ^13.0.2
   geocoding: ^3.0.0
   flutter_typeahead: ^5.2.0
-  location: ^7.0.1
+  location: ^8.0.0
   url_launcher: ^6.3.1
   webview_flutter: ^4.10.0
   dio: ^5.7.0
@@ -111,6 +111,7 @@ flutter:
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
+    - assets/svg/paymongo_logo.svg
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
