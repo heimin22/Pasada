@@ -68,5 +68,17 @@ class GeospatialService {
     }
   }
 
+  // calculate yung grid distance between duon sa H3 indices
+  int h3Distance(String h3IndexHex1, String h3IndexHex2) {
+    if (h3IndexHex1.isEmpty || h3IndexHex2.isEmpty) return -1;
+    try {
+      final h3Index1 = BigInt.parse(h3IndexHex1, radix: 16);
+      final h3Index2 = BigInt.parse(h3IndexHex2, radix: 16);
+      return h3.h3Distance(h3Index1, h3Index2);
+    } catch (e) {
+      debugPrint("Error calculating H3 distance: $e");
+      return -1;
+    }
+  }
 
 }
