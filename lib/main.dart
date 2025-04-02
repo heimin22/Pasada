@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
-import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
+import 'package:pasada_passenger_app/authentication/createAccount.dart';
+import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
+import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'authenticationAccounts/authGate.dart';
+import 'package:pasada_passenger_app/authentication/authGate.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks
   await dotenv.load(fileName: ".env");
-
-  // call the database tester before running the app
 
   // initialize supabase
   await Supabase.initialize(

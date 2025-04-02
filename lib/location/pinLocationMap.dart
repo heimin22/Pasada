@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/location/landmarkServices.dart';
+import 'package:pasada_passenger_app/services/landmarkService.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/location/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
