@@ -44,5 +44,29 @@ class GeospatialService {
     }
   }
 
-  //
+  // hahanapin natin yung H3 indices within a certain K-ring distance sa center index
+  // radius = 0 -> only yung center index
+  // radius = 1 -> center + immediate neighbors
+  // radius = 2 -> center + mga kapitbahay + kapitbahay ng kapitbahay mo
+  // pukinginamo nigger
+  List<String> getNeighboringH3Indices(String centerH3IndexHex, int radius) {
+    if (centerH3IndexHex.isEmpty) return [];
+    try {
+      final centerH3Index = BigInt.parse(centerH3IndexHex, radix: 16);
+
+      // magproproduce si kRing dapat ng list of lists, then flatten it
+      final List<BigInt> neighborIndicesBigInt = h3.kRing(centerH3Index, radius)
+          .cast<Iterable<BigInt>>()
+          .expand((i) => i)
+          .toList();
+
+      // convert yung BigInt indices to hex strings
+      return neighborIndicesBigInt.map((index) => index.toRadixString(16)).toList();
+    } catch (e) {
+      debugPrint("Error getting neighboring H3 indices: $e");
+      return [centerH3IndexHex];
+    }
+  }
+
+
 }
