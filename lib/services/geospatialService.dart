@@ -30,5 +30,19 @@ class GeospatialService {
     }
   }
 
+  // convert yung h3 index string back sa LatLng coordinates
+  LatLng h3IndexToLatLng(String h3IndexHex) {
+    try {
+      final h3Index = BigInt.parse(h3IndexHex, radix: 16);
+      final geoCoord = h3.h3ToGeo(h3Index);
+      // h3 returns lon, let - convert natin back to LatLng (lat, lon)
+      return LatLng(geoCoord.lat, geoCoord.lon);
+    } catch (e) {
+      debugPrint("Error converting H3 hex to LatLng: $e");
+      // return ng default ot throw
+      return const LatLng(0, 0);
+    }
+  }
 
+  //
 }
