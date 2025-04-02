@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
-import 'networkUtilities.dart';
+import '../location/networkUtilities.dart';
 
 class LandmarkService {
   static Future<Map<String, dynamic>?> getNearestLandmark(LatLng position) async {
@@ -43,15 +43,6 @@ class LandmarkService {
 
       if (location == null) return null;
 
-      // if (response != null && data['results'].isNotEmpty) {
-      //   final nearest = data['results'][0];
-      //   final dist = calculateDistance(
-      //     position.latitude,
-      //     position.longitude,
-      //     nearest['geometry']['location']['lat'],
-      //     nearest['geometry']['location']['lng'],
-      //   );
-
       return {
         'name': nearest['name'] ?? 'Unknown Landmark',
         'location': LatLng(
@@ -60,17 +51,6 @@ class LandmarkService {
         ),
         'address': nearest['vicinity'] ?? 'Address not available'
       };
-      // if (data['results'] != null && data['results'].isNotEmpty) {
-      //   final nearest = data['result'][0];
-      //   return {
-      //     'name': nearest['name'],
-      //     'location': LatLng(
-      //       nearest['geometry']['location']['lat'],
-      //       nearest['geometry']['location']['lng'],
-      //     ),
-      //     'address': nearest['vicinity'],
-      //   };
-      // }
     } catch (e) {
       debugPrint("Error in getNearestLandmark: $e");
       return null;

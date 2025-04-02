@@ -18,10 +18,5 @@ class SelectedLocation {
       LatLng(json['lat'], json['lng']),
     );
   }
-
-  // SelectedLocation({
-  //   required this.address,
-  //   required this.coordinates,
-  // });
 }
 

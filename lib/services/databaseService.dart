@@ -1,11 +1,11 @@
 // import 'package:postgres/postgres.dart';
 import 'package:flutter/foundation.dart';
 // import 'package:pasada_passenger_app/home/main.dart';
-// import 'package:pasada_passenger_app/authenticationAccounts/createAccountCred.dart';
+// import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 // import 'package:pasada_passenger_app/home/activityScreen.dart';
-// import 'package:pasada_passenger_app/authenticationAccounts/createAccount.dart';
+// import 'package:pasada_passenger_app/authentication/createAccount.dart';
 // import 'package:pasada_passenger_app/home/homeScreen.dart';
-// import 'package:pasada_passenger_app/authenticationAccounts/loginAccount.dart';
+// import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 // import 'package:pasada_passenger_app/home/notificationScreen.dart';
 // import 'package:pasada_passenger_app/home/profileSettingsScreen.dart';
 // import 'package:pasada_passenger_app/home/settingsScreen.dart';
