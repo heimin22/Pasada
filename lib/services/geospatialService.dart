@@ -44,5 +44,41 @@ class GeospatialService {
     }
   }
 
-  //
+  // hahanapin natin yung H3 indices within a certain K-ring distance sa center index
+  // radius = 0 -> only yung center index
+  // radius = 1 -> center + immediate neighbors
+  // radius = 2 -> center + mga kapitbahay + kapitbahay ng kapitbahay mo
+  // pukinginamo nigger
+  List<String> getNeighboringH3Indices(String centerH3IndexHex, int radius) {
+    if (centerH3IndexHex.isEmpty) return [];
+    try {
+      final centerH3Index = BigInt.parse(centerH3IndexHex, radix: 16);
+
+      // magproproduce si kRing dapat ng list of lists, then flatten it
+      final List<BigInt> neighborIndicesBigInt = h3.kRing(centerH3Index, radius)
+          .cast<Iterable<BigInt>>()
+          .expand((i) => i)
+          .toList();
+
+      // convert yung BigInt indices to hex strings
+      return neighborIndicesBigInt.map((index) => index.toRadixString(16)).toList();
+    } catch (e) {
+      debugPrint("Error getting neighboring H3 indices: $e");
+      return [centerH3IndexHex];
+    }
+  }
+
+  // calculate yung grid distance between duon sa H3 indices
+  int h3Distance(String h3IndexHex1, String h3IndexHex2) {
+    if (h3IndexHex1.isEmpty || h3IndexHex2.isEmpty) return -1;
+    try {
+      final h3Index1 = BigInt.parse(h3IndexHex1, radix: 16);
+      final h3Index2 = BigInt.parse(h3IndexHex2, radix: 16);
+      return h3.h3Distance(h3Index1, h3Index2);
+    } catch (e) {
+      debugPrint("Error calculating H3 distance: $e");
+      return -1;
+    }
+  }
+
 }

@@ -7,7 +7,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
-import 'package:pasada_passenger_app/location/networkUtilities.dart';
+import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
