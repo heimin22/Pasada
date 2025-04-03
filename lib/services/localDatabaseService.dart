@@ -25,6 +25,7 @@ class LocalDatabaseService {
     );
   }
 
+  // table creation for the local database
   Future<void> onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE $tableName (
@@ -48,4 +49,21 @@ class LocalDatabaseService {
     ''');
     debugPrint("Local SQLite table '$tableName' created.");
   }
+
+  // saves or updates the booking details locally
+  Future<void> saveBookingDetails(BookingDetails details) async {
+    try {
+      final db = await database;
+      await db.insert(
+        tableName,
+        details.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      debugPrint('Saved booking ${details.bookingId} to local DB');
+    } catch (e) {
+      debugPrint('Error saving booking ${details.bookingId} locally: $e');
+    }
+  }
+
+
 }
