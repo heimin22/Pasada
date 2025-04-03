@@ -11,7 +11,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
-import 'networkUtilities.dart';
+import '../network/networkUtilities.dart';
 
 
 class MapScreen extends StatefulWidget {
