@@ -18,9 +18,23 @@ class RoutingService {
       // request only yung duration field para maminimize yung response size
       'X-Goog-FieldMask': 'routes.legs.duration', // adjusted field mask
     };
+    final body = jsonEncode({
+      'origin': {
+        'location': {
+          'latLng': {'latitude': origin.latitude, 'longitude': origin.longitude}
+        },
+      },
+      'destination': {
+        'location': {
+          'latlng': {'latitude': destination.latitude, 'longitude': destination.longitude}
+        },
+      },
+
+    });
+
 
     try {
-      final responseString = await networkUtility.postUrl(uri, headers: headers, body: body);
+      final responseString = await NetworkUtility.postUrl(uri, headers: headers, body: body);
       if (responseString == null) {
         debugPrint('No response from Routing API');
         return null;
