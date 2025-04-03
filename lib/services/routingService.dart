@@ -26,12 +26,19 @@ class RoutingService {
       },
       'destination': {
         'location': {
-          'latlng': {'latitude': destination.latitude, 'longitude': destination.longitude}
+          'latlng': {'latitude': destination.latitude, 'longitude': destination.longitude},
         },
       },
-
+      'travelMode': 'DRIVE',
+      // optimize para sa traffic, critical para sa ETA
+      'routingPreference': 'TRAFFIC_AWARE',
+      // don't compute polylines or alternatives routes here
+      'computeAlternativeRoutes': false,
+      // specify yung language
+      'languageCode': 'en-US',
+      // specify kung anong units
+      'units': 'METRIC',
     });
-
 
     try {
       final responseString = await NetworkUtility.postUrl(uri, headers: headers, body: body);
