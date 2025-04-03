@@ -54,7 +54,7 @@ class LocalDatabaseService {
   Future<void> saveBookingDetails(BookingDetails details) async {
     try {
       final db = await database;
-      await db.insert(
+      await db?.insert(
         tableName,
         details.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -86,5 +86,27 @@ class LocalDatabaseService {
       return null;
     }
   }
+
+  // updates the status ng local booking record
+  Future<void> updateLocalBookingStatus(int bookingId, String newStatus) async {
+    try {
+      final db = await database;
+      int count = await db.update(
+        tableName,
+        {'ride_status': newStatus},
+        where: 'booking_id = ?',
+        whereArgs: [bookingId],
+      );
+      if (count > 0) {
+        debugPrint('Updated status for local booking $bookingId to $newStatus.');
+      }
+      else {
+        debugPrint("Local booking $bookingId not found for status update.");
+      }
+    } catch (e) {
+      debugPrint("Error updating status for local booking $bookingId: $e");
+    }
+  }
+
 
 }
