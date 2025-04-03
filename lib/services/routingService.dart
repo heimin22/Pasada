@@ -63,8 +63,7 @@ class RoutingService {
 
     } catch (e) {
       debugPrint('Error calculating ETA: $e');
-
-
+      return null;
     }
   }
 }
