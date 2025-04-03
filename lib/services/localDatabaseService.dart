@@ -65,5 +65,26 @@ class LocalDatabaseService {
     }
   }
 
+  // retrieves booking details from the local database
+  Future<BookingDetails?> getBookingDetails(int bookingId) async {
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        tableName,
+        where: 'booking_id = ?',
+        whereArgs: [bookingId],
+      );
+
+      if (maps.isNotEmpty) {
+        debugPrint("Retrieved booking $bookingId from local DB.");
+        return BookingDetails.fromMap(maps.first);
+      }
+      debugPrint("Booking $bookingId not found in local DB.");
+      return null;
+    } catch (e) {
+      debugPrint('Error retrieving booking $bookingId locally: $e');
+      return null;
+    }
+  }
 
 }
