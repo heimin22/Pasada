@@ -39,11 +39,30 @@ class RoutingService {
       // early exit for empty/missing legs
       final legs = routes[0]['legs'] as List<dynamic>?;
       if (legs == null || legs.isEmpty) {
+        debugPrint('Legs data missing or empty in route');
         return null;
       }
 
+      // early exit for missing duration
+      final durationString = legs[0]['duration'] as String?;
+      if (durationString == null) {
+        debugPrint("Duration field missing in leg data");
+        return null;
+      }
+
+      // parse duration
+      final secondString = durationString.replaceAll('s', '');
+      final durationSeconds = int.tryParse(secondString);
+      if (durationSeconds == null) {
+        debugPrint('Could not parse duration string: $durationString');
+        return null;
+      }
+
+      debugPrint('Calculated ETA: $durationSeconds seconds');
+      return durationSeconds;
 
     } catch (e) {
+      debugPrint('Error calculating ETA: $e');
 
 
     }
