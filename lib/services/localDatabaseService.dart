@@ -69,7 +69,7 @@ class LocalDatabaseService {
   Future<BookingDetails?> getBookingDetails(int bookingId) async {
     try {
       final db = await database;
-      final List<Map<String, dynamic>> maps = await db.query(
+      final List<Map<String, dynamic>> maps = await db!.query(
         tableName,
         where: 'booking_id = ?',
         whereArgs: [bookingId],
@@ -91,7 +91,7 @@ class LocalDatabaseService {
   Future<void> updateLocalBookingStatus(int bookingId, String newStatus) async {
     try {
       final db = await database;
-      int count = await db.update(
+      int count = await db!.update(
         tableName,
         {'ride_status': newStatus},
         where: 'booking_id = ?',
@@ -105,6 +105,21 @@ class LocalDatabaseService {
       }
     } catch (e) {
       debugPrint("Error updating status for local booking $bookingId: $e");
+    }
+  }
+
+  // deletes booking details from the local database
+  Future<void> deleteBookingDetails(int bookingId) async {
+    try {
+      final db = await database;
+      await db!.delete(
+        tableName,
+        where: 'booking_id = ?',
+        whereArgs: [bookingId],
+      );
+      debugPrint("Deleted booking $bookingId from local DB.");
+    } catch (e) {
+      debugPrint("Error deleting booking $bookingId locally: $e");
     }
   }
 
