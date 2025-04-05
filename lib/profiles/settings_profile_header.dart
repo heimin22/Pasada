@@ -18,7 +18,15 @@ class SettingsProfileHeader extends StatelessWidget {
     return FutureBuilder<Map<String, dynamic>?>(
       future: authService.getCurrentUserData(),
       builder: (context, snapshot) {
-        final userName = snapshot.data?['first_name'] != null && snapshot.data?['last_name']
+        if (snapshot.hasError) {
+          debugPrint('Error: ${snapshot.error}');
+          return Text('Error loading profile');
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const CircularProgressIndicator();
+        }
+        final userData = snapshot.data;
+        final userName = (userData?['first_name'] != null && userData?['last_name'] != null)
             ? '${snapshot.data!['first_name']} ${snapshot.data!['last_name']}'
             : 'Guest user';
 

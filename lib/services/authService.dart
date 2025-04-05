@@ -90,7 +90,6 @@ class AuthService {
     );
   }
 
-
   // logout
   // update to remove device ID
   Future<void> logout() async {
