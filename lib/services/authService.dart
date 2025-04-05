@@ -121,29 +121,25 @@ class AuthService {
     return deviceID;
   }
 
-  // update user information
-  // Future<void> updateUserInfo(String firstName, String lastName, String contactNumber, String email) async {
-  //   final user = supabase.auth.currentUser;
-  //
-  //   if (user != null) {
-  //     try {
-  //       final response = await supabase.from('passengers').update({
-  //         'first_name': firstName,
-  //         'last_name': lastName,
-  //         'contact_number': contactNumber,
-  //         'passenger_email': email,
-  //       }).eq('user_id', user.id);
-  //
-  //       if (response.error != null) {
-  //         throw Exception(response.error!.message);
-  //       }
-  //       debugPrint('Updated passenger_table: first_Name=$firstName, last_Name=$lastName, contact_Number=$contactNumber');
-  //     } catch (e) {
-  //       debugPrint('Error updating passenger_table: $e');
-  //       rethrow;
-  //     }
-  //   } else {
-  //     throw Exception('User not found');
-  //   }
-  // }
+  // gathering user information
+  Future<Map<String, dynamic>?> getCurrentUserData() async {
+    try {
+      final user = supabase.auth.currentUser;
+
+      if (user != null) {
+        final response = await supabase
+            .from('passenger')
+            .select()
+            .eq('id', user.id)
+            .single();
+        return response;
+      }
+      else {
+        return null;
+      }
+    } catch (e) {
+      if (kDebugMode) ('Error fetching user data: $e');
+      return null;
+    }
+  }
 }

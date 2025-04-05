@@ -80,11 +80,11 @@ class BookingDetails {
       pickupCoordinates: parseCoordinates('pickup_lat', 'pickup_lng'),
       dropoffAddress: map['dropoff_address'] as String,
       dropoffCoordinates: parseCoordinates('dropoff_lat', 'dropoff_lng'),
-      startTime: map['start_time'] as String,
+      startTime: TimeOfDay.fromDateTime(DateTime.parse(map['start_time'])),
       createdAt: DateTime.parse(map['created_at'] as String),
       fare: (map['fare'] as num).toDouble(),
       assignedAt: DateTime.parse(map['assigned_at'] as String),
-      endTime: map['end_time'] as String,
+      endTime: TimeOfDay.fromDateTime(DateTime.parse(map['end_time'])),
     );
   }
 }
