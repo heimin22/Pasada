@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
 import '../main.dart';
-
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -26,7 +26,6 @@ class SettingsScreen extends StatelessWidget {
 
 class SettingsScreenStateful extends StatefulWidget {
   const SettingsScreenStateful({super.key, required this.title});
-
   final String title;
 
   @override
@@ -38,11 +37,17 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            buildPassengerProfile(),
+            SettingsProfileHeader(
+              authService: authService,
+              screenHeight: screenSize.height,
+              screenWidth: screenSize.width,
+            ),
             const Divider(
               height: 0,
               thickness: 12,
@@ -54,74 +59,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // profile section widget
-  Widget buildPassengerProfile() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-    return Container (
-      width: double.infinity,
-      color: Color(0xFFF5F5F5),
-      height: screenHeight * 0.13,
-      padding: EdgeInsets.symmetric(
-        horizontal: screenWidth * 0.06,
-        vertical: screenHeight * 0.03,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: screenWidth * 0.07,
-            backgroundColor: const Color(0xFF00CC58),
-            child: Icon(
-              Icons.person,
-              size: screenWidth * 0.1,
-              color: const Color(0xFFDEDEDE),
-            ),
-          ),
-          SizedBox(width: screenWidth * 0.06),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: screenHeight * 0.008),
-              const Text(
-                'Fyke Tonel',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF121212)
-                ),
-              ),
-              SizedBox(height: screenHeight * 0.005),
-              InkWell(
-                onTap: () {
-                  debugPrint('Edit profile tapped');
-                },
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Edit profile',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF121212),
-                      ),
-                    ),
-                    SizedBox(width: screenWidth * 0.01),
-                    Icon(
-                      Icons.arrow_forward,
-                      size: 15,
-                      color: Color(0xFF121212),
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
