@@ -1,16 +1,41 @@
-# pasada_passenger_app
+# Pasada
 
-A new Flutter project.
+Pasada is a ride-hailing application designed specifically for passengers of modernized jeepneys in the Philippines. At present, the application supports only the route from Bayan to Malinta, offering a convenient way for users to book rides and manage their transportation needs.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Route Support**: Currently supports the Bayan to Malinta route.
+- **Ride Booking**: Users can book rides for the supported route.
+- **Real-time Tracking**: Track the location of the jeepney in real-time.
+- **Payment Integration**: Secure payment options for ride fares.
+- **User Profiles**: Manage personal information and ride history.
 
-A few resources to get you started if this is your first Flutter project:
+Additional features, such as support for more routes and enhanced functionality, are planned for future releases.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Usage
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Once the application is installed and running, users can:
+
+1. **Sign Up / Log In**: Create a new account or log in with existing credentials.
+2. **Book a Ride**: Select the Bayan to Malinta route and book a ride.
+3. **Track the Jeepney**: View the real-time location of the jeepney on the map.
+4. **Make Payments**: Pay for the ride using integrated payment methods.
+5. **View Ride History**: Check past rides and manage profile settings.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For inquiries or support, please email me [heiminrei22@gmail.com](mailto:heiminrei22@gmail.com). You can also open an issue on the [GitHub repository](https://github.com/heimin22/Pasada) for bug reports or feature requests.
+
+## Current Status
+
+**Note**: The Pasada application is currently in development. Some features may not be fully implemented or may change over time. We appreciate your patience and encourage feedback or contributions to help improve the application.
+
+## Future Plans
+
+- Expand route support to cover more areas in the Philippines.
+- Enhance the user interface for a better experience.
+- Integrate additional payment methods.
