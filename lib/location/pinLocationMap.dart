@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/landmarkService.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
-import 'package:pasada_passenger_app/location/mapScreen.dart';
+import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
