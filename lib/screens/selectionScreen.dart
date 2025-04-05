@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
-import 'package:pasada_passenger_app/home/activityScreen.dart';
-import 'package:pasada_passenger_app/home/settingsScreen.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
+import 'package:pasada_passenger_app/screens/activityScreen.dart';
+import 'package:pasada_passenger_app/screens/settingsScreen.dart';
+import 'package:pasada_passenger_app/screens/homeScreen.dart';
 
 class selectionScreen extends StatefulWidget {
   const selectionScreen({super.key});

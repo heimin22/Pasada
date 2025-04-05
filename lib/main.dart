@@ -57,7 +57,7 @@ class PasadaPassenger extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      // home: const PasadaHomePage(title: 'Pasada'),
+      // screens: const PasadaHomePage(title: 'Pasada'),
       home: const AuthGate(),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,11 +12,11 @@ class BookingDetails {
   final LatLng pickupCoordinates;
   final String dropoffAddress;
   final LatLng dropoffCoordinates;
-  final String startTime;
+  final TimeOfDay startTime;
   final DateTime createdAt;
   final double fare;
   final DateTime assignedAt;
-  final String endTime;
+  final TimeOfDay endTime;
 
   BookingDetails({
     required this.bookingId,
@@ -47,11 +48,11 @@ class BookingDetails {
       'dropoff_address': dropoffAddress,
       'dropoff_lat': dropoffCoordinates.latitude.toString(),
       'dropoff_lng': dropoffCoordinates.longitude.toString(),
-      'start_time': startTime,
+      'start_time': '${startTime.hour}:${startTime.minute}',
       'created_at': createdAt.toIso8601String(),
       'fare': fare,
       'assigned_at': assignedAt.toIso8601String(),
-      'end_time': endTime,
+      'end_time': '${startTime.hour}:${startTime.minute}',
     };
   }
 
@@ -79,11 +80,11 @@ class BookingDetails {
       pickupCoordinates: parseCoordinates('pickup_lat', 'pickup_lng'),
       dropoffAddress: map['dropoff_address'] as String,
       dropoffCoordinates: parseCoordinates('dropoff_lat', 'dropoff_lng'),
-      startTime: map['start_time'] as String,
+      startTime: TimeOfDay.fromDateTime(DateTime.parse(map['start_time'])),
       createdAt: DateTime.parse(map['created_at'] as String),
       fare: (map['fare'] as num).toDouble(),
       assignedAt: DateTime.parse(map['assigned_at'] as String),
-      endTime: map['end_time'] as String,
+      endTime: TimeOfDay.fromDateTime(DateTime.parse(map['end_time'])),
     );
   }
 }

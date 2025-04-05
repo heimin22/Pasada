@@ -11,8 +11,8 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
-// import 'package:pasada_passenger_app/home/selectionScreen.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
+// import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/screens/homeScreen.dart';
 // import 'package:http/http.dart' as http;
 import 'selectedLocation.dart';
 

@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 
-import '../home/selectionScreen.dart';
+import '../screens/selectionScreen.dart';
 
 class CreateAccountCredPage extends StatefulWidget {
   final String email;

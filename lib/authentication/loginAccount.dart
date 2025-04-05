@@ -3,10 +3,10 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/home/selectionScreen.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/home/homeScreen.dart';
+import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,7 +26,7 @@ class LoginAccountPage extends StatelessWidget {
       home: const LoginPage(title: 'Log-in to your account'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
-        'home': (BuildContext context) => const HomeScreen(),
+        'screens': (BuildContext context) => const HomeScreen(),
         'selection': (BuildContext context) => const selectionScreen(),
       },
     );
