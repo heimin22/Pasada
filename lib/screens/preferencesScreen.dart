@@ -78,6 +78,66 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
+  // Toggle List Item Helper
+  Widget buildToggleListItem(
+    String title,
+    String subtitle,
+    bool value,
+    Function(bool) onChanged,
+    double screenWidth,
+    double screenHeight,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: screenWidth * 0.03,
+            vertical: 12,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF121212),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF515151),
+                    ),
+                  ),
+                ],
+              ),
+              Transform.scale(
+                scale: 0.8,
+                child: CupertinoSwitch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeTrackColor: const Color(0xFF00CC58),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+          child: const Divider(height: 1),
+        ),
+      ],
+    );
+  }
+
   Widget buildBody(Size screenSize) {
     return SafeArea(
       child: Column(
