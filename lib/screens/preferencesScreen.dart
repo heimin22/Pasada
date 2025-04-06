@@ -34,7 +34,9 @@ class PreferencesScreenState extends State<PreferencesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery
+        .of(context)
+        .size;
 
     return Scaffold(
       appBar: buildAppBar(),
@@ -59,7 +61,70 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  // section header helper
+  Widget buildBody(Size screenSize) {
+    return SafeArea(
+      child: Column(
+        children: [
+          buildNotificationSection(screenSize.width),
+          buildAppSettingsSection(screenSize.width, screenSize.height),
+        ],
+      ),
+    );
+  }
+
+  // settings section ng notification
+  Widget buildNotificationSection(double screenWidth) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            buildSectionHeader('Notifications', screenWidth),
+            buildToggleListItem(
+              'Push Notifications',
+              'Enable/disable app notifications',
+              notificationsEnabled,
+              toggleNotification,
+              screenWidth,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // additional application settings section
+  Widget buildAppSettingsSection(double screenWidth, double screenHeight) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+          vertical: screenHeight * 0.02, horizontal: screenWidth * 0.03),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            buildSectionHeader('App Settings', screenWidth),
+            buildSettingsListItem(
+                'Appearance', 'Change theme preferences', screenWidth, () {
+              debugPrint('Appearance tapped');
+            }),
+            buildSettingsListItem(
+                'Language', 'Set app language', screenWidth, () {
+              debugPrint('Language tapped');
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+// section header helper
   Widget buildSectionHeader(String title, double screenWidth) {
     return Padding(
       padding: EdgeInsets.all(screenWidth * 0.03),
@@ -78,15 +143,12 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  // Toggle List Item Helper
-  Widget buildToggleListItem(
-    String title,
-    String subtitle,
-    bool value,
-    Function(bool) onChanged,
-    double screenWidth,
-    double screenHeight,
-  ) {
+// Toggle List Item Helper
+  Widget buildToggleListItem(String title,
+      String subtitle,
+      bool value,
+      Function(bool) onChanged,
+      double screenWidth,) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -138,48 +200,56 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  Widget buildBody(Size screenSize) {
-    return SafeArea(
-      child: Column(
-        children: [
-          buildNotificationSection(screenSize.width),
-          buildAppSettingsSection(screenSize.width, screenSize.height),
-        ],
-      ),
-    );
-  }
-
-  // settings section ng notification
-  Widget buildNotificationSection(double screenWidth) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(18),
+// regular settings list item helper my niggers
+  Widget buildSettingsListItem(String title,
+      String subtitle,
+      double screenWidth,
+      VoidCallback onTap,) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.all(screenWidth * 0.03),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF121212),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFF121212),
+                  size: 22,
+                )
+              ],
+            ),
+          ),
         ),
-        child: Column(
-          children: [
-
-          ],
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+          child: const Divider(height: 1),
         ),
-      ),
-    );
-  }
-
-  // additional application settings section
-  Widget buildAppSettingsSection(double screenWidth, double screenHeight) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02, horizontal: screenWidth * 0.03),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-
-        ),
-      ),
+      ],
     );
   }
 }
