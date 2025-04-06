@@ -34,12 +34,11 @@ class PreferencesScreenState extends State<PreferencesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // final screenHeight = MediaQuery.of(context).size.height;
-    // final screenWidth = MediaQuery.of(context).size.width;
+    final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: buildAppBar(),
-      body: (),
+      body: buildBody(screenSize),
     );
   }
 
@@ -60,26 +59,67 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  Widget buildBody(Size screenSize) {
-    return SafeArea(
-      child: Column(
+  // section header helper
+  Widget buildSectionHeader(String title, double screenWidth) {
+    return Padding(
+      padding: EdgeInsets.all(screenWidth * 0.03),
+      child: Row(
         children: [
-          buildNotificationSection(screenSize.width),
-          buildAppSettingsSection(screenSize.width),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF121212),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget buildNotificationSection(double screenWidth) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+  Widget buildBody(Size screenSize) {
+    return SafeArea(
+      child: Column(
+        children: [
+          buildNotificationSection(screenSize.width),
+          buildAppSettingsSection(screenSize.width, screenSize.height),
+        ],
+      ),
     );
   }
 
-  Widget buildAppSettingsSection(double screenWidth) {
+  // settings section ng notification
+  Widget buildNotificationSection(double screenWidth) {
     return Padding(
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
 
+          ],
+        ),
+      ),
+    );
+  }
+
+  // additional application settings section
+  Widget buildAppSettingsSection(double screenWidth, double screenHeight) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: screenHeight * 0.02, horizontal: screenWidth * 0.03),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+
+        ),
+      ),
     );
   }
 }
