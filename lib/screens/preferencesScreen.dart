@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 
 class PreferencesScreen extends StatefulWidget {
   const PreferencesScreen({super.key});
@@ -8,6 +10,14 @@ class PreferencesScreen extends StatefulWidget {
 }
 
 class PreferencesScreenState extends State<PreferencesScreen> {
+  bool notificationsEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
