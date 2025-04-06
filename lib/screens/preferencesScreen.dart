@@ -31,12 +31,9 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     setState(() => notificationsEnabled = value);
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery
-        .of(context)
-        .size;
+    final screenSize = MediaQuery.of(context).size;
 
     return Scaffold(
       appBar: buildAppBar(),
@@ -65,6 +62,7 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     return SafeArea(
       child: Column(
         children: [
+          SizedBox(height: 12),
           buildNotificationSection(screenSize.width),
           buildAppSettingsSection(screenSize.width, screenSize.height),
         ],
@@ -114,10 +112,6 @@ class PreferencesScreenState extends State<PreferencesScreen> {
                 'Appearance', 'Change theme preferences', screenWidth, () {
               debugPrint('Appearance tapped');
             }),
-            buildSettingsListItem(
-                'Language', 'Set app language', screenWidth, () {
-              debugPrint('Language tapped');
-            }),
           ],
         ),
       ),
@@ -144,11 +138,13 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   }
 
 // Toggle List Item Helper
-  Widget buildToggleListItem(String title,
-      String subtitle,
-      bool value,
-      Function(bool) onChanged,
-      double screenWidth,) {
+  Widget buildToggleListItem(
+    String title,
+    String subtitle,
+    bool value,
+    Function(bool) onChanged,
+    double screenWidth,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -201,10 +197,12 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   }
 
 // regular settings list item helper my niggers
-  Widget buildSettingsListItem(String title,
-      String subtitle,
-      double screenWidth,
-      VoidCallback onTap,) {
+  Widget buildSettingsListItem(
+    String title,
+    String subtitle,
+    double screenWidth,
+    VoidCallback onTap,
+  ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
