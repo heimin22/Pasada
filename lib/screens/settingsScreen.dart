@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
 import '../main.dart';
@@ -93,6 +94,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             buildSettingsListItem('Preferences', screenWidth, (){
               debugPrint('Preferences tapped');
               // TODO: dapat may function na ito sa susunod my nigger
+              Navigator.push(
+                context, 
+                MaterialPageRoute(builder: (context) => PreferencesScreen())
+              );
             }),
             buildSettingsListItem('Contact Support', screenWidth, (){
               debugPrint('Contact support tapped');
