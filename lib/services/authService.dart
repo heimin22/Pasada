@@ -90,6 +90,39 @@ class AuthService {
     );
   }
 
+  Future<bool> checkNetworkConnection() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity == ConnectivityResult.none) {
+      Fluttertoast.showToast(
+        msg: 'No internet connection',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  // ito na yung method to sign in with google my niggas
+  Future<bool> signInWithGoogle() async {
+    // check the internet connection
+    final hasConnection = await checkNetworkConnection();
+    if (!hasConnection) debugPrint('No internet connection');
+
+    try {
+      final response = await supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'https://otbwhitwrmnfqgpmnjvf.supabase.co/auth/v1/callback',
+      );
+      return response;
+    } catch (e) {
+      debugPrint('Error during Google sign-in: $e');
+      throw Exception('Google sign-in failed');
+    }
+  }
+
   // logout
   // update to remove device ID
   Future<void> logout() async {
