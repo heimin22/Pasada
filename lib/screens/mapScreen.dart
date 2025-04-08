@@ -283,7 +283,10 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds,routes.legs.steps.travelAdvisory.speedReadingIntervals',
+        // 'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds,routes.legs.steps.travelAdvisory.speedReadingIntervals',
+        'X-Goog-FieldMask': 'routes.encoded.encodedPolyline,'
+                            'routes.legs.duration,'
+                            'routes.legs.travelAdvisory.speedReadingIntervals',
       };
       final body = jsonEncode({
         'origin': {
@@ -329,9 +332,9 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       // null checking for nested properties
       final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
       if (polyline == null) {
-        showDebugToast('No polyline found in the response');
+        showDebugToast('No encoded found in the response');
         if (kDebugMode) {
-          print('No polyline found in the response');
+          print('No encoded found in the response');
         }
         return;
       }
@@ -341,11 +344,21 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         debugPrint('API Response: $data');
         debugPrint('Routes; ${data['routes']}');
         if (data['routes']?.isNotEmpty ?? false) {
-          // final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-          final route = data['routes'][0];
-          final polyline = route['polyline']['encodedPolyline'];
+          // final encoded = data['routes'][0]['encoded']['encodedPolyline'];
+          final route = data['routes'][0] as Map<String, dynamic>;
+          final encoded = route['encoded']['encodedPolyline'] as String;
+          final decoded = polylinePoints.decodePolyline(encoded);
+
+          // pull out the leg advisory
+          final leg = (route['legs'] as List)[0] as Map<String, dynamic>;
+          final advisory = leg['travelAdvisory'] as Map<String, dynamic>?;
+
+          // get the intervals
+          final intervals = (leg['travelAdvisory']?['speedReadingIntervals'] as List?)
+              ?.cast<Map<String, dynamic>>() ?? [];
+
           List<PointLatLng> decodedPolyline =
-              polylinePoints.decodePolyline(polyline);
+              polylinePoints.decodePolyline(encoded);
 
           // extract yung speed rating sa mga intervals
           List<dynamic> steps = route['legs'][0]['steps'] ?? [];
