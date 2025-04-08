@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,10 +8,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
-import 'package:uni_links5/uni_links.dart';
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks
@@ -90,24 +90,55 @@ class PasadaHomePage extends StatefulWidget {
 
 // application content
 class PasadaHomePageState extends State<PasadaHomePage> {
-  StreamSubscription? sub;
+  StreamSubscription<Uri>? linkSubscription;
+  final appLinks = AppLinks();
 
   @override
   void initState() {
     super.initState();
     initDeepLinks();
+    initAuthListener();
   }
 
   Future<void> initDeepLinks() async {
     // handle initial deep link kung yung app is launched via link
     try {
-      final initialUri = await getInitialUri();
+      final initialUri = await appLinks.getInitialLink();
       if (initialUri != null) {
-        await handleDeepLink(initialUri);
+        handleDeepLink(initialUri);
       }
+
+      // listen for subsequent deep links habang tumatakbo yung app
+      linkSubscription = appLinks.uriLinkStream.listen((uri) {
+        if (uri != null) {
+          handleDeepLink(uri);
+        }
+      });
     } catch (e) {
       debugPrint('Error getting initial URI: $e');
     }
+  }
+
+  void handleDeepLink(Uri uri) {
+    if (uri.toString().startsWith('pasada://login-callback')) {
+      Supabase.instance.client.auth.getSessionFromUrl(uri);
+    }
+  }
+
+  void initAuthListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((authState){
+      if (authState.event == AuthChangeEvent.signedIn) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => selectionScreen()),
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    linkSubscription?.cancel();
+    super.dispose();
   }
 
   @override

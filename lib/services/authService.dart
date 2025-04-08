@@ -127,7 +127,7 @@ class AuthService {
             String firstName = nameParts.isNotEmpty ? nameParts.first : '';
             String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-            await supabase.from('passenger').upsert({
+            await supabase.from('passenger').insert({
               'id': user.id,
               'first_name': firstName,
               'last_name': lastName,
