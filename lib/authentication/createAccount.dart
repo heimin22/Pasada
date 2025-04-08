@@ -18,6 +18,8 @@ class CreateAccountPage extends StatefulWidget {
   State<CreateAccountPage> createState() => _CreateAccountPageState();
 }
 
+bool isGoogleLoading = false;
+
 class _CreateAccountPageState extends State<CreateAccountPage> {
   @override
   Widget build(BuildContext context) {
@@ -490,7 +492,24 @@ class CreateAccountScreen extends State<CAPage> {
         margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: () async {
+            if (isGoogleLoading) return;
+            setState(() => isGoogleLoading = true);
+            try {
+              await authService.signInWithGoogle();
+            }
+            catch (e) {
+              Fluttertoast.showToast(
+                msg: 'Error: ${e.toString()}',
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                backgroundColor: Color(0xFFF5F5F5),
+                textColor: Color(0xFF121212),
+              );
+            } finally {
+              if (mounted) setState(() => isGoogleLoading = false);
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),
