@@ -226,37 +226,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
   Future<void> getLocationUpdates() async {
     try {
-      // if (!await checkLocationService()) return;
-      //
-      // // check if yung location services ay available
-      // bool serviceEnabled = await location.serviceEnabled();
-      // if (!serviceEnabled) {
-      //   serviceEnabled = await location.requestService();
-      //   if (!serviceEnabled) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Enable Location Services',
-      //         'Location services are disabled. Please enable them to use this feature.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-      // // check ng location permissions
-      // PermissionStatus permissionGranted = await location.hasPermission();
-      // if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
-      //   final permission = await location.requestPermission();
-      //   if (permission != PermissionStatus.granted) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Permission Required',
-      //         'This app needs location permission to work. Please allow it in your settings.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
@@ -272,24 +241,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
           if (!mounted) return;
           setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
       });
-
-      // listen sa location updates
-      // location.onLocationChanged.listen((LocationData newLocation) {
-      //   if (newLocation.latitude != null && newLocation.longitude != null) {
-      //     setState(() {
-      //       currentLocation =
-      //           LatLng(newLocation.latitude!, newLocation.longitude!);
-      //     });
-      //   }
-      // });
-
-      // locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
-      //   // if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
-      //   //   setState(() {
-      //   //     currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
-      //   //   });
-      //   // }
-      // });
     } catch (e) {
       // showError('An error occurred while fetching the location.');
       if (mounted) showError('Location Error: ${e.toString()}');
@@ -332,7 +283,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds,routes.legs.steps.travelAdvisory.speedReadingIntervals',
       };
       final body = jsonEncode({
         'origin': {
