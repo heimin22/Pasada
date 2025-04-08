@@ -259,13 +259,20 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      showDebugToast('No internet connection');
-      return;
+  Future<bool> checkNetworkConnection() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity == ConnectivityResult.none) {
+      showError('No internet connection');
+      return false;
     }
+    return true;
+  }
+
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey == null) {
         showDebugToast('API key not found');
@@ -283,10 +290,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        // 'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds,routes.legs.steps.travelAdvisory.speedReadingIntervals',
-        'X-Goog-FieldMask': 'routes.encoded.encodedPolyline,'
-                            'routes.legs.duration,'
-                            'routes.legs.travelAdvisory.speedReadingIntervals',
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
       };
       final body = jsonEncode({
         'origin': {
@@ -315,26 +319,33 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+      await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        debugPrint('No response from the server');
+        showDebugToast('No response from the server');
+        if (kDebugMode) {
+          print('No response from the server');
+        }
         return;
       }
 
       final data = json.decode(response);
+
       // add ng response validation
       if (data['routes'] == null || data['routes'].isEmpty) {
-        debugPrint('No response from the server');
+        showDebugToast('No routes found');
+        if (kDebugMode) {
+          print('No routes found');
+        }
         return;
       }
 
       // null checking for nested properties
       final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
       if (polyline == null) {
-        showDebugToast('No encoded found in the response');
+        showDebugToast('No polyline found in the response');
         if (kDebugMode) {
-          print('No encoded found in the response');
+          print('No polyline found in the response');
         }
         return;
       }
@@ -344,71 +355,26 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         debugPrint('API Response: $data');
         debugPrint('Routes; ${data['routes']}');
         if (data['routes']?.isNotEmpty ?? false) {
-          // final encoded = data['routes'][0]['encoded']['encodedPolyline'];
-          final route = data['routes'][0] as Map<String, dynamic>;
-          final encoded = route['encoded']['encodedPolyline'] as String;
-          final decoded = polylinePoints.decodePolyline(encoded);
-
-          // pull out the leg advisory
-          final leg = (route['legs'] as List)[0] as Map<String, dynamic>;
-          final advisory = leg['travelAdvisory'] as Map<String, dynamic>?;
-
-          // get the intervals
-          final intervals = (leg['travelAdvisory']?['speedReadingIntervals'] as List?)
-              ?.cast<Map<String, dynamic>>() ?? [];
-
+          final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
-              polylinePoints.decodePolyline(encoded);
-
-          // extract yung speed rating sa mga intervals
-          List<dynamic> steps = route['legs'][0]['steps'] ?? [];
-          List<Map<String, dynamic>> speedIntervals = [];
-          for (var step in steps) {
-            final intervals = step['travelAdvisory']?['speedRatingIntervals'] ?? [];
-            speedIntervals.addAll(List<Map<String, dynamic>>.from(intervals));
-          }
-
+          polylinePoints.decodePolyline(polyline);
+          List<LatLng> polylineCoordinates = decodedPolyline
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
           if (mounted) {
             setState(() {
-              // clear existing polylines
-              polylines.clear();
-
-              // create polylines for each traffic segment
-              int previousEndIndex = 0;
-              for (var interval in speedIntervals) {
-                final startIndex = interval['startPolylinePointIndex'] ?? 0;
-                final endIndex =
-                    interval['endPolylinePointIndex'] ?? decodedPolyline.length;
-                final speedCategory = interval['speed'] ?? 'NORMAL';
-
-                // get the segment points
-                List<LatLng> segmentPoints = decodedPolyline
-                    .sublist(previousEndIndex, endIndex)
-                    .map((point) => LatLng(point.latitude, point.longitude))
-                    .toList();
-
-                // determine color based on speed categorY
-                Color segmentColor;
-                if (speedCategory == 'SLOW') {
-                  segmentColor = Color(0xFFFFCE21);
-                } else if (speedCategory == 'TRAFFIC_JAM') {
-                  segmentColor = Color(0xFFD7481D);
-                } else {
-                  segmentColor = Color(0xFF59F720);
-                }
-
-                final id = PolylineId('route_segment_${polylines.length}');
-                polylines[id] = Polyline(
-                  polylineId: id,
-                  points: segmentPoints,
-                  color: segmentColor,
+              polylines = {
+                const PolylineId('route'): Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: polylineCoordinates,
+                  color: Color(0xFF067837),
                   width: 8,
-                );
-
-                previousEndIndex = endIndex;
-              }
+                )
+              };
             });
           }
+
+          showDebugToast('Route generated successfully');
 
           final legs = data['routes'][0]['legs'];
           if (legs is! List || legs.isEmpty) {
@@ -443,12 +409,13 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       }
       showDebugToast('Failed to generate route');
       if (kDebugMode) {
-        debugPrint('Failed to generate route: $response');
+        print('Failed to generate route: $response');
       }
     } catch (e) {
-      debugPrint('Error: ${e.toString()}');
+      showDebugToast('Error: ${e.toString()}');
     }
   }
+
 
   String formatDuration(int totalSeconds) {
     final hours = totalSeconds ~/ 3600;
