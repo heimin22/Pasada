@@ -113,53 +113,86 @@ class AuthService {
     if (!hasConnection) return false;
 
     final completer = Completer<bool>();
-    StreamSubscription<AuthState>? authSubscription;
+    late final StreamSubscription? authSub;
+    authSub = supabase.auth.onAuthStateChange.listen((authState) async {
+      // wait muna sa sign-in event
+      if (authState.event == AuthChangeEvent.signedIn) {
+        // get yung current user
+        final user = supabase.auth.currentUser;
+        if (user != null) {
+          // perform ng polling to make sure na handa na yung metadata
+          await Future.delayed(Duration(seconds: 2));
 
-    try {
-      authSubscription = supabase.auth.onAuthStateChange.listen((authState) async {
-        final event = authState.event;
-        if (event == AuthChangeEvent.signedIn) {
-          final user = supabase.auth.currentUser;
-          if (user != null) {
-            // extract yung name duon sa Google metadata
-            final fullName = user.userMetadata?['full_name'] as String? ?? '';
-            List<String> nameParts = fullName.split(' ');
-            String firstName = nameParts.isNotEmpty ? nameParts.first : '';
-            String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+          // extract na yung user's full name from metadata safely
+          String fullName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'];
+          // provide ng fallback if hindi provided yung name
+          fullName = fullName?.trim() ?? 'User${DateTime.now().millisecondsSinceEpoch}';
+
+          // parse na yung full name into parts
+          final nameParts = fullName.split(' ');
+          final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+          final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
+          try {
+            final uniquePlaceholder = "temp-${DateTime.now().millisecondsSinceEpoch}";
 
             await supabase.from('passenger').upsert({
               'id': user.id,
               'first_name': firstName,
               'last_name': lastName,
-              'email': user.email,
+              'passenger_email': user.email,
+              'contact_number': uniquePlaceholder,
             });
-
             completer.complete(true);
-          }
-          else {
+          } catch (e) {
+            debugPrint('Database error $e');
             completer.complete(false);
           }
-          await authSubscription?.cancel();
+        } else {
+          completer.complete(false);
         }
-      });
+        await authSub?.cancel();
+      }
+    });
 
-      await supabase.auth.signInWithOAuth(
+    try {
+      final response = await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'pasada://login-callback',
+        redirectTo: kIsWeb ? null : 'pasada://login-callback',
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
-
-    return await completer.future.timeout(const Duration(seconds: 30), onTimeout: () {
-    throw Exception('Timed out waiting for Google sign-in');
-    });
+      return response;
     } catch (e) {
       debugPrint('Error during Google sign-in: $e');
+      Fluttertoast.showToast(
+        msg: 'Failed to sign in with Google',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
       return false;
     }
   }
 
-  // logout
-  // update to remove device ID
+  // Future<bool> signInWithGoogle() async {
+  //   // check the internet connection
+  //   final hasConnection = await checkNetworkConnection();
+  //   if (!hasConnection) return false;
+  //
+  //   try {
+  //     final response = await supabase.auth.signInWithOAuth(
+  //       OAuthProvider.google,
+  //       redirectTo: 'pasada://login-callback',
+  //       authScreenLaunchMode: LaunchMode.externalApplication,
+  //     );
+  //     return response;
+  //   } catch (e) {
+  //     debugPrint('Error during Google sign-in: $e');
+  //     throw Exception('Google sign-in failed');
+  //   }
+  // }
+
   Future<void> logout() async {
     try {
       await supabase.auth.signOut();

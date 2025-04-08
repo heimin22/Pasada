@@ -493,7 +493,16 @@ class CreateAccountScreen extends State<CAPage> {
             if (isGoogleLoading) return;
             setState(() => isGoogleLoading = true);
             try {
-              await authService.signInWithGoogle();
+              final success = await authService.signInWithGoogle();
+              if (!success && mounted) {
+                Fluttertoast.showToast(
+                  msg: 'Failed to create user profile',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  textColor: Color(0xFF121212),
+                );
+              }
             }
             catch (e) {
               Fluttertoast.showToast(
