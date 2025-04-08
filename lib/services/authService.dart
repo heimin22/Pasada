@@ -127,7 +127,7 @@ class AuthService {
             String firstName = nameParts.isNotEmpty ? nameParts.first : '';
             String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-            await supabase.from('passenger').insert({
+            await supabase.from('passenger').upsert({
               'id': user.id,
               'first_name': firstName,
               'last_name': lastName,
@@ -154,7 +154,6 @@ class AuthService {
     });
     } catch (e) {
       debugPrint('Error during Google sign-in: $e');
-      await authSubscription?.cancel();
       return false;
     }
   }

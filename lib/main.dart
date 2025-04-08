@@ -90,57 +90,6 @@ class PasadaHomePage extends StatefulWidget {
 
 // application content
 class PasadaHomePageState extends State<PasadaHomePage> {
-  StreamSubscription<Uri>? linkSubscription;
-  final appLinks = AppLinks();
-
-  @override
-  void initState() {
-    super.initState();
-    initDeepLinks();
-    initAuthListener();
-  }
-
-  Future<void> initDeepLinks() async {
-    // handle initial deep link kung yung app is launched via link
-    try {
-      final initialUri = await appLinks.getInitialLink();
-      if (initialUri != null) {
-        handleDeepLink(initialUri);
-      }
-
-      // listen for subsequent deep links habang tumatakbo yung app
-      linkSubscription = appLinks.uriLinkStream.listen((uri) {
-        if (uri != null) {
-          handleDeepLink(uri);
-        }
-      });
-    } catch (e) {
-      debugPrint('Error getting initial URI: $e');
-    }
-  }
-
-  void handleDeepLink(Uri uri) {
-    if (uri.toString().startsWith('pasada://login-callback')) {
-      Supabase.instance.client.auth.getSessionFromUrl(uri);
-    }
-  }
-
-  void initAuthListener() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((authState){
-      if (authState.event == AuthChangeEvent.signedIn) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => selectionScreen()),
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    linkSubscription?.cancel();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {

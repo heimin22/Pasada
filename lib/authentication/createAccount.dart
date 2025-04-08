@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/main.dart';
+
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -493,13 +493,7 @@ class CreateAccountScreen extends State<CAPage> {
             if (isGoogleLoading) return;
             setState(() => isGoogleLoading = true);
             try {
-              bool success = await authService.signInWithGoogle();
-              if (success && mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => selectionScreen())
-                );
-              }
+              await authService.signInWithGoogle();
             }
             catch (e) {
               Fluttertoast.showToast(
