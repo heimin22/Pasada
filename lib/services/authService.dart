@@ -112,18 +112,50 @@ class AuthService {
     final hasConnection = await checkNetworkConnection();
     if (!hasConnection) return false;
 
-    final
+    final completer = Completer<bool>();
+    StreamSubscription<AuthState>? authSubscription;
 
     try {
-      final response = await supabase.auth.signInWithOAuth(
+      authSubscription = supabase.auth.onAuthStateChange.listen((authState) async {
+        final event = authState.event;
+        if (event == AuthChangeEvent.signedIn) {
+          final user = supabase.auth.currentUser;
+          if (user != null) {
+            // extract yung name duon sa Google metadata
+            final fullName = user.userMetadata?['full_name'] as String? ?? '';
+            List<String> nameParts = fullName.split(' ');
+            String firstName = nameParts.isNotEmpty ? nameParts.first : '';
+            String lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
+            await supabase.from('passenger').upsert({
+              'id': user.id,
+              'first_name': firstName,
+              'last_name': lastName,
+              'email': user.email,
+            });
+
+            completer.complete(true);
+          }
+          else {
+            completer.complete(false);
+          }
+          await authSubscription?.cancel();
+        }
+      });
+
+      await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'pasada://login-callback',
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
-      return response;
+
+    return await completer.future.timeout(const Duration(seconds: 30), onTimeout: () {
+    throw Exception('Timed out waiting for Google sign-in');
+    });
     } catch (e) {
       debugPrint('Error during Google sign-in: $e');
-      throw Exception('Google sign-in failed');
+      await authSubscription?.cancel();
+      return false;
     }
   }
 
