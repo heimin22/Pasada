@@ -226,37 +226,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
   Future<void> getLocationUpdates() async {
     try {
-      // if (!await checkLocationService()) return;
-      //
-      // // check if yung location services ay available
-      // bool serviceEnabled = await location.serviceEnabled();
-      // if (!serviceEnabled) {
-      //   serviceEnabled = await location.requestService();
-      //   if (!serviceEnabled) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Enable Location Services',
-      //         'Location services are disabled. Please enable them to use this feature.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-      // // check ng location permissions
-      // PermissionStatus permissionGranted = await location.hasPermission();
-      // if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
-      //   final permission = await location.requestPermission();
-      //   if (permission != PermissionStatus.granted) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Permission Required',
-      //         'This app needs location permission to work. Please allow it in your settings.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
@@ -272,24 +241,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
           if (!mounted) return;
           setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
       });
-
-      // listen sa location updates
-      // location.onLocationChanged.listen((LocationData newLocation) {
-      //   if (newLocation.latitude != null && newLocation.longitude != null) {
-      //     setState(() {
-      //       currentLocation =
-      //           LatLng(newLocation.latitude!, newLocation.longitude!);
-      //     });
-      //   }
-      // });
-
-      // locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
-      //   // if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
-      //   //   setState(() {
-      //   //     currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
-      //   //   });
-      //   // }
-      // });
     } catch (e) {
       // showError('An error occurred while fetching the location.');
       if (mounted) showError('Location Error: ${e.toString()}');
@@ -308,13 +259,20 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      showDebugToast('No internet connection');
-      return;
+  Future<bool> checkNetworkConnection() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity == ConnectivityResult.none) {
+      showError('No internet connection');
+      return false;
     }
+    return true;
+  }
+
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey == null) {
         showDebugToast('API key not found');
@@ -361,7 +319,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+      await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
         showDebugToast('No response from the server');
@@ -399,7 +357,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
-              polylinePoints.decodePolyline(polyline);
+          polylinePoints.decodePolyline(polyline);
           List<LatLng> polylineCoordinates = decodedPolyline
               .map((point) => LatLng(point.latitude, point.longitude))
               .toList();
@@ -409,7 +367,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
                 const PolylineId('route'): Polyline(
                   polylineId: const PolylineId('route'),
                   points: polylineCoordinates,
-                  color: Color(0xFFD7481D),
+                  color: Color(0xFF067837),
                   width: 8,
                 )
               };
@@ -457,6 +415,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       showDebugToast('Error: ${e.toString()}');
     }
   }
+
 
   String formatDuration(int totalSeconds) {
     final hours = totalSeconds ~/ 3600;

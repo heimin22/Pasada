@@ -10,9 +10,14 @@ import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginAccountPage extends StatelessWidget {
+class LoginAccountPage extends StatefulWidget {
   const LoginAccountPage({super.key});
 
+  @override
+  State<LoginAccountPage> createState() => _LoginAccountPageState();
+}
+
+class _LoginAccountPageState extends State<LoginAccountPage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -107,7 +112,10 @@ class LoginScreen extends State<LoginPage> {
 
       if (mounted) {
         // successful login
-        Navigator.pushReplacementNamed(context, 'selection');
+        Navigator.push(
+            context,
+          MaterialPageRoute(builder: (context) => selectionScreen()
+        ));
       }
     }
     on AuthException catch (e) {
@@ -173,7 +181,10 @@ class LoginScreen extends State<LoginPage> {
                     buildPassengerPassText(),
                     buildPassengerPassInput(),
                     buildForgotPassword(),
+                    SizedBox(height: 48),
                     buildLogInButton(),
+                    buildOrDesign(),
+                    buildLoginGoogle(),
                   ],
                 ),
               ),
@@ -189,7 +200,7 @@ class LoginScreen extends State<LoginPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: IconButton(
         onPressed: () {
-          Navigator.pushNamed(context, 'start');
+          Navigator.pop(context);
         },
         icon: Icon(Icons.arrow_back),
       ),
@@ -337,7 +348,7 @@ class LoginScreen extends State<LoginPage> {
   Flexible buildLogInButton() {
     return Flexible(
       child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
         width: double.infinity,
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
@@ -365,6 +376,54 @@ class LoginScreen extends State<LoginPage> {
                     fontSize: 20,
                   ),
                 ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildOrDesign() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+        width: double.infinity,
+        child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
+      ),
+    );
+  }
+
+  Widget buildLoginGoogle() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF121212),
+            minimumSize: const Size(360, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/svg/googleIcon.svg',
+                height: 24,
+                width: 24,
+              ),
+              const SizedBox(width: 25),
+              const Text(
+                'Sign-up with Google',
+                style: TextStyle(
+                  color: Color(0xFFF2F2F2),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
