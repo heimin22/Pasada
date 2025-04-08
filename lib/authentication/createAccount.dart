@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pasada_passenger_app/main.dart';
 
-void main() => runApp(const CreateAccountPage());
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});

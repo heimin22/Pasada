@@ -6,6 +6,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthService {
   // supabase client instance
@@ -109,12 +110,15 @@ class AuthService {
   Future<bool> signInWithGoogle() async {
     // check the internet connection
     final hasConnection = await checkNetworkConnection();
-    if (!hasConnection) debugPrint('No internet connection');
+    if (!hasConnection) return false;
+
+    final
 
     try {
       final response = await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'https://otbwhitwrmnfqgpmnjvf.supabase.co/auth/v1/callback',
+        redirectTo: 'pasada://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
       return response;
     } catch (e) {

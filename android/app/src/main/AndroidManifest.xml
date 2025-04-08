@@ -38,9 +38,8 @@
 <!--                    android:scheme="io.supabase.flutterquickstart"-->
 <!--                    android:host="login-callback" />-->
                 <data
-                    android:scheme="https"
-                    android:host="otbwhitwrmnfqgpmnjvf.supabase.co"
-                    android:pathPrefix="/auth/v1/callback"/>
+                    android:scheme="pasada"
+                    android:host="login-callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
