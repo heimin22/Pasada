@@ -13,15 +13,12 @@
 	<key>CFBundleIdentifier</key>
 	<key>CFBundleURLTypes</key>
     <array>
-        <dict>
-            <key>CFBundleURLSchemes</key>
-            <array>
-                <!-- Your custom scheme -->
-                <string>pasada</string>
-            </array>
-            <key>CFBundleURLName</key>
-            <string>login-callback</string>
-        </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>pasada</string>
+        </array>
+      </dict>
     </array>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
