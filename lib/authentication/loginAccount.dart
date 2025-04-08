@@ -181,7 +181,10 @@ class LoginScreen extends State<LoginPage> {
                     buildPassengerPassText(),
                     buildPassengerPassInput(),
                     buildForgotPassword(),
+                    SizedBox(height: 48),
                     buildLogInButton(),
+                    buildOrDesign(),
+                    buildLoginGoogle(),
                   ],
                 ),
               ),
@@ -345,7 +348,7 @@ class LoginScreen extends State<LoginPage> {
   Flexible buildLogInButton() {
     return Flexible(
       child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
         width: double.infinity,
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
@@ -387,7 +390,6 @@ class LoginScreen extends State<LoginPage> {
       ),
     );
   }
-
 
   Widget buildLoginGoogle() {
     return Flexible(
