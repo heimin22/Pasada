@@ -83,7 +83,8 @@ class AuthService {
   // implement nga tayong bagong method nigga
   // putangina hihiwalay ko na lang to para malupet
   // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
-  Future<AuthResponse> signUpAuth(String email, String password, {Map<String, dynamic>? data}) async {
+  Future<AuthResponse> signUpAuth(String email, String password,
+      {Map<String, dynamic>? data}) async {
     return await supabase.auth.signUp(
       email: email,
       password: password,
@@ -112,86 +113,161 @@ class AuthService {
     final hasConnection = await checkNetworkConnection();
     if (!hasConnection) return false;
 
-    final completer = Completer<bool>();
-    late final StreamSubscription? authSub;
-    authSub = supabase.auth.onAuthStateChange.listen((authState) async {
-      // wait muna sa sign-in event
-      if (authState.event == AuthChangeEvent.signedIn) {
-        // get yung current user
-        final user = supabase.auth.currentUser;
-        if (user != null) {
-          // perform ng polling to make sure na handa na yung metadata
-          await Future.delayed(Duration(seconds: 2));
+    try {
+      final response = await supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'pasada://login-callback',
+        queryParams: {
+          'access_type': 'offline',
+          'prompt': 'consent',
+        },
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
 
-          // extract na yung user's full name from metadata safely
-          String fullName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'];
-          // provide ng fallback if hindi provided yung name
-          fullName = fullName?.trim() ?? 'User${DateTime.now().millisecondsSinceEpoch}';
+      if (!response) {
+        debugPrint('Google sign-in failed');
+        return false;
+      }
 
-          // parse na yung full name into parts
-          final nameParts = fullName.split(' ');
-          final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-          final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      // wait natin yung auth state na magbago
+      final completer = Completer<bool>();
+      late StreamSubscription<AuthState> authSub;
 
+      authSub = supabase.auth.onAuthStateChange.listen((data) async {
+        final event = data.event;
+        final session = data.session;
+
+        if (event == AuthChangeEvent.signedIn && session != null) {
           try {
-            final uniquePlaceholder = "temp-${DateTime.now().millisecondsSinceEpoch}";
+            final user = session.user;
+            final metadata = user.userMetadata;
+
+            if (metadata == null) {
+              debugPrint('No user metadata available');
+              completer.complete(false);
+              return;
+            }
+
+            final firstName =
+                metadata['full_name']?.toString().split(' ').first ?? '';
+            final lastName =
+                metadata['full_name']?.toString().split(' ').last ?? '';
+            final email = user.email ?? '';
 
             await supabase.from('passenger').upsert({
               'id': user.id,
               'first_name': firstName,
               'last_name': lastName,
-              'passenger_email': user.email,
-              'contact_number': uniquePlaceholder,
+              'passenger_email': email,
+              'contact_number': 'pending',
             });
             completer.complete(true);
           } catch (e) {
-            debugPrint('Database error $e');
+            debugPrint('Error creating user profile: $e');
             completer.complete(false);
+          } finally {
+            await authSub.cancel();
           }
-        } else {
-          completer.complete(false);
         }
-        await authSub?.cancel();
-      }
-    });
+      });
 
-    try {
-      final response = await supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: kIsWeb ? null : 'pasada://login-callback',
-        authScreenLaunchMode: LaunchMode.externalApplication,
+      return await completer.future.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          authSub.cancel();
+          return false;
+        },
       );
-      return response;
     } catch (e) {
       debugPrint('Error during Google sign-in: $e');
-      Fluttertoast.showToast(
-        msg: 'Failed to sign in with Google',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Color(0xFFF5F5F5),
-        textColor: Color(0xFF121212),
-      );
       return false;
     }
-  }
 
-  // Future<bool> signInWithGoogle() async {
-  //   // check the internet connection
-  //   final hasConnection = await checkNetworkConnection();
-  //   if (!hasConnection) return false;
-  //
-  //   try {
-  //     final response = await supabase.auth.signInWithOAuth(
-  //       OAuthProvider.google,
-  //       redirectTo: 'pasada://login-callback',
-  //       authScreenLaunchMode: LaunchMode.externalApplication,
-  //     );
-  //     return response;
-  //   } catch (e) {
-  //     debugPrint('Error during Google sign-in: $e');
-  //     throw Exception('Google sign-in failed');
-  //   }
-  // }
+    //   final completer = Completer<bool>();
+    //   late final StreamSubscription? authSub;
+    //   authSub = supabase.auth.onAuthStateChange.listen((authState) async {
+    //     // wait muna sa sign-in event
+    //     if (authState.event == AuthChangeEvent.signedIn) {
+    //       // get yung current user
+    //       final user = supabase.auth.currentUser;
+    //       if (user != null) {
+    //         // perform ng polling to make sure na handa na yung metadata
+    //         await Future.delayed(Duration(seconds: 2));
+
+    //         // extract na yung user's full name from metadata safely
+    //         String fullName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'];
+    //         // provide ng fallback if hindi provided yung name
+    //         fullName = fullName.trim();
+
+    //         // parse na yung full name into parts
+    //         final nameParts = fullName.split(' ');
+    //         final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+    //         final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+    //         final uniquePlaceholder = "temp-${DateTime.now().millisecondsSinceEpoch}";
+
+    //         if (supabase.auth.currentSession == null) {
+    //           debugPrint('No active session when trying to create profile');
+    //           return;
+    //         }
+
+    //         try {
+    //           await supabase.from('passenger').upsert({
+    //             'id': user.id,
+    //             'first_name': firstName,
+    //             'last_name': lastName,
+    //             'passenger_email': user.email,
+    //             'contact_number': uniquePlaceholder,
+    //           });
+    //           completer.complete(true);
+    //         } catch (e) {
+    //           debugPrint('Database error $e');
+    //           completer.complete(false);
+    //         }
+    //       } else {
+    //         completer.complete(false);
+    //       }
+    //       await authSub?.cancel();
+    //     }
+    //   });
+
+    //   try {
+    //     await supabase.auth.signInWithOAuth(
+    //       OAuthProvider.google,
+    //       redirectTo: kIsWeb ? null : 'pasada://login-callback',
+    //       authScreenLaunchMode: kIsWeb ? LaunchMode.inAppWebView : LaunchMode.externalApplication,
+    //     );
+    //     return true;
+    //   } catch (e) {
+    //     debugPrint('Error during Google sign-in: $e');
+    //     Fluttertoast.showToast(
+    //       msg: 'Failed to sign in with Google',
+    //       toastLength: Toast.LENGTH_SHORT,
+    //       gravity: ToastGravity.BOTTOM,
+    //       backgroundColor: Color(0xFFF5F5F5),
+    //       textColor: Color(0xFF121212),
+    //     );
+    //     return false;
+    //   }
+    // }
+
+    // Future<bool> signInWithGoogle() async {
+    //   // check the internet connection
+    //   final hasConnection = await checkNetworkConnection();
+    //   if (!hasConnection) return false;
+    //
+    //   try {
+    //     final response = await supabase.auth.signInWithOAuth(
+    //       OAuthProvider.google,
+    //       redirectTo: 'pasada://login-callback',
+    //       authScreenLaunchMode: LaunchMode.externalApplication,
+    //     );
+    //     return response;
+    //   } catch (e) {
+    //     debugPrint('Error during Google sign-in: $e');
+    //     throw Exception('Google sign-in failed');
+    //   }
+    // }
+  }
 
   Future<void> logout() async {
     try {
@@ -233,8 +309,7 @@ class AuthService {
             .eq('id', user.id)
             .single();
         return response;
-      }
-      else {
+      } else {
         return null;
       }
     } catch (e) {
