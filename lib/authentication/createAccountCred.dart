@@ -10,7 +10,8 @@ class CreateAccountCredPage extends StatefulWidget {
   final String email;
   final String title;
 
-  const CreateAccountCredPage({super.key, required this.title, required this.email});
+  const CreateAccountCredPage(
+      {super.key, required this.title, required this.email});
 
   @override
   State<CreateAccountCredPage> createState() => _CreateAccountCredPageState();
@@ -57,10 +58,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
                       buildHeader(),
-                      buildPassengerFirstNameText(),
-                      buildPassengerFirstNameInput(),
-                      buildPassengerLastNameText(),
-                      buildPassengerLastNameInput(),
+                      buildPassengerDisplayNameText(),
+                      buildPassengerDisplayNameInput(),
                       buildPassengerContactNumberText(),
                       buildPassengerContactNumberInput(),
                       buildTermsCheckbox(),
@@ -102,6 +101,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           ),
           alignment: Alignment.centerLeft,
         ),
+
         /// Logo
         Container(
           alignment: Alignment.centerLeft,
@@ -113,9 +113,11 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
+
         /// Create your account text
         Container(
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Create your account',
             style: TextStyle(
@@ -126,9 +128,11 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           ),
         ),
         const SizedBox(height: 3),
+
         /// Join the Pasada... text
         Container(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
+          padding:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
           child: Text(
             'Join the Pasada app and make your ride easier',
             style: TextStyle(color: Color(0xFF121212)),
@@ -138,17 +142,17 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Container buildPassengerFirstNameText() {
+  Container buildPassengerDisplayNameText() {
     return Container(
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
       child: Text(
-        'First Name',
+        'Display Name',
         style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
       ),
     );
   }
 
-  Container buildPassengerFirstNameInput() {
+  Container buildPassengerDisplayNameInput() {
     return Container(
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
       child: SizedBox(
@@ -163,57 +167,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             fontSize: 14,
           ),
           decoration: InputDecoration(
-            labelText: 'Enter your first name',
-            labelStyle: const TextStyle(
-              fontSize: 12,
-            ),
-            floatingLabelStyle: const TextStyle(
-              color: Color(0xFF121212),
-            ),
-            enabledBorder: const OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
-                width: 1.0,
-              ),
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
-            ),
-            focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0xFF121212),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Container buildPassengerLastNameText() {
-    return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-      child: Text(
-        'Last Name',
-        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
-      ),
-    );
-  }
-
-  Container buildPassengerLastNameInput() {
-    return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
-      child: SizedBox(
-        width: double.infinity,
-        height: 45,
-        child: TextField(
-          controller: lastNameController,
-          style: const TextStyle(
-            color: Color(0xFF121212),
-            fontWeight: FontWeight.w600,
-            fontFamily: 'Inter',
-            fontSize: 14,
-          ),
-          decoration: InputDecoration(
-            labelText: 'Enter your last name',
+            labelText: 'Enter your name',
             labelStyle: const TextStyle(
               fontSize: 12,
             ),
@@ -269,8 +223,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               color: Color(0xFF121212),
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Inter'
-          ),
+              fontFamily: 'Inter'),
           decoration: InputDecoration(
             prefix: Padding(
               padding: const EdgeInsets.only(right: 8.0),
@@ -343,7 +296,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           Expanded(
             // Ensures text wraps and doesn't push Checkbox
             child: Container(
-              padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.02),
+              padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.02),
               child: Text(
                 'By signing up, I have read and agree to Pasada’s Terms and Conditions and Privacy Policy',
                 style: const TextStyle(
@@ -366,7 +320,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         width: double.infinity,
         child: ElevatedButton(
           // onPressed: isLoading ? null : SigningUp,
-          onPressed: () async{
+          onPressed: () async {
             if (!isChecked) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -377,15 +331,15 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               return;
             }
             // validate required fields
-            final firstName = firstNameController.text.trim();
-            final lastName = lastNameController.text.trim();
+            final displayName = firstNameController.text.trim();
             final contactDigits = contactController.text.trim();
             final email = widget.email;
             // retrieve natin ung password na pinasa duon sa previous page
-            final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+            final args = ModalRoute.of(context)!.settings.arguments
+                as Map<String, dynamic>;
             final password = args['password'];
 
-            if (firstName.isEmpty || lastName.isEmpty || contactDigits.isEmpty) {
+            if (displayName.isEmpty || contactDigits.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Please fill in all required fields.'),
@@ -415,17 +369,16 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                 email,
                 password,
                 data: {
-                  'first_name': firstName,
-                  'last_name': lastName,
+                  'display_name': displayName,
                   'contact_number': contactNumber,
                 },
               );
               if (authResponse.user != null) {
                 debugPrint('User signed up: ${authResponse.user!.email}');
                 Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const selectionScreen())
-                );
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const selectionScreen()));
               }
             } catch (e) {
               if (mounted) {
@@ -460,4 +413,3 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 }
-

@@ -4,24 +4,17 @@ import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
 import '../main.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const SettingsScreenStateful(title: 'Pasada'),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-      },
-    );
+    return const SettingsScreenStateful(title: 'Pasada');
   }
 }
 
@@ -68,7 +61,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   Widget buildSettingsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.003),
       child: Container(
         color: Color(0xFFF5F5F5),
         child: Column(

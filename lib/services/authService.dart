@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'package:app_links/app_links.dart';
 
 extension on AppLinks {
@@ -125,6 +123,7 @@ class AuthService {
         queryParams: {
           'access_type': 'offline',
           'prompt': 'consent',
+          'close': 'true',
         },
         authScreenLaunchMode: LaunchMode.externalNonBrowserApplication,
       );
@@ -143,17 +142,30 @@ class AuthService {
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           final user = supabase.auth.currentUser;
           if (user != null) {
-            final existingUser = await supabase.from('passenger')
+            final userMetadata = user.userMetadata;
+            final avatarUrl = userMetadata?['picture'] ?? '';
+
+            final existingUser = await supabase
+                .from('passenger')
                 .select()
                 .eq('id', user.id)
                 .maybeSingle();
+
+            final displayName = userMetadata?['full_name'] ?? '';
 
             if (existingUser == null) {
               await passengersDatabase.insert({
                 'id': user.id,
                 'email': user.email,
+                'display_name': displayName,
+                'avatar_url': avatarUrl,
                 'created_at': DateTime.now().toIso8601String(),
               });
+            } else {
+              await passengersDatabase.update({
+                'avatar_url': avatarUrl,
+                'display_name': displayName,
+              }).eq('id', user.id);
             }
             completer.complete(true);
           }
@@ -174,19 +186,19 @@ class AuthService {
     }
   }
 
-
-  // Initialize deep link handling for auth callbacks
+  // initialize deep link handling for auth callbacks
   Future<void> initDeepLinkHandling() async {
     try {
       final appLinks = AppLinks();
 
       // listen for app links while the app is running
-      appLinks.uriLinkStream.listen((Uri? uri) {
+      appLinks.uriLinkStream.listen((Uri? uri) async {
         if (uri != null &&
             uri.scheme == 'pasada' &&
             uri.host == 'login-callback') {
           // the app was opened via the redirect URL, handle the auth callback
           // Supabase SDK should automatically handle the session
+          await supabase.auth.getSessionFromUrl(uri);
         }
       }, onError: (error) {
         return;
@@ -194,12 +206,12 @@ class AuthService {
 
       // check for initial link if the app was started from a link
       final initialLink = await appLinks.getInitialAppLink();
-      if (initialLink != null) {
-        if (initialLink.scheme == 'pasada' &&
-            initialLink.host == 'login-callback') {
-          // the app was opened from the redirect URL, handle the auth callback
-          // Supabase SDK should automatically handle the session
-        }
+      if (initialLink != null &&
+          initialLink.scheme == 'pasada' &&
+          initialLink.host == 'login-callback') {
+        // the app was opened from the redirect URL, handle the auth callback
+        // Supabase SDK should automatically handle the session
+        await supabase.auth.getSessionFromUrl(initialLink);
       }
     } catch (e) {
       return;
@@ -223,28 +235,17 @@ class AuthService {
     return user?.email;
   }
 
-  // generate or retrieve device ID
-  Future<String> getDeviceID() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? deviceID = prefs.getString('device_id');
-    if (deviceID == null) {
-      deviceID = const Uuid().v4();
-      await prefs.setString('device_id', deviceID);
-    }
-    return deviceID;
-  }
-
   // gathering user information
   Future<Map<String, dynamic>?> getCurrentUserData() async {
     try {
       final user = supabase.auth.currentUser;
-
       if (user != null) {
         final response = await supabase
             .from('passenger')
             .select()
             .eq('id', user.id)
             .single();
+
         return response;
       } else {
         return null;
