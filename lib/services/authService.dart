@@ -6,7 +6,13 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:app_links/app_links.dart';
+
+extension on AppLinks {
+  Future<Uri?> getInitialAppLink() async {
+    return getInitialLink();
+  }
+}
 
 class AuthService {
   // supabase client instance
@@ -30,11 +36,12 @@ class AuthService {
 
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+    if (connectivityResult.contains(ConnectivityResult.none))
+      showNoInternetToast();
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
-    if (result == ConnectivityResult.none) showNoInternetToast();
+    if (result.contains(ConnectivityResult.none)) showNoInternetToast();
   }
 
   void showNoInternetToast() {
@@ -63,7 +70,7 @@ class AuthService {
   Future<AuthResponse> login(String email, String password) async {
     // checking internet connection of the device
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
+    if (connectivityResult.contains(ConnectivityResult.none)) {
       showNoInternetToast();
       throw Exception("No internet connection");
     }
@@ -107,7 +114,7 @@ class AuthService {
     return true;
   }
 
-  // ito na yung method to sign in with google my niggas
+  // Method to sign in with Google
   Future<bool> signInWithGoogle() async {
     // check the internet connection
     if (!await checkNetworkConnection()) return false;
@@ -116,7 +123,11 @@ class AuthService {
       final response = await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: kIsWeb ? null : 'pasada://login-callback',
-        authScreenLaunchMode: LaunchMode.externalApplication,
+        queryParams: {
+          'access_type': 'offline',
+          'prompt': 'consent',
+        },
+        authScreenLaunchMode: LaunchMode.externalNonBrowserApplication,
       );
 
       if (!response) {
@@ -124,11 +135,12 @@ class AuthService {
         return false;
       }
 
-      // wait natin yung auth state na magbago
+      // wait for the auth state to change
       final completer = Completer<bool>();
       late StreamSubscription<AuthState> authSub;
 
       authSub = supabase.auth.onAuthStateChange.listen((AuthState state) async {
+        debugPrint('Auth state changed: ${state.event}');
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           try {
             completer.complete(true);
@@ -145,6 +157,7 @@ class AuthService {
       return await completer.future.timeout(
         const Duration(seconds: 30),
         onTimeout: () {
+          debugPrint('Auth state change timeout');
           authSub.cancel();
           return false;
         },
@@ -152,6 +165,41 @@ class AuthService {
     } catch (e) {
       debugPrint('Error during Google sign-in: $e');
       return false;
+    }
+  }
+
+  // Initialize deep link handling for auth callbacks
+  Future<void> initDeepLinkHandling() async {
+    try {
+      final appLinks = AppLinks();
+
+      // Listen for app links while the app is running
+      appLinks.uriLinkStream.listen((Uri? uri) {
+        debugPrint('Got app link while running: $uri');
+        if (uri != null &&
+            uri.scheme == 'pasada' &&
+            uri.host == 'login-callback') {
+          // The app was opened via the redirect URL, handle the auth callback
+          debugPrint('Processing auth callback from deep link');
+          // Supabase SDK should automatically handle the session
+        }
+      }, onError: (error) {
+        debugPrint('Error processing app link: $error');
+      });
+
+      // Check for initial link if the app was started from a link
+      final initialLink = await appLinks.getInitialAppLink();
+      if (initialLink != null) {
+        debugPrint('App started from link: $initialLink');
+        if (initialLink.scheme == 'pasada' &&
+            initialLink.host == 'login-callback') {
+          // The app was opened from the redirect URL, handle the auth callback
+          debugPrint('Processing initial auth callback');
+          // Supabase SDK should automatically handle the session
+        }
+      }
+    } catch (e) {
+      debugPrint('Error setting up deep link handling: $e');
     }
   }
 
