@@ -140,27 +140,60 @@ class AuthService {
         if (event == AuthChangeEvent.signedIn && session != null) {
           try {
             final user = session.user;
-            final metadata = user.userMetadata;
 
-            if (metadata == null) {
-              debugPrint('No user metadata available');
-              completer.complete(false);
-              return;
-            }
+            debugPrint('User ID: ${user.id}');
+            debugPrint('User Email: ${user.email}');
+            debugPrint('User Metadata: ${user.userMetadata}');
 
-            final firstName =
-                metadata['full_name']?.toString().split(' ').first ?? '';
-            final lastName =
-                metadata['full_name']?.toString().split(' ').last ?? '';
+            final metadata = user.userMetadata ?? {};
+            final fullName = metadata['full_name'] as String? ?? '';
+            final nameParts = fullName.split(' ');
+            final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+            final lastName = nameParts.length > 1 ? nameParts.last : '';
             final email = user.email ?? '';
 
-            await supabase.from('passenger').upsert({
+            final userData = {
               'id': user.id,
               'first_name': firstName,
               'last_name': lastName,
               'passenger_email': email,
               'contact_number': 'pending',
-            });
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            };
+
+            debugPrint('Attempting to save user data: $userData');
+
+            // Check if user already exists
+            final existingUser = await supabase
+                .from('passenger')
+                .select()
+                .eq('id', user.id)
+                .single();
+
+            if (existingUser == null) {
+              // User doesn't exist, insert new record
+              final response =
+                  await supabase.from('passenger').insert(userData);
+
+              if (response.error != null) {
+                throw Exception(
+                    'Failed to insert user: ${response.error!.message}');
+              }
+            } else {
+              // User exists, update record
+              final response = await supabase
+                  .from('passenger')
+                  .update(userData)
+                  .eq('id', user.id);
+
+              if (response.error != null) {
+                throw Exception(
+                    'Failed to update user: ${response.error!.message}');
+              }
+            }
+
+            debugPrint('Successfully saved user data');
             completer.complete(true);
           } catch (e) {
             debugPrint('Error creating user profile: $e');
@@ -182,91 +215,6 @@ class AuthService {
       debugPrint('Error during Google sign-in: $e');
       return false;
     }
-
-    //   final completer = Completer<bool>();
-    //   late final StreamSubscription? authSub;
-    //   authSub = supabase.auth.onAuthStateChange.listen((authState) async {
-    //     // wait muna sa sign-in event
-    //     if (authState.event == AuthChangeEvent.signedIn) {
-    //       // get yung current user
-    //       final user = supabase.auth.currentUser;
-    //       if (user != null) {
-    //         // perform ng polling to make sure na handa na yung metadata
-    //         await Future.delayed(Duration(seconds: 2));
-
-    //         // extract na yung user's full name from metadata safely
-    //         String fullName = user.userMetadata?['full_name'] ?? user.userMetadata?['name'];
-    //         // provide ng fallback if hindi provided yung name
-    //         fullName = fullName.trim();
-
-    //         // parse na yung full name into parts
-    //         final nameParts = fullName.split(' ');
-    //         final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-    //         final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
-    //         final uniquePlaceholder = "temp-${DateTime.now().millisecondsSinceEpoch}";
-
-    //         if (supabase.auth.currentSession == null) {
-    //           debugPrint('No active session when trying to create profile');
-    //           return;
-    //         }
-
-    //         try {
-    //           await supabase.from('passenger').upsert({
-    //             'id': user.id,
-    //             'first_name': firstName,
-    //             'last_name': lastName,
-    //             'passenger_email': user.email,
-    //             'contact_number': uniquePlaceholder,
-    //           });
-    //           completer.complete(true);
-    //         } catch (e) {
-    //           debugPrint('Database error $e');
-    //           completer.complete(false);
-    //         }
-    //       } else {
-    //         completer.complete(false);
-    //       }
-    //       await authSub?.cancel();
-    //     }
-    //   });
-
-    //   try {
-    //     await supabase.auth.signInWithOAuth(
-    //       OAuthProvider.google,
-    //       redirectTo: kIsWeb ? null : 'pasada://login-callback',
-    //       authScreenLaunchMode: kIsWeb ? LaunchMode.inAppWebView : LaunchMode.externalApplication,
-    //     );
-    //     return true;
-    //   } catch (e) {
-    //     debugPrint('Error during Google sign-in: $e');
-    //     Fluttertoast.showToast(
-    //       msg: 'Failed to sign in with Google',
-    //       toastLength: Toast.LENGTH_SHORT,
-    //       gravity: ToastGravity.BOTTOM,
-    //       backgroundColor: Color(0xFFF5F5F5),
-    //       textColor: Color(0xFF121212),
-    //     );
-    //     return false;
-    //   }
-    // }
-
-    // Future<bool> signInWithGoogle() async {
-    //   // check the internet connection
-    //   final hasConnection = await checkNetworkConnection();
-    //   if (!hasConnection) return false;
-    //
-    //   try {
-    //     final response = await supabase.auth.signInWithOAuth(
-    //       OAuthProvider.google,
-    //       redirectTo: 'pasada://login-callback',
-    //       authScreenLaunchMode: LaunchMode.externalApplication,
-    //     );
-    //     return response;
-    //   } catch (e) {
-    //     debugPrint('Error during Google sign-in: $e');
-    //     throw Exception('Google sign-in failed');
-    //   }
-    // }
   }
 
   Future<void> logout() async {
