@@ -142,14 +142,21 @@ class AuthService {
       authSub = supabase.auth.onAuthStateChange.listen((AuthState state) async {
         debugPrint('Auth state changed: ${state.event}');
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
-          try {
+          final user = supabase.auth.currentUser;
+          if (user != null) {
+            final existingUser = await supabase.from('passenger')
+                .select()
+                .eq('id', user.id)
+                .maybeSingle();
+
+            if (existingUser == null) {
+              await passengersDatabase.insert({
+                'id': user.id,
+                'email': user.email,
+                'created_at': DateTime.now().toIso8601String(),
+              });
+            }
             completer.complete(true);
-          } catch (e) {
-            debugPrint('Error creating user profile: $e');
-            await supabase.auth.signOut();
-            completer.complete(false);
-          } finally {
-            await authSub.cancel();
           }
         }
       });
