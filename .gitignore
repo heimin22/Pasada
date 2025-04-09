@@ -11,6 +11,9 @@
 .svn/
 migrate_working_dir/
 
+# APIs
+.env
+
 # IntelliJ related
 *.iml
 *.ipr
