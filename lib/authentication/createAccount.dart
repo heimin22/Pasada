@@ -4,12 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-// import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
 import 'package:pasada_passenger_app/main.dart';
-
-void main() => runApp(const CreateAccountPage());
 
 class CreateAccountPage extends StatefulWidget {
   const CreateAccountPage({super.key});
@@ -17,6 +14,8 @@ class CreateAccountPage extends StatefulWidget {
   @override
   State<CreateAccountPage> createState() => _CreateAccountPageState();
 }
+
+bool isGoogleLoading = false;
 
 class _CreateAccountPageState extends State<CreateAccountPage> {
   @override
@@ -38,7 +37,8 @@ class CreateAccountScreen extends State<CAPage> {
   // text controllers
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   // get auth service
   final AuthService authService = AuthService();
@@ -117,8 +117,7 @@ class CreateAccountScreen extends State<CAPage> {
       }
       // pop the register page
       Navigator.pop(context);
-    }
-    finally {
+    } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
@@ -197,6 +196,7 @@ class CreateAccountScreen extends State<CAPage> {
           ),
           alignment: Alignment.centerLeft,
         ),
+
         /// Logo
         Container(
           alignment: Alignment.centerLeft,
@@ -208,9 +208,11 @@ class CreateAccountScreen extends State<CAPage> {
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
+
         /// Create your account text
         Container(
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Create your account',
             style: TextStyle(
@@ -221,9 +223,11 @@ class CreateAccountScreen extends State<CAPage> {
           ),
         ),
         const SizedBox(height: 3),
+
         /// Join the Pasada... text
         Container(
-          padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
+          padding:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
           child: Text(
             'Join the Pasada app and make your ride easier',
             style: TextStyle(color: Color(0xFF121212)),
@@ -313,8 +317,7 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             )
           ],
-        )
-    );
+        ));
   }
 
   Container buildPassengerPassInput() {
@@ -371,18 +374,16 @@ class CreateAccountScreen extends State<CAPage> {
 
   Container buildConfirmPassText() {
     return Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        child: const Row(
-          children: [
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: const Row(
+        children: [
           Text(
-          'Confirm your ',
-          style: TextStyle(color: Color(0xFF121212)),
-        ),
-          Text(
-            'password.',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-          ],
-        ),
+            'Confirm your ',
+            style: TextStyle(color: Color(0xFF121212)),
+          ),
+          Text('password.', style: TextStyle(fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 
@@ -490,7 +491,35 @@ class CreateAccountScreen extends State<CAPage> {
         margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: isGoogleLoading
+              ? null
+              : () async {
+                  setState(() => isGoogleLoading = true);
+                  try {
+                    final success = await authService.signInWithGoogle();
+                    if (success && mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const selectionScreen()),
+                      );
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Failed to sign in with Google')),
+                      );
+                    }
+                  } catch (e) {
+                    debugPrint('Google sign-in error: $e');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => isGoogleLoading = false);
+                  }
+                },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),

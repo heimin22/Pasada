@@ -6,7 +6,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,21 +19,7 @@ class LoginAccountPage extends StatefulWidget {
 class _LoginAccountPageState extends State<LoginAccountPage> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Log-in',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const LoginPage(title: 'Log-in to your account'),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'screens': (BuildContext context) => const HomeScreen(),
-        'selection': (BuildContext context) => const selectionScreen(),
-      },
-    );
+    return const LoginPage(title: 'Pasada');
   }
 }
 

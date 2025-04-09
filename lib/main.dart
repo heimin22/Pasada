@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -5,9 +8,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
-
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks
