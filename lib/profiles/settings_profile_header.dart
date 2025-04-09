@@ -26,9 +26,7 @@ class SettingsProfileHeader extends StatelessWidget {
           return const CircularProgressIndicator();
         }
         final userData = snapshot.data;
-        final userName = (userData?['first_name'] != null && userData?['last_name'] != null)
-            ? '${snapshot.data!['first_name']} ${snapshot.data!['last_name']}'
-            : 'Guest user';
+        final userName = userData?['display_name'] ?? 'Guest user';
 
         return Container(
           width: double.infinity,

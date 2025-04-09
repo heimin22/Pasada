@@ -148,12 +148,20 @@ class AuthService {
                 .eq('id', user.id)
                 .maybeSingle();
 
+            final userMetadata = user.userMetadata;
+            final displayName = userMetadata?['full_name'] ?? '';
+
             if (existingUser == null) {
               await passengersDatabase.insert({
                 'id': user.id,
                 'email': user.email,
+                'display_name': displayName,
                 'created_at': DateTime.now().toIso8601String(),
               });
+            } else if (existingUser['display_name'] == null) {
+              await passengersDatabase.update({
+                'display_name': displayName,
+              }).eq('id', user.id);
             }
             completer.complete(true);
           }
