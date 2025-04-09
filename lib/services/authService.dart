@@ -114,6 +114,10 @@ class AuthService {
     return true;
   }
 
+  Future<void> saveGoogleUsername(User user) async {
+
+  }
+
   // Method to sign in with Google
   Future<bool> signInWithGoogle() async {
     // check the internet connection
@@ -127,11 +131,11 @@ class AuthService {
           'access_type': 'offline',
           'prompt': 'consent',
         },
+        scopes: 'profile email',
         authScreenLaunchMode: LaunchMode.externalNonBrowserApplication,
       );
 
       if (!response) {
-        debugPrint('Google sign-in failed');
         return false;
       }
 
@@ -140,10 +144,15 @@ class AuthService {
       late StreamSubscription<AuthState> authSub;
 
       authSub = supabase.auth.onAuthStateChange.listen((AuthState state) async {
-        debugPrint('Auth state changed: ${state.event}');
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           final user = supabase.auth.currentUser;
+          debugPrint('Google User Metadata: ${user?.userMetadata}'); // Debug log
           if (user != null) {
+            final rawData = user.userMetadata ?? {};
+            final fullName = rawData['full_name']?.split(' ') ?? [];
+            final firstName = fullName.isNotEmpty ? fullName.first : null;
+            final lastName = fullName.length > 1 ? fullName.last : null;
+
             final existingUser = await supabase.from('passenger')
                 .select()
                 .eq('id', user.id)
@@ -152,7 +161,9 @@ class AuthService {
             if (existingUser == null) {
               await passengersDatabase.insert({
                 'id': user.id,
-                'email': user.email,
+                'passenger_email': user.email,
+                'first_name': firstName,
+                'last_name': lastName,
                 'created_at': DateTime.now().toIso8601String(),
               });
             }
@@ -164,13 +175,11 @@ class AuthService {
       return await completer.future.timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          debugPrint('Auth state change timeout');
           authSub.cancel();
           return false;
         },
       );
     } catch (e) {
-      debugPrint('Error during Google sign-in: $e');
       return false;
     }
   }
@@ -182,31 +191,27 @@ class AuthService {
 
       // Listen for app links while the app is running
       appLinks.uriLinkStream.listen((Uri? uri) {
-        debugPrint('Got app link while running: $uri');
         if (uri != null &&
             uri.scheme == 'pasada' &&
             uri.host == 'login-callback') {
           // The app was opened via the redirect URL, handle the auth callback
-          debugPrint('Processing auth callback from deep link');
           // Supabase SDK should automatically handle the session
         }
       }, onError: (error) {
-        debugPrint('Error processing app link: $error');
+        return;
       });
 
       // Check for initial link if the app was started from a link
       final initialLink = await appLinks.getInitialAppLink();
       if (initialLink != null) {
-        debugPrint('App started from link: $initialLink');
         if (initialLink.scheme == 'pasada' &&
             initialLink.host == 'login-callback') {
           // The app was opened from the redirect URL, handle the auth callback
-          debugPrint('Processing initial auth callback');
           // Supabase SDK should automatically handle the session
         }
       }
     } catch (e) {
-      debugPrint('Error setting up deep link handling: $e');
+      return;
     }
   }
 
