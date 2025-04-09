@@ -17,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const SettingsScreenStateful(title:  'Pasada'),
+      home: const SettingsScreenStateful(title: 'Pasada'),
       routes: <String, WidgetBuilder>{
         'start': (BuildContext context) => const PasadaPassenger(),
       },
@@ -87,19 +87,15 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               debugPrint('Log out tapped');
               showLogoutDialog();
             }, isDestructive: true),
-
             const SizedBox(height: 25),
-
             buildSectionHeader('Settings', screenWidth),
-            buildSettingsListItem('Preferences', screenWidth, (){
+            buildSettingsListItem('Preferences', screenWidth, () {
               debugPrint('Preferences tapped');
               // TODO: dapat may function na ito sa susunod my nigger
-              Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (context) => PreferencesScreen())
-              );
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
-            buildSettingsListItem('Contact Support', screenWidth, (){
+            buildSettingsListItem('Contact Support', screenWidth, () {
               debugPrint('Contact support tapped');
               // TODO: dapat may function na ito sa susunod my nigger
             }),
@@ -112,7 +108,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // dito yung mga helper widgets my nigger
 
   // dito yung mga single tappable list items para sa settings ng sections
-  Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructive = false}) {
+  Widget buildSettingsListItem(
+      String title, double screenWidth, VoidCallback onTap,
+      {bool isDestructive = false}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -131,8 +129,11 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                     title,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDestructive ? Color(0xFFD7481D) : Theme.of(context).textTheme.bodyMedium?.color,
-                      fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w500,
+                      color: isDestructive
+                          ? Color(0xFFD7481D)
+                          : Theme.of(context).textTheme.bodyMedium?.color,
+                      fontWeight:
+                          isDestructive ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -155,7 +156,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   // builds the header for a settings section
   Widget buildSectionHeader(String title, double screenWidth) {
-    return Padding (
+    return Padding(
       padding: EdgeInsets.only(
         left: screenWidth * 0.05,
         right: screenWidth * 0.05,
@@ -216,7 +217,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         rootNavigator.pop();
         rootNavigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => PasadaPassenger()),
-              (Route<dynamic> route) => false,
+          (Route<dynamic> route) => false,
         );
       }
     } catch (e) {
