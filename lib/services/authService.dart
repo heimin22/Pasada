@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 import 'package:app_links/app_links.dart';
 
 extension on AppLinks {
@@ -181,12 +179,13 @@ class AuthService {
       final appLinks = AppLinks();
 
       // listen for app links while the app is running
-      appLinks.uriLinkStream.listen((Uri? uri) {
+      appLinks.uriLinkStream.listen((Uri? uri) async {
         if (uri != null &&
             uri.scheme == 'pasada' &&
             uri.host == 'login-callback') {
           // the app was opened via the redirect URL, handle the auth callback
           // Supabase SDK should automatically handle the session
+          await supabase.auth.getSessionFromUrl(uri);
         }
       }, onError: (error) {
         return;
@@ -194,12 +193,12 @@ class AuthService {
 
       // check for initial link if the app was started from a link
       final initialLink = await appLinks.getInitialAppLink();
-      if (initialLink != null) {
-        if (initialLink.scheme == 'pasada' &&
-            initialLink.host == 'login-callback') {
-          // the app was opened from the redirect URL, handle the auth callback
-          // Supabase SDK should automatically handle the session
-        }
+      if (initialLink != null &&
+          initialLink.scheme == 'pasada' &&
+          initialLink.host == 'login-callback') {
+        // the app was opened from the redirect URL, handle the auth callback
+        // Supabase SDK should automatically handle the session
+        await supabase.auth.getSessionFromUrl(initialLink);
       }
     } catch (e) {
       return;
@@ -221,17 +220,6 @@ class AuthService {
     final session = supabase.auth.currentSession;
     final user = session?.user;
     return user?.email;
-  }
-
-  // generate or retrieve device ID
-  Future<String> getDeviceID() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? deviceID = prefs.getString('device_id');
-    if (deviceID == null) {
-      deviceID = const Uuid().v4();
-      await prefs.setString('device_id', deviceID);
-    }
-    return deviceID;
   }
 
   // gathering user information
