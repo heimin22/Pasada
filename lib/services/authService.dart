@@ -110,8 +110,7 @@ class AuthService {
   // ito na yung method to sign in with google my niggas
   Future<bool> signInWithGoogle() async {
     // check the internet connection
-    final hasConnection = await checkNetworkConnection();
-    if (!hasConnection) return false;
+    if (!await checkNetworkConnection()) return false;
 
     try {
       final response = await supabase.auth.signInWithOAuth(
@@ -133,30 +132,14 @@ class AuthService {
       final completer = Completer<bool>();
       late StreamSubscription<AuthState> authSub;
 
-      authSub = supabase.auth.onAuthStateChange.listen((data) async {
-        final event = data.event;
-        final session = data.session;
-
-        if (event == AuthChangeEvent.signedIn && session != null) {
+      authSub = supabase.auth.onAuthStateChange.listen((AuthState state) async {
+        if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           try {
-            final user = session.user;
-
-            debugPrint('User ID: ${user.id}');
-            debugPrint('User Email: ${user.email}');
-            debugPrint('User Metadata: ${user.userMetadata}');
-
-            final metadata = user.userMetadata ?? {};
-            final fullName = metadata['full_name'] as String? ?? '';
-            final nameParts = fullName.split(' ');
-            final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-            final lastName = nameParts.length > 1 ? nameParts.last : '';
-            final email = user.email ?? '';
+            final user = state.session!.user;
 
             final userData = {
               'id': user.id,
-              'first_name': firstName,
-              'last_name': lastName,
-              'passenger_email': email,
+              'passenger_email': user.email,
               'contact_number': 'pending',
               'created_at': DateTime.now().toIso8601String(),
               'updated_at': DateTime.now().toIso8601String(),
@@ -165,38 +148,12 @@ class AuthService {
             debugPrint('Attempting to save user data: $userData');
 
             // Check if user already exists
-            final existingUser = await supabase
-                .from('passenger')
-                .select()
-                .eq('id', user.id)
-                .single();
+            await supabase.from('passenger').upsert(userData, onConflict: 'id');
 
-            if (existingUser == null) {
-              // User doesn't exist, insert new record
-              final response =
-                  await supabase.from('passenger').insert(userData);
-
-              if (response.error != null) {
-                throw Exception(
-                    'Failed to insert user: ${response.error!.message}');
-              }
-            } else {
-              // User exists, update record
-              final response = await supabase
-                  .from('passenger')
-                  .update(userData)
-                  .eq('id', user.id);
-
-              if (response.error != null) {
-                throw Exception(
-                    'Failed to update user: ${response.error!.message}');
-              }
-            }
-
-            debugPrint('Successfully saved user data');
             completer.complete(true);
           } catch (e) {
             debugPrint('Error creating user profile: $e');
+            await supabase.auth.signOut();
             completer.complete(false);
           } finally {
             await authSub.cancel();
