@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SettingsProfileHeader extends StatelessWidget {
   final AuthService authService;
@@ -39,15 +40,7 @@ class SettingsProfileHeader extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: screenWidth * 0.07,
-                backgroundColor: const Color(0xFF00CC58),
-                child: Icon(
-                  Icons.person,
-                  size: screenWidth * 0.1,
-                  color: const Color(0xFFDEDEDE),
-                ),
-              ),
+              buildProfileAvatar(avatarUrl),
               SizedBox(width: screenWidth * 0.06),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,6 +63,26 @@ class SettingsProfileHeader extends StatelessWidget {
         );
       },
     );
+  }
+
+  Widget buildProfileAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: screenWidth * 0.07,
+        backgroundColor: Colors.transparent,
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: avatarUrl,
+            placeholder: (context, url) => const CircularProgressIndicator(),
+            errorWidget: (context, url, error) => buildDefaultAvatar(),
+            fit: BoxFit.cover,
+            width: screenWidth * 0.14,
+            height: screenWidth * 0.14,
+          ),
+        ),
+      );
+    }
+    return buildDefaultAvatar();
   }
 
   Widget buildEditProfile(BuildContext context) {
