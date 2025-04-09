@@ -28,6 +28,7 @@ class SettingsProfileHeader extends StatelessWidget {
         }
         final userData = snapshot.data;
         final userName = userData?['display_name'] ?? 'Guest user';
+        final avatarUrl = userData?['avatar_url'];
 
         return Container(
           width: double.infinity,
@@ -83,6 +84,18 @@ class SettingsProfileHeader extends StatelessWidget {
       );
     }
     return buildDefaultAvatar();
+  }
+
+  Widget buildDefaultAvatar() {
+    return CircleAvatar(
+      radius: screenWidth * 0.07,
+      backgroundColor: const Color(0xFF000CC58),
+      child: Icon(
+        Icons.person,
+        size: screenWidth * 0.1,
+        color: const Color(0xFFF5F5F5),
+      ),
+    );
   }
 
   Widget buildEditProfile(BuildContext context) {

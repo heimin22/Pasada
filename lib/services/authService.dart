@@ -142,13 +142,15 @@ class AuthService {
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           final user = supabase.auth.currentUser;
           if (user != null) {
+            final userMetadata = user.userMetadata;
+            final avatarUrl = userMetadata?['picture'] ?? '';
+
             final existingUser = await supabase
                 .from('passenger')
                 .select()
                 .eq('id', user.id)
                 .maybeSingle();
 
-            final userMetadata = user.userMetadata;
             final displayName = userMetadata?['full_name'] ?? '';
 
             if (existingUser == null) {
@@ -156,10 +158,12 @@ class AuthService {
                 'id': user.id,
                 'email': user.email,
                 'display_name': displayName,
+                'avatar_url': avatarUrl,
                 'created_at': DateTime.now().toIso8601String(),
               });
-            } else if (existingUser['display_name'] == null) {
+            } else {
               await passengersDatabase.update({
+                'avatar_url': avatarUrl,
                 'display_name': displayName,
               }).eq('id', user.id);
             }
@@ -182,7 +186,7 @@ class AuthService {
     }
   }
 
-  // Initialize deep link handling for auth callbacks
+  // initialize deep link handling for auth callbacks
   Future<void> initDeepLinkHandling() async {
     try {
       final appLinks = AppLinks();
@@ -235,13 +239,13 @@ class AuthService {
   Future<Map<String, dynamic>?> getCurrentUserData() async {
     try {
       final user = supabase.auth.currentUser;
-
       if (user != null) {
         final response = await supabase
             .from('passenger')
             .select()
             .eq('id', user.id)
             .single();
+
         return response;
       } else {
         return null;
