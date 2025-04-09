@@ -59,7 +59,8 @@ class LoginScreen extends State<LoginPage> {
   void initState() {
     super.initState();
     checkInitialConnectivity();
-    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+    connectivitySubscription =
+        connectivity.onConnectivityChanged.listen(updateConnectionStatus);
   }
 
   Future<void> checkInitialConnectivity() async {
@@ -97,23 +98,18 @@ class LoginScreen extends State<LoginPage> {
 
       if (mounted) {
         // successful login
-        Navigator.push(
-            context,
-          MaterialPageRoute(builder: (context) => selectionScreen()
-        ));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => selectionScreen()));
       }
-    }
-    on AuthException catch (e) {
+    } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
       }
-    }
-    catch (err) {
+    } catch (err) {
       setState(() => errorMessage = 'An unexpected error occurred');
-    }
-    finally {
+    } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -288,24 +284,23 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerPassText() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-      child: const Row(
-        children: [
-          Text(
-            'Enter your ',
-            style: TextStyle(
-              color: Color(0xFF121212),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+        child: const Row(
+          children: [
+            Text(
+              'Enter your ',
+              style: TextStyle(
+                color: Color(0xFF121212),
+              ),
             ),
-          ),
-          Text(
-            'password.',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-          )
-        ],
-      )
-    );
+            Text(
+              'password.',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          ],
+        ));
   }
 
   Container buildPassengerEmailNumberText() {
@@ -382,7 +377,34 @@ class LoginScreen extends State<LoginPage> {
         margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: isLoading
+              ? null
+              : () async {
+                  setState(() => isLoading = true);
+                  try {
+                    final success = await authService.signInWithGoogle();
+                    if (success && mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const selectionScreen()),
+                      );
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Failed to sign in with Google')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => isLoading = false);
+                  }
+                },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),
@@ -400,7 +422,7 @@ class LoginScreen extends State<LoginPage> {
               ),
               const SizedBox(width: 25),
               const Text(
-                'Sign-up with Google',
+                'Log-in with Google',
                 style: TextStyle(
                   color: Color(0xFFF2F2F2),
                   fontSize: 20,
@@ -437,13 +459,15 @@ class LoginScreen extends State<LoginPage> {
       children: [
         Container(
           alignment: Alignment.centerLeft,
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
           height: 80,
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
         Container(
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Log-in to your account',
             style: TextStyle(

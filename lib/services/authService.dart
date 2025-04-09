@@ -123,6 +123,7 @@ class AuthService {
         queryParams: {
           'access_type': 'offline',
           'prompt': 'consent',
+          'close': 'true',
         },
         authScreenLaunchMode: LaunchMode.externalNonBrowserApplication,
       );
@@ -141,7 +142,8 @@ class AuthService {
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           final user = supabase.auth.currentUser;
           if (user != null) {
-            final existingUser = await supabase.from('passenger')
+            final existingUser = await supabase
+                .from('passenger')
                 .select()
                 .eq('id', user.id)
                 .maybeSingle();
@@ -171,7 +173,6 @@ class AuthService {
       return false;
     }
   }
-
 
   // Initialize deep link handling for auth callbacks
   Future<void> initDeepLinkHandling() async {
