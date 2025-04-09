@@ -116,10 +116,6 @@ class AuthService {
       final response = await supabase.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: kIsWeb ? null : 'pasada://login-callback',
-        queryParams: {
-          'access_type': 'offline',
-          'prompt': 'consent',
-        },
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
 
@@ -135,21 +131,6 @@ class AuthService {
       authSub = supabase.auth.onAuthStateChange.listen((AuthState state) async {
         if (state.event == AuthChangeEvent.signedIn && state.session != null) {
           try {
-            final user = state.session!.user;
-
-            final userData = {
-              'id': user.id,
-              'passenger_email': user.email,
-              'contact_number': 'pending',
-              'created_at': DateTime.now().toIso8601String(),
-              'updated_at': DateTime.now().toIso8601String(),
-            };
-
-            debugPrint('Attempting to save user data: $userData');
-
-            // Check if user already exists
-            await supabase.from('passenger').upsert(userData, onConflict: 'id');
-
             completer.complete(true);
           } catch (e) {
             debugPrint('Error creating user profile: $e');

@@ -38,9 +38,7 @@
                                android:scheme="https"
                                         android:host="otbwhitwrmnfqgpmnjvf.supabase.co"
                                         android:pathPrefix="/auth/v1/callback" />-->
-                <data
-                    android:scheme="pasada"
-                    android:host="login-callback" />
+                <data android:scheme="pasada" android:host="login-callback"/>
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
