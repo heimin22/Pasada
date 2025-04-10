@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -253,6 +254,69 @@ class AuthService {
     } catch (e) {
       if (kDebugMode) ('Error fetching user data: $e');
       return null;
+    }
+  }
+
+  Future<String?> uploadProfileImage(File imageFile) async {
+    try {
+      // generate a unique file name using timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileExt = imageFile.path.split('.').last;
+      final fileName = 'avatar_$timestamp.$fileExt';
+
+      // upload the file to Supabase Storage
+      final response =
+          await supabase.storage.from('avatar_url').upload(fileName, imageFile);
+
+      if (response.isEmpty) {
+        throw Exception('Failed to upload image');
+      }
+
+      // get the public URL of the uploaded file
+      final imageUrl =
+          supabase.storage.from('avatar_url').getPublicUrl(fileName);
+
+      return imageUrl;
+    } catch (e) {
+      debugPrint('Error uploading profile image: $e');
+      throw Exception('Failed to upload profile image');
+    }
+  }
+
+  Future<void> updateProfile({
+    required String displayName,
+    required String email,
+    required String mobileNumber,
+    String? avatarUrl,
+  }) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      // remove the '+63' prefix if it exists in the mobile number
+      final formattedMobileNumber =
+          mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
+
+      // update the passenger table
+      await passengersDatabase.update({
+        'display_name': displayName,
+        'passenger_email': email,
+        'contact_number': formattedMobileNumber,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      }).eq('id', user.id);
+
+      // update auth metadata if needed
+      await supabase.auth.updateUser(
+        UserAttributes(
+          email: email,
+          data: {
+            'display_name': displayName,
+          },
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      throw Exception('Failed to update profile');
     }
   }
 }
