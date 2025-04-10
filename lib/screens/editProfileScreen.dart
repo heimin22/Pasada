@@ -50,8 +50,70 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Future<void> saveProfile() async {
+    try {
+      // upload yung image if selected
+      String? newAvatarUrl;
+      if (_imageFile != null) {
+        newAvatarUrl = await authService.uploadProfileImage(_imageFile!);
+      }
+
+      await authService.updateProfile(
+        displayName: nameController.text,
+        email: emailController.text,
+        mobileNumber: mobileNumberController.text,
+        avatarUrl: newAvatarUrl ?? profileImageUrl,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating profile')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return const Placeholder();
+  }
+
+  Widget buildInputField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF121212),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Color(0xFFF5F5F5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 16,
+              horizontal: 14,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
   }
 }
