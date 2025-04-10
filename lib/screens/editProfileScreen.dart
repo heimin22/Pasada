@@ -116,4 +116,55 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ],
     );
   }
+
+  Widget buildPhoneNumberField() {
+    return Column(
+      children: [
+        const Text(
+          'Mobile Number',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF121212),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                  ),
+                  child: const Text(
+                    '+63',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF121212),
+                    ),
+                  )),
+              Container(
+                width: 1,
+                height: 20,
+                color: Color(0xFF515151),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: mobileNumberController,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
 }
