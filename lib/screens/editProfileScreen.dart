@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -230,7 +231,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             children: [
               Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 14,
                   ),
                   child: const Text(
                     '+63',
@@ -285,7 +286,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Image.asset(
+              SvgPicture.asset(
                 'assets/svg/googleIcon.svg',
                 width: 24,
                 height: 24,
