@@ -81,7 +81,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    final screenSize = MediaQuery.of(context).size;
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back),
+        ),
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF121212),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(screenSize.width * 0.04),
+            child: Column(
+              
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget buildInputField(String label, TextEditingController controller) {
@@ -164,6 +191,60 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
         ),
         const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget buildLinkedAccountsSection(double screenWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Linked Accounts',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF121212),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 16,
+          ),
+          decoration: BoxDecoration(
+            color: Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Image.asset(
+                'assets/svg/googleIcon.svg',
+                width: 24,
+                height: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Google',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF121212),
+                  fontWeight: FontWeight.w600
+                ),
+              ),
+            ],
+          ),
+        ),
+        Transform.scale(
+            scale: 0.8,
+            child: CupertinoSwitch(
+              value: isGoogleLinked,
+              onChanged: null;
+              activeTrackColor: const Color(0xFF00CC58),
+            ),
+          ),
       ],
     );
   }
