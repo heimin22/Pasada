@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,6 +8,7 @@ import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 
@@ -53,66 +53,63 @@ class PasadaPassenger extends StatefulWidget {
 }
 
 class _PasadaPassengerState extends State<PasadaPassenger> {
-  bool isDarkMode = false;
+  final ThemeController _themeController = ThemeController();
 
   @override
   void initState() {
     super.initState();
-    loadThemeMode();
+    _themeController.initialize();
   }
 
-  Future<void> loadThemeMode() async {
-    final darkMode = await ThemePreferences.getDarkModeStatus();
-    setState(() => isDarkMode = darkMode);
-  }
-
-  // root of the application
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
-      statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
-    ));
-
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor:
-            isDarkMode ? const Color(0xFF121212) : Color(0xFFF5F5F5),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-        brightness: isDarkMode ? Brightness.dark : Brightness.light,
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212)),
-          bodyMedium: TextStyle(
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212)),
-          bodySmall: TextStyle(
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212)),
-        ),
-      ),
-      // screens: const PasadaHomePage(title: 'Pasada'),
-      home: const AuthGate(),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'createAccount': (BuildContext context) => const CreateAccountPage(),
-        'cred': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
-          return CreateAccountCredPage(
-            title: 'Create Account',
-            email: args['email'],
-          );
-        },
-        'loginAccount': (BuildContext context) => const LoginAccountPage(),
+    return ListenableBuilder(
+      listenable: _themeController,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Pasada',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            scaffoldBackgroundColor: _themeController.isDarkMode
+                ? const Color(0xFF121212)
+                : const Color(0xFFF5F5F5),
+            fontFamily: 'Inter',
+            useMaterial3: true,
+            brightness: _themeController.isDarkMode
+                ? Brightness.dark
+                : Brightness.light,
+            textTheme: TextTheme(
+              bodyLarge: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+              bodyMedium: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+              bodySmall: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+            ),
+          ),
+          // screens: const PasadaHomePage(title: 'Pasada'),
+          home: const AuthGate(),
+          routes: <String, WidgetBuilder>{
+            'start': (BuildContext context) => const PasadaPassenger(),
+            'createAccount': (BuildContext context) =>
+                const CreateAccountPage(),
+            'cred': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+              return CreateAccountCredPage(
+                title: 'Create Account',
+                email: args['email'],
+              );
+            },
+            'loginAccount': (BuildContext context) => const LoginAccountPage(),
+          },
+        );
       },
     );
   }

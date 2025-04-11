@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 
@@ -35,22 +35,22 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   }
 
   Future<void> toggleDarkMode(bool value) async {
-    await ThemePreferences.setDarkModeStatus(value);
+    // Update UI immediately
     setState(() => isDarkMode = value);
 
-    // update the app theme live my nigger
+    // Update theme preferences
+    await ThemePreferences.setDarkModeStatus(value);
+
+    // Update the theme immediately using ThemeController
     if (mounted) {
-      final MaterialApp app = context.findAncestorWidgetOfExactType()!;
-      if (app.theme != null) {
-        final brightness = value ? Brightness.dark : Brightness.light;
-        app.theme!.copyWith(brightness: brightness);
-      }
+      final themeController = ThemeController();
+      await themeController.toggleTheme(context);
     }
   }
 
   Future<void> toggleNotification(bool value) async {
-    await NotificationPreference.setNotificationStatus(value);
     setState(() => notificationsEnabled = value);
+    await NotificationPreference.setNotificationStatus(value);
   }
 
   @override

@@ -67,7 +67,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.003),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
       child: Container(
         color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
         child: Column(
