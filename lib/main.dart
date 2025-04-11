@@ -69,6 +69,12 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
   // root of the application
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDarkMode ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDarkMode ? Brightness.dark : Brightness.light,
+    ));
+
     return MaterialApp(
       title: 'Pasada',
       debugShowCheckedModeBanner: false,

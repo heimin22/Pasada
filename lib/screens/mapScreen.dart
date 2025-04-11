@@ -13,7 +13,6 @@ import 'package:location/location.dart';
 
 import '../network/networkUtilities.dart';
 
-
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
   final LatLng? dropOffLocation;
@@ -32,7 +31,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin{
+class MapScreenState extends State<MapScreen>
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
@@ -103,8 +103,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     isScreenActive = state == AppLifecycleState.resumed;
     if (isScreenActive) {
       handleLocationUpdates();
-    }
-    else {
+    } else {
       locationSubscription?.pause();
     }
   }
@@ -133,11 +132,12 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
     locationSubscription = location.onLocationChanged
-      .where((data) => data.latitude != null && data.longitude != null)
-      .listen((newLocation) {
-        if (mounted && isScreenActive) {
-          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
-        }
+        .where((data) => data.latitude != null && data.longitude != null)
+        .listen((newLocation) {
+      if (mounted && isScreenActive) {
+        setState(() => currentLocation =
+            LatLng(newLocation.latitude!, newLocation.longitude!));
+      }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
@@ -214,12 +214,10 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   Future<void> animateToLocation(LatLng target) async {
     final GoogleMapController controller = await mapController.future;
     controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: target,
-          zoom: 17.0,
-        )
-      ),
+      CameraUpdate.newCameraPosition(CameraPosition(
+        target: target,
+        zoom: 17.0,
+      )),
     );
     pulseCurrentLocationMarker();
   }
@@ -230,16 +228,18 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
 
-      setState(() => currentLocation = LatLng(locationData.latitude!, locationData.longitude!));
+      setState(() => currentLocation =
+          LatLng(locationData.latitude!, locationData.longitude!));
 
       final controller = await mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
 
       locationSubscription = location.onLocationChanged
-        .where((data) => data.latitude != null && data.longitude != null)
-        .listen((newLocation) {
-          if (!mounted) return;
-          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
+          .where((data) => data.latitude != null && data.longitude != null)
+          .listen((newLocation) {
+        if (!mounted) return;
+        setState(() => currentLocation =
+            LatLng(newLocation.latitude!, newLocation.longitude!));
       });
     } catch (e) {
       // showError('An error occurred while fetching the location.');
@@ -290,7 +290,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+        'X-Goog-FieldMask':
+            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
       };
       final body = jsonEncode({
         'origin': {
@@ -319,7 +320,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response =
-      await NetworkUtility.postUrl(uri, headers: headers, body: body);
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
         showDebugToast('No response from the server');
@@ -357,7 +358,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         if (data['routes']?.isNotEmpty ?? false) {
           final polyline = data['routes'][0]['polyline']['encodedPolyline'];
           List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(polyline);
+              polylinePoints.decodePolyline(polyline);
           List<LatLng> polylineCoordinates = decodedPolyline
               .map((point) => LatLng(point.latitude, point.longitude))
               .toList();
@@ -403,7 +404,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
           // debug testing
           debugPrint('API Response: ${json.encode(data)}'); // Full response
           debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-          debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
+          debugPrint(
+              'Duration Type: ${duration.runtimeType}'); // Verify map type
           return;
         }
       }
@@ -415,7 +417,6 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       showDebugToast('Error: ${e.toString()}');
     }
   }
-
 
   String formatDuration(int totalSeconds) {
     final hours = totalSeconds ~/ 3600;
@@ -525,6 +526,40 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Dark mode style for Google Maps
+    final String mapStyle = isDarkMode
+        ? '''[
+      {
+        "elementType": "geometry",
+        "stylers": [{"color": "#242f3e"}]
+      },
+      {
+        "elementType": "labels.text.fill",
+        "stylers": [{"color": "#746855"}]
+      },
+      {
+        "elementType": "labels.text.stroke",
+        "stylers": [{"color": "#242f3e"}]
+      },
+      {
+        "featureType": "road",
+        "elementType": "geometry",
+        "stylers": [{"color": "#38414e"}]
+      },
+      {
+        "featureType": "road",
+        "elementType": "geometry.stroke",
+        "stylers": [{"color": "#212a37"}]
+      },
+      {
+        "featureType": "road",
+        "elementType": "labels.text.fill",
+        "stylers": [{"color": "#9ca5b3"}]
+      }
+    ]'''
+        : '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isLocationInitialized) {
@@ -542,8 +577,12 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
                 ),
               )
             : GoogleMap(
-                onMapCreated: (controller) =>
-                    mapController.complete(controller),
+                onMapCreated: (controller) {
+                  mapController.complete(controller);
+                  if (isDarkMode) {
+                    controller.setMapStyle(mapStyle);
+                  }
+                },
                 initialCameraPosition: CameraPosition(
                   target: currentLocation!,
                   zoom: 15.0,

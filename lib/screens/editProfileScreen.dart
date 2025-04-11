@@ -334,7 +334,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             horizontal: 16,
           ),
           decoration: BoxDecoration(
-            color: Color(0xFFF5F5F5),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E1E)
+                : const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -346,26 +348,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'assets/svg/googleIcon.svg',
                     width: 24,
                     height: 24,
+                    // Removing any color override to keep original Google colors
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Google',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF121212),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const Spacer(), // This will push the switch to the right
-              // Google Switch
+              const Spacer(),
               Transform.scale(
                 scale: 0.8,
                 child: CupertinoSwitch(
                   value: isGoogleLinked,
-                  onChanged:
-                      null, // Keep null since we don't want to allow manual changes
+                  onChanged: null,
                   activeColor: const Color(0xFF00CC58),
                 ),
               ),
