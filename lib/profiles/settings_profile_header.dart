@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -101,7 +102,14 @@ class SettingsProfileHeader extends StatelessWidget {
   Widget buildEditProfile(BuildContext context) {
     return InkWell(
       // TODO: dapat may function na ito sa susunod may nigga ha
-      onTap: () => debugPrint('Edit profile tapped'),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const EditProfileScreen(),
+          ),
+        );
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

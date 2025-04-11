@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +12,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ensure initialization for async tasks
+  WidgetsFlutterBinding
+      .ensureInitialized(); // ensure initialization for async tasks
   await dotenv.load(fileName: ".env");
 
   // initialize supabase
@@ -31,9 +31,7 @@ Future<void> main() async {
     ),
   );
 
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -45,7 +43,7 @@ Future<void> main() async {
 }
 
 final supabase = Supabase.instance.client;
-  
+
 class PasadaPassenger extends StatelessWidget {
   const PasadaPassenger({super.key});
 
@@ -66,7 +64,8 @@ class PasadaPassenger extends StatelessWidget {
         'start': (BuildContext context) => const PasadaPassenger(),
         'createAccount': (BuildContext context) => const CreateAccountPage(),
         'cred': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
           return CreateAccountCredPage(
             title: 'Create Account',
             email: args['email'],
@@ -93,7 +92,8 @@ class PasadaHomePageState extends State<PasadaHomePage> {
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args?['accountCreated'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Account created successfully!')),
@@ -132,13 +132,15 @@ class PasadaHomePageState extends State<PasadaHomePage> {
       children: [
         Container(
           alignment: Alignment.center,
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
           height: 130,
           width: 130,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
         Container(
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Kumusta!',
             style: TextStyle(
@@ -188,16 +190,15 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           child: const Text(
             'Create an Account',
             style: TextStyle(
-              color: Color(0xFFF2F2F2),
-              fontWeight: FontWeight.w600,
-              fontSize: 20
-            ),
+                color: Color(0xFFF2F2F2),
+                fontWeight: FontWeight.w600,
+                fontSize: 20),
           ),
         ),
       ),
     );
   }
-  
+
   Flexible buildLoginAccount() {
     return Flexible(
       child: Container(
@@ -227,8 +228,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
             style: TextStyle(
                 color: Color(0xFF121212),
                 fontWeight: FontWeight.w600,
-                fontSize: 20
-            ),
+                fontSize: 20),
           ),
         ),
       ),
