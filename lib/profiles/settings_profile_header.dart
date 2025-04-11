@@ -104,8 +104,9 @@ class SettingsProfileHeader extends StatelessWidget {
   }
 
   Widget buildEditProfile(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
-      // TODO: dapat may function na ito sa susunod may nigga ha
       onTap: () {
         Navigator.push(
           context,
@@ -117,18 +118,21 @@ class SettingsProfileHeader extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Edit profile',
             style: TextStyle(
               fontSize: 13,
-              color: Color(0xFF121212),
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
           ),
           SizedBox(width: screenWidth * 0.01),
-          const Icon(
+          Icon(
             Icons.arrow_forward,
             size: 15,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ],
       ),

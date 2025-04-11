@@ -117,7 +117,9 @@ class selectionState extends State<selectionScreen> {
   }
 
   Widget buildCurvedNavItem(int index) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     String selectedIcon, unselectedIcon;
+
     switch (index) {
       case 0:
         selectedIcon = 'homeSelectedIcon.svg';
@@ -135,6 +137,7 @@ class selectionState extends State<selectionScreen> {
         selectedIcon = '';
         unselectedIcon = '';
     }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -142,7 +145,9 @@ class selectionState extends State<selectionScreen> {
           'assets/svg/${currentIndex == index ? selectedIcon : unselectedIcon}',
           colorFilter: currentIndex == index
               ? ColorFilter.mode(getIconColor(), BlendMode.srcIn)
-              : null,
+              : isDarkMode
+                  ? const ColorFilter.mode(Color(0xFFF5F5F5), BlendMode.srcIn)
+                  : null,
           width: 24,
           height: 24,
         ),
