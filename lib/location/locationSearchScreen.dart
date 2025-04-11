@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -11,9 +11,7 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'locationListTile.dart';
-// import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
-// import 'package:http/http.dart' as http;
 import 'selectedLocation.dart';
 
 class SearchLocationScreen extends StatefulWidget {
@@ -29,6 +27,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   final TextEditingController searchController = TextEditingController();
   List<AutocompletePrediction> placePredictions = [];
   HomeScreenPageState? homeScreenState;
+  Timer? _debounce;
+  bool isLoading = false;
+  HomeScreenPageState? homeScreenPageState;
 
   @override
   void initState() {
@@ -36,17 +37,35 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     searchController.addListener(onSearchChanged);
   }
 
-  void onSearchChanged() => placeAutocomplete(searchController.text);
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    setState(() => isLoading = true);
+
+    _debounce = Timer(const Duration(milliseconds: 1500), () {
+      placeAutocomplete(searchController.text);
+    });
+  }
 
   Future<void> placeAutocomplete(String query) async {
     if (query.isEmpty) {
-      setState(() => placePredictions = []);
+      setState(() {
+        placePredictions = [];
+        isLoading = false;
+      });
       return;
     }
 
     final String apiKey = dotenv.env["ANDROID_MAPS_API_KEY"] ?? '';
     if (apiKey.isEmpty) {
       if (kDebugMode) print("API Key is not configured!");
+      setState(() => isLoading = false);
       return;
     }
 
@@ -60,11 +79,21 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       },
     );
 
-    final response = await NetworkUtility.fetchUrl(uri);
-    if (response != null) {
-      final result =
-          PlaceAutocompleteResponse.parseAutocompleteResult(response);
-      setState(() => placePredictions = result.prediction ?? []);
+    try {
+      final response = await NetworkUtility.fetchUrl(uri);
+      if (response != null) {
+        final result =
+            PlaceAutocompleteResponse.parseAutocompleteResult(response);
+        setState(() {
+          placePredictions = result.prediction ?? [];
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error fetching places: $e");
+      setState(() => isLoading = false);
     }
   }
 
@@ -98,6 +127,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final loadingColor = isDarkMode
+        ? const Color(0xFF00E865) // Brighter green for dark mode
+        : const Color(0xFF067837); // Original green for light mode
 
     return Scaffold(
       appBar: AppBar(
@@ -155,9 +187,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: TextFormField(
-                onChanged: (value) {
-                  placeAutocomplete(value);
-                },
+                controller: searchController,
                 textInputAction: TextInputAction.search,
                 style: TextStyle(
                   fontFamily: 'Inter',
@@ -195,12 +225,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
-          ),
-          Divider(
-            height: 0,
-            thickness: 4,
-            color:
-                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
           ),
           if (widget.isPickup) ...[
             Padding(
@@ -261,9 +285,17 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             color:
                 isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
           ),
-          Expanded(
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width,
+          if (isLoading)
+            Expanded(
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(loadingColor),
+                ),
+              ),
+            )
+          else
+            Expanded(
               child: ListView.builder(
                 itemCount: placePredictions.length,
                 itemBuilder: (context, index) => SizedBox(
@@ -276,7 +308,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
-          ),
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -437,12 +468,5 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    searchController.removeListener(onSearchChanged);
-    searchController.dispose();
-    super.dispose();
   }
 }

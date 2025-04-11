@@ -103,7 +103,7 @@ class PreferencesScreenState extends State<PreferencesScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
