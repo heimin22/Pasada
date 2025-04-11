@@ -41,7 +41,10 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     // update the app theme live my nigger
     if (mounted) {
       final MaterialApp app = context.findAncestorWidgetOfExactType()!;
-      if (app.theme != null) {}
+      if (app.theme != null) {
+        final brightness = value ? Brightness.dark : Brightness.light;
+        app.theme!.copyWith(brightness: brightness);
+      }
     }
   }
 
@@ -127,10 +130,13 @@ class PreferencesScreenState extends State<PreferencesScreen> {
         child: Column(
           children: [
             buildSectionHeader('App Settings', screenWidth),
-            buildSettingsListItem('Dark Mode',
-                'Switch screen appearance to dark mode', screenWidth, () {
-              debugPrint('Appearance tapped');
-            }),
+            buildToggleListItem(
+              'Dark Mode',
+              'Switch screen appearance to dark mode',
+              isDarkMode,
+              toggleDarkMode,
+              screenWidth,
+            ),
           ],
         ),
       ),
