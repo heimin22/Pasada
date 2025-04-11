@@ -14,13 +14,12 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    return const SettingsScreenStateful(title: 'Pasada');
+    return const SettingsScreenStateful();
   }
 }
 
 class SettingsScreenStateful extends StatefulWidget {
-  const SettingsScreenStateful({super.key, required this.title});
-  final String title;
+  const SettingsScreenStateful({super.key});
 
   @override
   State<SettingsScreenStateful> createState() => SettingsScreenPageState();

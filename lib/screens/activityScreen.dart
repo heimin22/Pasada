@@ -1,32 +1,21 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(const ActivityScreen());
-
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const ActivityScreenStateful(title: 'Pasada'),
-      routes: <String, WidgetBuilder>{
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
 
-      },
-    );
+class _ActivityScreenState extends State<ActivityScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return const ActivityScreenStateful();
   }
 }
 
 class ActivityScreenStateful extends StatefulWidget {
-  const ActivityScreenStateful({super.key, required this.title});
-
-  final String title;
+  const ActivityScreenStateful({super.key});
 
   @override
   State<ActivityScreenStateful> createState() => ActivityScreenPageState();
