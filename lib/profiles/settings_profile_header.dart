@@ -17,6 +17,8 @@ class SettingsProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return FutureBuilder<Map<String, dynamic>?>(
       future: authService.getCurrentUserData(),
       builder: (context, snapshot) {
@@ -33,7 +35,7 @@ class SettingsProfileHeader extends StatelessWidget {
 
         return Container(
           width: double.infinity,
-          color: const Color(0xFFF5F5F5),
+          color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
           height: screenHeight * 0.13,
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.06,
@@ -50,10 +52,12 @@ class SettingsProfileHeader extends StatelessWidget {
                   SizedBox(height: screenHeight * 0.008),
                   Text(
                     userName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF121212),
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.005),
