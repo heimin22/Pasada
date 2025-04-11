@@ -95,9 +95,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
             color: Color(0xFF121212),
           ),
         ),
+        backgroundColor: Color(0xFFF5F5F5),
+        elevation: 1.0,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -106,11 +109,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 24),
                 Center(
                   child: Stack(
                     children: [
                       CircleAvatar(
-                        radius: screenSize.width * 0.15,
+                        radius: screenSize.width * 0.12,
                         backgroundColor: const Color(0xFF00CC58),
                         backgroundImage: _imageFile != null
                             ? FileImage(_imageFile!) as ImageProvider
@@ -141,7 +145,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 64),
                 buildInputField('Name', nameController),
                 buildPhoneNumberField(),
                 buildInputField('Email Address', emailController),
@@ -184,7 +188,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Text(
           label,
           style: const TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Color(0xFF121212),
           ),
@@ -200,23 +204,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               borderSide: BorderSide.none,
             ),
             contentPadding: const EdgeInsets.symmetric(
-              vertical: 16,
+              vertical: 12,
               horizontal: 14,
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 45),
       ],
     );
   }
 
   Widget buildPhoneNumberField() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Mobile Number',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Color(0xFF121212),
           ),
@@ -256,7 +261,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 45),
       ],
     );
   }
