@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 
 class EditProfileScreen extends StatefulWidget {
@@ -31,12 +32,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> loadUserData() async {
     final userData = await authService.getCurrentUserData();
     if (userData != null) {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      final isGoogleProvider =
+          currentUser?.appMetadata['provider'] == 'google' ||
+              currentUser?.identities
+                      ?.any((identity) => identity.provider == 'google') ==
+                  true;
+      true;
       setState(() {
         nameController.text = userData['display_name'] ?? '';
         emailController.text = userData['passenger_email'] ?? '';
         mobileNumberController.text = userData['contact_number'] ?? '';
         profileImageUrl = userData['avatar_url'];
-        isGoogleLinked = userData['is_google_linked'] ?? false;
+        isGoogleLinked = isGoogleProvider;
       });
     }
   }
@@ -84,75 +92,94 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textSelectionTheme: TextSelectionThemeData(
+          selectionHandleColor: const Color(0xFF067837),
+          cursorColor: const Color(0xFF067837),
+          selectionColor: const Color(0xFF067837).withOpacity(0.2),
         ),
-        title: const Text(
-          'Edit Profile',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'Inter',
-            color: Color(0xFF121212),
-          ),
-        ),
-        backgroundColor: Color(0xFFF5F5F5),
-        elevation: 1.0,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.all(screenSize.width * 0.04),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 24),
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: screenSize.width * 0.12,
-                        backgroundColor: const Color(0xFF00CC58),
-                        backgroundImage: _imageFile != null
-                            ? FileImage(_imageFile!) as ImageProvider
-                            : (profileImageUrl != null
-                                ? NetworkImage(profileImageUrl!)
-                                : null),
-                        child: (_imageFile == null && profileImageUrl == null)
-                            ? Icon(
-                                Icons.person,
-                                size: screenSize.width * 0.15,
-                                color: const Color(0xFFF5F5F5),
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          backgroundColor: const Color(0xFF00CC58),
-                          radius: screenSize.width * 0.05,
-                          child: IconButton(
-                            icon: const Icon(Icons.camera_alt,
-                                color: Colors.white),
-                            onPressed: pickImage,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+          ),
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+              color: Color(0xFF121212),
+            ),
+          ),
+          backgroundColor: Color(0xFFF5F5F5),
+          elevation: 1.0,
+        ),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.all(screenSize.width * 0.04),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        Center(
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: screenSize.width * 0.12,
+                                backgroundColor: const Color(0xFF00CC58),
+                                backgroundImage: _imageFile != null
+                                    ? FileImage(_imageFile!) as ImageProvider
+                                    : (profileImageUrl != null
+                                        ? NetworkImage(profileImageUrl!)
+                                        : null),
+                                child: (_imageFile == null &&
+                                        profileImageUrl == null)
+                                    ? Icon(
+                                        Icons.person,
+                                        size: screenSize.width * 0.12,
+                                        color: const Color(0xFFF5F5F5),
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: CircleAvatar(
+                                  backgroundColor: const Color(0xFF00CC58),
+                                  radius: screenSize.width * 0.04,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.camera_alt,
+                                        color: Colors.white),
+                                    onPressed: pickImage,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 48),
+                        buildInputField('Name', nameController),
+                        buildPhoneNumberField(),
+                        buildInputField('Email Address', emailController),
+                        const SizedBox(height: 24),
+                        buildLinkedAccountsSection(screenSize.width),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 64),
-                buildInputField('Name', nameController),
-                buildPhoneNumberField(),
-                buildInputField('Email Address', emailController),
-                const SizedBox(height: 24),
-                buildLinkedAccountsSection(screenSize.width),
-                const SizedBox(height: 48),
-                SizedBox(
+              ),
+              Padding(
+                padding: EdgeInsets.all(screenSize.width * 0.04),
+                child: SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
@@ -173,8 +200,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -189,6 +216,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           label,
           style: const TextStyle(
             fontSize: 13,
+            fontFamily: 'Inter',
             fontWeight: FontWeight.w600,
             color: Color(0xFF121212),
           ),
@@ -196,6 +224,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          cursorColor: const Color(0xFF121212),
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF121212),
+            fontFamily: 'Inter',
+          ),
           decoration: InputDecoration(
             filled: true,
             fillColor: Color(0xFFF5F5F5),
@@ -222,6 +257,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           'Mobile Number',
           style: TextStyle(
             fontSize: 13,
+            fontFamily: 'Inter',
             fontWeight: FontWeight.w600,
             color: Color(0xFF121212),
           ),
@@ -254,8 +290,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               Expanded(
                 child: TextField(
                   controller: mobileNumberController,
+                  cursorColor: const Color(0xFF121212),
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF121212),
+                    fontFamily: 'Inter',
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -273,12 +322,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         const Text(
           'Linked Accounts',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: FontWeight.w700,
             color: Color(0xFF121212),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(
             vertical: 12,
@@ -289,30 +338,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SvgPicture.asset(
-                'assets/svg/googleIcon.svg',
-                width: 24,
-                height: 24,
+              // Google Icon and Text
+              Row(
+                children: [
+                  SvgPicture.asset(
+                    'assets/svg/googleIcon.svg',
+                    width: 24,
+                    height: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Google',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF121212),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Google',
-                style: TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF121212),
-                    fontWeight: FontWeight.w600),
+              const Spacer(), // This will push the switch to the right
+              // Google Switch
+              Transform.scale(
+                scale: 0.8,
+                child: CupertinoSwitch(
+                  value: isGoogleLinked,
+                  onChanged:
+                      null, // Keep null since we don't want to allow manual changes
+                  activeColor: const Color(0xFF00CC58),
+                ),
               ),
             ],
-          ),
-        ),
-        Transform.scale(
-          scale: 0.8,
-          child: CupertinoSwitch(
-            value: isGoogleLinked,
-            onChanged: null,
-            activeTrackColor: const Color(0xFF00CC58),
           ),
         ),
       ],
