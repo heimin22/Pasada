@@ -25,57 +25,50 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final screenHeight = MediaQuery.of(context).size.height;
-    // final screenWidth = MediaQuery.of(context).size.width;
-    try {
-      debugPrint('Building CredPage with email: ${widget.email}');
-      return Scaffold(
-        resizeToAvoidBottomInset: false,
-        body: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.07,
-                left: MediaQuery.of(context).size.height * 0.01,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: buildBackButton(),
-              ),
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * 0.07,
+              left: MediaQuery.of(context).size.height * 0.01,
             ),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.10,
-                    left: MediaQuery.of(context).size.height * 0.035,
-                    right: MediaQuery.of(context).size.height * 0.035,
-                    bottom: MediaQuery.of(context).size.height * 0.035,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      buildHeader(),
-                      buildPassengerDisplayNameText(),
-                      buildPassengerDisplayNameInput(),
-                      buildPassengerContactNumberText(),
-                      buildPassengerContactNumberInput(),
-                      buildTermsCheckbox(),
-                      buildCreateAccountButton(),
-                    ],
-                  ),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: buildBackButton(),
+            ),
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.10,
+                  left: MediaQuery.of(context).size.height * 0.035,
+                  right: MediaQuery.of(context).size.height * 0.035,
+                  bottom: MediaQuery.of(context).size.height * 0.035,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    buildHeader(),
+                    buildPassengerDisplayNameText(),
+                    buildPassengerDisplayNameInput(),
+                    buildPassengerContactNumberText(),
+                    buildPassengerContactNumberInput(),
+                    buildTermsCheckbox(),
+                    buildCreateAccountButton(),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error building CreateAccountCredPage: $e');
-      return Scaffold(body: Center(child: Text('Error: $e')));
-    }
+          ),
+        ],
+      ),
+    );
   }
 
   Container buildBackButton() {
@@ -86,7 +79,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           // navigate back to the previous screen
           Navigator.pop(context);
         },
-        icon: Icon(Icons.arrow_back),
+        icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
       ),
     );
   }

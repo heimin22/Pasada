@@ -132,13 +132,15 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args?['accountCreated'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account created successfully!')),
+          const SnackBar(content: Text('Account created successfully!')),
         );
         ModalRoute.of(context)?.settings.arguments != null;
       }
     });
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      // Force light background for this screen
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
         child: SizedBox(
           height: MediaQuery.of(context).size.height,
@@ -182,7 +184,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
             style: TextStyle(
               fontSize: 40,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF121212),
+              color: Color(0xFF121212), // Force dark text
             ),
           ),
         ),
@@ -195,7 +197,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 16,
-              color: Color(0xFF121212),
+              color: Color(0xFF121212), // Force dark text
             ),
           ),
         )
@@ -226,9 +228,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           child: const Text(
             'Create an Account',
             style: TextStyle(
-                color: Color(0xFFF2F2F2),
-                fontWeight: FontWeight.w600,
-                fontSize: 20),
+              color: Color(0xFFF2F2F2),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
           ),
         ),
       ),
@@ -262,9 +265,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           child: const Text(
             'Log-in',
             style: TextStyle(
-                color: Color(0xFF121212),
-                fontWeight: FontWeight.w600,
-                fontSize: 20),
+              color: Color(0xFF121212),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
           ),
         ),
       ),

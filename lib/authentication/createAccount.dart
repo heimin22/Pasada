@@ -126,6 +126,7 @@ class CreateAccountScreen extends State<CAPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
       body: Column(
         children: [
           // Back button with its own padding
@@ -181,7 +182,10 @@ class CreateAccountScreen extends State<CAPage> {
         onPressed: () {
           Navigator.pushNamed(context, 'start');
         },
-        icon: Icon(Icons.arrow_back),
+        icon: Icon(
+          Icons.arrow_back,
+          color: Color(0xFF121212),
+        ),
       ),
     );
   }
@@ -243,16 +247,11 @@ class CreateAccountScreen extends State<CAPage> {
       child: const Row(
         children: [
           Text(
-            'Enter your ',
-            style: TextStyle(color: Color(0xFF121212)),
-          ),
-          Text(
-            'email',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          Text(
-            ' to continue',
-            style: TextStyle(color: Color(0xFF121212)),
+            'Email or Phone Number',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: Color(0xFF121212)),
           ),
         ],
       ),
@@ -276,7 +275,10 @@ class CreateAccountScreen extends State<CAPage> {
           decoration: InputDecoration(
             labelText: 'Enter your email',
             labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
               fontSize: 12,
+              color: Color(0xFF515151),
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0xFF121212),
@@ -301,23 +303,19 @@ class CreateAccountScreen extends State<CAPage> {
 
   Container buildPassengerPassText() {
     return Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        child: const Row(
-          children: [
-            Text(
-              'Enter your ',
-              style: TextStyle(
-                color: Color(0xFF121212),
-              ),
-            ),
-            Text(
-              'password.',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          ],
-        ));
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: const Row(
+        children: [
+          Text(
+            'Password',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: Color(0xFF121212)),
+          ),
+        ],
+      ),
+    );
   }
 
   Container buildPassengerPassInput() {
@@ -349,7 +347,10 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
               fontSize: 12,
+              color: Color(0xFF515151),
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0XFF121212),
@@ -378,10 +379,12 @@ class CreateAccountScreen extends State<CAPage> {
       child: const Row(
         children: [
           Text(
-            'Confirm your ',
-            style: TextStyle(color: Color(0xFF121212)),
+            'Confirm Password',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: Color(0xFF121212)),
           ),
-          Text('password.', style: TextStyle(fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -416,7 +419,10 @@ class CreateAccountScreen extends State<CAPage> {
               ),
             ),
             labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
               fontSize: 12,
+              color: Color(0xFF515151),
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0XFF121212),
