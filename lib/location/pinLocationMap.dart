@@ -10,6 +10,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -626,50 +627,84 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         final bool isSearching = address == "Searching..." ||
             address == "Searching for location..." ||
             isFindingLandmark;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+
+        final parts = address.isNotEmpty ? splitLocation(address) : ['', ''];
+        final landmark = parts[0];
+        final addressDetail = parts[1];
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (isSearching)
-              Row(
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Color(0xFF067837),
+            SvgPicture.asset(
+              "assets/svg/pindropoff.svg",
+              width: 24,
+              height: 24,
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: isSearching
+                  ? Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF067837),
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          "Finding location...",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontFamily: 'Inter',
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          landmark.isNotEmpty
+                              ? landmark
+                              : "Move the map to select a location",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
+                          ),
+                        ),
+                        if (addressDetail.isNotEmpty)
+                          Text(
+                            addressDetail,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              fontFamily: 'Inter',
+                              color: Theme.of(context).brightness ==
+                                      Brightness.dark
+                                  ? const Color(0xFFAAAAAA)
+                                  : const Color(0xFF515151),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    "Finding location...",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFF5F5F5)
-                          : address.isNotEmpty
-                              ? const Color(0xFF121212)
-                              : const Color(0xFF515151),
-                    ),
-                  ),
-                ],
-              )
-            else
-              Text(
-                address.isNotEmpty
-                    ? address
-                    : "Move the map to select a location",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontFamily: 'Inter',
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFFF5F5F5)
-                      : address.isNotEmpty
-                          ? const Color(0xFF121212)
-                          : const Color(0xFF515151),
-                ),
-              ),
+            ),
           ],
         );
       },
