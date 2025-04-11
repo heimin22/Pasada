@@ -615,6 +615,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               ),
             ),
           ),
+          const SizedBox(height: 24),
         ],
       ),
     );
