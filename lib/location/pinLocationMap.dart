@@ -9,6 +9,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:flutter/services.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -23,9 +24,7 @@ class PinLocationStateless extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const PinLocationStateful(isPickup: true),
-      routes: <String, WidgetBuilder>{
-
-      },
+      routes: <String, WidgetBuilder>{},
     );
   }
 }
@@ -39,6 +38,97 @@ class PinLocationStateful extends StatefulWidget {
 }
 
 class _PinLocationStatefulState extends State<PinLocationStateful> {
+  // Add dark mode map style
+  final String darkMapStyle = '''[
+    {
+      "elementType": "geometry",
+      "stylers": [{"color": "#242f3e"}]
+    },
+    {
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#746855"}]
+    },
+    {
+      "elementType": "labels.text.stroke",
+      "stylers": [{"color": "#242f3e"}]
+    },
+    {
+      "featureType": "administrative.locality",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#d59563"}]
+    },
+    {
+      "featureType": "poi",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#d59563"}]
+    },
+    {
+      "featureType": "poi.park",
+      "elementType": "geometry",
+      "stylers": [{"color": "#263c3f"}]
+    },
+    {
+      "featureType": "poi.park",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#6b9a76"}]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry",
+      "stylers": [{"color": "#38414e"}]
+    },
+    {
+      "featureType": "road",
+      "elementType": "geometry.stroke",
+      "stylers": [{"color": "#212a37"}]
+    },
+    {
+      "featureType": "road",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#9ca5b3"}]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry",
+      "stylers": [{"color": "#746855"}]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "geometry.stroke",
+      "stylers": [{"color": "#1f2835"}]
+    },
+    {
+      "featureType": "road.highway",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#f3d19c"}]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "geometry",
+      "stylers": [{"color": "#2f3948"}]
+    },
+    {
+      "featureType": "transit.station",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#d59563"}]
+    },
+    {
+      "featureType": "water",
+      "elementType": "geometry",
+      "stylers": [{"color": "#17263c"}]
+    },
+    {
+      "featureType": "water",
+      "elementType": "labels.text.fill",
+      "stylers": [{"color": "#515c6d"}]
+    },
+    {
+      "featureType": "water",
+      "elementType": "labels.text.stroke",
+      "stylers": [{"color": "#17263c"}]
+    }
+  ]''';
+
   // global key for the map
   final GlobalKey<MapScreenState> mapScreenKey = GlobalKey<MapScreenState>();
 
@@ -85,6 +175,12 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   @override
   void initState() {
     super.initState();
+    // Set status bar theme
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
     getCurrentLocation();
   }
 
@@ -97,6 +193,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
     isMapReady = true;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (isDarkMode) {
+      controller.setMapStyle(darkMapStyle);
+    }
 
     Future.delayed(Duration(milliseconds: 300), () {
       getCurrentLocation();
@@ -118,29 +218,27 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         pinnedLocation = landmark['location'];
         landmarkName = landmark['name'];
         // addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
-       if (landmark != null) {
-         final selectedLoc = SelectedLocation(
-             "${landmark['name']}\n${landmark['address']}",
-             tappedPosition
-         );
-         Navigator.pop(context, selectedLoc);
-       }
+        if (landmark != null) {
+          final selectedLoc = SelectedLocation(
+              "${landmark['name']}\n${landmark['address']}", tappedPosition);
+          Navigator.pop(context, selectedLoc);
+        }
       });
-    }
-    else {
+    } else {
       final location = await reverseGeocode(tappedPosition);
       addressNotifier.value = location?.address ?? "Unable to find location";
     }
     setState(() => isFindingLandmark = false);
   }
-  
+
   Future<void> updateLocation() async {
     if (mapController == null) return;
 
     final visibleRegion = await mapController!.getVisibleRegion();
-    final center  = LatLng(
-        (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
-        (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2,
+    final center = LatLng(
+      (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
+      (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) /
+          2,
     );
 
     final location = await reverseGeocode(center);
@@ -161,8 +259,12 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
     final visibleRegion = await mapController!.getVisibleRegion();
     // calculate natin yung exact center
-    final centerLat = (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2;
-    final centerLng = (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2;
+    final centerLat =
+        (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) /
+            2;
+    final centerLng = (visibleRegion.northeast.longitude +
+            visibleRegion.southwest.longitude) /
+        2;
 
     return LatLng(centerLat, centerLng);
   }
@@ -216,8 +318,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           isFindingLandmark = false;
         });
       }
-    }
-    catch (e) {
+    } catch (e) {
       debugPrint("Error fetching location: $e");
       if (mounted) {
         setState(() {
@@ -254,8 +355,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
         fetchLocationAtCenter(); // Initial snap after load
       }
-    }
-    catch (e) {
+    } catch (e) {
       debugPrint("Error in getCurrentLocation: $e");
       if (mounted) setState(() => isLoading = false);
     }
@@ -278,12 +378,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
       if (data['results'] != null && data['results'].isNotEmpty) {
         return SelectedLocation(
-          data['results'][0]['formatted_address'],
-          position
-        );
+            data['results'][0]['formatted_address'], position);
       }
-    }
-    catch (e) {
+    } catch (e) {
       debugPrint("Error in reverseGeocode: $e");
     }
     return null;
@@ -294,7 +391,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       setState(() => isLoading = true);
 
       final locationData = await locationService.getLocation();
-      final currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+      final currentLatLng =
+          LatLng(locationData.latitude!, locationData.longitude!);
 
       setState(() {
         currentLocation = currentLatLng;
@@ -303,11 +401,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
       await mapController.animateCamera(
         CameraUpdate.newLatLngZoom(
-          currentLatLng, 17,
+          currentLatLng,
+          17,
         ),
       );
-    }
-    catch (e) {
+    } catch (e) {
       debugPrint("Error in animateToCurrentLocation: $e");
       setState(() => isLoading = false);
     }
@@ -321,7 +419,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     // measuring container height
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (bottomContainerKey.currentContext != null) {
-        final RenderBox box = bottomContainerKey.currentContext!.findRenderObject() as RenderBox;
+        final RenderBox box =
+            bottomContainerKey.currentContext!.findRenderObject() as RenderBox;
         final newHeight = box.size.height;
         if (newHeight != bottomContainerHeight) {
           setState(() => bottomContainerHeight = newHeight);
@@ -342,24 +441,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     return Scaffold(
       body: Stack(
         children: [
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.07,
-            left: MediaQuery.of(context).size.width * 0.03, // Use width for horizontal positioning
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white, // Add background
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
-                color: Color(0xFFF5F5F5),
-              ),
-            ),
-          ),
           GoogleMap(
             padding: EdgeInsets.only(
-              bottom: bottomContainerHeight + MediaQuery.of(context).size.height * 0.01,
+              bottom: bottomContainerHeight +
+                  MediaQuery.of(context).size.height * 0.01,
             ),
             onMapCreated: onMapCreated,
             onTap: (position) {
@@ -376,8 +461,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             indoorViewEnabled: false,
             myLocationButtonEnabled: true,
             onCameraMove: (position) {
-              // don't do anything when the camera is moving
-              // prevent na rin para walang jumping/snapping during movement
               if (isFindingLandmark) {
                 setState(() => isFindingLandmark = false);
               }
@@ -386,11 +469,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               fetchLocationAtCenter();
             },
           ),
-
           Center(
             child: Container(
-              // Offset it slightly to account for bottom sheet
-              margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.15),
+              margin: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height * 0.15),
               child: Icon(
                 Icons.location_pin,
                 color: Color(0xFFFFCE21),
@@ -398,7 +480,35 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               ),
             ),
           ),
-
+          // Back button - now rendered on top of the map
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.07,
+            left: MediaQuery.of(context).size.width * 0.03,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+            ),
+          ),
           Positioned(
             right: responsivePadding,
             bottom: bottomContainerHeight + fabVerticalSpacing,
@@ -406,12 +516,17 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                LocationFAB (
+                LocationFAB(
                   heroTag: "pinLocationFAB",
                   onPressed: animateToCurrentLocation,
                   icon: Icons.gps_fixed,
-                  iconColor: const Color(0xFF067837),
-                  backgroundColor: Colors.white,
+                  iconColor: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF00E865)
+                      : const Color(0xFF00CC58),
+                  backgroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF1E1E1E)
+                          : const Color(0xFFF5F5F5),
                   buttonSize: screenWidth * 0.12,
                   iconSize: screenWidth * 0.06,
                 ),
@@ -421,7 +536,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: pinnedLocationContainer(screenWidth, key: bottomContainerKey),
+            child:
+                pinnedLocationContainer(screenWidth, key: bottomContainerKey),
           ),
         ],
       ),
@@ -429,15 +545,16 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   Widget pinnedLocationContainer(double screenWidth, {Key? key}) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
       key: key,
       width: screenWidth,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0xFFD2D2D2),
+            color: isDarkMode ? Colors.black12 : const Color(0xFFD2D2D2),
             blurRadius: 16,
             spreadRadius: 4,
           ),
@@ -455,28 +572,32 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               if (isFindingLandmark) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                      content: Text("Still finding location, please wait a moment..."),
+                    content:
+                        Text("Still finding location, please wait a moment..."),
                     duration: Duration(seconds: 2),
                   ),
                 );
                 return;
               }
               // check kapag may valid location na mapapass back
-              if (pinnedLocation != null && addressNotifier.value.isNotEmpty && addressNotifier.value != "Searching..." && addressNotifier.value != "Searching for location..." && addressNotifier.value != "Unable to find location") {
-                Navigator.pop(context, SelectedLocation(addressNotifier.value, pinnedLocation!));
-              }
-              else if (pinnedLocation != null) {
+              if (pinnedLocation != null &&
+                  addressNotifier.value.isNotEmpty &&
+                  addressNotifier.value != "Searching..." &&
+                  addressNotifier.value != "Searching for location..." &&
+                  addressNotifier.value != "Unable to find location") {
+                Navigator.pop(context,
+                    SelectedLocation(addressNotifier.value, pinnedLocation!));
+              } else if (pinnedLocation != null) {
                 // may coordinates pero walang readable address
                 // use na lang ng generic address pukingina niyan
-                Navigator.pop(context, SelectedLocation(addressNotifier.value, pinnedLocation!));
-              }
-              else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Unable to confirm this location. Please try a different area.'),
-                      duration: Duration(seconds: 3),
-                    )
-                );
+                Navigator.pop(context,
+                    SelectedLocation(addressNotifier.value, pinnedLocation!));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(
+                      'Unable to confirm this location. Please try a different area.'),
+                  duration: Duration(seconds: 3),
+                ));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -485,8 +606,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             ),
             child: Text(
               'Confirm ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
-              style: const TextStyle(
-                color: Color(0xFFF5F5F5),
+              style: TextStyle(
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -522,17 +645,29 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                     "Finding location...",
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF515151),
+                      fontFamily: 'Inter',
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : address.isNotEmpty
+                              ? const Color(0xFF121212)
+                              : const Color(0xFF515151),
                     ),
                   ),
                 ],
               )
             else
               Text(
-                address.isNotEmpty ? address : "Move the map to select a location",
+                address.isNotEmpty
+                    ? address
+                    : "Move the map to select a location",
                 style: TextStyle(
                   fontSize: 14,
-                  color: address.isNotEmpty ? Color(0xFF121212) : Color(0xFF515151),
+                  fontFamily: 'Inter',
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF5F5F5)
+                      : address.isNotEmpty
+                          ? const Color(0xFF121212)
+                          : const Color(0xFF515151),
                 ),
               ),
           ],
@@ -541,4 +676,3 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     );
   }
 }
-
