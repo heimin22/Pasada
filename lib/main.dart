@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,7 +6,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
+import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 
@@ -44,34 +45,71 @@ Future<void> main() async {
 
 final supabase = Supabase.instance.client;
 
-class PasadaPassenger extends StatelessWidget {
+class PasadaPassenger extends StatefulWidget {
   const PasadaPassenger({super.key});
 
-  // root of the application
+  @override
+  State<PasadaPassenger> createState() => _PasadaPassengerState();
+}
+
+class _PasadaPassengerState extends State<PasadaPassenger> {
+  final ThemeController _themeController = ThemeController();
+
+  @override
+  void initState() {
+    super.initState();
+    _themeController.initialize();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      // screens: const PasadaHomePage(title: 'Pasada'),
-      home: const AuthGate(),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'createAccount': (BuildContext context) => const CreateAccountPage(),
-        'cred': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
-          return CreateAccountCredPage(
-            title: 'Create Account',
-            email: args['email'],
-          );
-        },
-        'loginAccount': (BuildContext context) => const LoginAccountPage(),
+    return ListenableBuilder(
+      listenable: _themeController,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Pasada',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            scaffoldBackgroundColor: _themeController.isDarkMode
+                ? const Color(0xFF121212)
+                : const Color(0xFFF5F5F5),
+            fontFamily: 'Inter',
+            useMaterial3: true,
+            brightness: _themeController.isDarkMode
+                ? Brightness.dark
+                : Brightness.light,
+            textTheme: TextTheme(
+              bodyLarge: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+              bodyMedium: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+              bodySmall: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+            ),
+          ),
+          // screens: const PasadaHomePage(title: 'Pasada'),
+          home: const AuthGate(),
+          routes: <String, WidgetBuilder>{
+            'start': (BuildContext context) => const PasadaPassenger(),
+            'createAccount': (BuildContext context) =>
+                const CreateAccountPage(),
+            'cred': (context) {
+              final args = ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+              return CreateAccountCredPage(
+                title: 'Create Account',
+                email: args['email'],
+              );
+            },
+            'loginAccount': (BuildContext context) => const LoginAccountPage(),
+          },
+        );
       },
     );
   }
@@ -79,9 +117,7 @@ class PasadaPassenger extends StatelessWidget {
 
 // make the app run
 class PasadaHomePage extends StatefulWidget {
-  const PasadaHomePage({super.key, required this.title});
-
-  final String title;
+  const PasadaHomePage({super.key});
 
   @override
   State<PasadaHomePage> createState() => PasadaHomePageState();
@@ -96,13 +132,15 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       if (args?['accountCreated'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account created successfully!')),
+          const SnackBar(content: Text('Account created successfully!')),
         );
         ModalRoute.of(context)?.settings.arguments != null;
       }
     });
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      // Force light background for this screen
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
         child: SizedBox(
           height: MediaQuery.of(context).size.height,
@@ -146,7 +184,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
             style: TextStyle(
               fontSize: 40,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF121212),
+              color: Color(0xFF121212), // Force dark text
             ),
           ),
         ),
@@ -159,7 +197,7 @@ class PasadaHomePageState extends State<PasadaHomePage> {
             style: TextStyle(
               fontWeight: FontWeight.w500,
               fontSize: 16,
-              color: Color(0xFF121212),
+              color: Color(0xFF121212), // Force dark text
             ),
           ),
         )
@@ -190,9 +228,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           child: const Text(
             'Create an Account',
             style: TextStyle(
-                color: Color(0xFFF2F2F2),
-                fontWeight: FontWeight.w600,
-                fontSize: 20),
+              color: Color(0xFFF2F2F2),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
           ),
         ),
       ),
@@ -226,9 +265,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
           child: const Text(
             'Log-in',
             style: TextStyle(
-                color: Color(0xFF121212),
-                fontWeight: FontWeight.w600,
-                fontSize: 20),
+              color: Color(0xFF121212),
+              fontWeight: FontWeight.w600,
+              fontSize: 20,
+            ),
           ),
         ),
       ),

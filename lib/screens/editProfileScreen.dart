@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:image_picker/image_picker.dart';
@@ -91,6 +92,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -104,20 +106,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         appBar: AppBar(
           leading: IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back),
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
           ),
-          title: const Text(
+          title: Text(
             'Edit Profile',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
-              color: Color(0xFF121212),
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
           ),
-          backgroundColor: Color(0xFFF5F5F5),
+          backgroundColor:
+              isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
           elevation: 1.0,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                isDarkMode ? Brightness.light : Brightness.dark,
+            statusBarBrightness:
+                isDarkMode ? Brightness.dark : Brightness.light,
+          ),
         ),
+        backgroundColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
         body: SafeArea(
           child: Column(
             children: [
@@ -167,11 +186,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 48),
-                        buildInputField('Name', nameController),
-                        buildPhoneNumberField(),
-                        buildInputField('Email Address', emailController),
+                        buildInputField('Name', nameController, isDarkMode),
+                        buildPhoneNumberField(isDarkMode),
+                        buildInputField(
+                            'Email Address', emailController, isDarkMode),
                         const SizedBox(height: 24),
-                        buildLinkedAccountsSection(screenSize.width),
+                        buildLinkedAccountsSection(
+                            screenSize.width, isDarkMode),
                       ],
                     ),
                   ),
@@ -208,32 +229,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget buildInputField(String label, TextEditingController controller) {
+  Widget buildInputField(
+      String label, TextEditingController controller, bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w600,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
-          cursorColor: const Color(0xFF121212),
-          style: const TextStyle(
+          cursorColor:
+              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
             fontFamily: 'Inter',
           ),
           decoration: InputDecoration(
             filled: true,
-            fillColor: Color(0xFFF5F5F5),
+            fillColor:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -249,53 +275,74 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget buildPhoneNumberField() {
+  Widget buildPhoneNumberField(bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Mobile Number',
           style: TextStyle(
             fontSize: 13,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w600,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: Color(0xFFF5F5F5),
+            color:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
-              Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                  ),
-                  child: const Text(
-                    '+63',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF121212),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/svg/phFlag.svg',
+                      width: 24,
+                      height: 24,
                     ),
-                  )),
+                    const SizedBox(width: 10),
+                    Text(
+                      '+63',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Container(
                 width: 1,
                 height: 20,
-                color: Color(0xFF515151),
+                color: isDarkMode
+                    ? const Color(0xFF515151)
+                    : const Color(0xFF515151),
               ),
               Expanded(
                 child: TextField(
                   controller: mobileNumberController,
-                  cursorColor: const Color(0xFF121212),
+                  cursorColor: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                   keyboardType: TextInputType.phone,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF121212),
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
                     fontFamily: 'Inter',
                   ),
                   decoration: const InputDecoration(
@@ -315,16 +362,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget buildLinkedAccountsSection(double screenWidth) {
+  Widget buildLinkedAccountsSection(double screenWidth, bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Linked Accounts',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF121212),
+            fontFamily: 'Inter',
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ),
         const SizedBox(height: 8),
@@ -334,7 +383,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             horizontal: 16,
           ),
           decoration: BoxDecoration(
-            color: Color(0xFFF5F5F5),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E1E)
+                : const Color(0xFFF5F5F5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -346,26 +397,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     'assets/svg/googleIcon.svg',
                     width: 24,
                     height: 24,
+                    // Removing any color override to keep original Google colors
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'Google',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF121212),
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const Spacer(), // This will push the switch to the right
-              // Google Switch
+              const Spacer(),
               Transform.scale(
                 scale: 0.8,
                 child: CupertinoSwitch(
                   value: isGoogleLinked,
-                  onChanged:
-                      null, // Keep null since we don't want to allow manual changes
+                  onChanged: null,
                   activeColor: const Color(0xFF00CC58),
                 ),
               ),

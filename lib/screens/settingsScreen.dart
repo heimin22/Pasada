@@ -14,13 +14,12 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    return const SettingsScreenStateful(title: 'Pasada');
+    return const SettingsScreenStateful();
   }
 }
 
 class SettingsScreenStateful extends StatefulWidget {
-  const SettingsScreenStateful({super.key, required this.title});
-  final String title;
+  const SettingsScreenStateful({super.key});
 
   @override
   State<SettingsScreenStateful> createState() => SettingsScreenPageState();
@@ -32,8 +31,11 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       body: SafeArea(
         child: Column(
           children: [
@@ -42,10 +44,12 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               screenHeight: screenSize.height,
               screenWidth: screenSize.width,
             ),
-            const Divider(
+            Divider(
               height: 0,
               thickness: 12,
-              color: Color(0xFFE9E9E9),
+              color: isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : const Color(0xFFE9E9E9),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -60,10 +64,12 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // settings section widget
   Widget buildSettingsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.003),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
       child: Container(
-        color: Color(0xFFF5F5F5),
+        color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -102,8 +108,13 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   // dito yung mga single tappable list items para sa settings ng sections
   Widget buildSettingsListItem(
-      String title, double screenWidth, VoidCallback onTap,
-      {bool isDestructive = false}) {
+    String title,
+    double screenWidth,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -123,8 +134,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                     style: TextStyle(
                       fontSize: 13,
                       color: isDestructive
-                          ? Color(0xFFD7481D)
-                          : Theme.of(context).textTheme.bodyMedium?.color,
+                          ? const Color(0xFFD7481D)
+                          : (isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212)),
                       fontWeight:
                           isDestructive ? FontWeight.w700 : FontWeight.w500,
                     ),
@@ -132,7 +145,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: Color(0xFF121212),
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                   size: 22,
                 )
               ],
@@ -149,19 +164,16 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   // builds the header for a settings section
   Widget buildSectionHeader(String title, double screenWidth) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: EdgeInsets.only(
-        left: screenWidth * 0.05,
-        right: screenWidth * 0.05,
-        top: 10,
-        bottom: 15,
-      ),
+      padding: EdgeInsets.all(screenWidth * 0.03),
       child: Text(
         title,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF121212),
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         ),
       ),
     );

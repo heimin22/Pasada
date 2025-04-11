@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 
@@ -13,12 +14,19 @@ class PreferencesScreen extends StatefulWidget {
 
 class PreferencesScreenState extends State<PreferencesScreen> {
   bool notificationsEnabled = true;
+  bool isDarkMode = false;
   final AuthService authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     loadNotificationPreferences();
+    loadThemePreferences();
+  }
+
+  Future<void> loadThemePreferences() async {
+    final darkMode = await ThemePreferences.getDarkModeStatus();
+    setState(() => isDarkMode = darkMode);
   }
 
   Future<void> loadNotificationPreferences() async {
@@ -26,68 +34,87 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     setState(() => notificationsEnabled = enabled);
   }
 
+  Future<void> toggleDarkMode(bool value) async {
+    // Update UI immediately
+    setState(() => isDarkMode = value);
+
+    // Update theme preferences
+    await ThemePreferences.setDarkModeStatus(value);
+
+    // Update the theme immediately using ThemeController
+    if (mounted) {
+      final themeController = ThemeController();
+      await themeController.toggleTheme(context);
+    }
+  }
+
   Future<void> toggleNotification(bool value) async {
-    await NotificationPreference.setNotificationStatus(value);
     setState(() => notificationsEnabled = value);
+    await NotificationPreference.setNotificationStatus(value);
   }
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: buildAppBar(),
-      body: buildBody(screenSize),
+      appBar: buildAppBar(isDarkMode),
+      body: buildBody(screenSize, isDarkMode),
     );
   }
 
-  PreferredSizeWidget buildAppBar() {
+  PreferredSizeWidget buildAppBar(bool isDarkMode) {
     return AppBar(
-      title: const Text(
+      title: Text(
         'Preferences',
         style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 18,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF121212),
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         ),
       ),
-      backgroundColor: Color(0xFFF5F5F5),
-      foregroundColor: Color(0xFF121212),
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      foregroundColor:
+          isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
       elevation: 1.0,
     );
   }
 
-  Widget buildBody(Size screenSize) {
+  Widget buildBody(Size screenSize, bool isDarkMode) {
     return SafeArea(
       child: Column(
         children: [
           SizedBox(height: 12),
-          buildNotificationSection(screenSize.width),
-          buildAppSettingsSection(screenSize.width, screenSize.height),
+          buildNotificationSection(screenSize.width, isDarkMode),
+          buildAppSettingsSection(
+              screenSize.width, screenSize.height, isDarkMode),
         ],
       ),
     );
   }
 
   // settings section ng notification
-  Widget buildNotificationSection(double screenWidth) {
+  Widget buildNotificationSection(double screenWidth, bool isDarkMode) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
       child: Container(
         decoration: BoxDecoration(
-          color: Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(18),
+          color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
-            buildSectionHeader('Notifications', screenWidth),
+            buildSectionHeader('Notifications', screenWidth, isDarkMode),
             buildToggleListItem(
               'Push Notifications',
               'Enable/disable app notifications',
               notificationsEnabled,
               toggleNotification,
               screenWidth,
+              isDarkMode,
             ),
           ],
         ),
@@ -96,22 +123,27 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   }
 
   // additional application settings section
-  Widget buildAppSettingsSection(double screenWidth, double screenHeight) {
+  Widget buildAppSettingsSection(
+      double screenWidth, double screenHeight, bool isDarkMode) {
     return Padding(
       padding: EdgeInsets.symmetric(
           vertical: screenHeight * 0.02, horizontal: screenWidth * 0.03),
       child: Container(
         decoration: BoxDecoration(
-          color: Color(0xFFF5F5F5),
+          color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
-            buildSectionHeader('App Settings', screenWidth),
-            buildSettingsListItem(
-                'Appearance', 'Change theme preferences', screenWidth, () {
-              debugPrint('Appearance tapped');
-            }),
+            buildSectionHeader('App Settings', screenWidth, isDarkMode),
+            buildToggleListItem(
+              'Dark Mode',
+              'Switch screen appearance to dark mode',
+              isDarkMode,
+              toggleDarkMode,
+              screenWidth,
+              isDarkMode,
+            ),
           ],
         ),
       ),
@@ -119,17 +151,19 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   }
 
 // section header helper
-  Widget buildSectionHeader(String title, double screenWidth) {
+  Widget buildSectionHeader(String title, double screenWidth, bool isDarkMode) {
     return Padding(
       padding: EdgeInsets.all(screenWidth * 0.03),
       child: Row(
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF121212),
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
           ),
         ],
@@ -144,6 +178,7 @@ class PreferencesScreenState extends State<PreferencesScreen> {
     bool value,
     Function(bool) onChanged,
     double screenWidth,
+    bool isDarkMode,
   ) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -161,10 +196,12 @@ class PreferencesScreenState extends State<PreferencesScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF121212),
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -172,7 +209,9 @@ class PreferencesScreenState extends State<PreferencesScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF515151),
+                      color: isDarkMode
+                          ? const Color(0xFFAAAAAA)
+                          : const Color(0xFF515151),
                     ),
                   ),
                 ],
@@ -182,7 +221,7 @@ class PreferencesScreenState extends State<PreferencesScreen> {
                 child: CupertinoSwitch(
                   value: value,
                   onChanged: onChanged,
-                  activeTrackColor: const Color(0xFF00CC58),
+                  activeColor: const Color(0xFF00CC58),
                 ),
               ),
             ],
@@ -190,7 +229,11 @@ class PreferencesScreenState extends State<PreferencesScreen> {
         ),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
-          child: const Divider(height: 1),
+          child: Divider(
+            height: 1,
+            color:
+                isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0),
+          ),
         ),
       ],
     );

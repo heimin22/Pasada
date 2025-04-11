@@ -130,6 +130,7 @@ class LoginScreen extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
       body: Column(
         children: [
           Padding(
@@ -183,7 +184,7 @@ class LoginScreen extends State<LoginPage> {
         onPressed: () {
           Navigator.pop(context);
         },
-        icon: Icon(Icons.arrow_back),
+        icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
       ),
     );
   }
@@ -205,6 +206,12 @@ class LoginScreen extends State<LoginPage> {
           ),
           decoration: InputDecoration(
             labelText: 'Enter your password',
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              fontFamily: 'Inter',
+              color: Color(0xFF121212),
+            ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
               color: const Color(0xFF121212),
@@ -216,9 +223,6 @@ class LoginScreen extends State<LoginPage> {
               icon: Icon(
                 isPasswordVisible ? Icons.visibility : Icons.visibility_off,
               ),
-            ),
-            labelStyle: const TextStyle(
-              fontSize: 12,
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0XFF00CC58),
@@ -258,7 +262,10 @@ class LoginScreen extends State<LoginPage> {
           decoration: InputDecoration(
             labelText: 'Enter your email or phone number',
             labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
               fontSize: 12,
+              fontFamily: 'Inter',
+              color: Color(0xFF121212),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
