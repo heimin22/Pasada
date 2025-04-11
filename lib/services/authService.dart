@@ -257,7 +257,7 @@ class AuthService {
     }
   }
 
-  Future<String?> uploadProfileImage(File imageFile) async {
+  Future<String?> uploadNewProfileImage(File imageFile) async {
     try {
       // generate a unique file name using timestamp
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -266,15 +266,14 @@ class AuthService {
 
       // upload the file to Supabase Storage
       final response =
-          await supabase.storage.from('avatar_url').upload(fileName, imageFile);
+          await supabase.storage.from('avatars').upload(fileName, imageFile);
 
       if (response.isEmpty) {
         throw Exception('Failed to upload image');
       }
 
       // get the public URL of the uploaded file
-      final imageUrl =
-          supabase.storage.from('avatar_url').getPublicUrl(fileName);
+      final imageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
 
       return imageUrl;
     } catch (e) {

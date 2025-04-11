@@ -64,7 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       // upload yung image if selected
       String? newAvatarUrl;
       if (_imageFile != null) {
-        newAvatarUrl = await authService.uploadProfileImage(_imageFile!);
+        newAvatarUrl = await authService.uploadNewProfileImage(_imageFile!);
       }
 
       await authService.updateProfile(
