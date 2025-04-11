@@ -108,8 +108,8 @@ class PreferencesScreenState extends State<PreferencesScreen> {
         child: Column(
           children: [
             buildSectionHeader('App Settings', screenWidth),
-            buildSettingsListItem(
-                'Appearance', 'Change theme preferences', screenWidth, () {
+            buildSettingsListItem('Dark Mode',
+                'Switch screen appearance to dark mode', screenWidth, () {
               debugPrint('Appearance tapped');
             }),
           ],
