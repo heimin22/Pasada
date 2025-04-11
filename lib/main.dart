@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
+import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
@@ -44,8 +45,26 @@ Future<void> main() async {
 
 final supabase = Supabase.instance.client;
 
-class PasadaPassenger extends StatelessWidget {
+class PasadaPassenger extends StatefulWidget {
   const PasadaPassenger({super.key});
+
+  @override
+  State<PasadaPassenger> createState() => _PasadaPassengerState();
+}
+
+class _PasadaPassengerState extends State<PasadaPassenger> {
+  bool isDarkMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadThemeMode();
+  }
+
+  Future<void> loadThemeMode() async {
+    final darkMode = await ThemePreferences.getDarkModeStatus();
+    setState(() => isDarkMode = darkMode);
+  }
 
   // root of the application
   @override
@@ -54,9 +73,25 @@ class PasadaPassenger extends StatelessWidget {
       title: 'Pasada',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
+        scaffoldBackgroundColor:
+            isDarkMode ? const Color(0xFF121212) : Color(0xFFF5F5F5),
         fontFamily: 'Inter',
         useMaterial3: true,
+        brightness: isDarkMode ? Brightness.dark : Brightness.light,
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212)),
+          bodyMedium: TextStyle(
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212)),
+          bodySmall: TextStyle(
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212)),
+        ),
       ),
       // screens: const PasadaHomePage(title: 'Pasada'),
       home: const AuthGate(),
@@ -79,9 +114,7 @@ class PasadaPassenger extends StatelessWidget {
 
 // make the app run
 class PasadaHomePage extends StatefulWidget {
-  const PasadaHomePage({super.key, required this.title});
-
-  final String title;
+  const PasadaHomePage({super.key});
 
   @override
   State<PasadaHomePage> createState() => PasadaHomePageState();
