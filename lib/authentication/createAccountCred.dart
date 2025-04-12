@@ -139,7 +139,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     return Container(
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
       child: Text(
-        'Display Name',
+        'Name',
         style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
       ),
     );
@@ -366,17 +366,24 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                   'contact_number': contactNumber,
                 },
               );
+
               if (authResponse.user != null) {
                 debugPrint('User signed up: ${authResponse.user!.email}');
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const selectionScreen()));
+                if (mounted) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const selectionScreen()));
+                }
               }
             } catch (e) {
               if (mounted) {
+                final errorMessage = e.toString().contains('unexpected_failure')
+                    ? 'Failed to create account. Please try again.'
+                    : 'Error: $e';
+
                 Fluttertoast.showToast(
-                  msg: 'Error saving details: $e',
+                  msg: errorMessage,
                   toastLength: Toast.LENGTH_SHORT,
                   gravity: ToastGravity.BOTTOM,
                   backgroundColor: Color(0xFFF5F5F5),

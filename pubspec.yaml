@@ -118,6 +118,8 @@ flutter:
     - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
     - assets/svg/paymongo_logo.svg
+    - assets/svg/default_user_profile.svg
+    - assets/png/default_user_profile.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

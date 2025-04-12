@@ -94,11 +94,14 @@ class SettingsProfileHeader extends StatelessWidget {
   Widget buildDefaultAvatar() {
     return CircleAvatar(
       radius: screenWidth * 0.07,
-      backgroundColor: const Color(0xFF000CC58),
-      child: Icon(
-        Icons.person,
-        size: screenWidth * 0.1,
-        color: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.transparent,
+      child: ClipOval(
+        child: Image.asset(
+          'assets/png/default_user_profile.png',
+          width: screenWidth * 0.14,
+          height: screenWidth * 0.14,
+          fit: BoxFit.cover,
+        ),
       ),
     );
   }
