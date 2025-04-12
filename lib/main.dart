@@ -13,24 +13,43 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding
-      .ensureInitialized(); // ensure initialization for async tasks
-  await dotenv.load(fileName: ".env");
+  WidgetsFlutterBinding.ensureInitialized();
 
-  // initialize supabase
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
-    ),
-    realtimeClientOptions: const RealtimeClientOptions(
-      logLevel: RealtimeLogLevel.info,
-    ),
-    storageOptions: const StorageClientOptions(
-      retryAttempts: 10,
-    ),
-  );
+  // Add error handling for env file
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Failed to load environment variables: $e");
+    return;
+  }
+
+  // Validate required environment variables
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+  if (supabaseUrl == null || supabaseKey == null) {
+    debugPrint("Missing required Supabase configuration");
+    return;
+  }
+
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
+      realtimeClientOptions: const RealtimeClientOptions(
+        logLevel: RealtimeLogLevel.info,
+      ),
+      storageOptions: const StorageClientOptions(
+        retryAttempts: 3, // Reduced from 10 for security
+      ),
+    );
+  } catch (e) {
+    debugPrint("Failed to initialize Supabase: $e");
+    return;
+  }
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 

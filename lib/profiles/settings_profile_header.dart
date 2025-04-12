@@ -19,6 +19,12 @@ class SettingsProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    String sanitizeUserName(String? name) {
+      if (name == null || name.isEmpty) return 'Guest user';
+      // Remove any potentially harmful characters
+      return name.replaceAll(RegExp(r'[<>&"/]'), '');
+    }
+
     return FutureBuilder<Map<String, dynamic>?>(
       future: authService.getCurrentUserData(),
       builder: (context, snapshot) {
@@ -30,7 +36,7 @@ class SettingsProfileHeader extends StatelessWidget {
           return const CircularProgressIndicator();
         }
         final userData = snapshot.data;
-        final userName = userData?['display_name'] ?? 'Guest user';
+        final userName = sanitizeUserName(userData?['display_name']);
         final avatarUrl = userData?['avatar_url'];
 
         return Container(
@@ -94,14 +100,11 @@ class SettingsProfileHeader extends StatelessWidget {
   Widget buildDefaultAvatar() {
     return CircleAvatar(
       radius: screenWidth * 0.07,
-      backgroundColor: Colors.transparent,
-      child: ClipOval(
-        child: Image.asset(
-          'assets/png/default_user_profile.png',
-          width: screenWidth * 0.14,
-          height: screenWidth * 0.14,
-          fit: BoxFit.cover,
-        ),
+      backgroundColor: const Color(0xFF000CC58),
+      child: Icon(
+        Icons.person,
+        size: screenWidth * 0.1,
+        color: const Color(0xFFF5F5F5),
       ),
     );
   }
