@@ -209,12 +209,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     // remove natin yung delay and call agad yung location if available
 
     if (currentLocation != null) {
-      controller.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: currentLocation!, zoom: 15),
-        ),
-      );
-      fetchLocationAtCenter();
+      controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
     }
   }
 
@@ -495,12 +490,6 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             onCameraIdle: () {
               fetchLocationAtCenter();
             },
-            // Add these optimizations
-            liteModeEnabled: true, // Faster rendering on Android
-            compassEnabled: false, // Disable compass for faster loading
-            tiltGesturesEnabled: false, // Disable tilt for better performance
-            buildingsEnabled: false, // Disable 3D buildings
-            mapToolbarEnabled: false, // Disable map toolbar
           ),
           Center(
             child: Container(
