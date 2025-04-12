@@ -210,7 +210,7 @@ class LoginScreen extends State<LoginPage> {
               fontWeight: FontWeight.w600,
               fontSize: 12,
               fontFamily: 'Inter',
-              color: Color(0xFF121212),
+              color: Color(0xFF515151),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
@@ -265,7 +265,7 @@ class LoginScreen extends State<LoginPage> {
               fontWeight: FontWeight.w600,
               fontSize: 12,
               fontFamily: 'Inter',
-              color: Color(0xFF121212),
+              color: Color(0xFF515151),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
@@ -291,23 +291,19 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerPassText() {
     return Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        child: const Row(
-          children: [
-            Text(
-              'Enter your ',
-              style: TextStyle(
-                color: Color(0xFF121212),
-              ),
-            ),
-            Text(
-              'password.',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-              ),
-            )
-          ],
-        ));
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      child: const Row(
+        children: [
+          Text(
+            'Password',
+            style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: Color(0xFF121212)),
+          ),
+        ],
+      ),
+    );
   }
 
   Container buildPassengerEmailNumberText() {
@@ -316,16 +312,12 @@ class LoginScreen extends State<LoginPage> {
       child: const Row(
         children: [
           Text(
-            'Enter your ',
-            style: TextStyle(color: Color(0xFF121212)),
-          ),
-          Text(
-            'email',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          Text(
-            ' to continue',
-            style: TextStyle(color: Color(0xFF121212)),
+            'Email or Phone Number',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+              color: Color(0xFF121212),
+            ),
           ),
         ],
       ),

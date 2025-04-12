@@ -233,12 +233,26 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       // Location FAB
                       LocationFAB(
                         heroTag: "homeLocationFAB",
-                        onPressed: () {
+                        onPressed: () async {
                           final mapState = mapScreenKey.currentState;
-                          if (mapState != null &&
-                              mapState.currentLocation != null) {
-                            mapState
-                                .animateToLocation(mapState.currentLocation!);
+                          if (mapState != null) {
+                            // First ensure location is initialized
+                            if (!mapState.isLocationInitialized) {
+                              await mapState.initializeLocation();
+                            }
+                            if (mapState.currentLocation != null) {
+                              await mapState
+                                  .animateToLocation(mapState.currentLocation!);
+                            } else {
+                              // Show error if location is still not available
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      "Unable to get current location. Please check your location settings."),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
                           }
                         },
                         iconSize: iconSize,
@@ -247,12 +261,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             Theme.of(context).brightness == Brightness.dark
                                 ? const Color(0xFF1E1E1E)
                                 : const Color(0xFFF5F5F5),
-                        iconColor: Theme.of(context).brightness ==
-                                Brightness.dark
-                            ? const Color(
-                                0xFF00E865) // Lighter green for dark mode
-                            : const Color(
-                                0xFF00CC58), // Original green for light mode
+                        iconColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF00E865)
+                                : const Color(0xFF00CC58),
                       ),
                       SizedBox(height: fabVerticalSpacing),
                       // Location Container

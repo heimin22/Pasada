@@ -1,3 +1,5 @@
+// ignore_for_file: file_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -69,30 +71,29 @@ class MapScreenState extends State<MapScreen>
   bool isLocationInitialized = false;
   bool errorDialogVisible = false;
 
+  // Add this field to store the current controller
+  GoogleMapController? _mapController;
+
   // Override methods
   /// state of the app
   @override
   void initState() {
-    // make sure the widgets binding with an instance of observer is here
-    // call the initLocation() method too
-    // then get the location updates
     super.initState();
-    // WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         initializeLocation();
         handleLocationUpdates();
       }
     });
-    // getLocationUpdates();
   }
 
   /// disposing of functions
   @override
   void dispose() {
-    // location subscription should be cancelled
+    WidgetsBinding.instance.removeObserver(this);
+    _mapController?.dispose();
     locationSubscription?.cancel();
-    // WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -261,7 +262,7 @@ class MapScreenState extends State<MapScreen>
 
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity == ConnectivityResult.none) {
+    if (connectivity.contains(ConnectivityResult.none)) {
       showError('No internet connection');
       return false;
     }
@@ -274,7 +275,7 @@ class MapScreenState extends State<MapScreen>
       if (!hasConnection) return;
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey == null) {
+      if (apiKey.isEmpty) {
         showDebugToast('API key not found');
         if (kDebugMode) {
           print('API key not found');
@@ -351,63 +352,59 @@ class MapScreenState extends State<MapScreen>
         return;
       }
 
-      if (response != null) {
-        final data = json.decode(response);
-        debugPrint('API Response: $data');
-        debugPrint('Routes; ${data['routes']}');
-        if (data['routes']?.isNotEmpty ?? false) {
-          final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-          List<PointLatLng> decodedPolyline =
-              polylinePoints.decodePolyline(polyline);
-          List<LatLng> polylineCoordinates = decodedPolyline
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-          if (mounted) {
-            setState(() {
-              polylines = {
-                const PolylineId('route'): Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: polylineCoordinates,
-                  color: Color(0xFF067837),
-                  width: 8,
-                )
-              };
-            });
-          }
+      debugPrint('API Response: $data');
+      debugPrint('Routes; ${data['routes']}');
+      if (data['routes']?.isNotEmpty ?? false) {
+        final polyline = data['routes'][0]['polyline']['encodedPolyline'];
+        List<PointLatLng> decodedPolyline =
+            polylinePoints.decodePolyline(polyline);
+        List<LatLng> polylineCoordinates = decodedPolyline
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+        if (mounted) {
+          setState(() {
+            polylines = {
+              const PolylineId('route'): Polyline(
+                polylineId: const PolylineId('route'),
+                points: polylineCoordinates,
+                color: Color(0xFF067837),
+                width: 8,
+              )
+            };
+          });
+        }
 
-          showDebugToast('Route generated successfully');
+        showDebugToast('Route generated successfully');
 
-          final legs = data['routes'][0]['legs'];
-          if (legs is! List || legs.isEmpty) {
-            debugPrint('Legs data is invalid: $legs');
-            setState(() => etaText = 'N/A');
-            return;
-          }
-
-          final firstLeg = legs[0];
-          final duration = firstLeg['duration'];
-          if (duration is! String || !duration.endsWith('s')) {
-            debugPrint('Invalid duration format: $duration');
-            setState(() => etaText = 'N/A');
-            return;
-          }
-
-          final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
-          final durationSeconds = int.tryParse(secondsString) ?? 0;
-          final durationText = formatDuration(durationSeconds);
-
-          setState(() => etaText = durationText);
-          if (widget.onEtaUpdated != null) {
-            widget.onEtaUpdated!(durationText);
-          }
-
-          // debug testing
-          debugPrint('API Response: ${json.encode(data)}'); // Full response
-          debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-          debugPrint(
-              'Duration Type: ${duration.runtimeType}'); // Verify map type
+        final legs = data['routes'][0]['legs'];
+        if (legs is! List || legs.isEmpty) {
+          debugPrint('Legs data is invalid: $legs');
+          setState(() => etaText = 'N/A');
           return;
         }
+
+        final firstLeg = legs[0];
+        final duration = firstLeg['duration'];
+        if (duration is! String || !duration.endsWith('s')) {
+          debugPrint('Invalid duration format: $duration');
+          setState(() => etaText = 'N/A');
+          return;
+        }
+
+        final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
+        final durationSeconds = int.tryParse(secondsString) ?? 0;
+        final durationText = formatDuration(durationSeconds);
+
+        setState(() => etaText = durationText);
+        if (widget.onEtaUpdated != null) {
+          widget.onEtaUpdated!(durationText);
+        }
+
+        // debug testing
+        debugPrint('API Response: ${json.encode(data)}'); // Full response
+        debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
+        debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
+        return;
       }
       showDebugToast('Failed to generate route');
       if (kDebugMode) {
@@ -440,6 +437,19 @@ class MapScreenState extends State<MapScreen>
 
   void onMapCreated(GoogleMapController controller) {
     mapController.complete(controller);
+  }
+
+  // Add this method to update map style
+  void _updateMapStyle() {
+    if (_mapController == null) return;
+
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    _updateMapStyle();
   }
 
   // helper function for showing alert dialogs to reduce repetition
@@ -524,42 +534,9 @@ class MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Dark mode style for Google Maps
-    final String mapStyle = isDarkMode
-        ? '''[
-      {
-        "elementType": "geometry",
-        "stylers": [{"color": "#242f3e"}]
-      },
-      {
-        "elementType": "labels.text.fill",
-        "stylers": [{"color": "#746855"}]
-      },
-      {
-        "elementType": "labels.text.stroke",
-        "stylers": [{"color": "#242f3e"}]
-      },
-      {
-        "featureType": "road",
-        "elementType": "geometry",
-        "stylers": [{"color": "#38414e"}]
-      },
-      {
-        "featureType": "road",
-        "elementType": "geometry.stroke",
-        "stylers": [{"color": "#212a37"}]
-      },
-      {
-        "featureType": "road",
-        "elementType": "labels.text.fill",
-        "stylers": [{"color": "#9ca5b3"}]
-      }
-    ]'''
-        : '';
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isLocationInitialized) {
@@ -578,11 +555,40 @@ class MapScreenState extends State<MapScreen>
               )
             : GoogleMap(
                 onMapCreated: (controller) {
+                  _mapController = controller;
                   mapController.complete(controller);
-                  if (isDarkMode) {
-                    controller.setMapStyle(mapStyle);
-                  }
                 },
+                style: Theme.of(context).brightness == Brightness.dark
+                    ? '''[
+                        {
+                          "elementType": "geometry",
+                          "stylers": [{"color": "#242f3e"}]
+                        },
+                        {
+                          "elementType": "labels.text.fill",
+                          "stylers": [{"color": "#746855"}]
+                        },
+                        {
+                          "elementType": "labels.text.stroke",
+                          "stylers": [{"color": "#242f3e"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry",
+                          "stylers": [{"color": "#38414e"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry.stroke",
+                          "stylers": [{"color": "#212a37"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.fill",
+                          "stylers": [{"color": "#9ca5b3"}]
+                        }
+                      ]'''
+                    : '',
                 initialCameraPosition: CameraPosition(
                   target: currentLocation!,
                   zoom: 15.0,

@@ -7,10 +7,20 @@ import 'dart:convert';
 import '../network/networkUtilities.dart';
 
 class LandmarkService {
-  static Future<Map<String, dynamic>?> getNearestLandmark(LatLng position) async {
-    final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
-    if (apiKey.isEmpty) {
-      debugPrint("API key is empty");
+  static String? _cachedApiKey;
+
+  static Future<String?> _getSecureApiKey() async {
+    if (_cachedApiKey != null) return _cachedApiKey;
+    // Implement secure storage retrieval
+    _cachedApiKey = dotenv.env['ANDROID_MAPS_API_KEY'];
+    return _cachedApiKey;
+  }
+
+  static Future<Map<String, dynamic>?> getNearestLandmark(
+      LatLng position) async {
+    final apiKey = await _getSecureApiKey();
+    if (apiKey == null) {
+      debugPrint("Failed to retrieve API key");
       return null;
     }
 

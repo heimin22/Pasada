@@ -60,6 +60,7 @@ dependencies:
   app_links: ^6.4.0
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
+  permission_handler: ^12.0.0+1 
 
 dev_dependencies:
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -117,6 +118,8 @@ flutter:
     - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
     - assets/svg/paymongo_logo.svg
+    - assets/svg/default_user_profile.svg
+    - assets/png/default_user_profile.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

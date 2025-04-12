@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pasada_passenger_app/services/landmarkService.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
@@ -182,6 +183,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
+    locationService.changeSettings(
+      interval: 1000,
+      accuracy: LocationAccuracy.high,
+    );
+    // Get location immediately
     getCurrentLocation();
   }
 
@@ -194,14 +200,17 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
     isMapReady = true;
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     if (isDarkMode) {
       controller.setMapStyle(darkMapStyle);
     }
 
-    Future.delayed(Duration(milliseconds: 300), () {
-      getCurrentLocation();
-    });
+    // remove natin yung delay and call agad yung location if available
+
+    if (currentLocation != null) {
+      controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+    }
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -388,27 +397,39 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   Future<void> animateToCurrentLocation() async {
+    if (!isMapReady) return;
+
     try {
-      setState(() => isLoading = true);
+      // use natin yung existing location if available
+
+      if (currentLocation != null) {
+        await mapController!.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: currentLocation!, zoom: 17),
+          ),
+        );
+        return;
+      }
 
       final locationData = await locationService.getLocation();
       final currentLatLng =
           LatLng(locationData.latitude!, locationData.longitude!);
 
-      setState(() {
-        currentLocation = currentLatLng;
-        isLoading = false;
-      });
-
       await mapController.animateCamera(
-        CameraUpdate.newLatLngZoom(
-          currentLatLng,
-          17,
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: currentLatLng,
+            zoom: 17,
+          ),
         ),
       );
+
+      // Only update the current location marker without reloading the screen
+      if (mounted) {
+        setState(() => currentLocation = currentLatLng);
+      }
     } catch (e) {
       debugPrint("Error in animateToCurrentLocation: $e");
-      setState(() => isLoading = false);
     }
   }
 
