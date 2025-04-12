@@ -183,6 +183,11 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
+    locationService.changeSettings(
+      interval: 1000,
+      accuracy: LocationAccuracy.high,
+    );
+    // Get location immediately
     getCurrentLocation();
   }
 
@@ -195,14 +200,22 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
     isMapReady = true;
+
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     if (isDarkMode) {
       controller.setMapStyle(darkMapStyle);
     }
 
-    Future.delayed(Duration(milliseconds: 300), () {
-      getCurrentLocation();
-    });
+    // remove natin yung delay and call agad yung location if available
+
+    if (currentLocation != null) {
+      controller.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: currentLocation!, zoom: 15),
+        ),
+      );
+      fetchLocationAtCenter();
+    }
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -482,6 +495,12 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             onCameraIdle: () {
               fetchLocationAtCenter();
             },
+            // Add these optimizations
+            liteModeEnabled: true, // Faster rendering on Android
+            compassEnabled: false, // Disable compass for faster loading
+            tiltGesturesEnabled: false, // Disable tilt for better performance
+            buildingsEnabled: false, // Disable 3D buildings
+            mapToolbarEnabled: false, // Disable map toolbar
           ),
           Center(
             child: Container(
