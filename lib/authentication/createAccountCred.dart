@@ -452,6 +452,11 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -461,19 +466,31 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       }
     } catch (e) {
       if (mounted) {
-        String userMessage;
+        late String userMessage;
 
         // Handle specific error cases
         if (e is PostgrestException && e.code == '23505') {
-          // Postgres unique violation code
-          userMessage = 'This account information is already in use';
+          // Only show duplicate entry message if it's actually a duplicate
+          final errorMessage = e.message.toLowerCase();
+          if (errorMessage.contains('email') ||
+              errorMessage.contains('contact_number')) {
+            userMessage = 'This account information is already in use';
+          } else {
+            // If it's some other database error, proceed with sign in
+            if (mounted) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const selectionScreen()),
+                (route) => false,
+              );
+              return;
+            }
+          }
         } else if (e.toString().contains('invalid_email')) {
           userMessage = 'Please enter a valid email address';
         } else if (e.toString().contains('weak_password')) {
           userMessage = 'Please use a stronger password';
-        } else {
-          userMessage = 'Failed to create account. Please try again later.';
-          debugPrint('Sign-up error: $e'); // Log the actual error for debugging
         }
 
         Fluttertoast.showToast(
@@ -483,11 +500,6 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           backgroundColor: Color(0xFFF5F5F5),
           textColor: Color(0xFF121212),
         );
-
-        // If auth was created but database insert failed, sign out
-        if (supabase.auth.currentUser != null) {
-          await supabase.auth.signOut();
-        }
       }
     } finally {
       if (mounted) {
