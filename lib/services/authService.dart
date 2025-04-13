@@ -92,14 +92,6 @@ class AuthService {
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
     try {
-      // Check if email exists in auth
-      final existingUser =
-          await supabase.from('auth.users').select().eq('email', email);
-
-      if (existingUser.isNotEmpty) {
-        throw Exception('Email already registered');
-      }
-
       // Check if phone number exists if provided
       if (data?['contact_number'] != null) {
         final existingPhoneData = await supabase
@@ -141,7 +133,6 @@ class AuthService {
         throw Exception('Failed to create user profile');
       }
 
-      // User is already signed in after signUp, no need for explicit sign in
       return response;
     } catch (e) {
       throw Exception(e.toString());
