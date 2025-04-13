@@ -64,7 +64,7 @@ class CreateAccountScreen extends State<CAPage> {
     setState(() => errorMessage = '');
 
     // controllers
-    final email = emailController.text;
+    final email = emailController.text.trim();
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
@@ -84,7 +84,7 @@ class CreateAccountScreen extends State<CAPage> {
     if (password != confirmPassword) {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: 'Please fill in all fields.',
+          msg: 'Passwords do not match.',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
@@ -180,7 +180,7 @@ class CreateAccountScreen extends State<CAPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: IconButton(
         onPressed: () {
-          Navigator.pushNamed(context, 'start');
+          Navigator.pop(context);
         },
         icon: Icon(
           Icons.arrow_back,

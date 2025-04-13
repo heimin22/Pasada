@@ -91,17 +91,61 @@ class AuthService {
   // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
-    // Merge the default avatar URL with the provided data
-    final Map<String, dynamic> userData = {
-      ...?data,
-      'avatar_url': 'assets/svg/default_user_profile.svg', // Add default avatar
-    };
+    try {
+      // Check if email exists
+      final existingEmailData = await supabase
+          .from('passenger')
+          .select()
+          .eq('passenger_email', email);
 
-    return await supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: userData,
-    );
+      if (existingEmailData.isNotEmpty) {
+        throw Exception('Email already registered');
+      }
+
+      // Check if phone number exists if provided
+      if (data?['contact_number'] != null) {
+        final existingPhoneData = await supabase
+            .from('passenger')
+            .select()
+            .eq('contact_number', data!['contact_number']);
+
+        if (existingPhoneData.isNotEmpty) {
+          throw Exception('Phone number already registered');
+        }
+      }
+
+      // Sign up the user
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: data,
+      );
+
+      if (response.user == null) {
+        throw Exception('Failed to create account');
+      }
+
+      // Insert into passenger table
+      await supabase.from('passenger').insert({
+        'id': response.user!.id,
+        'passenger_email': email,
+        'display_name': data?['display_name'],
+        'contact_number': data?['contact_number'],
+        'avatar_url':
+            data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      // Automatically sign in
+      await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      return response;
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   Future<bool> checkNetworkConnection() async {

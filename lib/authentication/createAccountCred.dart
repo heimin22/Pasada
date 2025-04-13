@@ -384,51 +384,10 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     setState(() => isLoading = true);
 
     try {
-      // Check if email exists
-      final existingEmailData = await supabase
-          .from('passenger')
-          .select()
-          .eq('passenger_email', email);
-
-      if (existingEmailData.isNotEmpty) {
-        if (mounted) {
-          Fluttertoast.showToast(
-            msg: 'This email is already registered',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: Color(0xFFF5F5F5),
-            textColor: Color(0xFF121212),
-          );
-          setState(() => isLoading = false);
-        }
-        return;
-      }
-
-      // Check if phone number exists
-      final existingPhoneData = await supabase
-          .from('passenger')
-          .select()
-          .eq('contact_number', contactNumber);
-
-      if (existingPhoneData.isNotEmpty) {
-        if (mounted) {
-          Fluttertoast.showToast(
-            msg: 'This phone number is already registered',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: Color(0xFFF5F5F5),
-            textColor: Color(0xFF121212),
-          );
-          setState(() => isLoading = false);
-        }
-        return;
-      }
-
       final authService = AuthService();
       const defaultAvatarUrl = 'assets/svg/default_user_profile.svg';
 
-      // Create auth user
-      final authResponse = await authService.signUpAuth(
+      await authService.signUpAuth(
         email,
         password,
         data: {
@@ -436,25 +395,6 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           'contact_number': contactNumber,
           'avatar_url': defaultAvatarUrl,
         },
-      );
-
-      if (authResponse.user == null) {
-        throw Exception('Failed to create account');
-      }
-
-      // Insert into passenger table
-      await supabase.from('passenger').insert({
-        'id': authResponse.user!.id,
-        'passenger_email': email,
-        'display_name': displayName,
-        'contact_number': contactNumber,
-        'avatar_url': defaultAvatarUrl,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
       );
 
       if (mounted) {
@@ -466,35 +406,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       }
     } catch (e) {
       if (mounted) {
-        late String userMessage;
-
-        // Handle specific error cases
-        if (e is PostgrestException && e.code == '23505') {
-          // Only show duplicate entry message if it's actually a duplicate
-          final errorMessage = e.message.toLowerCase();
-          if (errorMessage.contains('email') ||
-              errorMessage.contains('contact_number')) {
-            userMessage = 'This account information is already in use';
-          } else {
-            // If it's some other database error, proceed with sign in
-            if (mounted) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const selectionScreen()),
-                (route) => false,
-              );
-              return;
-            }
-          }
-        } else if (e.toString().contains('invalid_email')) {
-          userMessage = 'Please enter a valid email address';
-        } else if (e.toString().contains('weak_password')) {
-          userMessage = 'Please use a stronger password';
-        }
-
         Fluttertoast.showToast(
-          msg: userMessage,
+          msg: e.toString(),
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
@@ -502,9 +415,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      if (mounted) setState(() => isLoading = false);
     }
   }
 }
