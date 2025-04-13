@@ -384,14 +384,13 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     setState(() => isLoading = true);
 
     try {
-      // First check if email or phone number already exists
-      final existingEmail = await supabase
+      // Check if email exists
+      final existingEmailData = await supabase
           .from('passenger')
           .select()
-          .eq('passenger_email', email)
-          .single();
+          .eq('passenger_email', email);
 
-      if (existingEmail != null) {
+      if (existingEmailData.isNotEmpty) {
         if (mounted) {
           Fluttertoast.showToast(
             msg: 'This email is already registered',
@@ -405,13 +404,13 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         return;
       }
 
-      final existingPhone = await supabase
+      // Check if phone number exists
+      final existingPhoneData = await supabase
           .from('passenger')
           .select()
-          .eq('contact_number', contactNumber)
-          .single();
+          .eq('contact_number', contactNumber);
 
-      if (existingPhone != null) {
+      if (existingPhoneData.isNotEmpty) {
         if (mounted) {
           Fluttertoast.showToast(
             msg: 'This phone number is already registered',
@@ -465,8 +464,9 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         String userMessage;
 
         // Handle specific error cases
-        if (e.toString().contains('duplicate key')) {
-          userMessage = 'An account with this information already exists';
+        if (e is PostgrestException && e.code == '23505') {
+          // Postgres unique violation code
+          userMessage = 'This account information is already in use';
         } else if (e.toString().contains('invalid_email')) {
           userMessage = 'Please enter a valid email address';
         } else if (e.toString().contains('weak_password')) {
