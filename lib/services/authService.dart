@@ -92,13 +92,11 @@ class AuthService {
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
     try {
-      // Check if email exists
-      final existingEmailData = await supabase
-          .from('passenger')
-          .select()
-          .eq('passenger_email', email);
+      // Check if email exists in auth
+      final existingUser =
+          await supabase.from('auth.users').select().eq('email', email);
 
-      if (existingEmailData.isNotEmpty) {
+      if (existingUser.isNotEmpty) {
         throw Exception('Email already registered');
       }
 
@@ -107,9 +105,10 @@ class AuthService {
         final existingPhoneData = await supabase
             .from('passenger')
             .select()
-            .eq('contact_number', data!['contact_number']);
+            .eq('contact_number', data!['contact_number'])
+            .maybeSingle();
 
-        if (existingPhoneData.isNotEmpty) {
+        if (existingPhoneData != null) {
           throw Exception('Phone number already registered');
         }
       }
@@ -125,23 +124,24 @@ class AuthService {
         throw Exception('Failed to create account');
       }
 
-      // Insert into passenger table
-      await supabase.from('passenger').insert({
-        'id': response.user!.id,
-        'passenger_email': email,
-        'display_name': data?['display_name'],
-        'contact_number': data?['contact_number'],
-        'avatar_url':
-            data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      try {
+        // Then, insert into passenger table
+        await supabase.from('passenger').upsert({
+          'id': response.user!.id,
+          'passenger_email': email,
+          'display_name': data?['display_name'],
+          'contact_number': data?['contact_number'],
+          'avatar_url':
+              data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+          'created_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+      } catch (dbError) {
+        // If passenger table insertion fails, delete the auth user
+        await supabase.auth.admin.deleteUser(response.user!.id);
+        throw Exception('Failed to create user profile');
+      }
 
-      // Automatically sign in
-      await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
+      // User is already signed in after signUp, no need for explicit sign in
       return response;
     } catch (e) {
       throw Exception(e.toString());
