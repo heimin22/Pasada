@@ -91,10 +91,16 @@ class AuthService {
   // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
+    // Merge the default avatar URL with the provided data
+    final Map<String, dynamic> userData = {
+      ...?data,
+      'avatar_url': 'assets/svg/default_user_profile.svg', // Add default avatar
+    };
+
     return await supabase.auth.signUp(
       email: email,
       password: password,
-      data: data,
+      data: userData,
     );
   }
 

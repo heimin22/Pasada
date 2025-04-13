@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../screens/selectionScreen.dart';
 
@@ -22,6 +24,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   final lastNameController = TextEditingController();
   final contactController = TextEditingController();
   bool isChecked = false;
+  bool isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -312,87 +315,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
         width: double.infinity,
         child: ElevatedButton(
-          // onPressed: isLoading ? null : SigningUp,
-          onPressed: () async {
-            if (!isChecked) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please accept the terms and conditions.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              return;
-            }
-            // validate required fields
-            final displayName = firstNameController.text.trim();
-            final contactDigits = contactController.text.trim();
-            final email = widget.email;
-            // retrieve natin ung password na pinasa duon sa previous page
-            final args = ModalRoute.of(context)!.settings.arguments
-                as Map<String, dynamic>;
-            final password = args['password'];
-
-            if (displayName.isEmpty || contactDigits.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Please fill in all required fields.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-              return;
-            }
-
-            if (contactDigits.length != 10) {
-              if (mounted) {
-                Fluttertoast.showToast(
-                  msg: 'Phone number must be 10 digits',
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  backgroundColor: Color(0xFFF5F5F5),
-                  textColor: Color(0xFF121212),
-                );
-              }
-            }
-
-            try {
-              final authService = AuthService();
-              final contactNumber = '+63$contactDigits';
-
-              final authResponse = await authService.signUpAuth(
-                email,
-                password,
-                data: {
-                  'display_name': displayName,
-                  'contact_number': contactNumber,
-                },
-              );
-
-              if (authResponse.user != null) {
-                debugPrint('User signed up: ${authResponse.user!.email}');
-                if (mounted) {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const selectionScreen()));
-                }
-              }
-            } catch (e) {
-              if (mounted) {
-                final errorMessage = e.toString().contains('unexpected_failure')
-                    ? 'Failed to create account. Please try again.'
-                    : 'Error: $e';
-
-                Fluttertoast.showToast(
-                  msg: errorMessage,
-                  toastLength: Toast.LENGTH_SHORT,
-                  gravity: ToastGravity.BOTTOM,
-                  backgroundColor: Color(0xFFF5F5F5),
-                  textColor: Color(0xFF121212),
-                );
-                debugPrint('Error saving details: $e');
-              }
-            }
-          },
+          onPressed: isLoading ? null : () => handleSignUp(),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF121212),
             minimumSize: const Size(360, 50),
@@ -400,16 +323,176 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               borderRadius: BorderRadius.circular(10.0),
             ),
           ),
-          child: const Text(
-            'Sign-up',
-            style: TextStyle(
-              color: Color(0xFFF2F2F2),
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-            ),
-          ),
+          child: isLoading
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text(
+                  'Sign-up',
+                  style: TextStyle(
+                    color: Color(0xFFF2F2F2),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> handleSignUp() async {
+    if (!isChecked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please accept the terms and conditions.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final displayName = firstNameController.text.trim();
+    final contactDigits = contactController.text.trim();
+    final email = widget.email;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final password = args['password'];
+    final contactNumber = '+63$contactDigits';
+
+    // Basic validation
+    if (displayName.isEmpty || contactDigits.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (contactDigits.length != 10) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Phone number must be 10 digits',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+      }
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      // First check if email or phone number already exists
+      final existingEmail = await supabase
+          .from('passenger')
+          .select()
+          .eq('passenger_email', email)
+          .single();
+
+      if (existingEmail != null) {
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'This email is already registered',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Color(0xFFF5F5F5),
+            textColor: Color(0xFF121212),
+          );
+          setState(() => isLoading = false);
+        }
+        return;
+      }
+
+      final existingPhone = await supabase
+          .from('passenger')
+          .select()
+          .eq('contact_number', contactNumber)
+          .single();
+
+      if (existingPhone != null) {
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'This phone number is already registered',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Color(0xFFF5F5F5),
+            textColor: Color(0xFF121212),
+          );
+          setState(() => isLoading = false);
+        }
+        return;
+      }
+
+      final authService = AuthService();
+      const defaultAvatarUrl = 'assets/svg/default_user_profile.svg';
+
+      // Create auth user
+      final authResponse = await authService.signUpAuth(
+        email,
+        password,
+        data: {
+          'display_name': displayName,
+          'contact_number': contactNumber,
+          'avatar_url': defaultAvatarUrl,
+        },
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Failed to create account');
+      }
+
+      // Insert into passenger table
+      await supabase.from('passenger').insert({
+        'id': authResponse.user!.id,
+        'passenger_email': email,
+        'display_name': displayName,
+        'contact_number': contactNumber,
+        'avatar_url': defaultAvatarUrl,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const selectionScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        String userMessage;
+
+        // Handle specific error cases
+        if (e.toString().contains('duplicate key')) {
+          userMessage = 'An account with this information already exists';
+        } else if (e.toString().contains('invalid_email')) {
+          userMessage = 'Please enter a valid email address';
+        } else if (e.toString().contains('weak_password')) {
+          userMessage = 'Please use a stronger password';
+        } else {
+          userMessage = 'Failed to create account. Please try again later.';
+          debugPrint('Sign-up error: $e'); // Log the actual error for debugging
+        }
+
+        Fluttertoast.showToast(
+          msg: userMessage,
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+
+        // If auth was created but database insert failed, sign out
+        if (supabase.auth.currentUser != null) {
+          await supabase.auth.signOut();
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 }
