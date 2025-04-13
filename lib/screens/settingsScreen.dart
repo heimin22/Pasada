@@ -182,7 +182,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // logout dialog
   void showLogoutDialog() async {
     final AuthService authService = AuthService();
-    final navigator = Navigator.of(context);
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     try {
       final confirmLogout = await showDialog<bool>(

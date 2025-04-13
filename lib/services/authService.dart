@@ -91,11 +91,52 @@ class AuthService {
   // so ito yung para sa Supabase Authentication kasi tangina niyong lahat
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
-    return await supabase.auth.signUp(
-      email: email,
-      password: password,
-      data: data,
-    );
+    try {
+      // Check if phone number exists if provided
+      if (data?['contact_number'] != null) {
+        final existingPhoneData = await supabase
+            .from('passenger')
+            .select()
+            .eq('contact_number', data!['contact_number'])
+            .maybeSingle();
+
+        if (existingPhoneData != null) {
+          throw Exception('Phone number already registered');
+        }
+      }
+
+      // Sign up the user
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: data,
+      );
+
+      if (response.user == null) {
+        throw Exception('Failed to create account');
+      }
+
+      try {
+        // Then, insert into passenger table
+        await supabase.from('passenger').upsert({
+          'id': response.user!.id,
+          'passenger_email': email,
+          'display_name': data?['display_name'],
+          'contact_number': data?['contact_number'],
+          'avatar_url':
+              data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+          'created_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'id');
+      } catch (dbError) {
+        // If passenger table insertion fails, delete the auth user
+        await supabase.auth.admin.deleteUser(response.user!.id);
+        throw Exception('Failed to create user profile');
+      }
+
+      return response;
+    } catch (e) {
+      throw Exception(e.toString());
+    }
   }
 
   Future<bool> checkNetworkConnection() async {

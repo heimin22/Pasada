@@ -442,8 +442,6 @@ class MapScreenState extends State<MapScreen>
   // Add this method to update map style
   void _updateMapStyle() {
     if (_mapController == null) return;
-
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
   }
 
   @override
