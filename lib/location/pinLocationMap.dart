@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:pasada_passenger_app/services/landmarkService.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
@@ -228,11 +227,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         pinnedLocation = landmark['location'];
         landmarkName = landmark['name'];
         // addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
-        if (landmark != null) {
-          final selectedLoc = SelectedLocation(
-              "${landmark['name']}\n${landmark['address']}", tappedPosition);
-          Navigator.pop(context, selectedLoc);
-        }
+        final selectedLoc = SelectedLocation(
+            "${landmark['name']}\n${landmark['address']}", tappedPosition);
+        Navigator.pop(context, selectedLoc);
       });
     } else {
       final location = await reverseGeocode(tappedPosition);
@@ -242,7 +239,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   Future<void> updateLocation() async {
-    if (mapController == null) return;
+    if (!isMapReady) return;
 
     final visibleRegion = await mapController!.getVisibleRegion();
     final center = LatLng(
@@ -263,7 +260,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   // try natin gumawa ng method para mas accurate yung sentro ng map
   Future<LatLng> getMapCenter() async {
-    if (!isMapReady || mapController == null) {
+    if (!isMapReady) {
       return currentLocation ?? const LatLng(14.617494, 120.971770);
     }
 
@@ -344,8 +341,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       // get current location
       final LocationData locationData = await locationService.getLocation();
       final newLocation = LatLng(
-        locationData.latitude! ?? 14.617494,
-        locationData.longitude! ?? 120.971770,
+        locationData.latitude!,
+        locationData.longitude!,
       );
 
       if (mounted) {
