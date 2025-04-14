@@ -3,16 +3,21 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'dart:convert';
 import '../network/networkUtilities.dart';
 
 class LandmarkService {
   static String? _cachedApiKey;
+  static final MemoryManager memoryManager = MemoryManager();
 
   static Future<String?> _getSecureApiKey() async {
-    if (_cachedApiKey != null) return _cachedApiKey;
-    // Implement secure storage retrieval
+    final cachedKey = memoryManager.getFromCache('api_key');
+    if (cachedKey != null) return cachedKey as String;
+
     _cachedApiKey = dotenv.env['ANDROID_MAPS_API_KEY'];
+    if (_cachedApiKey != null) memoryManager.addToCache('api_key', _cachedApiKey);
+    // Implement secure storage retrieval
     return _cachedApiKey;
   }
 
