@@ -7,9 +7,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
+import 'package:pasada_passenger_app/location/recentSearch.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
+import 'package:pasada_passenger_app/services/recentSearchService.dart';
 import 'locationListTile.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'selectedLocation.dart';
@@ -26,6 +28,7 @@ class SearchLocationScreen extends StatefulWidget {
 class _SearchLocationScreenState extends State<SearchLocationScreen> {
   final TextEditingController searchController = TextEditingController();
   List<AutocompletePrediction> placePredictions = [];
+  List<RecentSearch> recentSearches = [];
   HomeScreenPageState? homeScreenState;
   Timer? _debounce;
   bool isLoading = false;
@@ -35,6 +38,21 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   void initState() {
     super.initState();
     searchController.addListener(onSearchChanged);
+    loadRecentSearches();
+  }
+
+  Future<void> loadRecentSearches() async {
+    final searches = await RecentSearchService.getRecentSearches();
+    setState(() {
+      recentSearches = searches;
+    });
+  }
+
+  void onRecentSearchSelected(RecentSearch search) {
+    Navigator.pop(
+      context,
+      SelectedLocation(search.address, search.coordinates),
+    );
   }
 
   @override
@@ -114,13 +132,15 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (response != null) {
       final data = json.decode(response);
       final location = data['result']['geometry']['location'];
-      Navigator.pop(
-        context,
-        SelectedLocation(
-          prediction.description!,
-          LatLng(location['lat'], location['lng']),
-        ),
+      final selectedLocation = SelectedLocation(
+        prediction.description!,
+        LatLng(location['lat'], location['lng']),
       );
+
+      // Save to recent searches
+      await RecentSearchService.addRecentSearch(selectedLocation);
+
+      Navigator.pop(context, selectedLocation);
     }
   }
 
@@ -281,11 +301,55 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           ],
           Divider(
             height: 0,
-            thickness: 4,
+            thickness: 2,
             color:
                 isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
           ),
-          if (isLoading)
+          if (searchController.text.isEmpty && recentSearches.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Searches',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await RecentSearchService.clearRecentSearches();
+                      loadRecentSearches();
+                    },
+                    child: Text(
+                      'Clear All',
+                      style: TextStyle(
+                        color: isDarkMode
+                            ? const Color(0xFFFFCE21)
+                            : const Color(0xFF067837),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: recentSearches.length,
+                itemBuilder: (context, index) => LocationListTile(
+                  press: () => onRecentSearchSelected(recentSearches[index]),
+                  location: recentSearches[index].address,
+                ),
+              ),
+            ),
+          ] else if (isLoading) ...[
             Expanded(
               child: Center(
                 child: CircularProgressIndicator(
@@ -294,7 +358,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             )
-          else
+          ] else ...[
             Expanded(
               child: ListView.builder(
                 itemCount: placePredictions.length,
@@ -308,6 +372,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
+          ],
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
