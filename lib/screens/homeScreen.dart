@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -10,7 +9,6 @@ import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
-
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -32,13 +30,17 @@ class HomeScreenStateful extends StatefulWidget {
   State<HomeScreenStateful> createState() => HomeScreenPageState();
 }
 
-class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
-  final GlobalKey containerKey = GlobalKey(); // container key for the location container
+class HomeScreenPageState extends State<HomeScreenStateful>
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+  final GlobalKey containerKey =
+      GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
   final GlobalKey<MapScreenState> mapScreenKey =
       GlobalKey<MapScreenState>(); // global key para maaccess si MapScreenState
-  SelectedLocation? selectedPickUpLocation; // variable for the selected pick up location
-  SelectedLocation? selectedDropOffLocation; // variable for the selected drop off location
+  SelectedLocation?
+      selectedPickUpLocation; // variable for the selected pick up location
+  SelectedLocation?
+      selectedDropOffLocation; // variable for the selected drop off location
   String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
@@ -53,8 +55,12 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(','); // split by comma
-    if (parts.length < 2) return [location, '']; // kapag exact address si location then leave as is
-    return [parts[0], parts.sublist(1).join(', ')]; // sa unahan o ibabaw yung landmark which is yung parts[0] the rest is sa baba which is yung parts.sublist(1). tapos join(',')  na lang
+    if (parts.length < 2)
+      return [location, '']; // kapag exact address si location then leave as is
+    return [
+      parts[0],
+      parts.sublist(1).join(', ')
+    ]; // sa unahan o ibabaw yung landmark which is yung parts[0] the rest is sa baba which is yung parts.sublist(1). tapos join(',')  na lang
   }
 
   /// Update yung proper location base duon sa search type
@@ -107,8 +113,7 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   }
 
   void navigateToSearch(BuildContext context, bool isPickup) async {
-    final result = await Navigator.of(
-        context, rootNavigator: true).push(
+    final result = await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => SearchLocationScreen(isPickup: isPickup),
       ),
@@ -195,67 +200,91 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
         }
       },
       child: Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final screenWidth = constraints.maxWidth;
-          // final screenHeight = constraints.maxHeight;
-          final responsivePadding = screenWidth * 0.05;
-          final iconSize = screenWidth * 0.06;
-          final bottomNavBarHeight = 20.0;
-          final double fabVerticalSpacing = 10.0;
-          return Stack(
-            children: [
-              MapScreen(
-                key: mapScreenKey,
-                pickUpLocation: selectedPickUpLocation?.coordinates,
-                dropOffLocation: selectedDropOffLocation?.coordinates,
-                bottomPadding: (containerHeight + bottomNavBarHeight) /
-                    MediaQuery.of(context).size.height,
-                onEtaUpdated: (eta) {
-                  setState(() => etaText = eta);
-                  WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
-                },
-              ),
-              Positioned(
-                bottom: bottomNavBarHeight,
-                left: responsivePadding,
-                right: responsivePadding,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // Location FAB
-                    LocationFAB(
-                      heroTag: "homeLocationFAB",
-                      onPressed: () {
-                        final mapState = mapScreenKey.currentState;
-                        if (mapState != null &&
-                            mapState.currentLocation != null) {
-                          mapState.animateToLocation(mapState.currentLocation!);
-                        }
-                      },
-                      iconSize: iconSize,
-                      buttonSize: screenWidth * 0.12,
-                    ),
-                    SizedBox(height: fabVerticalSpacing),
-                    // Location Container
-                    Container(
-                      key: containerKey,
-                      child: buildLocationContainer(
-                        context,
-                        screenWidth,
-                        responsivePadding,
-                        iconSize,
-                      ),
-                    ),
-                  ],
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
+            // final screenHeight = constraints.maxHeight;
+            final responsivePadding = screenWidth * 0.05;
+            final iconSize = screenWidth * 0.06;
+            final bottomNavBarHeight = 20.0;
+            final double fabVerticalSpacing = 10.0;
+            return Stack(
+              children: [
+                MapScreen(
+                  key: mapScreenKey,
+                  pickUpLocation: selectedPickUpLocation?.coordinates,
+                  dropOffLocation: selectedDropOffLocation?.coordinates,
+                  bottomPadding: (containerHeight + bottomNavBarHeight) /
+                      MediaQuery.of(context).size.height,
+                  onEtaUpdated: (eta) {
+                    setState(() => etaText = eta);
+                    WidgetsBinding.instance
+                        .addPostFrameCallback((_) => measureContainer());
+                  },
                 ),
-              ),
-            ],
-          );
-        },
+                Positioned(
+                  bottom: bottomNavBarHeight,
+                  left: responsivePadding,
+                  right: responsivePadding,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Location FAB
+                      LocationFAB(
+                        heroTag: "homeLocationFAB",
+                        onPressed: () async {
+                          final mapState = mapScreenKey.currentState;
+                          if (mapState != null) {
+                            // First ensure location is initialized
+                            if (!mapState.isLocationInitialized) {
+                              await mapState.initializeLocation();
+                            }
+                            if (mapState.currentLocation != null) {
+                              await mapState
+                                  .animateToLocation(mapState.currentLocation!);
+                            } else {
+                              // Show error if location is still not available
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      "Unable to get current location. Please check your location settings."),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        iconSize: iconSize,
+                        buttonSize: screenWidth * 0.12,
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E1E1E)
+                                : const Color(0xFFF5F5F5),
+                        iconColor:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF00E865)
+                                : const Color(0xFF00CC58),
+                      ),
+                      SizedBox(height: fabVerticalSpacing),
+                      // Location Container
+                      Container(
+                        key: containerKey,
+                        child: buildLocationContainer(
+                          context,
+                          screenWidth,
+                          responsivePadding,
+                          iconSize,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
-    ),
     );
   }
 
@@ -263,10 +292,12 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
       double padding, double iconSize) {
     String svgAssetPickup = 'assets/svg/pinpickup.svg';
     String svgAssetDropOff = 'assets/svg/pindropoff.svg';
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: Color(0xFFF5F5F5),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(screenWidth * 0.04),
         boxShadow: [
           BoxShadow(
@@ -313,11 +344,17 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF121212),
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right, size: iconSize, color: Color(0xFF515151)),
+                  Icon(Icons.chevron_right,
+                      size: iconSize,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF515151)),
                 ],
               ),
             ),
@@ -326,11 +363,13 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (selectedPickUpLocation != null && selectedDropOffLocation != null)
-              ? () {
-                // TODO: Lalagyan na to ng function sa susunod nigga
-              }
-              : null,
+              onPressed: (selectedPickUpLocation != null &&
+                      selectedDropOffLocation != null &&
+                      selectedPaymentMethod != null)
+                  ? () {
+                      // TODO: Lalagyan na to ng function sa susunod nigga
+                    }
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF00CC58),
                 disabledBackgroundColor: Color(0xFFD3D3D3),
@@ -347,7 +386,6 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                   fontSize: 16,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
-                  // color: Color(0xFFF5F5F5),
                 ),
               ),
             ),
@@ -360,8 +398,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
   Widget buildLocationRow(String svgAsset, SelectedLocation? location,
       bool isPickup, double screenWidth, double iconSize) {
     double iconSize = isPickup ? 15 : 15;
-    // split address into two parts
-    List<String> locationParts = location != null ? splitLocation(location.address) : ['' , ''];
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    List<String> locationParts =
+        location != null ? splitLocation(location.address) : ['', ''];
 
     return InkWell(
       onTap: () => navigateToSearch(context, isPickup),
@@ -377,7 +416,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: Color(0xFF121212),
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
                   ),
                 ),
               ],
@@ -392,7 +433,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: Color(0xFF121212),
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
                   ),
                 ),
                 Text(
@@ -401,7 +444,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
-                    color: Color(0xFF515151),
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF515151),
                   ),
                 ),
               ],
@@ -421,18 +466,20 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    /// Landmark
                     Text(
                       location != null
                           ? locationParts[0]
-                          : (isPickup ? 'Pick-up location' : 'Drop-off location'),
+                          : (isPickup
+                              ? 'Pick-up location'
+                              : 'Drop-off location'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF121212),
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
                       ),
                     ),
-                    /// Address
                     if (locationParts[1].isNotEmpty) ...[
                       Text(
                         locationParts[1],
@@ -440,7 +487,9 @@ class HomeScreenPageState extends State<HomeScreenStateful> with WidgetsBindingO
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF515151),
+                          color: isDarkMode
+                              ? const Color(0xFFAAAAAA)
+                              : const Color(0xFF515151),
                         ),
                       ),
                     ],

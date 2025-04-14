@@ -1,21 +1,20 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
+import 'package:pasada_passenger_app/location/recentSearch.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
+import 'package:pasada_passenger_app/services/recentSearchService.dart';
 import 'locationListTile.dart';
-// import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
-// import 'package:http/http.dart' as http;
 import 'selectedLocation.dart';
-
 
 class SearchLocationScreen extends StatefulWidget {
   // final Function(SelectedLocation)? onLocationSelected;
@@ -29,26 +28,62 @@ class SearchLocationScreen extends StatefulWidget {
 class _SearchLocationScreenState extends State<SearchLocationScreen> {
   final TextEditingController searchController = TextEditingController();
   List<AutocompletePrediction> placePredictions = [];
+  List<RecentSearch> recentSearches = [];
   HomeScreenPageState? homeScreenState;
+  Timer? _debounce;
+  bool isLoading = false;
+  HomeScreenPageState? homeScreenPageState;
 
   @override
   void initState() {
     super.initState();
     searchController.addListener(onSearchChanged);
+    loadRecentSearches();
   }
 
-  void onSearchChanged() => placeAutocomplete(searchController.text);
+  Future<void> loadRecentSearches() async {
+    final searches = await RecentSearchService.getRecentSearches();
+    setState(() {
+      recentSearches = searches;
+    });
+  }
 
+  void onRecentSearchSelected(RecentSearch search) {
+    Navigator.pop(
+      context,
+      SelectedLocation(search.address, search.coordinates),
+    );
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    setState(() => isLoading = true);
+
+    _debounce = Timer(const Duration(milliseconds: 1500), () {
+      placeAutocomplete(searchController.text);
+    });
+  }
 
   Future<void> placeAutocomplete(String query) async {
     if (query.isEmpty) {
-      setState(() => placePredictions = []);
+      setState(() {
+        placePredictions = [];
+        isLoading = false;
+      });
       return;
     }
 
     final String apiKey = dotenv.env["ANDROID_MAPS_API_KEY"] ?? '';
     if (apiKey.isEmpty) {
       if (kDebugMode) print("API Key is not configured!");
+      setState(() => isLoading = false);
       return;
     }
 
@@ -62,11 +97,21 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       },
     );
 
-    final response = await NetworkUtility.fetchUrl(uri);
-    if (response != null) {
-      final result = PlaceAutocompleteResponse.parseAutocompleteResult(
-          response);
-      setState(() => placePredictions = result.prediction ?? []);
+    try {
+      final response = await NetworkUtility.fetchUrl(uri);
+      if (response != null) {
+        final result =
+            PlaceAutocompleteResponse.parseAutocompleteResult(response);
+        setState(() {
+          placePredictions = result.prediction ?? [];
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (kDebugMode) print("Error fetching places: $e");
+      setState(() => isLoading = false);
     }
   }
 
@@ -87,120 +132,139 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (response != null) {
       final data = json.decode(response);
       final location = data['result']['geometry']['location'];
-      Navigator.pop(
-        context,
-        SelectedLocation(
-          prediction.description!,
-          LatLng(location['lat'], location['lng']),
-        ),
+      final selectedLocation = SelectedLocation(
+        prediction.description!,
+        LatLng(location['lat'], location['lng']),
       );
+
+      // Save to recent searches
+      await RecentSearchService.addRecentSearch(selectedLocation);
+
+      Navigator.pop(context, selectedLocation);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final loadingColor = isDarkMode
+        ? const Color(0xFF00E865) // Brighter green for dark mode
+        : const Color(0xFF067837); // Original green for light mode
+
     return Scaffold(
-      /// searching location label
-        appBar: AppBar(
-          backgroundColor: Color(0xFFF5F5F5),
-          elevation: 4,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 17),
-            child: CircleAvatar(
-              backgroundColor: Color(0xFFf5f5f5),
-              radius: 15,
-              child: SvgPicture.asset(
-                'assets/svg/navigation.svg',
-                height: 16,
-                width: 16,
+      appBar: AppBar(
+        backgroundColor:
+            isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        elevation: 4,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 17),
+          child: CircleAvatar(
+            backgroundColor:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            radius: 15,
+            child: SvgPicture.asset(
+              'assets/svg/navigation.svg',
+              height: 16,
+              width: 16,
+              colorFilter: ColorFilter.mode(
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+                BlendMode.srcIn,
               ),
             ),
           ),
-          title: Text(
-            'Set ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
-            style: TextStyle(
-              color: Color(0xFF121212),
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: [
-            CircleAvatar(
-              backgroundColor: Color(0xFFF5F5F5),
-              child: IconButton(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Color(0xFF121212)),
-              ),
-            ),
-            const SizedBox(width: 16)
-          ],
         ),
-        body: Column(
-          children: [
-            Form(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: TextFormField(
-                  onChanged: (value) {
-                    placeAutocomplete(value);
-                  },
-                  textInputAction: TextInputAction.search,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
+        title: Text(
+          'Set ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
+          style: TextStyle(
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        actions: [
+          CircleAvatar(
+            backgroundColor:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            child: IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Icon(
+                Icons.close,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16)
+        ],
+      ),
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF2F2F2),
+      body: Column(
+        children: [
+          Form(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextFormField(
+                controller: searchController,
+                textInputAction: TextInputAction.search,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+                decoration: InputDecoration(
+                  fillColor: isDarkMode
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF5F5F5),
+                  filled: true,
+                  border: InputBorder.none,
+                  hintText: 'Search Location',
+                  hintStyle: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF121212),
+                    fontFamily: 'Inter',
+                    color: isDarkMode
+                        ? const Color(0xFFAAAAAA)
+                        : const Color(0xFF515151),
                   ),
-                  decoration: InputDecoration(
-                    fillColor: Color(0xFFf5f5f5),
-                    border: InputBorder.none,
-                    hintText: 'Search Location',
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Inter',
-                    ),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      child: SvgPicture.asset(
-                        'assets/svg/locationPin.svg',
-                        height: 12,
-                        width: 12,
-                      ),
+                  prefixIcon: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: SvgPicture.asset(
+                      'assets/svg/pindropoff.svg',
+                      height: 12,
+                      width: 12,
                     ),
                   ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 ),
               ),
             ),
-            const Divider(
-              height: 0,
-              thickness: 4,
-              color: Color(0xFFE9E9E9),
-            ),
-            if (widget.isPickup) ...[
+          ),
+          if (widget.isPickup) ...[
             Padding(
               padding: const EdgeInsets.all(16.0),
-              // padding: const EdgeInsets.all(ShimmerEffect.defaultPadding) ,
               child: ElevatedButton.icon(
                 onPressed: () async {
                   final Location locationService = Location();
-
-                  // get current position
                   try {
                     final LocationData locationData =
                         await locationService.getLocation();
                     final LatLng currentLatLng =
                         LatLng(locationData.latitude!, locationData.longitude!);
-
-                    // get address using reverse geocoding
                     final SelectedLocation? currentLocation =
                         await reverseGeocode(currentLatLng);
-
                     if (currentLocation != null && mounted) {
-                      Navigator.pop(context, SelectedLocation(
-                        currentLocation.address,
-                        currentLocation.coordinates,
-                      ));
+                      Navigator.pop(
+                        context,
+                        SelectedLocation(currentLocation.address,
+                            currentLocation.coordinates),
+                      );
                     }
                   } catch (e) {
                     debugPrint("Error getting location: $e");
@@ -209,6 +273,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 icon: SvgPicture.asset(
                   'assets/svg/navigation.svg',
                   height: 16,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF121212),
+                    BlendMode.srcIn,
+                  ),
                 ),
                 label: const Text(
                   'Use My Current Location',
@@ -219,12 +287,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFFFCE21),
-                  foregroundColor: Color(0xFF000000),
+                  backgroundColor: const Color(0xFFFFCE21),
+                  foregroundColor: const Color(0xFF121212),
                   elevation: 0,
                   padding:
                       const EdgeInsets.symmetric(vertical: 10, horizontal: 85),
-                  // fixedSize: const Size(double.infinity, 40),
                   shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(10)),
                   ),
@@ -232,29 +299,154 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               ),
             ),
           ],
-          const Divider(
-              height: 0,
-              thickness: 4,
-              color: Color(0xFFE9E9E9),
+          Divider(
+            height: 0,
+            thickness: 2,
+            color:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
+          ),
+          if (searchController.text.isEmpty && recentSearches.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recent Searches',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      await RecentSearchService.clearRecentSearches();
+                      loadRecentSearches();
+                    },
+                    child: Text(
+                      'Clear All',
+                      style: TextStyle(
+                        color: isDarkMode
+                            ? const Color(0xFFFFCE21)
+                            : const Color(0xFF067837),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             Expanded(
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width,
-                child: ListView.builder(
-                  itemCount: placePredictions.length,
-                  itemBuilder: (context, index) => SizedBox(
-                    height: 57,
-                    child: LocationListTile(
-                      press: () => onPlaceSelected(placePredictions[index]),
-                      location: placePredictions[index].description?.toString() ?? 'Unknown',
-                    ),
+              child: ListView.builder(
+                itemCount: recentSearches.length,
+                itemBuilder: (context, index) => LocationListTile(
+                  press: () => onRecentSearchSelected(recentSearches[index]),
+                  location: recentSearches[index].address,
+                ),
+              ),
+            ),
+          ] else if (isLoading) ...[
+            Expanded(
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(loadingColor),
+                ),
+              ),
+            )
+          ] else ...[
+            Expanded(
+              child: ListView.builder(
+                itemCount: placePredictions.length,
+                itemBuilder: (context, index) => SizedBox(
+                  height: 57,
+                  child: LocationListTile(
+                    press: () => onPlaceSelected(placePredictions[index]),
+                    location: placePredictions[index].description?.toString() ??
+                        'Unknown',
                   ),
                 ),
               ),
             ),
-            pinFromTheMaps(),
           ],
-        ),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : const Color(0xFFF5F5F5),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(10)),
+              boxShadow: [
+                BoxShadow(
+                  color: isDarkMode
+                      ? const Color(0xFF000000)
+                      : const Color(0xFFD2D2D2),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        PinLocationStateful(isPickup: widget.isPickup),
+                  ),
+                ).then((result) {
+                  if (result != null && result is SelectedLocation) {
+                    Navigator.pop(context, result);
+                  }
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+                foregroundColor: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(0),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.map,
+                    size: 20,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "Pin on Maps",
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -301,12 +493,14 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal:16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: ElevatedButton(
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => PinLocationStateful(isPickup: widget.isPickup),
+            MaterialPageRoute(
+              builder: (context) =>
+                  PinLocationStateful(isPickup: widget.isPickup),
             ),
           ).then((result) {
             if (result != null && result is SelectedLocation) {
@@ -318,9 +512,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           backgroundColor: Color(0xFFF5F5F5),
           foregroundColor: const Color(0xFF121212),
           elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(0)
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           padding: const EdgeInsets.symmetric(vertical: 16),
         ),
         child: Row(
@@ -341,12 +533,5 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    searchController.removeListener(onSearchChanged);
-    searchController.dispose();
-    super.dispose();
   }
 }

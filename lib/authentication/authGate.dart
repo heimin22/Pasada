@@ -16,7 +16,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/selectionScreen.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate ({super.key});
+  const AuthGate({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,6 @@ class AuthGate extends StatelessWidget {
 
       // build appropriate page based on auth state
       builder: (context, snapshot) {
-
         // loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -41,7 +40,7 @@ class AuthGate extends StatelessWidget {
 
         return session != null
             ? const selectionScreen()
-            : const PasadaHomePage(title: 'Pasada');
+            : const PasadaHomePage();
       },
     );
   }

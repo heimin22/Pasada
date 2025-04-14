@@ -1,3 +1,5 @@
+// ignore_for_file: file_names
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -12,7 +14,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
 import '../network/networkUtilities.dart';
-
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -32,7 +33,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => MapScreenState();
 }
 
-class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin{
+class MapScreenState extends State<MapScreen>
+    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final Completer<GoogleMapController> mapController = Completer();
   LatLng? currentLocation; // Location Data
   final Location location = Location();
@@ -69,30 +71,29 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   bool isLocationInitialized = false;
   bool errorDialogVisible = false;
 
+  // Add this field to store the current controller
+  GoogleMapController? _mapController;
+
   // Override methods
   /// state of the app
   @override
   void initState() {
-    // make sure the widgets binding with an instance of observer is here
-    // call the initLocation() method too
-    // then get the location updates
     super.initState();
-    // WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         initializeLocation();
         handleLocationUpdates();
       }
     });
-    // getLocationUpdates();
   }
 
   /// disposing of functions
   @override
   void dispose() {
-    // location subscription should be cancelled
+    WidgetsBinding.instance.removeObserver(this);
+    _mapController?.dispose();
     locationSubscription?.cancel();
-    // WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -103,8 +104,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     isScreenActive = state == AppLifecycleState.resumed;
     if (isScreenActive) {
       handleLocationUpdates();
-    }
-    else {
+    } else {
       locationSubscription?.pause();
     }
   }
@@ -133,11 +133,12 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
     locationSubscription = location.onLocationChanged
-      .where((data) => data.latitude != null && data.longitude != null)
-      .listen((newLocation) {
-        if (mounted && isScreenActive) {
-          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
-        }
+        .where((data) => data.latitude != null && data.longitude != null)
+        .listen((newLocation) {
+      if (mounted && isScreenActive) {
+        setState(() => currentLocation =
+            LatLng(newLocation.latitude!, newLocation.longitude!));
+      }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
@@ -214,82 +215,33 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
   Future<void> animateToLocation(LatLng target) async {
     final GoogleMapController controller = await mapController.future;
     controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: target,
-          zoom: 17.0,
-        )
-      ),
+      CameraUpdate.newCameraPosition(CameraPosition(
+        target: target,
+        zoom: 17.0,
+      )),
     );
     pulseCurrentLocationMarker();
   }
 
   Future<void> getLocationUpdates() async {
     try {
-      // if (!await checkLocationService()) return;
-      //
-      // // check if yung location services ay available
-      // bool serviceEnabled = await location.serviceEnabled();
-      // if (!serviceEnabled) {
-      //   serviceEnabled = await location.requestService();
-      //   if (!serviceEnabled) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Enable Location Services',
-      //         'Location services are disabled. Please enable them to use this feature.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-      // // check ng location permissions
-      // PermissionStatus permissionGranted = await location.hasPermission();
-      // if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
-      //   final permission = await location.requestPermission();
-      //   if (permission != PermissionStatus.granted) {
-      //     if (mounted) {
-      //       showAlertDialog(
-      //         'Permission Required',
-      //         'This app needs location permission to work. Please allow it in your settings.',
-      //       );
-      //       return;
-      //     }
-      //   }
-      // }
-
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
 
-      setState(() => currentLocation = LatLng(locationData.latitude!, locationData.longitude!));
+      setState(() => currentLocation =
+          LatLng(locationData.latitude!, locationData.longitude!));
 
       final controller = await mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
 
       locationSubscription = location.onLocationChanged
-        .where((data) => data.latitude != null && data.longitude != null)
-        .listen((newLocation) {
-          if (!mounted) return;
-          setState(() => currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!));
+          .where((data) => data.latitude != null && data.longitude != null)
+          .listen((newLocation) {
+        if (!mounted) return;
+        setState(() => currentLocation =
+            LatLng(newLocation.latitude!, newLocation.longitude!));
       });
-
-      // listen sa location updates
-      // location.onLocationChanged.listen((LocationData newLocation) {
-      //   if (newLocation.latitude != null && newLocation.longitude != null) {
-      //     setState(() {
-      //       currentLocation =
-      //           LatLng(newLocation.latitude!, newLocation.longitude!);
-      //     });
-      //   }
-      // });
-
-      // locationSubscription = location.onLocationChanged.listen((LocationData newLocation) {
-      //   // if (mounted && newLocation.latitude != null && newLocation.longitude != null) {
-      //   //   setState(() {
-      //   //     currentLocation = LatLng(newLocation.latitude!, newLocation.longitude!);
-      //   //   });
-      //   // }
-      // });
     } catch (e) {
       // showError('An error occurred while fetching the location.');
       if (mounted) showError('Location Error: ${e.toString()}');
@@ -308,15 +260,22 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
     // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      showDebugToast('No internet connection');
-      return;
+  Future<bool> checkNetworkConnection() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.contains(ConnectivityResult.none)) {
+      showError('No internet connection');
+      return false;
     }
+    return true;
+  }
+
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey == null) {
+      if (apiKey.isEmpty) {
         showDebugToast('API key not found');
         if (kDebugMode) {
           print('API key not found');
@@ -332,7 +291,8 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
       final headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+        'X-Goog-FieldMask':
+            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
       };
       final body = jsonEncode({
         'origin': {
@@ -392,62 +352,59 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
         return;
       }
 
-      if (response != null) {
-        final data = json.decode(response);
-        debugPrint('API Response: $data');
-        debugPrint('Routes; ${data['routes']}');
-        if (data['routes']?.isNotEmpty ?? false) {
-          final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-          List<PointLatLng> decodedPolyline =
-              polylinePoints.decodePolyline(polyline);
-          List<LatLng> polylineCoordinates = decodedPolyline
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-          if (mounted) {
-            setState(() {
-              polylines = {
-                const PolylineId('route'): Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: polylineCoordinates,
-                  color: Color(0xFFD7481D),
-                  width: 8,
-                )
-              };
-            });
-          }
+      debugPrint('API Response: $data');
+      debugPrint('Routes; ${data['routes']}');
+      if (data['routes']?.isNotEmpty ?? false) {
+        final polyline = data['routes'][0]['polyline']['encodedPolyline'];
+        List<PointLatLng> decodedPolyline =
+            polylinePoints.decodePolyline(polyline);
+        List<LatLng> polylineCoordinates = decodedPolyline
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
+        if (mounted) {
+          setState(() {
+            polylines = {
+              const PolylineId('route'): Polyline(
+                polylineId: const PolylineId('route'),
+                points: polylineCoordinates,
+                color: Color(0xFF067837),
+                width: 8,
+              )
+            };
+          });
+        }
 
-          showDebugToast('Route generated successfully');
+        showDebugToast('Route generated successfully');
 
-          final legs = data['routes'][0]['legs'];
-          if (legs is! List || legs.isEmpty) {
-            debugPrint('Legs data is invalid: $legs');
-            setState(() => etaText = 'N/A');
-            return;
-          }
-
-          final firstLeg = legs[0];
-          final duration = firstLeg['duration'];
-          if (duration is! String || !duration.endsWith('s')) {
-            debugPrint('Invalid duration format: $duration');
-            setState(() => etaText = 'N/A');
-            return;
-          }
-
-          final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
-          final durationSeconds = int.tryParse(secondsString) ?? 0;
-          final durationText = formatDuration(durationSeconds);
-
-          setState(() => etaText = durationText);
-          if (widget.onEtaUpdated != null) {
-            widget.onEtaUpdated!(durationText);
-          }
-
-          // debug testing
-          debugPrint('API Response: ${json.encode(data)}'); // Full response
-          debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-          debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
+        final legs = data['routes'][0]['legs'];
+        if (legs is! List || legs.isEmpty) {
+          debugPrint('Legs data is invalid: $legs');
+          setState(() => etaText = 'N/A');
           return;
         }
+
+        final firstLeg = legs[0];
+        final duration = firstLeg['duration'];
+        if (duration is! String || !duration.endsWith('s')) {
+          debugPrint('Invalid duration format: $duration');
+          setState(() => etaText = 'N/A');
+          return;
+        }
+
+        final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
+        final durationSeconds = int.tryParse(secondsString) ?? 0;
+        final durationText = formatDuration(durationSeconds);
+
+        setState(() => etaText = durationText);
+        if (widget.onEtaUpdated != null) {
+          widget.onEtaUpdated!(durationText);
+        }
+
+        // debug testing
+        debugPrint('API Response: ${json.encode(data)}'); // Full response
+        debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
+        debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
+        return;
       }
       showDebugToast('Failed to generate route');
       if (kDebugMode) {
@@ -480,6 +437,17 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
   void onMapCreated(GoogleMapController controller) {
     mapController.complete(controller);
+  }
+
+  // Add this method to update map style
+  void _updateMapStyle() {
+    if (_mapController == null) return;
+  }
+
+  @override
+  void didChangePlatformBrightness() {
+    super.didChangePlatformBrightness();
+    _updateMapStyle();
   }
 
   // helper function for showing alert dialogs to reduce repetition
@@ -564,6 +532,7 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -583,8 +552,41 @@ class MapScreenState extends State<MapScreen> with WidgetsBindingObserver, Autom
                 ),
               )
             : GoogleMap(
-                onMapCreated: (controller) =>
-                    mapController.complete(controller),
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  mapController.complete(controller);
+                },
+                style: Theme.of(context).brightness == Brightness.dark
+                    ? '''[
+                        {
+                          "elementType": "geometry",
+                          "stylers": [{"color": "#242f3e"}]
+                        },
+                        {
+                          "elementType": "labels.text.fill",
+                          "stylers": [{"color": "#746855"}]
+                        },
+                        {
+                          "elementType": "labels.text.stroke",
+                          "stylers": [{"color": "#242f3e"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry",
+                          "stylers": [{"color": "#38414e"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "geometry.stroke",
+                          "stylers": [{"color": "#212a37"}]
+                        },
+                        {
+                          "featureType": "road",
+                          "elementType": "labels.text.fill",
+                          "stylers": [{"color": "#9ca5b3"}]
+                        }
+                      ]'''
+                    : '',
                 initialCameraPosition: CameraPosition(
                   target: currentLocation!,
                   zoom: 15.0,

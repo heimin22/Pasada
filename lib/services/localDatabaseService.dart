@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
 import 'bookingDetails.dart';
 
 class LocalDatabaseService {
@@ -100,9 +98,9 @@ class LocalDatabaseService {
         whereArgs: [bookingId],
       );
       if (count > 0) {
-        debugPrint('Updated status for local booking $bookingId to $newStatus.');
-      }
-      else {
+        debugPrint(
+            'Updated status for local booking $bookingId to $newStatus.');
+      } else {
         debugPrint("Local booking $bookingId not found for status update.");
       }
     } catch (e) {
@@ -124,6 +122,4 @@ class LocalDatabaseService {
       debugPrint("Error deleting booking $bookingId locally: $e");
     }
   }
-
-
 }
