@@ -3,16 +3,46 @@ import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'dart:convert';
 import '../network/networkUtilities.dart';
 
 class LandmarkService {
+  static final MemoryManager _memoryManager = MemoryManager();
+
+  // Cache landmarks data with a key based on location
+  static Future<void> cacheLandmarkData(
+      LatLng location, List<dynamic> landmarks) async {
+    final String cacheKey =
+        'landmarks_${location.latitude}_${location.longitude}';
+    _memoryManager.addToCache(cacheKey, landmarks);
+  }
+
+  // Get cached landmarks if available
+  static List<dynamic>? getCachedLandmarks(LatLng location) {
+    final String cacheKey =
+        'landmarks_${location.latitude}_${location.longitude}';
+    return _memoryManager.getFromCache(cacheKey);
+  }
+
+  // Debounce location updates
+  static void handleLocationUpdate(Function callback, LatLng location) {
+    _memoryManager.debounce(() {
+      callback(location);
+    }, const Duration(milliseconds: 500), 'location_update');
+  }
+
   static String? _cachedApiKey;
+  static final MemoryManager memoryManager = MemoryManager();
 
   static Future<String?> _getSecureApiKey() async {
-    if (_cachedApiKey != null) return _cachedApiKey;
-    // Implement secure storage retrieval
+    final cachedKey = memoryManager.getFromCache('api_key');
+    if (cachedKey != null) return cachedKey as String;
+
     _cachedApiKey = dotenv.env['ANDROID_MAPS_API_KEY'];
+    if (_cachedApiKey != null)
+      memoryManager.addToCache('api_key', _cachedApiKey);
+    // Implement secure storage retrieval
     return _cachedApiKey;
   }
 
