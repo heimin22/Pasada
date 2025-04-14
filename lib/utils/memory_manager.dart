@@ -77,7 +77,25 @@ class MemoryManager {
         throttleTimers.remove(key);
       });
     }
+  }
 
+  void debounce(Function func, Duration duration, String key) {
+    debounceTimers[key]?.cancel();
+    debounceTimers[key] = Timer(duration, () {
+      func();
+      debounceTimers.remove(key);
+    });
+  }
 
+  // lifecycle methods
+
+  // disposes of resources
+  void dispose() {
+    throttleTimers.values.forEach((timer) => timer.cancel());
+    throttleTimers.clear();
+    debounceTimers.values.forEach((timer) => timer.cancel());
+    debounceTimers.clear();
+    clearCache();
+    debugPrint("Memory manager disposed");
   }
 }
