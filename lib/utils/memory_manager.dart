@@ -1,13 +1,14 @@
 import 'dart:collection';
 import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 
 // this class is used to manage the memory of the app
 class MemoryManager {
-  MemoryManager.priavteConstructor();
+  MemoryManager._privateConstructor() : cacheSizeLimit = 100 {
+    cache = LinkedHashMap<String, dynamic>();
+  }
 
-  static final MemoryManager instance = MemoryManager.priavteConstructor();
+  static final MemoryManager instance = MemoryManager._privateConstructor();
 
   factory MemoryManager() {
     return instance;
@@ -58,5 +59,25 @@ class MemoryManager {
   void clearCacheItem(String key) {
     cache.remove(key);
     debugPrint("Item $key cleared");
+  }
+
+  // get the current size of the cache
+  int get cacheSize => cache.length;
+
+  // throttling and debouncing
+  final Map<String, Timer> throttleTimers = {};
+  final Map<String, Timer> debounceTimers = {};
+
+  // throttles a function call to a maximum of one call per duration
+  // subsequent calls within the duration are ignored
+  void throttle(Function func, Duration duration, String key) {
+    if (!throttleTimers.containsKey(key)) {
+      func();
+      throttleTimers[key] = Timer(duration, () {
+        throttleTimers.remove(key);
+      });
+    }
+
+
   }
 }
