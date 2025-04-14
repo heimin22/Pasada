@@ -11,6 +11,7 @@ import 'package:location/location.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -39,6 +40,11 @@ class PinLocationStateful extends StatefulWidget {
 }
 
 class _PinLocationStatefulState extends State<PinLocationStateful> {
+  final MemoryManager _memoryManager = MemoryManager();
+  static const String MAP_CACHE_KEY = 'map_state';
+  static const String LAST_LOCATION_KEY = 'last_known_location';
+  static const String MAP_STYLE_KEY = 'map_style';
+
   // Add dark mode map style
   final String darkMapStyle = '''[
     {
@@ -176,23 +182,47 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   @override
   void initState() {
     super.initState();
-    // Set status bar theme
+    _initializeMapState();
+
+    // Cache map style for faster access
+    final cachedStyle = _memoryManager.getFromCache(MAP_STYLE_KEY);
+    if (cachedStyle == null) {
+      _memoryManager.addToCache(MAP_STYLE_KEY, darkMapStyle);
+    }
+
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark,
     ));
+
     locationService.changeSettings(
       interval: 1000,
       accuracy: LocationAccuracy.high,
     );
-    // Get location immediately
+  }
+
+  Future<void> _initializeMapState() async {
+    // Try to get cached location first
+    final cachedLocation = _memoryManager.getFromCache(LAST_LOCATION_KEY);
+
+    if (cachedLocation != null) {
+      setState(() {
+        currentLocation =
+            LatLng(cachedLocation['latitude'], cachedLocation['longitude']);
+        isLoading = false;
+      });
+    }
+
+    // Get fresh location in background
     getCurrentLocation();
   }
 
   @override
   void dispose() {
     addressNotifier.dispose();
+    // Clear temporary caches
+    _memoryManager.clearCacheItem(MAP_CACHE_KEY);
     super.dispose();
   }
 
@@ -200,16 +230,20 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     mapController = controller;
     isMapReady = true;
 
+    // Get cached map style
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     if (isDarkMode) {
-      controller.setMapStyle(darkMapStyle);
+      final cachedStyle =
+          _memoryManager.getFromCache(MAP_STYLE_KEY) ?? darkMapStyle;
+      controller.setMapStyle(cachedStyle);
     }
 
-    // remove natin yung delay and call agad yung location if available
-
-    if (currentLocation != null) {
-      controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
-    }
+    // Debounce camera movements
+    _memoryManager.debounce(() {
+      if (currentLocation != null) {
+        controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+      }
+    }, const Duration(milliseconds: 300), 'camera_movement');
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -284,66 +318,85 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       return;
     }
 
-    try {
-      setState(() {
-        isFindingLandmark = true;
-        addressNotifier.value = "Searching...";
-      });
-
-      final center = await getMapCenter();
-
-      debugPrint("Map Center: ${center.latitude}, ${center.longitude}");
-
-      // update pinnedLocation duon sa center ng map
-      /// PUTANGINAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-      setState(() => pinnedLocation = center);
-
-      // try to get a landmark first para mas maayos yung UX
-      final landmark = await LandmarkService.getNearestLandmark(center);
-
-      if (landmark != null && mounted) {
-        // nakahanap ng landmark, pero wag muna igalaw yung mapa duon
-        // update lang muna ng information display
+    // Debounce location fetching
+    _memoryManager.debounce(() async {
+      try {
         setState(() {
-          landmarkName = landmark['name'];
-          final selectedLoc = SelectedLocation(
-            "${landmark['name']}\n${landmark['address']}",
-            center,
-          );
-          addressNotifier.value = selectedLoc.address;
-          isFindingLandmark = false;
+          isFindingLandmark = true;
+          addressNotifier.value = "Searching...";
         });
-        return;
-      }
 
-      // kapag walang nahanap na landmark, fall back to reverse geocoding
-      final location = await reverseGeocode(center);
-      if (mounted) {
-        setState(() {
-          addressNotifier.value =
-              location?.address ?? "Unable to find location";
-          isFindingLandmark = false;
-        });
+        final center = await getMapCenter();
+        final cacheKey = 'location_${center.latitude}_${center.longitude}';
+
+        // Check cache first
+        final cachedLocation = _memoryManager.getFromCache(cacheKey);
+        if (cachedLocation != null && mounted) {
+          setState(() {
+            landmarkName = cachedLocation['name'];
+            addressNotifier.value = cachedLocation['address'];
+            pinnedLocation = center;
+            isFindingLandmark = false;
+          });
+          return;
+        }
+
+        // If not in cache, fetch from API
+        final landmark = await LandmarkService.getNearestLandmark(center);
+        if (landmark != null && mounted) {
+          final locationData = {
+            'name': landmark['name'],
+            'address': "${landmark['name']}\n${landmark['address']}"
+          };
+
+          // Cache the result
+          _memoryManager.addToCache(cacheKey, locationData);
+
+          setState(() {
+            landmarkName = landmark['name'];
+            addressNotifier.value = locationData['address']!;
+            pinnedLocation = center;
+            isFindingLandmark = false;
+          });
+          return;
+        }
+
+        // Fallback to reverse geocoding
+        final location = await reverseGeocode(center);
+        if (mounted) {
+          final address = location?.address ?? "Unable to find location";
+          _memoryManager.addToCache(cacheKey, {'name': '', 'address': address});
+
+          setState(() {
+            addressNotifier.value = address;
+            isFindingLandmark = false;
+          });
+        }
+      } catch (e) {
+        debugPrint("Error fetching location: $e");
+        if (mounted) {
+          setState(() {
+            addressNotifier.value = "Error finding location";
+            isFindingLandmark = false;
+          });
+        }
       }
-    } catch (e) {
-      debugPrint("Error fetching location: $e");
-      if (mounted) {
-        setState(() {
-          addressNotifier.value = "Error finding location";
-          isFindingLandmark = false;
-        });
-      }
-    }
+    }, const Duration(milliseconds: 500), 'fetch_location');
   }
 
   Future<void> getCurrentLocation() async {
     try {
-      // get current location
       final LocationData locationData = await locationService.getLocation();
       final newLocation = LatLng(
         locationData.latitude!,
         locationData.longitude!,
       );
+
+      // Cache the location
+      _memoryManager.addToCache(LAST_LOCATION_KEY, {
+        'latitude': newLocation.latitude,
+        'longitude': newLocation.longitude,
+      });
 
       if (mounted) {
         setState(() {
@@ -354,13 +407,15 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       }
 
       if (isMapReady && mapController != null) {
-        await mapController!.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: newLocation, zoom: 15),
-          ),
-        );
-
-        fetchLocationAtCenter(); // Initial snap after load
+        // Throttle camera updates
+        _memoryManager.throttle(() async {
+          await mapController!.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: newLocation, zoom: 15),
+            ),
+          );
+          fetchLocationAtCenter();
+        }, const Duration(milliseconds: 300), 'camera_update');
       }
     } catch (e) {
       debugPrint("Error in getCurrentLocation: $e");
@@ -626,9 +681,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             child: Text(
               'Confirm ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
               style: TextStyle(
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
+                color: const Color(0xFFF5F5F5),
                 fontWeight: FontWeight.w600,
               ),
             ),

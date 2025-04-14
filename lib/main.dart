@@ -9,21 +9,29 @@ import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize MemoryManager singleton
+  final memoryManager = MemoryManager();
+
   // Add error handling for env file
   try {
     await dotenv.load(fileName: ".env");
+    // Cache env variables for faster access
+    memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
+    memoryManager.addToCache(
+        'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
   } catch (e) {
     debugPrint("Failed to load environment variables: $e");
     return;
   }
 
-  // Validate required environment variables
-  final supabaseUrl = dotenv.env['SUPABASE_URL'];
-  final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'];
+  // Use cached values
+  final supabaseUrl = memoryManager.getFromCache('SUPABASE_URL');
+  final supabaseKey = memoryManager.getFromCache('SUPABASE_ANON_KEY');
 
   if (supabaseUrl == null || supabaseKey == null) {
     debugPrint("Missing required Supabase configuration");
@@ -71,11 +79,24 @@ class PasadaPassenger extends StatefulWidget {
 
 class _PasadaPassengerState extends State<PasadaPassenger> {
   final ThemeController _themeController = ThemeController();
+  final MemoryManager _memoryManager = MemoryManager();
 
   @override
   void initState() {
     super.initState();
     _themeController.initialize();
+
+    // Cache the initial theme mode
+    _memoryManager.addToCache('isDarkMode', _themeController.isDarkMode);
+  }
+
+  void _handleThemeChange() {
+    // Throttle theme changes to prevent rapid toggles
+    _memoryManager.throttle(() {
+      setState(() {
+        // Your theme change logic
+      });
+    }, const Duration(milliseconds: 300), 'theme_change');
   }
 
   @override
@@ -291,5 +312,10 @@ class PasadaHomePageState extends State<PasadaHomePage> {
       ),
     );
   }
-}
 
+  @override
+  void dispose() {
+    MemoryManager().dispose();
+    super.dispose();
+  }
+}
