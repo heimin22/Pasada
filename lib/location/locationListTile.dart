@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
 
 class LocationListTile extends StatelessWidget {
   const LocationListTile({
@@ -24,6 +23,7 @@ class LocationListTile extends StatelessWidget {
     final parts = splitLocation(location);
     final landmark = parts[0];
     final address = parts[1];
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
       children: [
@@ -31,39 +31,50 @@ class LocationListTile extends StatelessWidget {
           onTap: press,
           horizontalTitleGap: 0,
           contentPadding: const EdgeInsets.only(left: 16, right: 16),
-          leading: SvgPicture.asset(
-            "assets/svg/locationPin.svg",
-            width: 14,
-            height: 14,
-          ),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          title: Row(
             children: [
-              Text(
-                landmark,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  color: Color(0xFF121212),
+              SvgPicture.asset(
+                "assets/svg/pindropoff.svg",
+                width: 16,
+                height: 16,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      landmark,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
+                      ),
+                    ),
+                    if (address.isNotEmpty) ...[
+                      Text(
+                        address,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w400,
+                          fontFamily: 'Inter',
+                          color: isDarkMode
+                              ? const Color(0xFFAAAAAA)
+                              : const Color(0xFF666666),
+                        ),
+                      ),
+                    ]
+                  ],
                 ),
               ),
-              if (address.isNotEmpty) ...[
-                Text(
-                  address,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w400,
-                    fontFamily: 'Inter',
-                    color: Color(0xFF666666),
-                  ),
-                ),
-              ]
             ],
           ),
         ),

@@ -28,26 +28,31 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     Widget? leadingIcon,
     bool enabled = true,
   }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return RadioListTile<String>(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 3.0),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 3.0),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontFamily: 'Inter',
           fontSize: 13,
           fontWeight: FontWeight.w500,
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         ),
       ),
       value: value,
       groupValue: selectPaymentMethod,
-      onChanged: enabled ? (String? newValue) {
-        if (newValue != null) {
-          setState(() {
-            selectPaymentMethod = newValue;
-          });
-          Navigator.pop(context, newValue);
-        }
-      } : null,
+      onChanged: enabled
+          ? (String? newValue) {
+              if (newValue != null) {
+                setState(() {
+                  selectPaymentMethod = newValue;
+                });
+                Navigator.pop(context, newValue);
+              }
+            }
+          : null,
       // use the provided leading icon
       secondary: Radio<String>(
         value: value,
@@ -65,7 +70,8 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
         activeColor: Color(0xFF00CC58),
       ),
       // dito yung icon
-      controlAffinity: ListTileControlAffinity.leading, // para mapunta yung radio button sa right
+      controlAffinity: ListTileControlAffinity
+          .leading, // para mapunta yung radio button sa right
       // leading property sa right icon
       // leading: leadingIcon,
       selected: selectPaymentMethod == value,
@@ -75,14 +81,15 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   // helper para sa section headers
   Widget buildSectionHeader(String title) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF515151),
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF515151),
           fontFamily: 'Inter',
         ),
       ),
@@ -91,23 +98,28 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Payment Methods',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ),
-        backgroundColor: Color(0xFFf5F5F5),
-        foregroundColor: Color(0xFF121212),
+        backgroundColor:
+            isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        foregroundColor:
+            isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         elevation: 1.0,
       ),
-      backgroundColor: Color(0xFFF2F2F2),
-      body: ListView (
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF2F2F2),
+      body: ListView(
         children: [
           // Cash option
           buildSectionHeader('Cash Payment'),
@@ -132,13 +144,16 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
             enabled: false,
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text(
               'Cashless payment will be available soon.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 12,
-                color: Color(0xFF515151),
+                color: isDarkMode
+                    ? const Color(0xFFAAAAAA)
+                    : const Color(0xFF515151),
                 fontWeight: FontWeight.w600,
               ),
             ),

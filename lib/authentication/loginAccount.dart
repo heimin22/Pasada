@@ -6,30 +6,20 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LoginAccountPage extends StatelessWidget {
+class LoginAccountPage extends StatefulWidget {
   const LoginAccountPage({super.key});
 
   @override
+  State<LoginAccountPage> createState() => _LoginAccountPageState();
+}
+
+class _LoginAccountPageState extends State<LoginAccountPage> {
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Log-in',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const LoginPage(title: 'Log-in to your account'),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-        'screens': (BuildContext context) => const HomeScreen(),
-        'selection': (BuildContext context) => const selectionScreen(),
-      },
-    );
+    return const LoginPage(title: 'Pasada');
   }
 }
 
@@ -69,7 +59,8 @@ class LoginScreen extends State<LoginPage> {
   void initState() {
     super.initState();
     checkInitialConnectivity();
-    connectivitySubscription = connectivity.onConnectivityChanged.listen(updateConnectionStatus);
+    connectivitySubscription =
+        connectivity.onConnectivityChanged.listen(updateConnectionStatus);
   }
 
   Future<void> checkInitialConnectivity() async {
@@ -107,20 +98,18 @@ class LoginScreen extends State<LoginPage> {
 
       if (mounted) {
         // successful login
-        Navigator.pushReplacementNamed(context, 'selection');
+        Navigator.push(context,
+            MaterialPageRoute(builder: (context) => selectionScreen()));
       }
-    }
-    on AuthException catch (e) {
+    } on AuthException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e')),
         );
       }
-    }
-    catch (err) {
+    } catch (err) {
       setState(() => errorMessage = 'An unexpected error occurred');
-    }
-    finally {
+    } finally {
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -141,6 +130,7 @@ class LoginScreen extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
       body: Column(
         children: [
           Padding(
@@ -173,7 +163,10 @@ class LoginScreen extends State<LoginPage> {
                     buildPassengerPassText(),
                     buildPassengerPassInput(),
                     buildForgotPassword(),
+                    SizedBox(height: 48),
                     buildLogInButton(),
+                    buildOrDesign(),
+                    buildLoginGoogle(),
                   ],
                 ),
               ),
@@ -189,9 +182,9 @@ class LoginScreen extends State<LoginPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
       child: IconButton(
         onPressed: () {
-          Navigator.pushNamed(context, 'start');
+          Navigator.pop(context);
         },
-        icon: Icon(Icons.arrow_back),
+        icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
       ),
     );
   }
@@ -213,6 +206,12 @@ class LoginScreen extends State<LoginPage> {
           ),
           decoration: InputDecoration(
             labelText: 'Enter your password',
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              fontFamily: 'Inter',
+              color: Color(0xFF515151),
+            ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
               color: const Color(0xFF121212),
@@ -224,9 +223,6 @@ class LoginScreen extends State<LoginPage> {
               icon: Icon(
                 isPasswordVisible ? Icons.visibility : Icons.visibility_off,
               ),
-            ),
-            labelStyle: const TextStyle(
-              fontSize: 12,
             ),
             floatingLabelStyle: const TextStyle(
               color: Color(0XFF00CC58),
@@ -266,7 +262,10 @@ class LoginScreen extends State<LoginPage> {
           decoration: InputDecoration(
             labelText: 'Enter your email or phone number',
             labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
               fontSize: 12,
+              fontFamily: 'Inter',
+              color: Color(0xFF515151),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
@@ -296,19 +295,14 @@ class LoginScreen extends State<LoginPage> {
       child: const Row(
         children: [
           Text(
-            'Enter your ',
+            'Password',
             style: TextStyle(
-              color: Color(0xFF121212),
-            ),
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: Color(0xFF121212)),
           ),
-          Text(
-            'password.',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
-          )
         ],
-      )
+      ),
     );
   }
 
@@ -318,16 +312,12 @@ class LoginScreen extends State<LoginPage> {
       child: const Row(
         children: [
           Text(
-            'Enter your ',
-            style: TextStyle(color: Color(0xFF121212)),
-          ),
-          Text(
-            'email',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          Text(
-            ' to continue',
-            style: TextStyle(color: Color(0xFF121212)),
+            'Email or Phone Number',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+              color: Color(0xFF121212),
+            ),
           ),
         ],
       ),
@@ -337,7 +327,7 @@ class LoginScreen extends State<LoginPage> {
   Flexible buildLogInButton() {
     return Flexible(
       child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.1),
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
         width: double.infinity,
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
@@ -370,6 +360,81 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
+  Widget buildOrDesign() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+        width: double.infinity,
+        child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
+      ),
+    );
+  }
+
+  Widget buildLoginGoogle() {
+    return Flexible(
+      child: Container(
+        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: isLoading
+              ? null
+              : () async {
+                  setState(() => isLoading = true);
+                  try {
+                    final success = await authService.signInWithGoogle();
+                    if (success && mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const selectionScreen()),
+                      );
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Failed to sign in with Google')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error: ${e.toString()}')),
+                      );
+                    }
+                  } finally {
+                    if (mounted) setState(() => isLoading = false);
+                  }
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF121212),
+            minimumSize: const Size(360, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/svg/googleIcon.svg',
+                height: 24,
+                width: 24,
+              ),
+              const SizedBox(width: 25),
+              const Text(
+                'Log-in with Google',
+                style: TextStyle(
+                  color: Color(0xFFF2F2F2),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Container buildForgotPassword() {
     return Container(
       margin: EdgeInsets.only(
@@ -393,13 +458,15 @@ class LoginScreen extends State<LoginPage> {
       children: [
         Container(
           alignment: Alignment.centerLeft,
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
           height: 80,
           width: 80,
           child: SvgPicture.asset('assets/svg/Ellipse.svg'),
         ),
         Container(
-          margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
           child: const Text(
             'Log-in to your account',
             style: TextStyle(

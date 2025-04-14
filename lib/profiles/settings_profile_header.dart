@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SettingsProfileHeader extends StatelessWidget {
   final AuthService authService;
@@ -15,6 +17,14 @@ class SettingsProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    String sanitizeUserName(String? name) {
+      if (name == null || name.isEmpty) return 'Guest user';
+      // Remove any potentially harmful characters
+      return name.replaceAll(RegExp(r'[<>&"/]'), '');
+    }
+
     return FutureBuilder<Map<String, dynamic>?>(
       future: authService.getCurrentUserData(),
       builder: (context, snapshot) {
@@ -26,13 +36,12 @@ class SettingsProfileHeader extends StatelessWidget {
           return const CircularProgressIndicator();
         }
         final userData = snapshot.data;
-        final userName = (userData?['first_name'] != null && userData?['last_name'] != null)
-            ? '${snapshot.data!['first_name']} ${snapshot.data!['last_name']}'
-            : 'Guest user';
+        final userName = sanitizeUserName(userData?['display_name']);
+        final avatarUrl = userData?['avatar_url'];
 
         return Container(
           width: double.infinity,
-          color: const Color(0xFFF5F5F5),
+          color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
           height: screenHeight * 0.13,
           padding: EdgeInsets.symmetric(
             horizontal: screenWidth * 0.06,
@@ -41,15 +50,7 @@ class SettingsProfileHeader extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              CircleAvatar(
-                radius: screenWidth * 0.07,
-                backgroundColor: const Color(0xFF00CC58),
-                child: Icon(
-                  Icons.person,
-                  size: screenWidth * 0.1,
-                  color: const Color(0xFFDEDEDE),
-                ),
-              ),
+              buildProfileAvatar(avatarUrl),
               SizedBox(width: screenWidth * 0.06),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,10 +58,12 @@ class SettingsProfileHeader extends StatelessWidget {
                   SizedBox(height: screenHeight * 0.008),
                   Text(
                     userName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF121212),
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
                   SizedBox(height: screenHeight * 0.005),
@@ -74,25 +77,68 @@ class SettingsProfileHeader extends StatelessWidget {
     );
   }
 
+  Widget buildProfileAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: screenWidth * 0.07,
+        backgroundColor: Colors.transparent,
+        child: ClipOval(
+          child: CachedNetworkImage(
+            imageUrl: avatarUrl,
+            placeholder: (context, url) => const CircularProgressIndicator(),
+            errorWidget: (context, url, error) => buildDefaultAvatar(),
+            fit: BoxFit.cover,
+            width: screenWidth * 0.14,
+            height: screenWidth * 0.14,
+          ),
+        ),
+      );
+    }
+    return buildDefaultAvatar();
+  }
+
+  Widget buildDefaultAvatar() {
+    return CircleAvatar(
+      radius: screenWidth * 0.07,
+      backgroundColor: const Color(0xFF000CC58),
+      child: Icon(
+        Icons.person,
+        size: screenWidth * 0.1,
+        color: const Color(0xFFF5F5F5),
+      ),
+    );
+  }
+
   Widget buildEditProfile(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return InkWell(
-      // TODO: dapat may function na ito sa susunod may nigga ha
-      onTap: () => debugPrint('Edit profile tapped'),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const EditProfileScreen(),
+          ),
+        );
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'Edit profile',
             style: TextStyle(
               fontSize: 13,
-              color: Color(0xFF121212),
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
           ),
           SizedBox(width: screenWidth * 0.01),
-          const Icon(
+          Icon(
             Icons.arrow_forward,
             size: 15,
-            color: Color(0xFF121212),
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ],
       ),

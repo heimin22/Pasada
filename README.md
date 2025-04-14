@@ -22,10 +22,6 @@ Once the application is installed and running, users can:
 4. **Make Payments**: Pay for the ride using integrated payment methods.
 5. **View Ride History**: Check past rides and manage profile settings.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
 ## Contact
 
 For inquiries or support, please email me [heiminrei22@gmail.com](mailto:heiminrei22@gmail.com). You can also open an issue on the [GitHub repository](https://github.com/heimin22/Pasada) for bug reports or feature requests.

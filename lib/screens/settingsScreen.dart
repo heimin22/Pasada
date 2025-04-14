@@ -1,32 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
 import '../main.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Pasada',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF2F2F2),
-        fontFamily: 'Inter',
-        useMaterial3: true,
-      ),
-      home: const SettingsScreenStateful(title:  'Pasada'),
-      routes: <String, WidgetBuilder>{
-        'start': (BuildContext context) => const PasadaPassenger(),
-      },
-    );
+    return const SettingsScreenStateful();
   }
 }
 
 class SettingsScreenStateful extends StatefulWidget {
-  const SettingsScreenStateful({super.key, required this.title});
-  final String title;
+  const SettingsScreenStateful({super.key});
 
   @override
   State<SettingsScreenStateful> createState() => SettingsScreenPageState();
@@ -38,8 +31,11 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       body: SafeArea(
         child: Column(
           children: [
@@ -48,10 +44,12 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               screenHeight: screenSize.height,
               screenWidth: screenSize.width,
             ),
-            const Divider(
+            Divider(
               height: 0,
               thickness: 12,
-              color: Color(0xFFE9E9E9),
+              color: isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : const Color(0xFFE9E9E9),
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -66,10 +64,12 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // settings section widget
   Widget buildSettingsSection() {
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.03),
+      padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01),
       child: Container(
-        color: Color(0xFFF5F5F5),
+        color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -86,15 +86,15 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               debugPrint('Log out tapped');
               showLogoutDialog();
             }, isDestructive: true),
-
             const SizedBox(height: 25),
-
             buildSectionHeader('Settings', screenWidth),
-            buildSettingsListItem('Preferences', screenWidth, (){
+            buildSettingsListItem('Preferences', screenWidth, () {
               debugPrint('Preferences tapped');
               // TODO: dapat may function na ito sa susunod my nigger
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
-            buildSettingsListItem('Contact Support', screenWidth, (){
+            buildSettingsListItem('Contact Support', screenWidth, () {
               debugPrint('Contact support tapped');
               // TODO: dapat may function na ito sa susunod my nigger
             }),
@@ -107,7 +107,14 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // dito yung mga helper widgets my nigger
 
   // dito yung mga single tappable list items para sa settings ng sections
-  Widget buildSettingsListItem(String title, double screenWidth, VoidCallback onTap, {bool isDestructive = false}) {
+  Widget buildSettingsListItem(
+    String title,
+    double screenWidth,
+    VoidCallback onTap, {
+    bool isDestructive = false,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -126,14 +133,21 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                     title,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDestructive ? Color(0xFFD7481D) : Theme.of(context).textTheme.bodyMedium?.color,
-                      fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w500,
+                      color: isDestructive
+                          ? const Color(0xFFD7481D)
+                          : (isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212)),
+                      fontWeight:
+                          isDestructive ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
                 Icon(
                   Icons.chevron_right,
-                  color: Color(0xFF121212),
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                   size: 22,
                 )
               ],
@@ -150,19 +164,16 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
 
   // builds the header for a settings section
   Widget buildSectionHeader(String title, double screenWidth) {
-    return Padding (
-      padding: EdgeInsets.only(
-        left: screenWidth * 0.05,
-        right: screenWidth * 0.05,
-        top: 10,
-        bottom: 15,
-      ),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: EdgeInsets.all(screenWidth * 0.03),
       child: Text(
         title,
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF121212),
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         ),
       ),
     );
@@ -171,7 +182,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   // logout dialog
   void showLogoutDialog() async {
     final AuthService authService = AuthService();
-    final navigator = Navigator.of(context);
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     try {
       final confirmLogout = await showDialog<bool>(
@@ -211,7 +221,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         rootNavigator.pop();
         rootNavigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => PasadaPassenger()),
-              (Route<dynamic> route) => false,
+          (Route<dynamic> route) => false,
         );
       }
     } catch (e) {

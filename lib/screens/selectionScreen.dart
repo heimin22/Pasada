@@ -19,7 +19,8 @@ class PersistentHomeScreen extends StatefulWidget {
   State<PersistentHomeScreen> createState() => PersistentHomeScreenState();
 }
 
-class PersistentHomeScreenState extends State<PersistentHomeScreen> with AutomaticKeepAliveClientMixin {
+class PersistentHomeScreenState extends State<PersistentHomeScreen>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -34,10 +35,12 @@ class PersistentActivityScreen extends StatefulWidget {
   const PersistentActivityScreen({super.key});
 
   @override
-  State<PersistentActivityScreen> createState() => _PersistentActivityScreenState();
+  State<PersistentActivityScreen> createState() =>
+      _PersistentActivityScreenState();
 }
 
-class _PersistentActivityScreenState extends State<PersistentActivityScreen> with AutomaticKeepAliveClientMixin{
+class _PersistentActivityScreenState extends State<PersistentActivityScreen>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -52,10 +55,12 @@ class PersistentProfileScreen extends StatefulWidget {
   const PersistentProfileScreen({super.key});
 
   @override
-  State<PersistentProfileScreen> createState() => _PersistentProfileScreenState();
+  State<PersistentProfileScreen> createState() =>
+      _PersistentProfileScreenState();
 }
 
-class _PersistentProfileScreenState extends State<PersistentProfileScreen> with AutomaticKeepAliveClientMixin{
+class _PersistentProfileScreenState extends State<PersistentProfileScreen>
+    with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
@@ -104,7 +109,7 @@ class selectionState extends State<selectionScreen> {
     }
   }
 
-  void onTap (int newIndex) {
+  void onTap(int newIndex) {
     setState(() {
       previousIndex = currentIndex;
       currentIndex = newIndex;
@@ -112,7 +117,9 @@ class selectionState extends State<selectionScreen> {
   }
 
   Widget buildCurvedNavItem(int index) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     String selectedIcon, unselectedIcon;
+
     switch (index) {
       case 0:
         selectedIcon = 'homeSelectedIcon.svg';
@@ -130,6 +137,7 @@ class selectionState extends State<selectionScreen> {
         selectedIcon = '';
         unselectedIcon = '';
     }
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -137,7 +145,9 @@ class selectionState extends State<selectionScreen> {
           'assets/svg/${currentIndex == index ? selectedIcon : unselectedIcon}',
           colorFilter: currentIndex == index
               ? ColorFilter.mode(getIconColor(), BlendMode.srcIn)
-              : null,
+              : isDarkMode
+                  ? const ColorFilter.mode(Color(0xFFF5F5F5), BlendMode.srcIn)
+                  : null,
           width: 24,
           height: 24,
         ),
@@ -147,6 +157,8 @@ class selectionState extends State<selectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return PageStorage(
       bucket: bucket,
       child: Scaffold(
@@ -163,7 +175,7 @@ class selectionState extends State<selectionScreen> {
             buildCurvedNavItem(2),
           ],
           index: currentIndex,
-          color: const Color(0xFFF5F5F5),
+          color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
           backgroundColor: getNavBarColor(),
           buttonBackgroundColor: Color(0xFFF5F5F5),
           onTap: (newIndex) {
