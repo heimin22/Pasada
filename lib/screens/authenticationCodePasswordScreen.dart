@@ -98,9 +98,9 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
 
     try {
       await authService.verifyPasswordResetCode(
-        widget.email,
-        codeController.text,
-        widget.newPassword,
+        email: widget.email,
+        token: codeController.text,
+        newPassword: widget.newPassword,
       );
 
       if (mounted) {
@@ -210,7 +210,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 24),
               child: ElevatedButton(
-                onPressed: isLoading ? null : verifyCodeAndChangePassword,
+                onPressed: isLoading ? null : verifyCodeAndChangedPassword,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00CC58),
                   padding: const EdgeInsets.symmetric(vertical: 16),
