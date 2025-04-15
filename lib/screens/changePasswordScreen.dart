@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/main.dart';
+import 'package:pasada_passenger_app/screens/authenticationCodePasswordScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -127,7 +130,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isLoading ? null : () {},
+        onPressed: isLoading ? null : handleChangePassword,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00CC58),
           minimumSize: const Size(360, 50),
@@ -154,6 +157,62 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
       ),
     );
+  }
+
+  Future<void> handleChangePassword() async {
+    if (currentPasswordController.text.isEmpty ||
+        newPasswordController.text.isEmpty ||
+        confirmPasswordController.text.isEmpty) {
+      Fluttertoast.showToast(
+        msg: 'Please fill in all fields',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
+      return;
+    }
+
+    if (newPasswordController.text != confirmPasswordController.text) {
+      Fluttertoast.showToast(
+        msg: 'Passwords do not match',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => AuthenticationScreen(
+                    email: user.email!,
+                    newPassword: newPasswordController.text,
+                  )),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Failed to change password',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+      }
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
