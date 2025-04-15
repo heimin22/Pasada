@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
@@ -75,7 +76,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
           children: [
             buildSectionHeader('My Account', screenWidth),
             buildSettingsListItem('Change your password', screenWidth, () {
-              debugPrint('Change Password tapped');
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ChangePasswordScreen()));
               // TODO: dapat may function na ito sa susunod my nigger
             }),
             buildSettingsListItem('Delete my account', screenWidth, () {

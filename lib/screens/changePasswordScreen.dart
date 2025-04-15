@@ -129,8 +129,7 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
       child: ElevatedButton(
         onPressed: isLoading ? null : () {},
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          backgroundColor: const Color(0xFF00CC58),
           minimumSize: const Size(360, 50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
@@ -148,9 +147,9 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
             : Text(
                 'Change Password',
                 style: TextStyle(
-                  color: Color(0xFF121212),
+                  color: Color(0xFFF5F5F5),
                   fontWeight: FontWeight.w600,
-                  fontSize: 20,
+                  fontSize: 16,
                 ),
               ),
       ),
@@ -167,14 +166,19 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            buildPasswordField(
-                'Current Password', currentPasswordController, isDarkMode),
-            buildPasswordField(
-                'New Password', newPasswordController, isDarkMode),
-            buildPasswordField(
-                'Confirm New Password', confirmPasswordController, isDarkMode),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                buildPasswordField(
+                    'Current Password', currentPasswordController, isDarkMode),
+                buildPasswordField(
+                    'New Password', newPasswordController, isDarkMode),
+                buildPasswordField('Confirm New Password',
+                    confirmPasswordController, isDarkMode),
+              ],
+            ),
             buildChangePasswordButton(isDarkMode),
           ],
         ),
