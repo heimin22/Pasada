@@ -359,4 +359,34 @@ class AuthService {
       throw Exception('Failed to update profile');
     }
   }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: null, // Remove redirect to force OTP mode
+      );
+    } catch (e) {
+      throw Exception('Failed to send password reset email');
+    }
+  }
+
+  Future<void> verifyPasswordResetCode(
+      {required String email,
+      required String token,
+      required String newPassword}) async {
+    try {
+      await supabase.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.recovery,
+      );
+
+      await supabase.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+    } catch (e) {
+      throw Exception('Failed to verify password reset code');
+    }
+  }
 }
