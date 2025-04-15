@@ -159,6 +159,26 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      appBar: buildAppBar(isDarkMode),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            buildPasswordField(
+                'Current Password', currentPasswordController, isDarkMode),
+            buildPasswordField(
+                'New Password', newPasswordController, isDarkMode),
+            buildPasswordField(
+                'Confirm New Password', confirmPasswordController, isDarkMode),
+            buildChangePasswordButton(isDarkMode),
+          ],
+        ),
+      ),
+    );
   }
 }
