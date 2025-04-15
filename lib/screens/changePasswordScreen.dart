@@ -87,10 +87,72 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
                 fontFamily: 'Inter',
                 fontSize: 14,
               ),
-              decoration: InputDecoration(),
+              decoration: InputDecoration(
+                suffixIcon: IconButton(
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                  onPressed: () {
+                    setState(() => isPasswordVisible = !isPasswordVisible);
+                  },
+                  icon: Icon(
+                    isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: isDarkMode
+                        ? const Color(0xFF1E1E1E)
+                        : const Color(0xFFE9E9E9),
+                    width: 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: const Color(0xFF00CC58),
+                  ),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Container buildChangePasswordButton(bool isDarkMode) {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : () {},
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+        ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF00CC58),
+                ),
+              )
+            : Text(
+                'Change Password',
+                style: TextStyle(
+                  color: Color(0xFF121212),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                ),
+              ),
       ),
     );
   }
