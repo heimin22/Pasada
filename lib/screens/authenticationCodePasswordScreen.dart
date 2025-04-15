@@ -264,6 +264,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
+                          color: const Color(0xFFF5F5F5),
                         ),
                       ),
               ),
