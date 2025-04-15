@@ -362,8 +362,10 @@ class AuthService {
 
   Future<void> sendPasswordResetEmail(String email) async {
     try {
-      await supabase.auth
-          .resetPasswordForEmail(email, redirectTo: 'pasada://reset-password');
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: null, // Remove redirect to force OTP mode
+      );
     } catch (e) {
       throw Exception('Failed to send password reset email');
     }

@@ -4,6 +4,7 @@ import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:async';
+import 'package:flutter/services.dart';
 
 class AuthenticationScreen extends StatefulWidget {
   final String email;
@@ -83,9 +84,22 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
   }
 
   Future<void> verifyCodeAndChangedPassword() async {
-    if (codeController.text.isEmpty) {
+    final code = codeController.text;
+
+    if (code.isEmpty) {
       Fluttertoast.showToast(
         msg: 'Please enter the authentication code',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
+      return;
+    }
+
+    if (code.length != 6) {
+      Fluttertoast.showToast(
+        msg: 'Please enter a valid 6-digit code',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: Color(0xFFF5F5F5),
@@ -99,7 +113,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
     try {
       await authService.verifyPasswordResetCode(
         email: widget.email,
-        token: codeController.text,
+        token: code,
         newPassword: widget.newPassword,
       );
 
@@ -116,7 +130,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
     } catch (e) {
       if (mounted) {
         Fluttertoast.showToast(
-          msg: 'Failed to change password',
+          msg: 'Invalid verification code',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
@@ -136,7 +150,16 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
       backgroundColor:
           isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        title: const Text('Verify Authentication Code'),
+        title: Text(
+          'Verify Authentication Code',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -173,13 +196,21 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
                     labelText: 'Authentication Code',
                     border: OutlineInputBorder(),
                     filled: true,
-                    fillColor:
-                        isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                    fillColor: isDarkMode
+                        ? const Color(0xFF1E1E1E)
+                        : const Color(0xFFF2F2F2),
+                    helperText: 'Enter the 6-digit code sent to your email',
                   ),
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
                   style: TextStyle(
                     color: isDarkMode
                         ? const Color(0xFFF5F5F5)
                         : const Color(0xFF121212),
+                    letterSpacing: 8.0,
                   ),
                 ),
                 const SizedBox(height: 16),
