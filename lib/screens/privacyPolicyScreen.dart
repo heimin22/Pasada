@@ -84,7 +84,30 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
             color:
                 isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
+          listBullet: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+          strong: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+          em: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+            fontStyle: FontStyle.italic,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
         ),
+        padding: const EdgeInsets.all(16.0),
       ),
     );
   }
