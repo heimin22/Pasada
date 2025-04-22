@@ -61,6 +61,68 @@ class ChangeForgottenPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Color(0xFFF5F5F5),
+        elevation: 0,
+        title: const Text('Change Password'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _newPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'New Password',
+                hintText: 'Enter your new password',
+                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF121212)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Confirm Password',
+                hintText: 'Confirm your new password',
+                border: OutlineInputBorder(),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF121212)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : handleForgotPassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00CC58),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFFF5F5F5)),
+                        ),
+                      )
+                    : const Text('Change Password'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

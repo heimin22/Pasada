@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/changeForgottenPasswordScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/cupertino.dart';
@@ -117,14 +118,27 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
       );
 
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Password changed successfully',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        if (widget.newPassword.isEmpty) {
+          // For forgotten password flow
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChangeForgottenPasswordScreen(
+                email: widget.email,
+              ),
+            ),
+          );
+        } else {
+          // For normal password change flow
+          Fluttertoast.showToast(
+            msg: 'Password changed successfully',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Color(0xFFF5F5F5),
+            textColor: Color(0xFF121212),
+          );
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       }
     } catch (e) {
       if (mounted) {
