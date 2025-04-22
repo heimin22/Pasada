@@ -78,6 +78,82 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      backgroundColor: Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: Color(0xFFF5F5F5),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF121212)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Forgot Password",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF121212),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Enter your email to reset your password",
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF121212),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                hintText: "Email",
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF121212),
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF121212)),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFF121212)),
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : handleForgotPassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF00CC58),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text('Reset Password'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
