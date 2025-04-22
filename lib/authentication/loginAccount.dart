@@ -3,6 +3,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/screens/changeForgottenPassword.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -437,19 +438,27 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildForgotPassword() {
     return Container(
-      margin: EdgeInsets.only(
-        top: MediaQuery.of(context).size.height * 0.02,
-        left: MediaQuery.of(context).size.height * 0.003,
-      ),
-      child: Text(
-        "Forgot Password?",
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF121212),
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).size.height * 0.02,
+          left: MediaQuery.of(context).size.height * 0.003,
         ),
-      ),
-    );
+        child: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ChangeForgottenPassword()),
+            );
+          },
+          child: Text(
+            "Forgot Password?",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF121212),
+            ),
+          ),
+        ));
   }
 
   Column buildHeader() {
