@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/forgotPasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
@@ -57,6 +56,7 @@ class LoginScreen extends State<LoginPage> {
   final Connectivity connectivity = Connectivity();
   late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
 
+  @override
   void initState() {
     super.initState();
     checkInitialConnectivity();
@@ -66,11 +66,13 @@ class LoginScreen extends State<LoginPage> {
 
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      showNoInternetToast();
+    }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
-    if (result == ConnectivityResult.none) showNoInternetToast();
+    if (result.contains(ConnectivityResult.none)) showNoInternetToast();
   }
 
   void showNoInternetToast() {
@@ -89,7 +91,9 @@ class LoginScreen extends State<LoginPage> {
     final email = emailController.text;
     final password = passwordController.text;
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      showNoInternetToast();
+    }
 
     try {
       await authService.supabase.auth.signInWithPassword(

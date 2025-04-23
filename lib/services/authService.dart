@@ -382,27 +382,42 @@ class AuthService {
         email,
         redirectTo: null,
       );
+
+      // Update last attempt time after successful send
+      _lastResetAttempts[email] = DateTime.now();
     } catch (e) {
       debugPrint('Error in sendPasswordResetEmail: $e');
-      throw e; // Let the calling function handle the error
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      }
+      throw e;
     }
   }
 
-  Future<void> verifyPasswordResetCode(
-      {required String email,
-      required String token,
-      required String newPassword}) async {
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
     try {
-      await supabase.auth.verifyOTP(
+      final response = await supabase.auth.verifyOTP(
         email: email,
         token: token,
         type: OtpType.recovery,
       );
 
-      await supabase.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
+      if (response.session != null && newPassword.isNotEmpty) {
+        await supabase.auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      }
     } catch (e) {
+      debugPrint('Error in verifyPasswordResetCode: $e');
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      } else if (e.toString().contains('Invalid')) {
+        throw Exception('Invalid or expired authentication code');
+      }
       throw Exception('Failed to verify password reset code');
     }
   }

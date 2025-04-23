@@ -275,7 +275,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   Future<void> updateLocation() async {
     if (!isMapReady) return;
 
-    final visibleRegion = await mapController!.getVisibleRegion();
+    final visibleRegion = await mapController.getVisibleRegion();
     final center = LatLng(
       (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
       (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) /
@@ -298,7 +298,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       return currentLocation ?? const LatLng(14.617494, 120.971770);
     }
 
-    final visibleRegion = await mapController!.getVisibleRegion();
+    final visibleRegion = await mapController.getVisibleRegion();
     // calculate natin yung exact center
     final centerLat =
         (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) /
@@ -313,7 +313,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   // papalitan ko yung snapToLandmark method kasi ang panget gago
   // try ko yung sa implementation ng Grab
   Future<void> fetchLocationAtCenter() async {
-    if (!isMapReady || mapController == null) {
+    if (!isMapReady) {
       debugPrint("Map not ready");
       return;
     }
@@ -406,10 +406,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         });
       }
 
-      if (isMapReady && mapController != null) {
+      if (isMapReady) {
         // Throttle camera updates
         _memoryManager.throttle(() async {
-          await mapController!.animateCamera(
+          await mapController.animateCamera(
             CameraUpdate.newCameraPosition(
               CameraPosition(target: newLocation, zoom: 15),
             ),
@@ -455,7 +455,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       // use natin yung existing location if available
 
       if (currentLocation != null) {
-        await mapController!.animateCamera(
+        await mapController.animateCamera(
           CameraUpdate.newCameraPosition(
             CameraPosition(target: currentLocation!, zoom: 17),
           ),
@@ -522,7 +522,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             ),
             onMapCreated: onMapCreated,
             onTap: (position) {
-              mapController?.animateCamera(
+              mapController.animateCamera(
                 CameraUpdate.newLatLng(position),
               );
             },
