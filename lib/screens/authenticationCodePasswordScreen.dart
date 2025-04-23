@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/changeForgottenPasswordScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:flutter/cupertino.dart';
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthenticationScreen extends StatefulWidget {
   final String email;
@@ -68,22 +69,32 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
         );
       }
     } catch (e) {
+      debugPrint(
+          'Error sending authentication code: $e'); // Add this for debugging
       if (mounted) {
+        // Only show error toast if there's actually an error
+        String errorMessage = 'Failed to send authentication code';
+        if (e.toString().contains('rate_limit')) {
+          errorMessage = 'Please wait before requesting another code';
+        }
         Fluttertoast.showToast(
-          msg: 'Failed to send authentication code',
+          msg: errorMessage,
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
           textColor: Color(0xFF121212),
         );
       }
+      rethrow; // Add this to propagate the error if needed
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
   Future<void> verifyCodeAndChangedPassword() async {
-    final code = codeController.text;
+    final code = codeController.text.trim();
 
     if (code.isEmpty) {
       Fluttertoast.showToast(
@@ -110,26 +121,53 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
     setState(() => isLoading = true);
 
     try {
-      await authService.verifyPasswordResetCode(
+      // First verify the OTP
+      final response = await authService.supabase.auth.verifyOTP(
         email: widget.email,
         token: code,
-        newPassword: widget.newPassword,
+        type: OtpType.recovery,
       );
 
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Password changed successfully',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      if (response.session != null) {
+        if (widget.newPassword.isNotEmpty) {
+          // For normal password change flow
+          await authService.supabase.auth.updateUser(
+            UserAttributes(password: widget.newPassword),
+          );
+
+          if (mounted) {
+            Fluttertoast.showToast(
+              msg: 'Password changed successfully',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: Color(0xFFF5F5F5),
+              textColor: Color(0xFF121212),
+            );
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        } else {
+          // For forgotten password flow
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChangeForgottenPasswordScreen(
+                  email: widget.email,
+                ),
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
+      debugPrint('Verification error: $e');
       if (mounted) {
+        String errorMessage = 'Invalid verification code';
+        if (e.toString().contains('rate_limit')) {
+          errorMessage = 'Please wait before trying again';
+        }
         Fluttertoast.showToast(
-          msg: 'Invalid verification code',
+          msg: errorMessage,
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
@@ -137,7 +175,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
         );
       }
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -263,7 +301,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFFF5F5F5),
+                          color: Color(0xFFF5F5F5),
                         ),
                       ),
               ),

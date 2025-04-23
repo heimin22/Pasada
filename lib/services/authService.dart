@@ -27,6 +27,10 @@ class AuthService {
   // database passengers
   final passengersDatabase = Supabase.instance.client.from('passenger');
 
+  // rate limit for password reset
+  final supabaseRateLimit = Supabase.instance.client;
+  final _lastResetAttempts = <String, DateTime>{};
+
   void initState() {
     checkInitialConnectivity();
     connectivitySubscription =
@@ -228,6 +232,18 @@ class AuthService {
     }
   }
 
+  Future<bool> checkResetPasswordRateLimit(String email) async {
+    final lastAttempt = _lastResetAttempts[email];
+    final now = DateTime.now();
+
+    if (lastAttempt != null && now.difference(lastAttempt).inSeconds < 60) {
+      return false;
+    }
+
+    _lastResetAttempts[email] = now;
+    return true;
+  }
+
   // initialize deep link handling for auth callbacks
   Future<void> initDeepLinkHandling() async {
     try {
@@ -364,28 +380,44 @@ class AuthService {
     try {
       await supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: null, // Remove redirect to force OTP mode
+        redirectTo: null,
       );
+
+      // Update last attempt time after successful send
+      _lastResetAttempts[email] = DateTime.now();
     } catch (e) {
-      throw Exception('Failed to send password reset email');
+      debugPrint('Error in sendPasswordResetEmail: $e');
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      }
+      throw e;
     }
   }
 
-  Future<void> verifyPasswordResetCode(
-      {required String email,
-      required String token,
-      required String newPassword}) async {
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
     try {
-      await supabase.auth.verifyOTP(
+      final response = await supabase.auth.verifyOTP(
         email: email,
         token: token,
         type: OtpType.recovery,
       );
 
-      await supabase.auth.updateUser(
-        UserAttributes(password: newPassword),
-      );
+      if (response.session != null && newPassword.isNotEmpty) {
+        await supabase.auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      }
     } catch (e) {
+      debugPrint('Error in verifyPasswordResetCode: $e');
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      } else if (e.toString().contains('Invalid')) {
+        throw Exception('Invalid or expired authentication code');
+      }
       throw Exception('Failed to verify password reset code');
     }
   }
