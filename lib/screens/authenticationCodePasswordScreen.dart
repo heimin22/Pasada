@@ -84,7 +84,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
   }
 
   Future<void> verifyCodeAndChangedPassword() async {
-    final code = codeController.text;
+    final code = codeController.text.trim();
 
     if (code.isEmpty) {
       Fluttertoast.showToast(

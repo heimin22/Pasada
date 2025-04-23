@@ -27,6 +27,10 @@ class AuthService {
   // database passengers
   final passengersDatabase = Supabase.instance.client.from('passenger');
 
+  // rate limit for password reset
+  final supabaseRateLimit = Supabase.instance.client;
+  final _lastResetAttempts = <String, DateTime>{};
+
   void initState() {
     checkInitialConnectivity();
     connectivitySubscription =
@@ -226,6 +230,18 @@ class AuthService {
       debugPrint('Error during Google sign-in: $e');
       return false;
     }
+  }
+
+  Future<bool> checkResetPasswordRateLimit(String email) async {
+    final lastAttempt = _lastResetAttempts[email];
+    final now = DateTime.now();
+
+    if (lastAttempt != null && now.difference(lastAttempt).inSeconds < 60) {
+      return false;
+    }
+
+    _lastResetAttempts[email] = now;
+    return true;
   }
 
   // initialize deep link handling for auth callbacks

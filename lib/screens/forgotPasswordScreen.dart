@@ -60,21 +60,26 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
     }
 
     if (!_canResend) {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: "Please wait $_remainingTime seconds before requesting again",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-      }
+      Fluttertoast.showToast(
+        msg: "Please wait $_remainingTime seconds before requesting again",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFFF5F5F5),
+        textColor: Color(0xFF121212),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
+      final bool canProceed =
+          await _authService.checkResetPasswordRateLimit(email);
+
+      if (!canProceed) {
+        throw Exception('rate_limit');
+      }
+
       // First, try to send the password reset email
       await _authService.supabase.auth.resetPasswordForEmail(
         email,
