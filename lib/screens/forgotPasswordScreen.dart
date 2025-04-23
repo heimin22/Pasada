@@ -28,6 +28,23 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
     super.dispose();
   }
 
+  void _startTimer() {
+    setState(() {
+      _canResend = false;
+      _remainingTime = 60;
+    });
+
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_remainingTime > 0) {
+        setState(() => _remainingTime--);
+      } else {
+        setState(() => _canResend = true);
+        timer.cancel();
+      }
+    });
+  }
+
   Future<void> handleForgotPassword() async {
     final email = _emailController.text.trim().toLowerCase();
 
