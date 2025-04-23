@@ -136,6 +136,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   ]''';
 
+  // Add this variable to store the current map style
+  String _currentMapStyle = '';
+
   // global key for the map
   final GlobalKey<MapScreenState> mapScreenKey = GlobalKey<MapScreenState>();
 
@@ -184,11 +187,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     super.initState();
     _initializeMapState();
 
-    // Cache map style for faster access
-    final cachedStyle = _memoryManager.getFromCache(MAP_STYLE_KEY);
-    if (cachedStyle == null) {
-      _memoryManager.addToCache(MAP_STYLE_KEY, darkMapStyle);
-    }
+    // Initialize map style based on theme and cache
+    _initializeMapStyle();
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -200,6 +200,21 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       interval: 1000,
       accuracy: LocationAccuracy.high,
     );
+  }
+
+  void _initializeMapStyle() {
+    // Get cached map style
+    final cachedStyle = _memoryManager.getFromCache(MAP_STYLE_KEY);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    if (isDarkMode) {
+      _currentMapStyle = cachedStyle ?? darkMapStyle;
+      if (cachedStyle == null) {
+        _memoryManager.addToCache(MAP_STYLE_KEY, darkMapStyle);
+      }
+    } else {
+      _currentMapStyle = '';
+    }
   }
 
   Future<void> _initializeMapState() async {
@@ -230,20 +245,25 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     mapController = controller;
     isMapReady = true;
 
-    // Get cached map style
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    if (isDarkMode) {
-      final cachedStyle =
-          _memoryManager.getFromCache(MAP_STYLE_KEY) ?? darkMapStyle;
-      controller.setMapStyle(cachedStyle);
-    }
-
     // Debounce camera movements
     _memoryManager.debounce(() {
       if (currentLocation != null) {
         controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
       }
     }, const Duration(milliseconds: 300), 'camera_movement');
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Update map style when theme changes
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final newStyle = isDarkMode ? darkMapStyle : '';
+    if (_currentMapStyle != newStyle) {
+      setState(() {
+        _currentMapStyle = newStyle;
+      });
+    }
   }
 
   void handleMapTap(LatLng tappedPosition) async {
@@ -516,6 +536,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       body: Stack(
         children: [
           GoogleMap(
+            style: _currentMapStyle,
             padding: EdgeInsets.only(
               bottom: bottomContainerHeight +
                   MediaQuery.of(context).size.height * 0.01,
@@ -566,9 +587,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Color(0xFF121212),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),

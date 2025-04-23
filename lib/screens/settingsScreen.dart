@@ -81,7 +81,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                   context,
                   MaterialPageRoute(
                       builder: (context) => ChangePasswordScreen()));
-              // TODO: dapat may function na ito sa susunod my nigger
             }),
             buildSettingsListItem('Delete my account', screenWidth, () {
               debugPrint('Delete Account tapped');
@@ -95,7 +94,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             buildSectionHeader('Settings', screenWidth),
             buildSettingsListItem('Preferences', screenWidth, () {
               debugPrint('Preferences tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
