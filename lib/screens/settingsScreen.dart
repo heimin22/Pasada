@@ -82,10 +82,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                   MaterialPageRoute(
                       builder: (context) => ChangePasswordScreen()));
             }),
-            buildSettingsListItem('Delete my account', screenWidth, () {
-              debugPrint('Delete Account tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
-            }),
             buildSettingsListItem("Log out", screenWidth, () {
               debugPrint('Log out tapped');
               showLogoutDialog();
