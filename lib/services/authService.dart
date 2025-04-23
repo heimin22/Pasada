@@ -367,7 +367,14 @@ class AuthService {
         redirectTo: null, // Remove redirect to force OTP mode
       );
     } catch (e) {
-      throw Exception('Failed to send password reset email');
+      debugPrint('Error in sendPasswordResetEmail: $e');
+      if (e.toString().contains('network')) {
+        throw Exception('Network error. Please check your connection');
+      } else if (e.toString().contains('not found')) {
+        throw Exception('No account found with this email');
+      } else {
+        throw Exception('Failed to send password reset email: ${e.toString()}');
+      }
     }
   }
 

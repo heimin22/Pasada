@@ -65,6 +65,16 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
       }
     } catch (e) {
       if (mounted) {
+        debugPrint("Error in handleForgotPassword: $e");
+
+        String errorMessage = "An error occurred";
+
+        if (e.toString().contains('not found')) {
+          errorMessage = "No account found with this email";
+        } else if (e.toString().contains('network')) {
+          errorMessage = "Network error. Please check your connection";
+        }
+
         Fluttertoast.showToast(
           msg: "An error occurred",
           toastLength: Toast.LENGTH_SHORT,
@@ -112,11 +122,19 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
             const SizedBox(height: 24),
             TextField(
               controller: _emailController,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF121212),
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               decoration: const InputDecoration(
                 hintText: "Email",
                 hintStyle: TextStyle(
                   fontSize: 14,
                   color: Color(0xFF121212),
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
                 ),
                 border: OutlineInputBorder(
                   borderSide: BorderSide(color: Color(0xFF121212)),
@@ -135,7 +153,7 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : handleForgotPassword,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF00CC58),
+                  backgroundColor: const Color(0xFF00CC58),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isLoading
@@ -145,10 +163,17 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                              AlwaysStoppedAnimation<Color>(Color(0xFFF5F5F5)),
                         ),
                       )
-                    : const Text('Reset Password'),
+                    : Text(
+                        'Reset Password',
+                        style: TextStyle(
+                          color: const Color(0xFFF5F5F5),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
               ),
             ),
           ],
