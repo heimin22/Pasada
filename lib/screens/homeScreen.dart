@@ -55,8 +55,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(','); // split by comma
-    if (parts.length < 2)
+    if (parts.length < 2) {
       return [location, '']; // kapag exact address si location then leave as is
+    }
     return [
       parts[0],
       parts.sublist(1).join(', ')
@@ -367,7 +368,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       selectedDropOffLocation != null &&
                       selectedPaymentMethod != null)
                   ? () {
-                      // TODO: Lalagyan na to ng function sa susunod nigga
+                      // Lalagyan na to ng function sa susunod nigga
                     }
                   : null,
               style: ElevatedButton.styleFrom(

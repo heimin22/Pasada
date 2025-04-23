@@ -40,8 +40,9 @@ class LandmarkService {
     if (cachedKey != null) return cachedKey as String;
 
     _cachedApiKey = dotenv.env['ANDROID_MAPS_API_KEY'];
-    if (_cachedApiKey != null)
+    if (_cachedApiKey != null) {
       memoryManager.addToCache('api_key', _cachedApiKey);
+    }
     // Implement secure storage retrieval
     return _cachedApiKey;
   }

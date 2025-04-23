@@ -95,7 +95,6 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             }),
             buildSettingsListItem('Contact Support', screenWidth, () {
               debugPrint('Contact support tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
             }),
             buildSettingsListItem('Privacy Policy', screenWidth, () {
               Navigator.push(
