@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gotrue/gotrue.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
@@ -34,10 +35,36 @@ class ChangeForgottenPasswordScreenState
       return;
     }
 
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      Fluttertoast.showToast(
+        msg: "Passwords do not match",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFF121212),
+        textColor: Color(0xFFF5F5F5),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      await _authService.login(widget.email, _newPasswordController.text);
+      await _authService.supabase.auth.updateUser(
+        UserAttributes(password: _newPasswordController.text),
+      );
+
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Password changed successfully',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+      }
+
+      // await _authService.login(widget.email, _newPasswordController.text);
+
       if (mounted) {
         Navigator.push(
           context,
@@ -66,7 +93,14 @@ class ChangeForgottenPasswordScreenState
       appBar: AppBar(
         backgroundColor: Color(0xFFF5F5F5),
         elevation: 0,
-        title: const Text('Change Password'),
+        title: const Text(
+          'Change Password',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF121212),
+          ),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -74,6 +108,11 @@ class ChangeForgottenPasswordScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               controller: _newPasswordController,
               obscureText: true,
               decoration: const InputDecoration(
@@ -87,6 +126,11 @@ class ChangeForgottenPasswordScreenState
             ),
             const SizedBox(height: 16),
             TextField(
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+              ),
               controller: _confirmPasswordController,
               obscureText: true,
               decoration: const InputDecoration(
@@ -117,7 +161,14 @@ class ChangeForgottenPasswordScreenState
                               AlwaysStoppedAnimation<Color>(Color(0xFFF5F5F5)),
                         ),
                       )
-                    : const Text('Change Password'),
+                    : const Text(
+                        'Change Password',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFF5F5F5),
+                        ),
+                      ),
               ),
             ),
           ],

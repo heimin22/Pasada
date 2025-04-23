@@ -69,17 +69,27 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
         );
       }
     } catch (e) {
+      debugPrint(
+          'Error sending authentication code: $e'); // Add this for debugging
       if (mounted) {
+        // Only show error toast if there's actually an error
+        String errorMessage = 'Failed to send authentication code';
+        if (e.toString().contains('rate_limit')) {
+          errorMessage = 'Please wait before requesting another code';
+        }
         Fluttertoast.showToast(
-          msg: 'Failed to send authentication code',
+          msg: errorMessage,
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: Color(0xFFF5F5F5),
           textColor: Color(0xFF121212),
         );
       }
+      rethrow; // Add this to propagate the error if needed
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
