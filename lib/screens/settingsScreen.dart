@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
+import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
 import '../main.dart';
@@ -75,12 +77,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
           children: [
             buildSectionHeader('My Account', screenWidth),
             buildSettingsListItem('Change your password', screenWidth, () {
-              debugPrint('Change Password tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
-            }),
-            buildSettingsListItem('Delete my account', screenWidth, () {
-              debugPrint('Delete Account tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => ChangePasswordScreen()));
             }),
             buildSettingsListItem("Log out", screenWidth, () {
               debugPrint('Log out tapped');
@@ -90,13 +90,19 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             buildSectionHeader('Settings', screenWidth),
             buildSettingsListItem('Preferences', screenWidth, () {
               debugPrint('Preferences tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
             buildSettingsListItem('Contact Support', screenWidth, () {
               debugPrint('Contact support tapped');
-              // TODO: dapat may function na ito sa susunod my nigger
+            }),
+            buildSettingsListItem('Privacy Policy', screenWidth, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyScreen(),
+                ),
+              );
             }),
           ],
         ),

@@ -100,7 +100,7 @@ class SettingsProfileHeader extends StatelessWidget {
   Widget buildDefaultAvatar() {
     return CircleAvatar(
       radius: screenWidth * 0.07,
-      backgroundColor: const Color(0xFF000CC58),
+      backgroundColor: const Color(0xFF00CC58),
       child: Icon(
         Icons.person,
         size: screenWidth * 0.1,
