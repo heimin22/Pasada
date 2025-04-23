@@ -221,7 +221,7 @@ class PreferencesScreenState extends State<PreferencesScreen> {
                 child: CupertinoSwitch(
                   value: value,
                   onChanged: onChanged,
-                  activeColor: const Color(0xFF00CC58),
+                  activeTrackColor: const Color(0xFF00CC58),
                 ),
               ),
             ],

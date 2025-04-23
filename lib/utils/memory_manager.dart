@@ -91,9 +91,13 @@ class MemoryManager {
 
   // disposes of resources
   void dispose() {
-    throttleTimers.values.forEach((timer) => timer.cancel());
+    for (var timer in throttleTimers.values) {
+      timer.cancel();
+    }
     throttleTimers.clear();
-    debounceTimers.values.forEach((timer) => timer.cancel());
+    for (var timer in debounceTimers.values) {
+      timer.cancel();
+    }
     debounceTimers.clear();
     clearCache();
     debugPrint("Memory manager disposed");

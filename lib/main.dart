@@ -90,15 +90,6 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
     _memoryManager.addToCache('isDarkMode', _themeController.isDarkMode);
   }
 
-  void _handleThemeChange() {
-    // Throttle theme changes to prevent rapid toggles
-    _memoryManager.throttle(() {
-      setState(() {
-        // Your theme change logic
-      });
-    }, const Duration(milliseconds: 300), 'theme_change');
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(

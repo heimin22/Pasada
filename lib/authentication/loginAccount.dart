@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/screens/forgotPasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -56,6 +56,7 @@ class LoginScreen extends State<LoginPage> {
   final Connectivity connectivity = Connectivity();
   late StreamSubscription<List<ConnectivityResult>> connectivitySubscription;
 
+  @override
   void initState() {
     super.initState();
     checkInitialConnectivity();
@@ -65,11 +66,13 @@ class LoginScreen extends State<LoginPage> {
 
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      showNoInternetToast();
+    }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
-    if (result == ConnectivityResult.none) showNoInternetToast();
+    if (result.contains(ConnectivityResult.none)) showNoInternetToast();
   }
 
   void showNoInternetToast() {
@@ -88,7 +91,9 @@ class LoginScreen extends State<LoginPage> {
     final email = emailController.text;
     final password = passwordController.text;
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) showNoInternetToast();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      showNoInternetToast();
+    }
 
     try {
       await authService.supabase.auth.signInWithPassword(
@@ -437,19 +442,27 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildForgotPassword() {
     return Container(
-      margin: EdgeInsets.only(
-        top: MediaQuery.of(context).size.height * 0.02,
-        left: MediaQuery.of(context).size.height * 0.003,
-      ),
-      child: Text(
-        "Forgot Password?",
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF121212),
+        margin: EdgeInsets.only(
+          top: MediaQuery.of(context).size.height * 0.02,
+          left: MediaQuery.of(context).size.height * 0.003,
         ),
-      ),
-    );
+        child: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ChangeForgottenPassword()),
+            );
+          },
+          child: Text(
+            "Forgot Password?",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF121212),
+            ),
+          ),
+        ));
   }
 
   Column buildHeader() {

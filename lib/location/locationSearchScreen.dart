@@ -140,7 +140,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       // Save to recent searches
       await RecentSearchService.addRecentSearch(selectedLocation);
 
-      Navigator.pop(context, selectedLocation);
+      if (mounted) {
+        Navigator.pop(context, selectedLocation);
+      }
     }
   }
 

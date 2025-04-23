@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/gestures.dart';
+import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 
 import '../screens/selectionScreen.dart';
 
@@ -294,12 +294,35 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             child: Container(
               padding: EdgeInsets.only(
                   top: MediaQuery.of(context).size.height * 0.02),
-              child: Text(
-                'By signing up, I have read and agree to Pasada’s Terms and Conditions and Privacy Policy',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xff121212),
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xff121212),
+                  ),
+                  children: [
+                    const TextSpan(
+                      text:
+                          "By signing up, I have read and agree to Pasada's Terms and Conditions and ",
+                    ),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: const TextStyle(
+                        color: Color(0xFF121212),
+                        decoration: TextDecoration.underline,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PrivacyPolicyScreen(),
+                            ),
+                          );
+                        },
+                    ),
+                  ],
                 ),
               ),
             ),

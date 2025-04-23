@@ -27,6 +27,10 @@ class AuthService {
   // database passengers
   final passengersDatabase = Supabase.instance.client.from('passenger');
 
+  // rate limit for password reset
+  final supabaseRateLimit = Supabase.instance.client;
+  final _lastResetAttempts = <String, DateTime>{};
+
   void initState() {
     checkInitialConnectivity();
     connectivitySubscription =
@@ -35,8 +39,9 @@ class AuthService {
 
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none))
+    if (connectivityResult.contains(ConnectivityResult.none)) {
       showNoInternetToast();
+    }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
@@ -141,7 +146,7 @@ class AuthService {
 
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity == ConnectivityResult.none) {
+    if (connectivity.contains(ConnectivityResult.none)) {
       Fluttertoast.showToast(
         msg: 'No internet connection',
         toastLength: Toast.LENGTH_SHORT,
@@ -226,6 +231,18 @@ class AuthService {
       debugPrint('Error during Google sign-in: $e');
       return false;
     }
+  }
+
+  Future<bool> checkResetPasswordRateLimit(String email) async {
+    final lastAttempt = _lastResetAttempts[email];
+    final now = DateTime.now();
+
+    if (lastAttempt != null && now.difference(lastAttempt).inSeconds < 60) {
+      return false;
+    }
+
+    _lastResetAttempts[email] = now;
+    return true;
   }
 
   // initialize deep link handling for auth callbacks
@@ -357,6 +374,52 @@ class AuthService {
     } catch (e) {
       debugPrint('Error updating profile: $e');
       throw Exception('Failed to update profile');
+    }
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: null,
+      );
+
+      // Update last attempt time after successful send
+      _lastResetAttempts[email] = DateTime.now();
+    } catch (e) {
+      debugPrint('Error in sendPasswordResetEmail: $e');
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> verifyPasswordResetCode({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await supabase.auth.verifyOTP(
+        email: email,
+        token: token,
+        type: OtpType.recovery,
+      );
+
+      if (response.session != null && newPassword.isNotEmpty) {
+        await supabase.auth.updateUser(
+          UserAttributes(password: newPassword),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error in verifyPasswordResetCode: $e');
+      if (e.toString().contains('429')) {
+        throw Exception('rate_limit');
+      } else if (e.toString().contains('Invalid')) {
+        throw Exception('Invalid or expired authentication code');
+      }
+      throw Exception('Failed to verify password reset code');
     }
   }
 }
