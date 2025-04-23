@@ -364,17 +364,11 @@ class AuthService {
     try {
       await supabase.auth.resetPasswordForEmail(
         email,
-        redirectTo: null, // Remove redirect to force OTP mode
+        redirectTo: null,
       );
     } catch (e) {
       debugPrint('Error in sendPasswordResetEmail: $e');
-      if (e.toString().contains('network')) {
-        throw Exception('Network error. Please check your connection');
-      } else if (e.toString().contains('not found')) {
-        throw Exception('No account found with this email');
-      } else {
-        throw Exception('Failed to send password reset email: ${e.toString()}');
-      }
+      throw e; // Let the calling function handle the error
     }
   }
 

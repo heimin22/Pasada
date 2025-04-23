@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -15,9 +17,19 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
   final TextEditingController _emailController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
+  bool _canResend = true;
+  int _remainingTime = 60;
+  Timer? _timer;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _timer?.cancel();
+    super.dispose();
+  }
 
   Future<void> handleForgotPassword() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
 
     if (email.isEmpty) {
       Fluttertoast.showToast(
@@ -33,24 +45,11 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _authService.supabase
-          .from('passenger')
-          .select()
-          .eq('email', email)
-          .single();
-
-      if (response == null) {
-        Fluttertoast.showToast(
-          msg: "User not found",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-        return;
-      }
-
-      await _authService.sendPasswordResetEmail(email);
+      // First, try to send the password reset email
+      await _authService.supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: null,
+      );
 
       if (mounted) {
         Navigator.push(
@@ -64,21 +63,24 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
         );
       }
     } catch (e) {
+      debugPrint("Detailed error in handleForgotPassword: $e");
       if (mounted) {
-        debugPrint("Error in handleForgotPassword: $e");
-
-        String errorMessage = "An error occurred";
-
-        if (e.toString().contains('not found')) {
-          errorMessage = "No account found with this email";
-        } else if (e.toString().contains('network')) {
+        String errorMessage;
+        if (e.toString().contains('network')) {
           errorMessage = "Network error. Please check your connection";
+        } else if (e.toString().contains('not found') ||
+            e.toString().contains('Invalid login credentials')) {
+          errorMessage = "No account found with this email";
+        } else {
+          errorMessage = "An error occurred while resetting password";
         }
 
         Fluttertoast.showToast(
-          msg: "An error occurred",
+          msg: errorMessage,
           toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.CENTER,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFF121212),
+          textColor: Color(0xFFF5F5F5),
         );
       }
     } finally {

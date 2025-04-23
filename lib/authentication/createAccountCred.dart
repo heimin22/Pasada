@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/gestures.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 
