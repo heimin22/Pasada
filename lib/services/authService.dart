@@ -39,8 +39,9 @@ class AuthService {
 
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none))
+    if (connectivityResult.contains(ConnectivityResult.none)) {
       showNoInternetToast();
+    }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
@@ -145,7 +146,7 @@ class AuthService {
 
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity == ConnectivityResult.none) {
+    if (connectivity.contains(ConnectivityResult.none)) {
       Fluttertoast.showToast(
         msg: 'No internet connection',
         toastLength: Toast.LENGTH_SHORT,
@@ -390,7 +391,7 @@ class AuthService {
       if (e.toString().contains('429')) {
         throw Exception('rate_limit');
       }
-      throw e;
+      rethrow;
     }
   }
 

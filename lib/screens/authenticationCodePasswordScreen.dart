@@ -160,7 +160,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
         }
       }
     } catch (e) {
-      debugPrint('Verification error: $e');
+      debugPrint('Error verifying code: $e'); // Add this for debugging
       if (mounted) {
         String errorMessage = 'Invalid verification code';
         if (e.toString().contains('rate_limit')) {
@@ -174,6 +174,7 @@ class AuthenticationScreenState extends State<AuthenticationScreen> {
           textColor: Color(0xFF121212),
         );
       }
+      rethrow; // Add this to propagate the error if needed
     } finally {
       if (mounted) setState(() => isLoading = false);
     }

@@ -53,8 +53,8 @@ class LocalDatabaseService {
   // saves or updates the booking details locally
   Future<void> saveBookingDetails(BookingDetails details) async {
     try {
-      final db = await database;
-      await db?.insert(
+      final db = await BookingDatabase;
+      await db.insert(
         tableName,
         details.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -68,8 +68,8 @@ class LocalDatabaseService {
   // retrieves booking details from the local database
   Future<BookingDetails?> getBookingDetails(int bookingId) async {
     try {
-      final db = await database;
-      final List<Map<String, dynamic>> maps = await db!.query(
+      final db = await BookingDatabase;
+      final List<Map<String, dynamic>> maps = await db.query(
         tableName,
         where: 'booking_id = ?',
         whereArgs: [bookingId],
@@ -90,8 +90,8 @@ class LocalDatabaseService {
   // updates the status ng local booking record
   Future<void> updateLocalBookingStatus(int bookingId, String newStatus) async {
     try {
-      final db = await database;
-      int count = await db!.update(
+      final db = await BookingDatabase;
+      int count = await db.update(
         tableName,
         {'ride_status': newStatus},
         where: 'booking_id = ?',
@@ -111,8 +111,8 @@ class LocalDatabaseService {
   // deletes booking details from the local database
   Future<void> deleteBookingDetails(int bookingId) async {
     try {
-      final db = await database;
-      await db!.delete(
+      final db = await BookingDatabase;
+      await db.delete(
         tableName,
         where: 'booking_id = ?',
         whereArgs: [bookingId],

@@ -99,7 +99,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         textSelectionTheme: TextSelectionThemeData(
           selectionHandleColor: const Color(0xFF067837),
           cursorColor: const Color(0xFF067837),
-          selectionColor: const Color(0xFF067837).withOpacity(0.2),
+          selectionColor: const Color(0xFF067837),
         ),
       ),
       child: Scaffold(
@@ -418,7 +418,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 child: CupertinoSwitch(
                   value: isGoogleLinked,
                   onChanged: null,
-                  activeColor: const Color(0xFF00CC58),
+                  activeTrackColor: const Color(0xFF00CC58),
                 ),
               ),
             ],
