@@ -40,7 +40,7 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
         setState(() => _remainingTime--);
       } else {
         setState(() => _canResend = true);
-        timer.cancel();
+        _timer?.cancel();
       }
     });
   }
@@ -59,6 +59,19 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
       return;
     }
 
+    if (!_canResend) {
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: "Please wait $_remainingTime seconds before requesting again",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Color(0xFFF5F5F5),
+          textColor: Color(0xFF121212),
+        );
+      }
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -67,6 +80,8 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
         email,
         redirectTo: null,
       );
+
+      _startTimer(); // Start the cooldown timer
 
       if (mounted) {
         Navigator.push(
@@ -83,7 +98,9 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
       debugPrint("Detailed error in handleForgotPassword: $e");
       if (mounted) {
         String errorMessage;
-        if (e.toString().contains('network')) {
+        if (e.toString().contains('rate_limit')) {
+          errorMessage = "Please wait before requesting another reset email";
+        } else if (e.toString().contains('network')) {
           errorMessage = "Network error. Please check your connection";
         } else if (e.toString().contains('not found') ||
             e.toString().contains('Invalid login credentials')) {
@@ -107,6 +124,15 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
 
   @override
   Widget build(BuildContext context) {
+    Widget timerWidget = _canResend
+        ? const SizedBox.shrink()
+        : Text(
+            'Resend in $_remainingTime seconds',
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
+          );
+
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F5),
       appBar: AppBar(
@@ -195,6 +221,7 @@ class ChangeForgottenPasswordState extends State<ChangeForgottenPassword> {
                       ),
               ),
             ),
+            timerWidget,
           ],
         ),
       ),
