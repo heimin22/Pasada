@@ -521,4 +521,52 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ),
     );
   }
+
+  Widget _buildRouteSelectionContainer() {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: _showRouteSelection,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0xFF121212),
+              blurRadius: 4,
+              spreadRadius: 0.5,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.route, color: Color(0xFF00CC58)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                selectedRoute?['route_name'] ?? 'Select Route',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            )
+          ],
+        ),
+      ),
+    );
+  }
 }
