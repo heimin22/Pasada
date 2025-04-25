@@ -569,4 +569,70 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ),
     );
   }
+
+  Widget _buildNotificationContainer() {
+    if (!isNotificationVisible) return const SizedBox.shrink();
+
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onVerticalDragUpdate: (details) {
+        setState(() {
+          notificationDragOffset += details.delta.dy;
+          if (notificationDragOffset > notificationHeight) {
+            isNotificationVisible = false;
+            notificationDragOffset = 0;
+          }
+        });
+      },
+      onVerticalDragEnd: (details) {
+        if (notificationDragOffset < notificationHeight / 2) {
+          setState(() => notificationDragOffset = 0);
+        }
+      },
+      child: Transform.translate(
+        offset: Offset(0, notificationDragOffset),
+        child: Container(
+          height: notificationHeight,
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color:
+                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isDarkMode
+                  ? const Color(0xFF2C2C2C)
+                  : const Color(0xFFE0E0E0),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Color(0xFF00CC58),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Please select a route before choosing locations',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Color(0xFF00CC58)),
+                onPressed: () => setState(() => isNotificationVisible = false),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
