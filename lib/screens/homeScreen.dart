@@ -32,7 +32,10 @@ class HomeScreenStateful extends StatefulWidget {
 }
 
 class HomeScreenPageState extends State<HomeScreenStateful>
-    with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+    with
+        WidgetsBindingObserver,
+        AutomaticKeepAliveClientMixin,
+        TickerProviderStateMixin {
   final GlobalKey containerKey =
       GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
@@ -57,6 +60,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isNotificationVisible = true;
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
+
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
 
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
@@ -98,6 +104,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+
+    _slideAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          isNotificationVisible = false;
+          measureContainer();
+        });
+        _animationController.reset();
+      }
+    });
     // magmemeasure dapat ito after ng first frame
     // WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -109,6 +137,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
+    _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -195,6 +224,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     return json != null ? SelectedLocation.fromJson(jsonDecode(json)) : null;
   }
 
+  // Calculate the bottom padding for FAB and Google logo
+  double calculateBottomPadding() {
+    double basePadding = containerHeight + 20.0;
+    if (isNotificationVisible) {
+      // Add notification height and spacing when notification is visible
+      basePadding += notificationHeight +
+          10; // 10 is the SizedBox height between notification and location container
+    }
+    return basePadding;
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -227,13 +267,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             final iconSize = screenWidth * 0.06;
             final bottomNavBarHeight = 20.0;
             final double fabVerticalSpacing = 10.0;
+
             return Stack(
               children: [
+                // Base Map Layer
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
                   dropOffLocation: selectedDropOffLocation?.coordinates,
-                  bottomPadding: (containerHeight + bottomNavBarHeight) /
+                  bottomPadding: calculateBottomPadding() /
                       MediaQuery.of(context).size.height,
                   onEtaUpdated: (eta) {
                     setState(() => etaText = eta);
@@ -241,52 +283,63 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         .addPostFrameCallback((_) => measureContainer());
                   },
                 ),
+
+                // Route Selection at the top
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  left: responsivePadding,
+                  right: responsivePadding,
+                  child: _buildRouteSelectionContainer(),
+                ),
+
+                // Location FAB and Google Logo
+                Positioned(
+                  right: responsivePadding,
+                  bottom: calculateBottomPadding() + fabVerticalSpacing,
+                  child: LocationFAB(
+                    heroTag: "homeLocationFAB",
+                    onPressed: () async {
+                      final mapState = mapScreenKey.currentState;
+                      if (mapState != null) {
+                        if (!mapState.isLocationInitialized) {
+                          await mapState.initializeLocation();
+                        }
+                        if (mapState.currentLocation != null) {
+                          await mapState
+                              .animateToLocation(mapState.currentLocation!);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  "Unable to get current location. Please check your location settings."),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    iconSize: iconSize,
+                    buttonSize: screenWidth * 0.12,
+                    backgroundColor:
+                        Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
+                    iconColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF00E865)
+                        : const Color(0xFF00CC58),
+                  ),
+                ),
+
+                // Bottom Section (Notification + Location Container)
                 Positioned(
                   bottom: bottomNavBarHeight,
                   left: responsivePadding,
                   right: responsivePadding,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Location FAB
-                      LocationFAB(
-                        heroTag: "homeLocationFAB",
-                        onPressed: () async {
-                          final mapState = mapScreenKey.currentState;
-                          if (mapState != null) {
-                            // First ensure location is initialized
-                            if (!mapState.isLocationInitialized) {
-                              await mapState.initializeLocation();
-                            }
-                            if (mapState.currentLocation != null) {
-                              await mapState
-                                  .animateToLocation(mapState.currentLocation!);
-                            } else {
-                              // Show error if location is still not available
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      "Unable to get current location. Please check your location settings."),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        iconSize: iconSize,
-                        buttonSize: screenWidth * 0.12,
-                        backgroundColor:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF1E1E1E)
-                                : const Color(0xFFF5F5F5),
-                        iconColor:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF00E865)
-                                : const Color(0xFF00CC58),
-                      ),
-                      SizedBox(height: fabVerticalSpacing),
-                      // Location Container
+                      if (isNotificationVisible) _buildNotificationContainer(),
+                      SizedBox(height: 10),
                       Container(
                         key: containerKey,
                         child: buildLocationContainer(
@@ -535,9 +588,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: Color(0xFF121212),
-              blurRadius: 4,
-              spreadRadius: 0.5,
+              color: Colors.black12,
+              blurRadius: MediaQuery.of(context).size.width * 0.03,
+              spreadRadius: MediaQuery.of(context).size.width * 0.005,
             ),
           ],
         ),
@@ -571,68 +624,97 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   Widget _buildNotificationContainer() {
-    if (!isNotificationVisible) return const SizedBox.shrink();
-
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onVerticalDragUpdate: (details) {
-        setState(() {
-          notificationDragOffset += details.delta.dy;
-          if (notificationDragOffset > notificationHeight) {
-            isNotificationVisible = false;
-            notificationDragOffset = 0;
-          }
-        });
-      },
-      onVerticalDragEnd: (details) {
-        if (notificationDragOffset < notificationHeight / 2) {
-          setState(() => notificationDragOffset = 0);
-        }
-      },
-      child: Transform.translate(
-        offset: Offset(0, notificationDragOffset),
-        child: Container(
-          height: notificationHeight,
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color:
-                isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isDarkMode
-                  ? const Color(0xFF2C2C2C)
-                  : const Color(0xFFE0E0E0),
+    return AnimatedBuilder(
+      animation: _slideAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _slideAnimation.value * notificationHeight),
+          child: GestureDetector(
+            onVerticalDragUpdate: (details) {
+              setState(() {
+                notificationDragOffset += details.delta.dy;
+                if (notificationDragOffset > notificationHeight) {
+                  isNotificationVisible = false;
+                  notificationDragOffset = 0;
+                  measureContainer();
+                }
+              });
+            },
+            onVerticalDragEnd: (details) {
+              if (notificationDragOffset < notificationHeight / 2) {
+                setState(() => notificationDragOffset = 0);
+              }
+            },
+            child: Container(
+              height: notificationHeight - notificationDragOffset,
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: MediaQuery.of(context).size.width * 0.03,
+                    spreadRadius: MediaQuery.of(context).size.width * 0.005,
+                  ),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.notifications_outlined,
+                          color: const Color(0xFF00CC58),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Please select a route before choosing locations',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 40),
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: const Color(0xFF00CC58),
+                        ),
+                        onPressed: () {
+                          _animationController.forward();
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                color: Color(0xFF00CC58),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  'Please select a route before choosing locations',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Color(0xFF00CC58)),
-                onPressed: () => setState(() => isNotificationVisible = false),
-              )
-            ],
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
