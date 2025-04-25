@@ -602,11 +602,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               child: Text(
                 selectedRoute?['route_name'] ?? 'Select Route',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: isDarkMode
-                      ? const Color(0xFFF5F5F5)
-                      : const Color(0xFF121212),
+                      ? const Color.fromARGB(255, 212, 212, 212)
+                      : const Color.fromARGB(255, 78, 78, 78),
                 ),
               ),
             ),
@@ -681,8 +681,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           child: Text(
                             'Please select a route before choosing locations',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                               color: isDarkMode
                                   ? const Color(0xFFF5F5F5)
                                   : const Color(0xFF121212),
