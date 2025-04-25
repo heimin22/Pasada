@@ -397,7 +397,7 @@ class MapScreenState extends State<MapScreen>
           }
 
           // add padding to the bounds
-          final double padding = 0.1;
+          final double padding = 0.01;
           southLat -= padding;
           northLat += padding;
           westLng -= padding;
@@ -411,8 +411,9 @@ class MapScreenState extends State<MapScreen>
                 southwest: LatLng(southLat, westLng),
                 northeast: LatLng(northLat, eastLng),
               ),
-              50,
+              20,
             ),
+            duration: const Duration(milliseconds: 1000),
           );
         }
 
