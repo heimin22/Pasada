@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
+import 'package:pasada_passenger_app/screens/routeSelection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
@@ -51,6 +52,23 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // state variable for the payment method
   String? selectedPaymentMethod;
   final double iconSize = 24;
+
+  Map<String, dynamic>? selectedRoute;
+  bool isNotificationVisible = true;
+  double notificationDragOffset = 0;
+  final double notificationHeight = 60.0;
+
+  Future<void> _showRouteSelection() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RouteSelection(),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() => selectedRoute = result);
+    }
+  }
 
   // method para sa pagsplit ng location names from landmark to address
   List<String> splitLocation(String location) {

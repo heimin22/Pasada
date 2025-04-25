@@ -26,9 +26,9 @@ class _RouteSelectionState extends State<RouteSelection> {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredRoutes = _routes.where((route) {
-        final _routeName = route['route_name'].toString().toLowerCase();
-        final _description = route['description'].toString().toLowerCase();
-        return _routeName.contains(query) || _description.contains(query);
+        final routeName = route['route_name'].toString().toLowerCase();
+        final description = route['description'].toString().toLowerCase();
+        return routeName.contains(query) || description.contains(query);
       }).toList();
     });
   }
@@ -70,10 +70,10 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   @override
   Widget build(BuildContext context) {
-    final _isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: buildAppBar(_isDarkMode),
+      appBar: buildAppBar(isDarkMode),
       body: Column(
         children: [
           Padding(
@@ -83,7 +83,7 @@ class _RouteSelectionState extends State<RouteSelection> {
               decoration: InputDecoration(
                 hintText: 'Search a route...',
                 hintStyle: TextStyle(
-                  color: _isDarkMode ? Color(0xFFAAAAAA) : Color(0xFF515151),
+                  color: isDarkMode ? Color(0xFFAAAAAA) : Color(0xFF515151),
                   fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -93,7 +93,7 @@ class _RouteSelectionState extends State<RouteSelection> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: _isDarkMode
+                fillColor: isDarkMode
                     ? const Color(0xFF1E1E1E)
                     : const Color(0xFFF5F5F5),
               ),
@@ -107,31 +107,31 @@ class _RouteSelectionState extends State<RouteSelection> {
                 : ListView.builder(
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
-                      final _route = _filteredRoutes[index];
+                      final route = _filteredRoutes[index];
                       return ListTile(
                         title: Text(
-                          _route['route_name'] ?? 'Unknown Route',
+                          route['route_name'] ?? 'Unknown Route',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: _isDarkMode
+                            color: isDarkMode
                                 ? Color(0xFFF5F5F5)
                                 : Color(0xFF121212),
                           ),
                         ),
                         subtitle: Text(
-                          _route['description'] ?? 'No description available',
+                          route['description'] ?? 'No description available',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
-                            color: _isDarkMode
+                            color: isDarkMode
                                 ? Color(0xFFAAAAAA)
                                 : Color(0xFF515151),
                           ),
                         ),
                         onTap: () {
-                          Navigator.pop(context, _route);
+                          Navigator.pop(context, route);
                         },
                       );
                     },
