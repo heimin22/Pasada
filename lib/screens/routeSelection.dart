@@ -73,14 +73,73 @@ class _RouteSelectionState extends State<RouteSelection> {
     final _isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-        appBar: buildAppBar(_isDarkMode),
-        body: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(16.0),
+      appBar: buildAppBar(_isDarkMode),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search a route...',
+                hintStyle: TextStyle(
+                  color: _isDarkMode ? Color(0xFFAAAAAA) : Color(0xFF515151),
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: _isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+              ),
             ),
-          ],
-        ));
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00CC58)),
+                  )
+                : ListView.builder(
+                    itemCount: _filteredRoutes.length,
+                    itemBuilder: (context, index) {
+                      final _route = _filteredRoutes[index];
+                      return ListTile(
+                        title: Text(
+                          _route['route_name'] ?? 'Unknown Route',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: _isDarkMode
+                                ? Color(0xFFF5F5F5)
+                                : Color(0xFF121212),
+                          ),
+                        ),
+                        subtitle: Text(
+                          _route['description'] ?? 'No description available',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            color: _isDarkMode
+                                ? Color(0xFFAAAAAA)
+                                : Color(0xFF515151),
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context, _route);
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   PreferredSizeWidget buildAppBar(bool isDarkMode) {
