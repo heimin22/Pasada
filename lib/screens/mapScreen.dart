@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -354,6 +355,7 @@ class MapScreenState extends State<MapScreen>
 
       debugPrint('API Response: $data');
       debugPrint('Routes; ${data['routes']}');
+
       if (data['routes']?.isNotEmpty ?? false) {
         final polyline = data['routes'][0]['polyline']['encodedPolyline'];
         List<PointLatLng> decodedPolyline =
@@ -361,6 +363,7 @@ class MapScreenState extends State<MapScreen>
         List<LatLng> polylineCoordinates = decodedPolyline
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
+
         if (mounted) {
           setState(() {
             polylines = {
@@ -372,6 +375,46 @@ class MapScreenState extends State<MapScreen>
               )
             };
           });
+
+          // calculate bounds that include start, destination and all ppolyline points
+          double southLat = start.latitude;
+          double northLat = start.latitude;
+          double westLng = start.longitude;
+          double eastLng = start.longitude;
+
+          // include the destination point
+          southLat = min(southLat, destination.latitude);
+          northLat = max(northLat, destination.latitude);
+          westLng = min(westLng, destination.longitude);
+          eastLng = max(eastLng, destination.longitude);
+
+          // include all polyline points
+          for (LatLng point in polylineCoordinates) {
+            southLat = min(southLat, point.latitude);
+            northLat = max(northLat, point.latitude);
+            westLng = min(westLng, point.longitude);
+            eastLng = max(eastLng, point.longitude);
+          }
+
+          // add padding to the bounds
+          final double padding = 0.01;
+          southLat -= padding;
+          northLat += padding;
+          westLng -= padding;
+          eastLng += padding;
+
+          // create a new camera position centered within the bounds
+          final GoogleMapController controller = await mapController.future;
+          controller.animateCamera(
+            CameraUpdate.newLatLngBounds(
+              LatLngBounds(
+                southwest: LatLng(southLat, westLng),
+                northeast: LatLng(northLat, eastLng),
+              ),
+              20,
+            ),
+            duration: const Duration(milliseconds: 1000),
+          );
         }
 
         showDebugToast('Route generated successfully');
