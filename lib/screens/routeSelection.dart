@@ -35,10 +35,35 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   Future<void> _loadRoutes() async {
     try {
-      final response = await Supabase.instance.client
-          .from('official_routes')
-          .select('route_name, description')
-          .eq('status', 'active');
+      final response =
+          await Supabase.instance.client.from('official_routes').select();
+      // .select('route_name, description')
+      // .eq('status', 'active');
+
+      debugPrint('Supabase Response: $response');
+
+      if (response.isNotEmpty) {
+        final statuses = response.map((route) => route['status']).toSet();
+        debugPrint('Available statuses: $statuses');
+      } else {
+        debugPrint('No routes found in the database');
+        if (mounted) {
+          setState(() {
+            _routes = [];
+            _filteredRoutes = [];
+            _isLoading = false;
+          });
+          Fluttertoast.showToast(
+            msg: 'No routes available',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Color(0xFFF5F5F5),
+            textColor: Color(0xFF121212),
+          );
+        }
+        return;
+      }
 
       if (mounted) {
         setState(() {
@@ -46,8 +71,10 @@ class _RouteSelectionState extends State<RouteSelection> {
           _filteredRoutes = _routes;
           _isLoading = false;
         });
+        debugPrint('Routes loaded: ${_routes.length}');
       }
     } catch (error) {
+      debugPrint("Error loading routes: $error");
       if (mounted) {
         setState(() => _isLoading = false);
         Fluttertoast.showToast(
