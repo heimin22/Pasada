@@ -164,20 +164,47 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   PreferredSizeWidget buildAppBar(bool isDarkMode) {
     return AppBar(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+      elevation: 4,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 17),
+        child: CircleAvatar(
+          backgroundColor:
+              isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          radius: 15,
+          child: Icon(
+            Icons.route,
+            size: 20,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+        ),
+      ),
       title: Text(
         'Select Route',
         style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
           color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor:
-          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-      foregroundColor:
-          isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-      elevation: 1.0,
+      actions: [
+        CircleAvatar(
+          backgroundColor:
+              isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          child: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.close,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16)
+      ],
     );
   }
 }
