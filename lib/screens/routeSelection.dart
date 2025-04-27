@@ -155,6 +155,7 @@ class _RouteSelectionState extends State<RouteSelection> {
                   ),
                   prefixIcon: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
+                    margin: const EdgeInsets.only(right: 8), // Added margin
                     child: Icon(
                       Icons.route,
                       size: 20,
