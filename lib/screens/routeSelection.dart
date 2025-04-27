@@ -35,10 +35,54 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   Future<void> _loadRoutes() async {
     try {
+      final session = Supabase.instance.client.auth.currentSession;
+      debugPrint('Current session: ${session != null ? "Active" : "None"}');
+      if (session != null) {
+        debugPrint('User ID: ${session.user.id}');
+      }
+
+      debugPrint('Attempting to query official_routes table...');
+
+      final countResponse = await Supabase.instance.client
+          .from('official_routes')
+          .select('*')
+          .count(CountOption.exact);
+
+      debugPrint('Count Response: $countResponse');
+
       final response = await Supabase.instance.client
           .from('official_routes')
           .select('route_name, description')
-          .eq('status', 'active');
+          .order('route_name');
+      // .select('route_name, description')
+      // .eq('status', 'active');
+
+      debugPrint('Raw Response: $response');
+      debugPrint('Response type: ${response.runtimeType}');
+      debugPrint('Supabase Response: $response');
+
+      if (response.isNotEmpty) {
+        final statuses = response.map((route) => route['status']).toSet();
+        debugPrint('Available statuses: $statuses');
+      } else {
+        debugPrint('No routes found in the database');
+        if (mounted) {
+          setState(() {
+            _routes = [];
+            _filteredRoutes = [];
+            _isLoading = false;
+          });
+          Fluttertoast.showToast(
+            msg: 'No routes available',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Color(0xFFF5F5F5),
+            textColor: Color(0xFF121212),
+          );
+        }
+        return;
+      }
 
       if (mounted) {
         setState(() {
@@ -46,8 +90,10 @@ class _RouteSelectionState extends State<RouteSelection> {
           _filteredRoutes = _routes;
           _isLoading = false;
         });
+        debugPrint('Routes loaded: ${_routes.length}');
       }
     } catch (error) {
+      debugPrint("Error loading routes: $error");
       if (mounted) {
         setState(() => _isLoading = false);
         Fluttertoast.showToast(
@@ -74,65 +120,110 @@ class _RouteSelectionState extends State<RouteSelection> {
 
     return Scaffold(
       appBar: buildAppBar(isDarkMode),
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF2F2F2),
       body: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search a route...',
-                hintStyle: TextStyle(
-                  color: isDarkMode ? Color(0xFFAAAAAA) : Color(0xFF515151),
+          Form(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextFormField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                 ),
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                decoration: InputDecoration(
+                  fillColor: isDarkMode
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF5F5F5),
+                  filled: true,
+                  border: InputBorder.none,
+                  hintText: 'Search Route',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    color: isDarkMode
+                        ? const Color(0xFFAAAAAA)
+                        : const Color(0xFF515151),
+                  ),
+                  prefixIcon: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    margin: const EdgeInsets.only(right: 8), // Added margin
+                    child: Icon(
+                      Icons.route,
+                      size: 20,
+                      color: isDarkMode
+                          ? const Color(0xFFAAAAAA)
+                          : const Color(0xFF515151),
+                    ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 ),
-                filled: true,
-                fillColor: isDarkMode
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF5F5F5),
               ),
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF00CC58)),
+                ? Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDarkMode
+                            ? const Color(0xFFFFCE21)
+                            : const Color(0xFF067837),
+                      ),
+                    ),
                   )
                 : ListView.builder(
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = _filteredRoutes[index];
-                      return ListTile(
-                        title: Text(
-                          route['route_name'] ?? 'Unknown Route',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      return SizedBox(
+                        height: 57,
+                        child: ListTile(
+                          horizontalTitleGap: 0,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          leading: Icon(
+                            Icons.route,
+                            size: 16,
                             color: isDarkMode
-                                ? Color(0xFFF5F5F5)
-                                : Color(0xFF121212),
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
                           ),
-                        ),
-                        subtitle: Text(
-                          route['description'] ?? 'No description available',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: isDarkMode
-                                ? Color(0xFFAAAAAA)
-                                : Color(0xFF515151),
+                          title: Text(
+                            route['route_name'] ?? 'Unknown Route',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
                           ),
+                          subtitle: Text(
+                            route['description'] ?? 'No description available',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: isDarkMode
+                                  ? const Color(0xFFAAAAAA)
+                                  : const Color(0xFF515151),
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, route);
+                          },
                         ),
-                        onTap: () {
-                          Navigator.pop(context, route);
-                        },
                       );
                     },
                   ),
@@ -144,20 +235,47 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   PreferredSizeWidget buildAppBar(bool isDarkMode) {
     return AppBar(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+      elevation: 4,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 17),
+        child: CircleAvatar(
+          backgroundColor:
+              isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          radius: 15,
+          child: Icon(
+            Icons.route,
+            size: 20,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+        ),
+      ),
       title: Text(
         'Select Route',
         style: TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
           color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      backgroundColor:
-          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-      foregroundColor:
-          isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-      elevation: 1.0,
+      actions: [
+        CircleAvatar(
+          backgroundColor:
+              isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+          child: IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: Icon(
+              Icons.close,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16)
+      ],
     );
   }
 }

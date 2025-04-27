@@ -64,6 +64,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
 
+  bool get isRouteSelected =>
+      selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
+
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
       context,
@@ -383,50 +386,65 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         mainAxisSize: MainAxisSize.min,
         children: [
           buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
-              screenWidth, iconSize),
+              screenWidth, iconSize,
+              enabled: isRouteSelected),
           const Divider(),
           buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
-              screenWidth, iconSize),
+              screenWidth, iconSize,
+              enabled: isRouteSelected),
           SizedBox(height: screenWidth * 0.04),
           // payment method widget
           InkWell(
-            onTap: () async {
-              final result = await Navigator.push<String>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentMethodScreen(
-                    currentSelection: selectedPaymentMethod,
-                  ),
-                  fullscreenDialog: true,
-                ),
-              );
-              if (result != null && mounted) {
-                setState(() => selectedPaymentMethod = result);
-              }
-            },
+            onTap: isRouteSelected
+                ? () async {
+                    final result = await Navigator.push<String>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PaymentMethodScreen(
+                          currentSelection: selectedPaymentMethod,
+                        ),
+                        fullscreenDialog: true,
+                      ),
+                    );
+                    if (result != null && mounted) {
+                      setState(() => selectedPaymentMethod = result);
+                    }
+                  }
+                : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12.0),
               child: Row(
                 children: [
-                  Icon(Icons.payment, size: iconSize, color: Color(0xFF00CC58)),
-                  SizedBox(width: screenWidth * 0.02),
+                  Icon(
+                    Icons.payment,
+                    size: iconSize,
+                    color:
+                        isRouteSelected ? const Color(0xFF00CC58) : Colors.grey,
+                  ),
+                  SizedBox(width: screenWidth * 0.03),
                   Text(
                     selectedPaymentMethod ?? 'Select Payment Method',
                     style: TextStyle(
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w600,
-                      color: isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
+                      color: isRouteSelected
+                          ? (isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212))
+                          : Colors.grey,
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right,
-                      size: iconSize,
-                      color: isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF515151)),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: isRouteSelected
+                        ? (isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212))
+                        : Colors.grey,
+                  ),
                 ],
               ),
             ),
@@ -468,14 +486,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   Widget buildLocationRow(String svgAsset, SelectedLocation? location,
-      bool isPickup, double screenWidth, double iconSize) {
+      bool isPickup, double screenWidth, double iconSize,
+      {required bool enabled}) {
     double iconSize = isPickup ? 15 : 15;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     List<String> locationParts =
         location != null ? splitLocation(location.address) : ['', ''];
 
     return InkWell(
-      onTap: () => navigateToSearch(context, isPickup),
+      onTap: enabled ? () => navigateToSearch(context, isPickup) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -488,9 +507,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
+                    color: enabled
+                        ? (isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212))
+                        : Colors.grey,
                   ),
                 ),
               ],
@@ -505,9 +526,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
+                    color: enabled
+                        ? (isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212))
+                        : Colors.grey,
                   ),
                 ),
                 Text(
@@ -516,9 +539,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF515151),
+                    color: enabled
+                        ? (isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF515151))
+                        : Colors.grey,
                   ),
                 ),
               ],
@@ -547,9 +572,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212),
+                        color: enabled
+                            ? (isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212))
+                            : Colors.grey,
                       ),
                     ),
                     if (locationParts[1].isNotEmpty) ...[
@@ -559,9 +586,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: isDarkMode
-                              ? const Color(0xFFAAAAAA)
-                              : const Color(0xFF515151),
+                          color: enabled
+                              ? (isDarkMode
+                                  ? const Color(0xFFAAAAAA)
+                                  : const Color(0xFF515151))
+                              : Colors.grey,
                         ),
                       ),
                     ],
