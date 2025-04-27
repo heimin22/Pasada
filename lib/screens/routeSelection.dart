@@ -35,11 +35,30 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   Future<void> _loadRoutes() async {
     try {
-      final response =
-          await Supabase.instance.client.from('official_routes').select();
+      final session = Supabase.instance.client.auth.currentSession;
+      debugPrint('Current session: ${session != null ? "Active" : "None"}');
+      if (session != null) {
+        debugPrint('User ID: ${session.user.id}');
+      }
+
+      debugPrint('Attempting to query official_routes table...');
+
+      final countResponse = await Supabase.instance.client
+          .from('official_routes')
+          .select('*')
+          .count(CountOption.exact);
+
+      debugPrint('Count Response: $countResponse');
+
+      final response = await Supabase.instance.client
+          .from('official_routes')
+          .select('route_name, description')
+          .order('route_name');
       // .select('route_name, description')
       // .eq('status', 'active');
 
+      debugPrint('Raw Response: $response');
+      debugPrint('Response type: ${response.runtimeType}');
       debugPrint('Supabase Response: $response');
 
       if (response.isNotEmpty) {
@@ -101,85 +120,109 @@ class _RouteSelectionState extends State<RouteSelection> {
 
     return Scaffold(
       appBar: buildAppBar(isDarkMode),
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF2F2F2),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextFormField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
-              decoration: InputDecoration(
-                fillColor: isDarkMode
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF5F5F5),
-                filled: true,
-                border: InputBorder.none,
-                hintText: 'Search Route',
-                hintStyle: TextStyle(
+          Form(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextFormField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                style: TextStyle(
+                  fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
                   color: isDarkMode
-                      ? const Color(0xFFAAAAAA)
-                      : const Color(0xFF515151),
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                 ),
-                prefixIcon: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Icon(
-                    Icons.route,
-                    size: 20,
+                decoration: InputDecoration(
+                  fillColor: isDarkMode
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF5F5F5),
+                  filled: true,
+                  border: InputBorder.none,
+                  hintText: 'Search Route',
+                  hintStyle: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
                     color: isDarkMode
                         ? const Color(0xFFAAAAAA)
                         : const Color(0xFF515151),
                   ),
+                  prefixIcon: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Icon(
+                      Icons.route,
+                      size: 20,
+                      color: isDarkMode
+                          ? const Color(0xFFAAAAAA)
+                          : const Color(0xFF515151),
+                    ),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF00CC58)),
+                ? Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isDarkMode
+                            ? const Color(0xFFFFCE21)
+                            : const Color(0xFF067837),
+                      ),
+                    ),
                   )
                 : ListView.builder(
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = _filteredRoutes[index];
-                      return ListTile(
-                        title: Text(
-                          route['route_name'] ?? 'Unknown Route',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                      return SizedBox(
+                        height: 57,
+                        child: ListTile(
+                          horizontalTitleGap: 0,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          leading: Icon(
+                            Icons.route,
+                            size: 16,
                             color: isDarkMode
-                                ? Color(0xFFF5F5F5)
-                                : Color(0xFF121212),
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
                           ),
-                        ),
-                        subtitle: Text(
-                          route['description'] ?? 'No description available',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: isDarkMode
-                                ? Color(0xFFAAAAAA)
-                                : Color(0xFF515151),
+                          title: Text(
+                            route['route_name'] ?? 'Unknown Route',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
                           ),
+                          subtitle: Text(
+                            route['description'] ?? 'No description available',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 12,
+                              color: isDarkMode
+                                  ? const Color(0xFFAAAAAA)
+                                  : const Color(0xFF515151),
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, route);
+                          },
                         ),
-                        onTap: () {
-                          Navigator.pop(context, route);
-                        },
                       );
                     },
                   ),
