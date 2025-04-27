@@ -77,25 +77,45 @@ class _RouteSelectionState extends State<RouteSelection> {
       body: Column(
         children: [
           Padding(
-            padding: EdgeInsets.all(16.0),
-            child: TextField(
+            padding: const EdgeInsets.all(12),
+            child: TextFormField(
               controller: _searchController,
+              textInputAction: TextInputAction.search,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
               decoration: InputDecoration(
-                hintText: 'Search a route...',
-                hintStyle: TextStyle(
-                  color: isDarkMode ? Color(0xFFAAAAAA) : Color(0xFF515151),
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
                 fillColor: isDarkMode
                     ? const Color(0xFF1E1E1E)
                     : const Color(0xFFF5F5F5),
+                filled: true,
+                border: InputBorder.none,
+                hintText: 'Search Route',
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  color: isDarkMode
+                      ? const Color(0xFFAAAAAA)
+                      : const Color(0xFF515151),
+                ),
+                prefixIcon: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Icon(
+                    Icons.route,
+                    size: 20,
+                    color: isDarkMode
+                        ? const Color(0xFFAAAAAA)
+                        : const Color(0xFF515151),
+                  ),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
           ),
