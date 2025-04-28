@@ -3,7 +3,7 @@ import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:pasada_passenger_app/profiles/settings_profile_header.dart';
+import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
