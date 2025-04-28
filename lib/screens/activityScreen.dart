@@ -35,9 +35,20 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
 
   Future<void> fetchBookings() async {
     try {
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      if (currentUser == null) {
+        debugPrint('No user logged in');
+        setState(() {
+          bookings = [];
+          isLoading = false;
+        });
+        return;
+      }
+
       final response = await Supabase.instance.client
           .from('bookings')
           .select()
+          .eq('passenger_id', currentUser.id)
           .order('created_at', ascending: false);
 
       setState(() {

@@ -14,7 +14,7 @@ class BookingListItem extends StatelessWidget {
     final formattedTime = DateFormat('h:mm a').format(createdAt);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -34,7 +34,7 @@ class BookingListItem extends StatelessWidget {
             ),
             child: Icon(
               Icons.directions_car_outlined,
-              color: const Color(0xFF00CC58),
+              color: const Color(0xFFF5F5F5),
               size: 24,
             ),
           ),
@@ -46,7 +46,7 @@ class BookingListItem extends StatelessWidget {
                 Text(
                   '${booking['pickup_address']} to ${booking['dropoff_address']}',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: isDarkMode
                         ? const Color(0xFFF5F5F5)
