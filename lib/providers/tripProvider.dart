@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:pasada_passenger_app/models/trip.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/tripService.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TripProvider extends ChangeNotifier {
   final TripService _tripService = TripService();
   Trip? currentTrip;
   bool isLoading = false;
   String? error;
+  final supabase = Supabase.instance.client;
+  RealtimeChannel? _tripChannel;
 
   Future<void> requestNewTrip({
     required double originLatitude,
@@ -33,7 +38,7 @@ class TripProvider extends ChangeNotifier {
         destinationAddress: destinationAddress,
         routeTrip: 'direct',
         fare: fare,
-        paymentMethod: 'cash',
+        paymentMethod: paymentMethod,
       );
 
       currentTrip = Trip.fromJson(response['booking']);
@@ -55,5 +60,30 @@ class TripProvider extends ChangeNotifier {
       error = e.message;
       notifyListeners();
     }
+  }
+
+  void setupRealtimeSubscription() {
+    _tripChannel?.unsubscribe();
+
+    _tripChannel = supabase.channel('public:bookings').onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'bookings',
+          callback: (payload) {
+            if (payload.newRecord['id'] == currentTrip?.id) {
+              currentTrip =
+                  Trip.fromJson(Map<String, dynamic>.from(payload.newRecord));
+              notifyListeners();
+            }
+          },
+        );
+
+    _tripChannel?.subscribe();
+  }
+
+  @override
+  void dispose() {
+    supabase.removeAllChannels();
+    super.dispose();
   }
 }
