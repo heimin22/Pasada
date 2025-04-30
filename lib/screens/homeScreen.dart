@@ -10,6 +10,7 @@ import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -51,6 +52,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // keep state alive my nigger
   @override
   bool get wantKeepAlive => true;
+  bool isBookingConfirmed = false;
+  late AnimationController _hideAnimationController;
+  late Animation<double> _fadeAnimation;
 
   // state variable for the payment method
   String? selectedPaymentMethod;
@@ -107,6 +111,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   void initState() {
     super.initState();
+    _hideAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _hideAnimationController,
+      curve: Curves.easeOut,
+    ));
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
@@ -140,6 +157,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
+    _hideAnimationController.dispose();
     _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -151,6 +169,34 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       loadLocation();
       mapScreenKey.currentState?.initializeLocation();
     }
+  }
+
+  void _handleBookingConfirmation() {
+    setState(() {
+      isBookingConfirmed = true;
+    });
+    _hideAnimationController.forward().then((_) {
+      // Handle post-confirmation actions here
+      // For example, navigate to a booking confirmation screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BookingStatusManager(
+            pickupLocation: selectedPickUpLocation,
+            dropoffLocation: selectedDropOffLocation,
+            paymentMethod: selectedPaymentMethod ?? 'Cash',
+            ETA: selectedRoute?['estimated_time'] ?? '15 mins',
+            onCancelBooking: () {
+              Navigator.pop(context);
+              setState(() {
+                isBookingConfirmed = false;
+                _hideAnimationController.reverse();
+              });
+            },
+          ),
+        ),
+      );
+    });
   }
 
   void measureContainer() {
@@ -369,119 +415,144 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     String svgAssetDropOff = 'assets/svg/pindropoff.svg';
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: screenWidth * 0.03,
-            spreadRadius: screenWidth * 0.005,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
-              screenWidth, iconSize,
-              enabled: isRouteSelected),
-          const Divider(),
-          buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
-              screenWidth, iconSize,
-              enabled: isRouteSelected),
-          SizedBox(height: screenWidth * 0.04),
-          // payment method widget
-          InkWell(
-            onTap: isRouteSelected
-                ? () async {
-                    final result = await Navigator.push<String>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PaymentMethodScreen(
-                          currentSelection: selectedPaymentMethod,
-                        ),
-                        fullscreenDialog: true,
-                      ),
-                    );
-                    if (result != null && mounted) {
-                      setState(() => selectedPaymentMethod = result);
-                    }
-                  }
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.payment,
-                    size: iconSize,
-                    color:
-                        isRouteSelected ? const Color(0xFF00CC58) : Colors.grey,
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - _fadeAnimation.value) * 100),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              padding: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: screenWidth * 0.03,
+                    spreadRadius: screenWidth * 0.005,
                   ),
-                  SizedBox(width: screenWidth * 0.03),
-                  Text(
-                    selectedPaymentMethod ?? 'Select Payment Method',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      color: isRouteSelected
-                          ? (isDarkMode
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFF121212))
-                          : Colors.grey,
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
+                      screenWidth, iconSize,
+                      enabled: isRouteSelected),
+                  const Divider(),
+                  buildLocationRow(svgAssetDropOff, selectedDropOffLocation,
+                      false, screenWidth, iconSize,
+                      enabled: isRouteSelected),
+                  SizedBox(height: screenWidth * 0.04),
+                  InkWell(
+                    onTap: isRouteSelected
+                        ? () async {
+                            final result = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PaymentMethodScreen(
+                                  currentSelection: selectedPaymentMethod,
+                                ),
+                                fullscreenDialog: true,
+                              ),
+                            );
+                            if (result != null && mounted) {
+                              setState(() => selectedPaymentMethod = result);
+                            }
+                          }
+                        : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF2D2D2D)
+                            : const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? const Color(0xFF3D3D3D)
+                              : const Color(0xFFE0E0E0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.payment,
+                            size: 24,
+                            color: isRouteSelected
+                                ? (isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212))
+                                : Colors.grey,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            selectedPaymentMethod ?? 'Select Payment Method',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: isRouteSelected
+                                  ? (isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212))
+                                  : Colors.grey,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: isRouteSelected
+                                ? (isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212))
+                                : Colors.grey,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: isRouteSelected
-                        ? (isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212))
-                        : Colors.grey,
-                  ),
+                  SizedBox(height: screenWidth * 0.05),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (selectedPickUpLocation != null &&
+                              selectedDropOffLocation != null &&
+                              selectedPaymentMethod != null &&
+                              isRouteSelected)
+                          ? _handleBookingConfirmation
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00CC58),
+                        disabledBackgroundColor: const Color(0xFFD3D3D3),
+                        foregroundColor: const Color(0xFFF5F5F5),
+                        disabledForegroundColor: const Color(0xFFF5F5F5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Confirm Booking',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
                 ],
               ),
             ),
           ),
-          SizedBox(height: screenWidth * 0.05),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (selectedPickUpLocation != null &&
-                      selectedDropOffLocation != null &&
-                      selectedPaymentMethod != null)
-                  ? () {
-                      // Lalagyan na to ng function sa susunod nigga
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF00CC58),
-                disabledBackgroundColor: Color(0xFFD3D3D3),
-                foregroundColor: Color(0xFFF5F5F5),
-                disabledForegroundColor: Color(0xFFF5F5F5),
-                padding: EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Confirm Booking',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
+        );
+      },
     );
   }
 
