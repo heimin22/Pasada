@@ -13,6 +13,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -160,6 +161,63 @@ class MapScreenState extends State<MapScreen>
     });
   }
 
+  Future<bool> checkPickupDistance(LatLng pickupLocation) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (currentLocation == null) return true;
+
+    final selectedLoc = SelectedLocation("", pickupLocation);
+    final distance = selectedLoc.distanceFrom(currentLocation!);
+
+    if (distance > 2.0) {
+      final bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Distance warning',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            content: Text(
+              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF067837),
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      return proceed ?? false;
+    }
+
+    return true;
+  }
+
   // replace ko yung initLocation ko ng ganito
   Future<void> initializeLocation() async {
     if (isLocationInitialized || !mounted) return;
@@ -250,8 +308,11 @@ class MapScreenState extends State<MapScreen>
   }
 
   // ito yung method para sa pick-up and drop-off location
-  void updateLocations({LatLng? pickup, LatLng? dropoff}) {
-    if (pickup != null) selectedPickupLatLng = pickup;
+  Future<void> updateLocations({LatLng? pickup, LatLng? dropoff}) async {
+    if (pickup != null) {
+      final shouldProceed = await checkPickupDistance(pickup);
+      if (!shouldProceed) return;
+    }
 
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
