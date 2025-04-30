@@ -4,13 +4,15 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
+import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
+import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -175,28 +177,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     setState(() {
       isBookingConfirmed = true;
     });
-    _hideAnimationController.forward().then((_) {
-      // Handle post-confirmation actions here
-      // For example, navigate to a booking confirmation screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BookingStatusManager(
-            pickupLocation: selectedPickUpLocation,
-            dropoffLocation: selectedDropOffLocation,
-            paymentMethod: selectedPaymentMethod ?? 'Cash',
-            ETA: selectedRoute?['estimated_time'] ?? '15 mins',
-            onCancelBooking: () {
-              Navigator.pop(context);
-              setState(() {
-                isBookingConfirmed = false;
-                _hideAnimationController.reverse();
-              });
-            },
-          ),
-        ),
-      );
-    });
+    _hideAnimationController.forward();
   }
 
   void measureContainer() {
@@ -333,74 +314,105 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   },
                 ),
 
-                // Route Selection at the top
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 10,
-                  left: responsivePadding,
-                  right: responsivePadding,
-                  child: _buildRouteSelectionContainer(),
-                ),
-
-                // Location FAB and Google Logo
-                Positioned(
-                  right: responsivePadding,
-                  bottom: calculateBottomPadding() + fabVerticalSpacing,
-                  child: LocationFAB(
-                    heroTag: "homeLocationFAB",
-                    onPressed: () async {
-                      final mapState = mapScreenKey.currentState;
-                      if (mapState != null) {
-                        if (!mapState.isLocationInitialized) {
-                          await mapState.initializeLocation();
-                        }
-                        if (mapState.currentLocation != null) {
-                          await mapState
-                              .animateToLocation(mapState.currentLocation!);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  "Unable to get current location. Please check your location settings."),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    iconSize: iconSize,
-                    buttonSize: screenWidth * 0.12,
-                    backgroundColor:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF1E1E1E)
-                            : const Color(0xFFF5F5F5),
-                    iconColor: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF00E865)
-                        : const Color(0xFF00CC58),
+                // Conditional rendering based on booking confirmation
+                if (!isBookingConfirmed) ...[
+                  // Route Selection at the top
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 10,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: _buildRouteSelectionContainer(),
                   ),
-                ),
 
-                // Bottom Section (Notification + Location Container)
-                Positioned(
-                  bottom: bottomNavBarHeight,
-                  left: responsivePadding,
-                  right: responsivePadding,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isNotificationVisible) _buildNotificationContainer(),
-                      SizedBox(height: 10),
-                      Container(
-                        key: containerKey,
-                        child: buildLocationContainer(
-                          context,
-                          screenWidth,
-                          responsivePadding,
-                          iconSize,
+                  // Location FAB
+                  Positioned(
+                    right: responsivePadding,
+                    bottom: calculateBottomPadding() + fabVerticalSpacing,
+                    child: LocationFAB(
+                      heroTag: "homeLocationFAB",
+                      onPressed: () async {
+                        final mapState = mapScreenKey.currentState;
+                        if (mapState != null) {
+                          if (!mapState.isLocationInitialized) {
+                            await mapState.initializeLocation();
+                          }
+                          if (mapState.currentLocation != null) {
+                            await mapState
+                                .animateToLocation(mapState.currentLocation!);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    "Unable to get current location. Please check your location settings."),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      iconSize: iconSize,
+                      buttonSize: screenWidth * 0.12,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF1E1E1E)
+                              : const Color(0xFFF5F5F5),
+                      iconColor: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF00E865)
+                          : const Color(0xFF00CC58),
+                    ),
+                  ),
+
+                  // Bottom Section (Notification + Location Container)
+                  Positioned(
+                    bottom: bottomNavBarHeight,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isNotificationVisible)
+                          _buildNotificationContainer(),
+                        SizedBox(height: 10),
+                        Container(
+                          key: containerKey,
+                          child: buildLocationContainer(
+                            context,
+                            screenWidth,
+                            responsivePadding,
+                            iconSize,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ] else ...[
+                  // Booking Status Widgets
+                  Positioned(
+                    bottom: bottomNavBarHeight,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BookingStatusContainer(),
+                        BookingDetailsContainer(
+                          pickupLocation: selectedPickUpLocation,
+                          dropoffLocation: selectedDropOffLocation,
+                          ETA: selectedRoute?['estimated_time'] ?? '15 mins',
+                        ),
+                        PaymentDetailsContainer(
+                          paymentMethod: selectedPaymentMethod ?? 'Cash',
+                          onCancelBooking: () {
+                            setState(() {
+                              isBookingConfirmed = false;
+                              _hideAnimationController.reverse();
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             );
           },
@@ -484,18 +496,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           Icon(
                             Icons.payment,
                             size: 24,
-                            color: isRouteSelected
-                                ? (isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212))
-                                : Colors.grey,
+                            color: const Color(0xFF00CC58),
                           ),
                           const SizedBox(width: 12),
                           Text(
                             selectedPaymentMethod ?? 'Select Payment Method',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: isRouteSelected
                                   ? (isDarkMode
                                       ? const Color(0xFFF5F5F5)
