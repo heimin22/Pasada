@@ -4,6 +4,9 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
+import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
+import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
@@ -51,6 +54,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // keep state alive my nigger
   @override
   bool get wantKeepAlive => true;
+  bool isBookingConfirmed = false;
 
   // state variable for the payment method
   String? selectedPaymentMethod;
@@ -61,8 +65,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
 
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
+  late AnimationController _bookingAnimationController;
+  late Animation<double> _downwardAnimation;
+  late Animation<double> _upwardAnimation;
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
@@ -107,32 +112,39 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+
+    _bookingAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
 
-    _slideAnimation = Tween<double>(
+    _downwardAnimation = Tween<double>(
       begin: 0.0,
-      end: 1.0,
+      end: 100.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
+      parent: _bookingAnimationController,
       curve: Curves.easeOut,
     ));
 
-    _animationController.addStatusListener((status) {
+    _upwardAnimation = Tween<double>(
+      begin: 100.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _bookingAnimationController,
+      curve: Curves.easeOut,
+    ));
+
+    _bookingAnimationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
           isNotificationVisible = false;
+          // Don't reset the controller here
           measureContainer();
         });
-        _animationController.reset();
       }
     });
-    // magmemeasure dapat ito after ng first frame
-    // WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // load saved locations on initializations
       loadLocation();
       measureContainer();
     });
@@ -140,7 +152,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -151,6 +163,20 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       loadLocation();
       mapScreenKey.currentState?.initializeLocation();
     }
+  }
+
+  void _handleBookingConfirmation() {
+    setState(() {
+      isBookingConfirmed = true;
+    });
+    _bookingAnimationController.forward();
+  }
+
+  void _handleBookingCancellation() {
+    setState(() {
+      isBookingConfirmed = false;
+    });
+    _bookingAnimationController.reverse();
   }
 
   void measureContainer() {
@@ -265,15 +291,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         body: LayoutBuilder(
           builder: (context, constraints) {
             final screenWidth = constraints.maxWidth;
-            // final screenHeight = constraints.maxHeight;
             final responsivePadding = screenWidth * 0.05;
             final iconSize = screenWidth * 0.06;
             final bottomNavBarHeight = 20.0;
-            final double fabVerticalSpacing = 10.0;
+            final fabVerticalSpacing = 10.0;
 
             return Stack(
               children: [
-                // Base Map Layer
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
@@ -292,69 +316,135 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   top: MediaQuery.of(context).padding.top + 10,
                   left: responsivePadding,
                   right: responsivePadding,
-                  child: _buildRouteSelectionContainer(),
+                  child: AnimatedBuilder(
+                    animation: _bookingAnimationController,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, -_downwardAnimation.value),
+                        child: Opacity(
+                          opacity: 1 - _bookingAnimationController.value,
+                          child: _buildRouteSelectionContainer(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
 
-                // Location FAB and Google Logo
+                // Location FAB
                 Positioned(
                   right: responsivePadding,
                   bottom: calculateBottomPadding() + fabVerticalSpacing,
-                  child: LocationFAB(
-                    heroTag: "homeLocationFAB",
-                    onPressed: () async {
-                      final mapState = mapScreenKey.currentState;
-                      if (mapState != null) {
-                        if (!mapState.isLocationInitialized) {
-                          await mapState.initializeLocation();
-                        }
-                        if (mapState.currentLocation != null) {
-                          await mapState
-                              .animateToLocation(mapState.currentLocation!);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  "Unable to get current location. Please check your location settings."),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      }
+                  child: AnimatedBuilder(
+                    animation: _bookingAnimationController,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, _downwardAnimation.value),
+                        child: Opacity(
+                          opacity: 1 - _bookingAnimationController.value,
+                          child: LocationFAB(
+                            heroTag: "homeLocationFAB",
+                            onPressed: () async {
+                              final mapState = mapScreenKey.currentState;
+                              if (mapState != null) {
+                                if (!mapState.isLocationInitialized) {
+                                  await mapState.initializeLocation();
+                                }
+                                if (mapState.currentLocation != null) {
+                                  mapState.animateToLocation(
+                                      mapState.currentLocation!);
+                                }
+                                mapState.pulseCurrentLocationMarker();
+                              }
+                            },
+                            iconSize: iconSize,
+                            buttonSize: screenWidth * 0.12,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1E1E1E)
+                                    : const Color(0xFFF5F5F5),
+                            iconColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF00E865)
+                                    : const Color(0xFF00CC58),
+                          ),
+                        ),
+                      );
                     },
-                    iconSize: iconSize,
-                    buttonSize: screenWidth * 0.12,
-                    backgroundColor:
-                        Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF1E1E1E)
-                            : const Color(0xFFF5F5F5),
-                    iconColor: Theme.of(context).brightness == Brightness.dark
-                        ? const Color(0xFF00E865)
-                        : const Color(0xFF00CC58),
                   ),
                 ),
 
-                // Bottom Section (Notification + Location Container)
-                Positioned(
-                  bottom: bottomNavBarHeight,
-                  left: responsivePadding,
-                  right: responsivePadding,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isNotificationVisible) _buildNotificationContainer(),
-                      SizedBox(height: 10),
-                      Container(
-                        key: containerKey,
-                        child: buildLocationContainer(
-                          context,
-                          screenWidth,
-                          responsivePadding,
-                          iconSize,
-                        ),
-                      ),
-                    ],
+                // Main booking container
+                if (!isBookingConfirmed)
+                  Positioned(
+                    bottom: bottomNavBarHeight,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: AnimatedBuilder(
+                      animation: _bookingAnimationController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _downwardAnimation.value),
+                          child: Opacity(
+                            opacity: 1 - _bookingAnimationController.value,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isNotificationVisible)
+                                  _buildNotificationContainer(),
+                                SizedBox(height: 10),
+                                Container(
+                                  key: containerKey,
+                                  child: buildLocationContainer(
+                                    context,
+                                    screenWidth,
+                                    responsivePadding,
+                                    iconSize,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
+
+                // Booking status containers
+                if (isBookingConfirmed)
+                  Positioned(
+                    bottom: bottomNavBarHeight,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: AnimatedBuilder(
+                      animation: _bookingAnimationController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0,
+                              -_upwardAnimation.value), // Use upward animation
+                          child: Opacity(
+                            opacity: _bookingAnimationController.value,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                BookingStatusContainer(),
+                                BookingDetailsContainer(
+                                  pickupLocation: selectedPickUpLocation,
+                                  dropoffLocation: selectedDropOffLocation,
+                                  etaText: etaText,
+                                ),
+                                PaymentDetailsContainer(
+                                  paymentMethod:
+                                      selectedPaymentMethod ?? 'Cash',
+                                  fare: 150.0,
+                                  onCancelBooking: _handleBookingCancellation,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
               ],
             );
           },
@@ -369,119 +459,140 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     String svgAssetDropOff = 'assets/svg/pindropoff.svg';
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.all(padding),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: screenWidth * 0.03,
-            spreadRadius: screenWidth * 0.005,
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
-              screenWidth, iconSize,
-              enabled: isRouteSelected),
-          const Divider(),
-          buildLocationRow(svgAssetDropOff, selectedDropOffLocation, false,
-              screenWidth, iconSize,
-              enabled: isRouteSelected),
-          SizedBox(height: screenWidth * 0.04),
-          // payment method widget
-          InkWell(
-            onTap: isRouteSelected
-                ? () async {
-                    final result = await Navigator.push<String>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PaymentMethodScreen(
-                          currentSelection: selectedPaymentMethod,
-                        ),
-                        fullscreenDialog: true,
-                      ),
-                    );
-                    if (result != null && mounted) {
-                      setState(() => selectedPaymentMethod = result);
-                    }
-                  }
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.payment,
-                    size: iconSize,
-                    color:
-                        isRouteSelected ? const Color(0xFF00CC58) : Colors.grey,
+    return AnimatedBuilder(
+      animation: _bookingAnimationController,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _downwardAnimation.value),
+          child: Opacity(
+            opacity: 1 - _bookingAnimationController.value,
+            child: Container(
+              padding: EdgeInsets.all(padding),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(screenWidth * 0.04),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: screenWidth * 0.03,
+                    spreadRadius: screenWidth * 0.005,
                   ),
-                  SizedBox(width: screenWidth * 0.03),
-                  Text(
-                    selectedPaymentMethod ?? 'Select Payment Method',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      color: isRouteSelected
-                          ? (isDarkMode
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFF121212))
-                          : Colors.grey,
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  buildLocationRow(svgAssetPickup, selectedPickUpLocation, true,
+                      screenWidth, iconSize,
+                      enabled: isRouteSelected),
+                  const Divider(),
+                  buildLocationRow(svgAssetDropOff, selectedDropOffLocation,
+                      false, screenWidth, iconSize,
+                      enabled: isRouteSelected),
+                  SizedBox(height: screenWidth * 0.04),
+                  InkWell(
+                    onTap: isRouteSelected
+                        ? () async {
+                            final result = await Navigator.push<String>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PaymentMethodScreen(
+                                  currentSelection: selectedPaymentMethod,
+                                ),
+                                fullscreenDialog: true,
+                              ),
+                            );
+                            if (result != null && mounted) {
+                              setState(() => selectedPaymentMethod = result);
+                            }
+                          }
+                        : null,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF2D2D2D)
+                            : const Color(0xFFFFFFFF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? const Color(0xFF3D3D3D)
+                              : const Color(0xFFE0E0E0),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.payment,
+                            size: 24,
+                            color: const Color(0xFF00CC58),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            selectedPaymentMethod ?? 'Select Payment Method',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isRouteSelected
+                                  ? (isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212))
+                                  : Colors.grey,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: isRouteSelected
+                                ? (isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212))
+                                : Colors.grey,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: isRouteSelected
-                        ? (isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212))
-                        : Colors.grey,
-                  ),
+                  SizedBox(height: screenWidth * 0.05),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (selectedPickUpLocation != null &&
+                              selectedDropOffLocation != null &&
+                              selectedPaymentMethod != null &&
+                              isRouteSelected)
+                          ? _handleBookingConfirmation
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF00CC58),
+                        disabledBackgroundColor: const Color(0xFFD3D3D3),
+                        foregroundColor: const Color(0xFFF5F5F5),
+                        disabledForegroundColor: const Color(0xFFF5F5F5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Confirm Booking',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
                 ],
               ),
             ),
           ),
-          SizedBox(height: screenWidth * 0.05),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (selectedPickUpLocation != null &&
-                      selectedDropOffLocation != null &&
-                      selectedPaymentMethod != null)
-                  ? () {
-                      // Lalagyan na to ng function sa susunod nigga
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF00CC58),
-                disabledBackgroundColor: Color(0xFFD3D3D3),
-                foregroundColor: Color(0xFFF5F5F5),
-                disabledForegroundColor: Color(0xFFF5F5F5),
-                padding: EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                'Confirm Booking',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          )
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -656,10 +767,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return AnimatedBuilder(
-      animation: _slideAnimation,
+      animation: _downwardAnimation,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, _slideAnimation.value * notificationHeight),
+          offset: Offset(0, _downwardAnimation.value * notificationHeight),
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
               setState(() {
@@ -733,7 +844,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           color: const Color(0xFF00CC58),
                         ),
                         onPressed: () {
-                          _animationController.forward();
+                          _bookingAnimationController.forward();
                         },
                       ),
                     ),
