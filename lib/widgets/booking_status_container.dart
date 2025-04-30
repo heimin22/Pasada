@@ -36,6 +36,51 @@ class BookingStatusContainerState extends State<BookingStatusContainer> {
 
   @override
   Widget build(BuildContext context) {
-    return const Placeholder();
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(seconds: 5),
+              child: Text(
+                _statusMessages[_currentMessageIndex],
+                key: ValueKey<int>(_currentMessageIndex),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+            ),
+          )
+        ],
+      ),
+    );
   }
 }
