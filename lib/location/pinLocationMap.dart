@@ -283,13 +283,78 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         // addressNotifier.value = "${landmark['name']}\n${landmark['address']}";
         final selectedLoc = SelectedLocation(
             "${landmark['name']}\n${landmark['address']}", tappedPosition);
-        Navigator.pop(context, selectedLoc);
+        // Navigator.pop(context, selectedLoc);
+        checkDistanceAndReturn(selectedLoc);
       });
     } else {
       final location = await reverseGeocode(tappedPosition);
       addressNotifier.value = location?.address ?? "Unable to find location";
     }
     setState(() => isFindingLandmark = false);
+  }
+
+  Future<void> checkDistanceAndReturn(SelectedLocation selectedLocation) async {
+    if (currentLocation == null) {
+      Navigator.pop(context, selectedLocation);
+      return;
+    }
+
+    final distance = selectedLocation.distanceFrom(LatLng(
+      currentLocation!.latitude,
+      currentLocation!.longitude,
+    ));
+
+    if (distance > 1.0) {
+      final bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+          return AlertDialog(
+            title: Text(
+              'Distance warning',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            content: Text(
+              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF067837),
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      if (proceed ?? false) {
+        Navigator.pop(context, selectedLocation);
+      }
+    } else {
+      Navigator.pop(context, selectedLocation);
+    }
   }
 
   Future<void> updateLocation() async {

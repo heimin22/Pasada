@@ -167,7 +167,7 @@ class MapScreenState extends State<MapScreen>
     final selectedLoc = SelectedLocation("", pickupLocation);
     final distance = selectedLoc.distanceFrom(currentLocation!);
 
-    if (distance > 2.0) {
+    if (distance > 1.0) {
       final bool? proceed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
@@ -311,6 +311,7 @@ class MapScreenState extends State<MapScreen>
     if (pickup != null) {
       final shouldProceed = await checkPickupDistance(pickup);
       if (!shouldProceed) return;
+      selectedPickupLatLng = pickup;
     }
 
     if (dropoff != null) selectedDropOffLatLng = dropoff;
@@ -384,7 +385,7 @@ class MapScreenState extends State<MapScreen>
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        showDebugToast('Please try again.');
+        showError('Please try again.');
         if (kDebugMode) {
           print('No response from the server');
         }
