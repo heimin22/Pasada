@@ -5,21 +5,40 @@ import '../location/selectedLocation.dart';
 class BookingDetailsContainer extends StatelessWidget {
   final SelectedLocation? pickupLocation;
   final SelectedLocation? dropoffLocation;
-  final String ETA;
+  final String etaText; // Using etaText from MapScreen
 
   const BookingDetailsContainer({
     super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
-    required this.ETA,
+    required this.etaText,
   });
+
+  String formatETA() {
+    final now = DateTime.now();
+
+    int minutes = 0;
+    if (etaText.contains('h')) {
+      final parts = etaText.split(' ');
+      minutes += int.parse(parts[0].replaceAll('h', '')) * 60;
+      if (parts.length > 1) {
+        minutes += int.parse(parts[1].replaceAll('m', ''));
+      }
+    } else if (etaText.contains('mins')) {
+      // Parse "X mins" format
+      minutes = int.parse(etaText.replaceAll(' mins', ''));
+    } else if (etaText == '<1 min') {
+      minutes = 1;
+    }
+
+    final arrivalTime = now.add(Duration(minutes: minutes));
+    return DateFormat('h:mm a').format(arrivalTime);
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final now = DateTime.now();
-    final formattedTime = DateFormat('h:mm a').format(now);
-    final formattedETA = ETA.isNotEmpty ? ETA : formattedTime;
+    final formattedETA = formatETA();
 
     return Container(
       width: double.infinity,
@@ -69,7 +88,7 @@ class BookingDetailsContainer extends StatelessWidget {
           _buildInfoRow(
             context,
             'Estimated Time',
-            formattedETA,
+            'Arrival at $formattedETA',
             Icons.access_time,
             isDarkMode,
           ),

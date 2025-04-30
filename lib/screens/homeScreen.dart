@@ -55,8 +55,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   bool get wantKeepAlive => true;
   bool isBookingConfirmed = false;
-  late AnimationController _hideAnimationController;
-  late Animation<double> _fadeAnimation;
 
   // state variable for the payment method
   String? selectedPaymentMethod;
@@ -67,8 +65,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
 
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
+  late AnimationController _bookingAnimationController;
+  late Animation<double> _downwardAnimation;
+  late Animation<double> _upwardAnimation;
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
@@ -113,45 +112,39 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   void initState() {
     super.initState();
-    _hideAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
 
-    _fadeAnimation = Tween<double>(
-      begin: 1.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _hideAnimationController,
-      curve: Curves.easeOut,
-    ));
-
-    _animationController = AnimationController(
+    _bookingAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
 
-    _slideAnimation = Tween<double>(
+    _downwardAnimation = Tween<double>(
       begin: 0.0,
-      end: 1.0,
+      end: 100.0,
     ).animate(CurvedAnimation(
-      parent: _animationController,
+      parent: _bookingAnimationController,
       curve: Curves.easeOut,
     ));
 
-    _animationController.addStatusListener((status) {
+    _upwardAnimation = Tween<double>(
+      begin: 100.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _bookingAnimationController,
+      curve: Curves.easeOut,
+    ));
+
+    _bookingAnimationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         setState(() {
           isNotificationVisible = false;
+          // Don't reset the controller here
           measureContainer();
         });
-        _animationController.reset();
       }
     });
-    // magmemeasure dapat ito after ng first frame
-    // WidgetsBinding.instance.addObserver(this);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // load saved locations on initializations
       loadLocation();
       measureContainer();
     });
@@ -159,8 +152,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
-    _hideAnimationController.dispose();
-    _animationController.dispose();
+    _bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -177,7 +169,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     setState(() {
       isBookingConfirmed = true;
     });
-    _hideAnimationController.forward();
+    _bookingAnimationController.forward();
+  }
+
+  void _handleBookingCancellation() {
+    setState(() {
+      isBookingConfirmed = false;
+    });
+    _bookingAnimationController.reverse();
   }
 
   void measureContainer() {
@@ -292,15 +291,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         body: LayoutBuilder(
           builder: (context, constraints) {
             final screenWidth = constraints.maxWidth;
-            // final screenHeight = constraints.maxHeight;
             final responsivePadding = screenWidth * 0.05;
             final iconSize = screenWidth * 0.06;
             final bottomNavBarHeight = 20.0;
-            final double fabVerticalSpacing = 10.0;
+            final fabVerticalSpacing = 10.0;
 
             return Stack(
               children: [
-                // Base Map Layer
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
@@ -314,105 +311,140 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   },
                 ),
 
-                // Conditional rendering based on booking confirmation
-                if (!isBookingConfirmed) ...[
-                  // Route Selection at the top
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 10,
-                    left: responsivePadding,
-                    right: responsivePadding,
-                    child: _buildRouteSelectionContainer(),
+                // Route Selection at the top
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 10,
+                  left: responsivePadding,
+                  right: responsivePadding,
+                  child: AnimatedBuilder(
+                    animation: _bookingAnimationController,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, -_downwardAnimation.value),
+                        child: Opacity(
+                          opacity: 1 - _bookingAnimationController.value,
+                          child: _buildRouteSelectionContainer(),
+                        ),
+                      );
+                    },
                   ),
+                ),
 
-                  // Location FAB
-                  Positioned(
-                    right: responsivePadding,
-                    bottom: calculateBottomPadding() + fabVerticalSpacing,
-                    child: LocationFAB(
-                      heroTag: "homeLocationFAB",
-                      onPressed: () async {
-                        final mapState = mapScreenKey.currentState;
-                        if (mapState != null) {
-                          if (!mapState.isLocationInitialized) {
-                            await mapState.initializeLocation();
-                          }
-                          if (mapState.currentLocation != null) {
-                            await mapState
-                                .animateToLocation(mapState.currentLocation!);
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                    "Unable to get current location. Please check your location settings."),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      iconSize: iconSize,
-                      buttonSize: screenWidth * 0.12,
-                      backgroundColor:
-                          Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1E1E1E)
-                              : const Color(0xFFF5F5F5),
-                      iconColor: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF00E865)
-                          : const Color(0xFF00CC58),
-                    ),
-                  ),
-
-                  // Bottom Section (Notification + Location Container)
-                  Positioned(
-                    bottom: bottomNavBarHeight,
-                    left: responsivePadding,
-                    right: responsivePadding,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isNotificationVisible)
-                          _buildNotificationContainer(),
-                        SizedBox(height: 10),
-                        Container(
-                          key: containerKey,
-                          child: buildLocationContainer(
-                            context,
-                            screenWidth,
-                            responsivePadding,
-                            iconSize,
+                // Location FAB
+                Positioned(
+                  right: responsivePadding,
+                  bottom: calculateBottomPadding() + fabVerticalSpacing,
+                  child: AnimatedBuilder(
+                    animation: _bookingAnimationController,
+                    builder: (context, child) {
+                      return Transform.translate(
+                        offset: Offset(0, _downwardAnimation.value),
+                        child: Opacity(
+                          opacity: 1 - _bookingAnimationController.value,
+                          child: LocationFAB(
+                            heroTag: "homeLocationFAB",
+                            onPressed: () async {
+                              final mapState = mapScreenKey.currentState;
+                              if (mapState != null) {
+                                if (!mapState.isLocationInitialized) {
+                                  await mapState.initializeLocation();
+                                }
+                                if (mapState.currentLocation != null) {
+                                  mapState.animateToLocation(
+                                      mapState.currentLocation!);
+                                }
+                                mapState.pulseCurrentLocationMarker();
+                              }
+                            },
+                            iconSize: iconSize,
+                            buttonSize: screenWidth * 0.12,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1E1E1E)
+                                    : const Color(0xFFF5F5F5),
+                            iconColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF00E865)
+                                    : const Color(0xFF00CC58),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                ] else ...[
-                  // Booking Status Widgets
+                ),
+
+                // Main booking container
+                if (!isBookingConfirmed)
                   Positioned(
                     bottom: bottomNavBarHeight,
                     left: responsivePadding,
                     right: responsivePadding,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        BookingStatusContainer(),
-                        BookingDetailsContainer(
-                          pickupLocation: selectedPickUpLocation,
-                          dropoffLocation: selectedDropOffLocation,
-                          ETA: selectedRoute?['estimated_time'] ?? '15 mins',
-                        ),
-                        PaymentDetailsContainer(
-                          paymentMethod: selectedPaymentMethod ?? 'Cash',
-                          onCancelBooking: () {
-                            setState(() {
-                              isBookingConfirmed = false;
-                              _hideAnimationController.reverse();
-                            });
-                          },
-                        ),
-                      ],
+                    child: AnimatedBuilder(
+                      animation: _bookingAnimationController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0, _downwardAnimation.value),
+                          child: Opacity(
+                            opacity: 1 - _bookingAnimationController.value,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isNotificationVisible)
+                                  _buildNotificationContainer(),
+                                SizedBox(height: 10),
+                                Container(
+                                  key: containerKey,
+                                  child: buildLocationContainer(
+                                    context,
+                                    screenWidth,
+                                    responsivePadding,
+                                    iconSize,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
+
+                // Booking status containers
+                if (isBookingConfirmed)
+                  Positioned(
+                    bottom: bottomNavBarHeight,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: AnimatedBuilder(
+                      animation: _bookingAnimationController,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(0,
+                              -_upwardAnimation.value), // Use upward animation
+                          child: Opacity(
+                            opacity: _bookingAnimationController.value,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                BookingStatusContainer(),
+                                BookingDetailsContainer(
+                                  pickupLocation: selectedPickUpLocation,
+                                  dropoffLocation: selectedDropOffLocation,
+                                  etaText: etaText,
+                                ),
+                                PaymentDetailsContainer(
+                                  paymentMethod:
+                                      selectedPaymentMethod ?? 'Cash',
+                                  fare: 150.0,
+                                  onCancelBooking: _handleBookingCancellation,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
               ],
             );
           },
@@ -428,12 +460,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return AnimatedBuilder(
-      animation: _fadeAnimation,
+      animation: _bookingAnimationController,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, (1 - _fadeAnimation.value) * 100),
+          offset: Offset(0, _downwardAnimation.value),
           child: Opacity(
-            opacity: _fadeAnimation.value,
+            opacity: 1 - _bookingAnimationController.value,
             child: Container(
               padding: EdgeInsets.all(padding),
               decoration: BoxDecoration(
@@ -735,10 +767,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return AnimatedBuilder(
-      animation: _slideAnimation,
+      animation: _downwardAnimation,
       builder: (context, child) {
         return Transform.translate(
-          offset: Offset(0, _slideAnimation.value * notificationHeight),
+          offset: Offset(0, _downwardAnimation.value * notificationHeight),
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
               setState(() {
@@ -812,7 +844,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           color: const Color(0xFF00CC58),
                         ),
                         onPressed: () {
-                          _animationController.forward();
+                          _bookingAnimationController.forward();
                         },
                       ),
                     ),

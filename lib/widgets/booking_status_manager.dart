@@ -28,7 +28,7 @@ class BookingStatusManager extends StatelessWidget {
           BookingDetailsContainer(
             pickupLocation: pickupLocation,
             dropoffLocation: dropoffLocation,
-            ETA: ETA,
+            etaText: ETA,
           ),
           PaymentDetailsContainer(
             paymentMethod: paymentMethod,
