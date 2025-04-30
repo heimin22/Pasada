@@ -125,7 +125,7 @@ class MapScreenState extends State<MapScreen>
   void calculateRoute() {
     //  make sure there's a null check before placing polylines
     if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
-      showDebugToast('Select both locations first.');
+      showError('Select both locations first.');
       return;
     }
     // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
@@ -215,6 +215,25 @@ class MapScreenState extends State<MapScreen>
     }
 
     return true;
+  }
+
+  Future<void> handleSearchLocationSelection(
+      SelectedLocation location, bool isPickup) async {
+    if (isPickup) {
+      final shouldProceed = await checkPickupDistance(location.coordinates);
+      if (!shouldProceed) return;
+    }
+    if (isPickup) {
+      setState(() {
+        selectedPickupLatLng = location.coordinates;
+        // Update any other necessary pickup-related state
+      });
+    } else {
+      setState(() {
+        selectedDropOffLatLng = location.coordinates;
+        // Update any other necessary dropoff-related state
+      });
+    }
   }
 
   // replace ko yung initLocation ko ng ganito

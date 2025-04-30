@@ -745,13 +745,19 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                   addressNotifier.value != "Searching..." &&
                   addressNotifier.value != "Searching for location..." &&
                   addressNotifier.value != "Unable to find location") {
-                Navigator.pop(context,
-                    SelectedLocation(addressNotifier.value, pinnedLocation!));
+                final selectedLoc =
+                    SelectedLocation(addressNotifier.value, pinnedLocation!);
+                checkDistanceAndReturn(selectedLoc);
+                // Navigator.pop(context,
+                //     SelectedLocation(addressNotifier.value, pinnedLocation!));
               } else if (pinnedLocation != null) {
                 // may coordinates pero walang readable address
                 // use na lang ng generic address pukingina niyan
-                Navigator.pop(context,
-                    SelectedLocation(addressNotifier.value, pinnedLocation!));
+                // Navigator.pop(context,
+                //     SelectedLocation(addressNotifier.value, pinnedLocation!));
+                final selectedLoc =
+                    SelectedLocation("Unknown Location", pinnedLocation!);
+                checkDistanceAndReturn(selectedLoc);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(
