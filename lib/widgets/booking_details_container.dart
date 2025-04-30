@@ -31,7 +31,7 @@ class BookingDetailsContainer extends StatelessWidget {
           BoxShadow(
             color: Colors.black12,
             blurRadius: 10,
-            spreadRadius: 1,
+            spreadRadius: 0,
           ),
         ],
       ),
