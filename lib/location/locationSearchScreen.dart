@@ -8,13 +8,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/recentSearch.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'package:pasada_passenger_app/services/recentSearchService.dart';
 import 'locationListTile.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
-import 'selectedLocation.dart';
 
 class SearchLocationScreen extends StatefulWidget {
   // final Function(SelectedLocation)? onLocationSelected;
@@ -33,6 +33,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   Timer? _debounce;
   bool isLoading = false;
   HomeScreenPageState? homeScreenPageState;
+  LatLng? currentLocation;
 
   @override
   void initState() {
@@ -48,7 +49,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     });
   }
 
-  void onRecentSearchSelected(RecentSearch search) {
+  void onRecentSearchSelected(RecentSearch search) async {
+    if (widget.isPickup) {
+      final shouldProceed = await checkPickupDistance(search.coordinates);
+      if (!shouldProceed) return;
+    }
+
     Navigator.pop(
       context,
       SelectedLocation(search.address, search.coordinates),
@@ -137,6 +143,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         LatLng(location['lat'], location['lng']),
       );
 
+      if (widget.isPickup) {
+        final shouldProceed =
+            await checkPickupDistance(selectedLocation.coordinates);
+        if (!shouldProceed) return;
+      }
+
       // Save to recent searches
       await RecentSearchService.addRecentSearch(selectedLocation);
 
@@ -144,6 +156,63 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         Navigator.pop(context, selectedLocation);
       }
     }
+  }
+
+  Future<bool> checkPickupDistance(LatLng pickupLocation) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (currentLocation == null) return true;
+
+    final selectedLoc = SelectedLocation("", pickupLocation);
+    final distance = selectedLoc.distanceFrom(currentLocation!);
+
+    if (distance > 1.0) {
+      final bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Distance warning',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            content: Text(
+              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF067837),
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      return proceed ?? false;
+    }
+
+    return true;
   }
 
   @override

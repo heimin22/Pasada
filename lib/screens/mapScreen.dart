@@ -13,6 +13,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -124,7 +125,7 @@ class MapScreenState extends State<MapScreen>
   void calculateRoute() {
     //  make sure there's a null check before placing polylines
     if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
-      showDebugToast('Select both locations first.');
+      showError('Select both locations first.');
       return;
     }
     // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
@@ -143,7 +144,6 @@ class MapScreenState extends State<MapScreen>
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
-      showDebugToast('Generating route');
     }
   }
 
@@ -158,6 +158,82 @@ class MapScreenState extends State<MapScreen>
         setState(() => isAnimatingLocation = false);
       }
     });
+  }
+
+  Future<bool> checkPickupDistance(LatLng pickupLocation) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (currentLocation == null) return true;
+
+    final selectedLoc = SelectedLocation("", pickupLocation);
+    final distance = selectedLoc.distanceFrom(currentLocation!);
+
+    if (distance > 1.0) {
+      final bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(
+              'Distance warning',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            content: Text(
+              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF067837),
+                ),
+                child: const Text('Continue'),
+              ),
+            ],
+          );
+        },
+      );
+      return proceed ?? false;
+    }
+
+    return true;
+  }
+
+  Future<void> handleSearchLocationSelection(
+      SelectedLocation location, bool isPickup) async {
+    if (isPickup) {
+      final shouldProceed = await checkPickupDistance(location.coordinates);
+      if (!shouldProceed) return;
+    }
+    if (isPickup) {
+      setState(() {
+        selectedPickupLatLng = location.coordinates;
+        // Update any other necessary pickup-related state
+      });
+    } else {
+      setState(() {
+        selectedDropOffLatLng = location.coordinates;
+        // Update any other necessary dropoff-related state
+      });
+    }
   }
 
   // replace ko yung initLocation ko ng ganito
@@ -250,8 +326,12 @@ class MapScreenState extends State<MapScreen>
   }
 
   // ito yung method para sa pick-up and drop-off location
-  void updateLocations({LatLng? pickup, LatLng? dropoff}) {
-    if (pickup != null) selectedPickupLatLng = pickup;
+  Future<void> updateLocations({LatLng? pickup, LatLng? dropoff}) async {
+    if (pickup != null) {
+      final shouldProceed = await checkPickupDistance(pickup);
+      if (!shouldProceed) return;
+      selectedPickupLatLng = pickup;
+    }
 
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
@@ -277,7 +357,6 @@ class MapScreenState extends State<MapScreen>
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey.isEmpty) {
-        showDebugToast('API key not found');
         if (kDebugMode) {
           print('API key not found');
         }
@@ -325,7 +404,7 @@ class MapScreenState extends State<MapScreen>
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        showDebugToast('No response from the server');
+        showError('Please try again.');
         if (kDebugMode) {
           print('No response from the server');
         }
@@ -336,7 +415,6 @@ class MapScreenState extends State<MapScreen>
 
       // add ng response validation
       if (data['routes'] == null || data['routes'].isEmpty) {
-        showDebugToast('No routes found');
         if (kDebugMode) {
           print('No routes found');
         }
@@ -346,7 +424,6 @@ class MapScreenState extends State<MapScreen>
       // null checking for nested properties
       final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
       if (polyline == null) {
-        showDebugToast('No polyline found in the response');
         if (kDebugMode) {
           print('No polyline found in the response');
         }
@@ -417,8 +494,6 @@ class MapScreenState extends State<MapScreen>
           );
         }
 
-        showDebugToast('Route generated successfully');
-
         final legs = data['routes'][0]['legs'];
         if (legs is! List || legs.isEmpty) {
           debugPrint('Legs data is invalid: $legs');
@@ -449,12 +524,11 @@ class MapScreenState extends State<MapScreen>
         debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
         return;
       }
-      showDebugToast('Failed to generate route');
       if (kDebugMode) {
         print('Failed to generate route: $response');
       }
     } catch (e) {
-      showDebugToast('Error: ${e.toString()}');
+      showError('Error: ${e.toString()}');
     }
   }
 
