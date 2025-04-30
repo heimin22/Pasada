@@ -144,7 +144,6 @@ class MapScreenState extends State<MapScreen>
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
-      showDebugToast('Generating route');
     }
   }
 
@@ -338,7 +337,6 @@ class MapScreenState extends State<MapScreen>
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey.isEmpty) {
-        showDebugToast('API key not found');
         if (kDebugMode) {
           print('API key not found');
         }
@@ -386,7 +384,7 @@ class MapScreenState extends State<MapScreen>
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        showDebugToast('No response from the server');
+        showDebugToast('Please try again.');
         if (kDebugMode) {
           print('No response from the server');
         }
@@ -397,7 +395,6 @@ class MapScreenState extends State<MapScreen>
 
       // add ng response validation
       if (data['routes'] == null || data['routes'].isEmpty) {
-        showDebugToast('No routes found');
         if (kDebugMode) {
           print('No routes found');
         }
@@ -407,7 +404,6 @@ class MapScreenState extends State<MapScreen>
       // null checking for nested properties
       final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
       if (polyline == null) {
-        showDebugToast('No polyline found in the response');
         if (kDebugMode) {
           print('No polyline found in the response');
         }
@@ -478,8 +474,6 @@ class MapScreenState extends State<MapScreen>
           );
         }
 
-        showDebugToast('Route generated successfully');
-
         final legs = data['routes'][0]['legs'];
         if (legs is! List || legs.isEmpty) {
           debugPrint('Legs data is invalid: $legs');
@@ -510,12 +504,11 @@ class MapScreenState extends State<MapScreen>
         debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
         return;
       }
-      showDebugToast('Failed to generate route');
       if (kDebugMode) {
         print('Failed to generate route: $response');
       }
     } catch (e) {
-      showDebugToast('Error: ${e.toString()}');
+      showError('Error: ${e.toString()}');
     }
   }
 
