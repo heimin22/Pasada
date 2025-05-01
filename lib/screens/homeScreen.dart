@@ -82,12 +82,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (result != null && mounted) {
       setState(() => selectedRoute = result);
 
-      if (result['origin_coordinates'] != null &&
-          result['destination_coordinates'] != null) {
-        mapScreenKey.currentState?.generatePolylineBetween(
-          result['origin_coordinates'],
-          result['destination_coordinates'],
+      debugPrint('Selected route: ${result!['route_name']}');
+      debugPrint('Route details: $result');
+
+      if (result['intermediate_coordinates'] != null) {
+        debugPrint(
+            'Route has intermediate coordinates: ${result['intermediate_coordinates']}');
+
+        // Use the new method for route polylines
+        mapScreenKey.currentState?.generateRoutePolyline(
+          result['intermediate_coordinates'],
         );
+      } else {
+        debugPrint('Route does not have intermediate coordinates');
+
+        // Fallback to the original method if no intermediate coordinates
+        if (result['origin_coordinates'] != null &&
+            result['destination_coordinates'] != null) {
+          mapScreenKey.currentState?.generatePolylineBetween(
+            result['origin_coordinates'],
+            result['destination_coordinates'],
+          );
+        }
       }
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 
 class RouteSelection extends StatefulWidget {
   const RouteSelection({super.key});
@@ -94,13 +95,6 @@ class _RouteSelectionState extends State<RouteSelection> {
           _isLoading = false;
         });
       }
-      for (var route in _routes) {
-        if (route['route_name'] == 'Sangandaan to Ilaya' ||
-            route['route_name'] == 'Ilaya to Sangandaan') {
-          debugPrint(
-              '${route['route_name']} intermediate points: ${route['intermediate_points']}');
-        }
-      }
     } catch (error) {
       debugPrint("Error loading routes: $error");
       if (mounted) {
@@ -118,6 +112,9 @@ class _RouteSelectionState extends State<RouteSelection> {
   }
 
   void _selectRoute(Map<String, dynamic> route) async {
+    // Debug the route data before returning
+    debugPrint('Selected route data: $route');
+
     if (route['origin_lat'] != null &&
         route['origin_lng'] != null &&
         route['destination_lat'] != null &&
@@ -134,6 +131,26 @@ class _RouteSelectionState extends State<RouteSelection> {
 
       route['origin_coordinates'] = originLatLng;
       route['destination_coordinates'] = destinationLatLng;
+
+      // Process intermediate coordinates
+      if (route['intermediate_coordinates'] != null) {
+        debugPrint(
+            'Route has intermediate coordinates: ${route['intermediate_coordinates']}');
+
+        // If it's a string, try to parse it as JSON
+        if (route['intermediate_coordinates'] is String) {
+          try {
+            route['intermediate_coordinates'] =
+                jsonDecode(route['intermediate_coordinates']);
+            debugPrint(
+                'Parsed intermediate_coordinates from string to: ${route['intermediate_coordinates']}');
+          } catch (e) {
+            debugPrint('Failed to parse intermediate_coordinates: $e');
+          }
+        }
+      } else {
+        debugPrint('No intermediate coordinates for this route');
+      }
     }
 
     Navigator.pop(context, route);
@@ -258,7 +275,7 @@ class _RouteSelectionState extends State<RouteSelection> {
                                         route['route_name'] ?? 'Unknown Route',
                                         style: TextStyle(
                                           fontFamily: 'Inter',
-                                          fontSize: 14,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                           color: isDarkMode
                                               ? const Color(0xFFF5F5F5)

@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -352,6 +353,81 @@ class MapScreenState extends State<MapScreen>
     return true;
   }
 
+  Future<void> generateRoutePolyline(
+      List<dynamic> intermediateCoordinates) async {
+    try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      if (intermediateCoordinates.isEmpty) {
+        debugPrint('No intermediate coordinates provided');
+        return;
+      }
+
+      // convert the list of coordinates to LatLng objects
+      List<LatLng> routePoints = [];
+      for (var point in intermediateCoordinates) {
+        if (point is Map &&
+            point.containsKey('lat') &&
+            point.containsKey('lng')) {
+          routePoints.add(LatLng(
+            double.parse(point['lat'].toString()),
+            double.parse(point['lng'].toString()),
+          ));
+        }
+      }
+
+      if (routePoints.isEmpty) {
+        debugPrint('Failed to parse intermediate coordinates');
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          polylines[const PolylineId('route_path')] = Polyline(
+            polylineId: const PolylineId('route_path'),
+            points: routePoints,
+            color: const Color(0xFFFFCE21),
+            width: 8,
+          );
+        });
+      }
+
+      double southLat = routePoints.first.latitude;
+      double northLat = routePoints.first.latitude;
+      double westLng = routePoints.first.longitude;
+      double eastLng = routePoints.first.longitude;
+
+      for (LatLng point in routePoints) {
+        southLat = math.min(southLat, point.latitude);
+        northLat = math.max(northLat, point.latitude);
+        westLng = math.min(westLng, point.longitude);
+        eastLng = math.max(eastLng, point.longitude);
+      }
+
+      // Add padding to the bounds
+      final double padding = 0.01;
+      southLat -= padding;
+      northLat += padding;
+      westLng -= padding;
+      eastLng += padding;
+
+      final GoogleMapController controller = await mapController.future;
+      controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(southLat, westLng),
+            northeast: LatLng(northLat, eastLng),
+          ),
+          20,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error generating route polyline: $e');
+      showError('Error: ${e.toString()}');
+    }
+  }
+
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
       final hasConnection = await checkNetworkConnection();
@@ -359,7 +435,9 @@ class MapScreenState extends State<MapScreen>
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey.isEmpty) {
-        showError('API Key is not configured!');
+        if (kDebugMode) {
+          print('API key not found');
+        }
         return;
       }
 
@@ -374,11 +452,7 @@ class MapScreenState extends State<MapScreen>
         'X-Goog-FieldMask':
             'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
       };
-
-      final bool isUsingPredefinedRoute = widget.selectedRoute != null &&
-          widget.selectedRoute!['route_name'] != 'Select Route';
-
-      Map<String, dynamic> requestBody = {
+      final body = jsonEncode({
         'origin': {
           'location': {
             'latLng': {
@@ -399,35 +473,9 @@ class MapScreenState extends State<MapScreen>
         'polylineEncoding': 'ENCODED_POLYLINE',
         'computeAlternativeRoutes': false,
         'routingPreference': 'TRAFFIC_AWARE',
-      };
+      });
 
-      if (isUsingPredefinedRoute &&
-          widget.selectedRoute!['intermediate_coordinates'] != null) {
-        List<Map<String, dynamic>> intermediates = [];
-
-        final coordinates = widget.selectedRoute!['intermediate_coordinates'];
-        if (coordinates is List) {
-          for (var coordinate in coordinates) {
-            intermediates.add({
-              'location': {
-                'latLng': {
-                  'latitude': double.parse(coordinate['lat'].toString()),
-                  'longitude': double.parse(coordinate['lng'].toString()),
-                },
-              },
-            });
-          }
-        }
-
-        if (intermediates.isNotEmpty) {
-          requestBody['waypoints'] = intermediates;
-          debugPrint(
-              'Added ${intermediates.length} intermediate points to route request');
-        }
-      }
-
-      final body = json.encode(requestBody);
-      debugPrint('Request Body: $requestBody');
+      debugPrint('Request Body: $body');
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response =
