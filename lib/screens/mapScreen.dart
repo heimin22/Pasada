@@ -23,6 +23,7 @@ class MapScreen extends StatefulWidget {
   final LatLng? dropOffLocation;
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
+  final Function(double)? onFareUpdated;
   final Map<String, dynamic>? selectedRoute;
 
   const MapScreen({
@@ -31,6 +32,7 @@ class MapScreen extends StatefulWidget {
     this.dropOffLocation,
     this.bottomPadding = 0.07,
     this.onEtaUpdated,
+    this.onFareUpdated,
     this.selectedRoute,
   });
 
@@ -76,15 +78,14 @@ class MapScreenState extends State<MapScreen>
   bool isLocationInitialized = false;
   bool errorDialogVisible = false;
 
-  // Add this field to store the current controller
   GoogleMapController? _mapController;
 
-  // Add this property to the MapScreenState class
   bool showRouteEndIndicator = false;
   String routeEndName = '';
 
-  // Add this property to the MapScreenState class
   Map<MarkerId, Marker> markers = {};
+
+  double fareAmount = 0.0;
 
   // Override methods
   /// state of the app
@@ -653,6 +654,12 @@ class MapScreenState extends State<MapScreen>
             .toList();
 
         if (mounted) {
+          final double routeDistance = getRouteDistance(polylineCoordinates);
+          final double fare = calculateFare(routeDistance);
+
+          debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
+          debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
+
           setState(() {
             polylines = {
               const PolylineId('route'): Polyline(
@@ -662,9 +669,19 @@ class MapScreenState extends State<MapScreen>
                 width: 8,
               )
             };
+
+            fareAmount = fare;
           });
 
-          // calculate bounds that include start, destination and all ppolyline points
+          if (widget.onFareUpdated != null) {
+            debugPrint(
+                'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
+            widget.onFareUpdated!(fare);
+          } else {
+            debugPrint('onFareUpdated callback is null');
+          }
+
+          // calculate bounds that include start, destination and all polyline points
           double southLat = start.latitude;
           double northLat = start.latitude;
           double westLng = start.longitude;
@@ -741,6 +758,43 @@ class MapScreenState extends State<MapScreen>
     } catch (e) {
       showError('Error: ${e.toString()}');
     }
+  }
+
+  double calculateFare(double distanceInKm) {
+    const double baseFare = 15.0;
+    const double ratePerKm = 2.2;
+
+    double calculatedFare = 0.0;
+    if (distanceInKm <= 4.0) {
+      calculatedFare = baseFare;
+    } else {
+      calculatedFare = baseFare + (distanceInKm - 4.0) * ratePerKm;
+    }
+
+    // Add debug print to verify calculation
+    debugPrint(
+        'Distance: ${distanceInKm.toStringAsFixed(2)} km, Calculated fare: ₱${calculatedFare.toStringAsFixed(2)}');
+
+    return calculatedFare;
+  }
+
+  double getRouteDistance(List<LatLng> polylineCoordinates) {
+    double totalDistance = 0.0;
+
+    for (int i = 0; i < polylineCoordinates.length - 1; i++) {
+      final SelectedLocation start = SelectedLocation(
+        '',
+        polylineCoordinates[i],
+      );
+      final SelectedLocation end = SelectedLocation(
+        '',
+        polylineCoordinates[i + 1],
+      );
+      totalDistance += start.distanceFrom(end.coordinates);
+      debugPrint(
+          'Distance between points: ${start.distanceFrom(end.coordinates)}');
+    }
+    return totalDistance;
   }
 
   String formatDuration(int totalSeconds) {
