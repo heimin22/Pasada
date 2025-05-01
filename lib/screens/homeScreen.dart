@@ -876,7 +876,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           color: const Color(0xFF00CC58),
                         ),
                         onPressed: () {
-                          _bookingAnimationController.forward();
+                          // Instead of forwarding the animation controller, just hide the notification
+                          setState(() {
+                            isNotificationVisible = false;
+                            measureContainer();
+                          });
                         },
                       ),
                     ),

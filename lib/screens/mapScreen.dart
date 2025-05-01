@@ -374,6 +374,8 @@ class MapScreenState extends State<MapScreen>
       // Add origin point if provided
       if (originCoordinates != null) {
         routePoints.add(originCoordinates);
+        debugPrint(
+            'Added origin point: ${originCoordinates.latitude}, ${originCoordinates.longitude}');
       }
 
       // Add intermediate points
@@ -382,10 +384,10 @@ class MapScreenState extends State<MapScreen>
           if (point is Map &&
               point.containsKey('lat') &&
               point.containsKey('lng')) {
-            routePoints.add(LatLng(
-              double.parse(point['lat'].toString()),
-              double.parse(point['lng'].toString()),
-            ));
+            final lat = double.parse(point['lat'].toString());
+            final lng = double.parse(point['lng'].toString());
+            routePoints.add(LatLng(lat, lng));
+            debugPrint('Added intermediate point: $lat, $lng');
           }
         }
       }
@@ -393,6 +395,8 @@ class MapScreenState extends State<MapScreen>
       // Add destination point if provided
       if (destinationCoordinates != null) {
         routePoints.add(destinationCoordinates);
+        debugPrint(
+            'Added destination point: ${destinationCoordinates.latitude}, ${destinationCoordinates.longitude}');
       }
 
       if (routePoints.isEmpty) {
@@ -402,6 +406,8 @@ class MapScreenState extends State<MapScreen>
 
       if (mounted) {
         setState(() {
+          polylines.clear(); // Clear existing polylines
+
           polylines[const PolylineId('route_path')] = Polyline(
             polylineId: const PolylineId('route_path'),
             points: routePoints,
@@ -474,6 +480,13 @@ class MapScreenState extends State<MapScreen>
             20,
           ),
         );
+
+        // Debug the points to verify they're in the correct order
+        debugPrint('Route points in order (${routePoints.length} points):');
+        for (int i = 0; i < routePoints.length; i++) {
+          debugPrint(
+              'Point $i: ${routePoints[i].latitude}, ${routePoints[i].longitude}');
+        }
       }
     } catch (e) {
       debugPrint('Error generating route polyline: $e');
@@ -863,51 +876,6 @@ class MapScreenState extends State<MapScreen>
                     rotateGesturesEnabled: true,
                     myLocationEnabled: true,
                   ),
-
-                  // Custom end of route indicator
-                  if (showRouteEndIndicator)
-                    Positioned(
-                      bottom: screenHeight * 0.15,
-                      right: screenWidth * 0.05,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? const Color(0xFF1E1E1E)
-                              : const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              color: const Color(0xFFFFCE21),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              routeEndName,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color:
-                                    isDarkMode ? Colors.white : Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                 ],
               ),
       ),
