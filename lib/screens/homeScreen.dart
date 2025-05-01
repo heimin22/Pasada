@@ -66,6 +66,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
 
+  double currentFare = 0.0;
+
   late AnimationController _bookingAnimationController;
   late Animation<double> _downwardAnimation;
   late Animation<double> _upwardAnimation;
@@ -341,6 +343,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     WidgetsBinding.instance
                         .addPostFrameCallback((_) => measureContainer());
                   },
+                  onFareUpdated: (fare) {
+                    debugPrint(
+                        'HomeScreen received fare update: ₱${fare.toStringAsFixed(2)}');
+                    setState(() {
+                      currentFare = fare;
+                    });
+                    WidgetsBinding.instance
+                        .addPostFrameCallback((_) => measureContainer());
+                  },
+                  selectedRoute: selectedRoute,
                 ),
 
                 // Route Selection at the top
@@ -467,7 +479,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                 PaymentDetailsContainer(
                                   paymentMethod:
                                       selectedPaymentMethod ?? 'Cash',
-                                  fare: 150.0,
+                                  fare:
+                                      currentFare, // Use the calculated fare instead of hardcoded 150.0
                                   onCancelBooking: _handleBookingCancellation,
                                 ),
                               ],
@@ -643,6 +656,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         children: [
           if (isPickup) ...[
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   "Total Fare: ",
@@ -655,6 +669,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             ? const Color(0xFFF5F5F5)
                             : const Color(0xFF121212))
                         : Colors.grey,
+                  ),
+                ),
+                Text(
+                  "₱${currentFare.toStringAsFixed(2)}",
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: enabled ? const Color(0xFF00CC58) : Colors.grey,
                   ),
                 ),
               ],
