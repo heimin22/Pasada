@@ -224,11 +224,22 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   void navigateToSearch(BuildContext context, bool isPickup) async {
+    // Debug the entire selectedRoute object
+    debugPrint('Selected route: $selectedRoute');
+
+    // The field might be named differently in the route object
+    int? routeId = selectedRoute?['id'] ?? selectedRoute?['officialroute_id'];
+    debugPrint('Navigating to search with routeID: $routeId');
+
     final result = await Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (context) => SearchLocationScreen(isPickup: isPickup),
+        builder: (context) => SearchLocationScreen(
+          isPickup: isPickup,
+          routeID: routeId,
+        ),
       ),
     );
+
     if (result != null && result is SelectedLocation) {
       setState(() {
         if (isPickup) {

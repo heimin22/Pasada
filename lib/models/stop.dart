@@ -1,61 +1,77 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Stop {
   final int id;
-  final int officialrouteId;
+  final int routeId;
   final String name;
   final String address;
-  final double lat;
-  final double lng;
-  final int order;
+  final LatLng coordinates;
+  final int stopOrder;
   final bool isActive;
-  final DateTime createdAt;
-  final double? distance;
 
   Stop({
     required this.id,
-    required this.officialrouteId,
+    required this.routeId,
     required this.name,
     required this.address,
-    required this.lat,
-    required this.lng,
-    required this.order,
+    required this.coordinates,
+    required this.stopOrder,
     required this.isActive,
-    required this.createdAt,
-    this.distance,
   });
 
-  LatLng get coordinates => LatLng(lat, lng);
-
   factory Stop.fromJson(Map<String, dynamic> json) {
-    return Stop(
-      id: json['id'],
-      officialrouteId: json['officialroute_id'],
-      name: json['stop_name'],
-      address: json['stop_address'],
-      lat: double.parse(json['stop_lat']),
-      lng: double.parse(json['stop_lng']),
-      order: json['stop_order'],
-      isActive: json['is_active'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      distance: json['distance']?.toDouble(),
-    );
+    try {
+      debugPrint('Parsing stop data: $json');
+
+      // Check if required fields exist
+      if (json['allowedstop_id'] == null) {
+        debugPrint('Missing allowedstop_id in data');
+      }
+      if (json['officialroute_id'] == null) {
+        debugPrint('Missing officialroute_id in data');
+      }
+      if (json['stop_name'] == null) {
+        debugPrint('Missing stop_name in data');
+      }
+      if (json['stop_address'] == null) {
+        debugPrint('Missing stop_address in data');
+      }
+      if (json['stop_lat'] == null) {
+        debugPrint('Missing stop_lat in data');
+      }
+      if (json['stop_lng'] == null) {
+        debugPrint('Missing stop_lng in data');
+      }
+
+      return Stop(
+        id: json['allowedstop_id'],
+        routeId: json['officialroute_id'],
+        name: json['stop_name'] ?? 'Unknown Stop',
+        address: json['stop_address'] ?? 'No address',
+        coordinates: LatLng(
+          double.parse(json['stop_lat'] ?? '0'),
+          double.parse(json['stop_lng'] ?? '0'),
+        ),
+        stopOrder: json['stop_order'] ?? 0,
+        isActive: json['is_active'] ?? true,
+      );
+    } catch (e) {
+      debugPrint('Error in Stop.fromJson: $e');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'officialroute_id': officialrouteId,
+      'allowedstop_id': id, // Updated to match your schema
+      'officialroute_id': routeId,
       'stop_name': name,
       'stop_address': address,
-      'stop_lat': lat.toString(),
-      'stop_lng': lng.toString(),
-      'stop_order': order,
+      'stop_lat': coordinates.latitude.toString(),
+      'stop_lng': coordinates.longitude.toString(),
+      'stop_order': stopOrder,
       'is_active': isActive,
-      'created_at': createdAt.toIso8601String(),
-      if (distance != null) 'distance': distance,
     };
   }
 }
