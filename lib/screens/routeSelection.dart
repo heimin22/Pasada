@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RouteSelection extends StatefulWidget {
@@ -52,7 +53,8 @@ class _RouteSelectionState extends State<RouteSelection> {
 
       final response = await Supabase.instance.client
           .from('official_routes')
-          .select('route_name, description')
+          .select(
+              'route_name, description, origin_lat, origin_lng, destination_lat, destination_lng')
           .order('route_name');
       // .select('route_name, description')
       // .eq('status', 'active');
@@ -90,8 +92,8 @@ class _RouteSelectionState extends State<RouteSelection> {
           _filteredRoutes = _routes;
           _isLoading = false;
         });
-        debugPrint('Routes loaded: ${_routes.length}');
       }
+      debugPrint('Routes loaded: ${_routes.length}');
     } catch (error) {
       debugPrint("Error loading routes: $error");
       if (mounted) {
@@ -106,6 +108,28 @@ class _RouteSelectionState extends State<RouteSelection> {
         );
       }
     }
+  }
+
+  void _selectRoute(Map<String, dynamic> route) async {
+    if (route['origin_lat'] != null &&
+        route['origin_lng'] != null &&
+        route['destination_lat'] != null &&
+        route['destination_lng'] != null) {
+      final originLatLng = LatLng(
+        double.parse(route['origin_lat'].toString()),
+        double.parse(route['origin_lng'].toString()),
+      );
+
+      final destinationLatLng = LatLng(
+        double.parse(route['destination_lat'].toString()),
+        double.parse(route['destination_lng'].toString()),
+      );
+
+      route['origin_coordinates'] = originLatLng;
+      route['destination_coordinates'] = destinationLatLng;
+    }
+
+    Navigator.pop(context, route);
   }
 
   @override
@@ -221,7 +245,7 @@ class _RouteSelectionState extends State<RouteSelection> {
                             ),
                           ),
                           onTap: () {
-                            Navigator.pop(context, route);
+                            _selectRoute(route);
                           },
                         ),
                       );
