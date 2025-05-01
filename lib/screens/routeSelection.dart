@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 
 class RouteSelection extends StatefulWidget {
   const RouteSelection({super.key});
@@ -35,6 +37,8 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   Future<void> _loadRoutes() async {
     try {
+      setState(() => _isLoading = true);
+
       final session = Supabase.instance.client.auth.currentSession;
       debugPrint('Current session: ${session != null ? "Active" : "None"}');
       if (session != null) {
@@ -52,10 +56,10 @@ class _RouteSelectionState extends State<RouteSelection> {
 
       final response = await Supabase.instance.client
           .from('official_routes')
-          .select('route_name, description')
+          .select(
+              'route_name, description, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, origin_name, destination_name, status')
+          .eq('status', 'active')
           .order('route_name');
-      // .select('route_name, description')
-      // .eq('status', 'active');
 
       debugPrint('Raw Response: $response');
       debugPrint('Response type: ${response.runtimeType}');
@@ -90,7 +94,6 @@ class _RouteSelectionState extends State<RouteSelection> {
           _filteredRoutes = _routes;
           _isLoading = false;
         });
-        debugPrint('Routes loaded: ${_routes.length}');
       }
     } catch (error) {
       debugPrint("Error loading routes: $error");
@@ -106,6 +109,51 @@ class _RouteSelectionState extends State<RouteSelection> {
         );
       }
     }
+  }
+
+  void _selectRoute(Map<String, dynamic> route) async {
+    // Debug the route data before returning
+    debugPrint('Selected route data: $route');
+
+    if (route['origin_lat'] != null &&
+        route['origin_lng'] != null &&
+        route['destination_lat'] != null &&
+        route['destination_lng'] != null) {
+      final originLatLng = LatLng(
+        double.parse(route['origin_lat'].toString()),
+        double.parse(route['origin_lng'].toString()),
+      );
+
+      final destinationLatLng = LatLng(
+        double.parse(route['destination_lat'].toString()),
+        double.parse(route['destination_lng'].toString()),
+      );
+
+      route['origin_coordinates'] = originLatLng;
+      route['destination_coordinates'] = destinationLatLng;
+
+      // Process intermediate coordinates
+      if (route['intermediate_coordinates'] != null) {
+        debugPrint(
+            'Route has intermediate coordinates: ${route['intermediate_coordinates']}');
+
+        // If it's a string, try to parse it as JSON
+        if (route['intermediate_coordinates'] is String) {
+          try {
+            route['intermediate_coordinates'] =
+                jsonDecode(route['intermediate_coordinates']);
+            debugPrint(
+                'Parsed intermediate_coordinates from string to: ${route['intermediate_coordinates']}');
+          } catch (e) {
+            debugPrint('Failed to parse intermediate_coordinates: $e');
+          }
+        }
+      } else {
+        debugPrint('No intermediate coordinates for this route');
+      }
+    }
+
+    Navigator.pop(context, route);
   }
 
   @override
@@ -186,43 +234,82 @@ class _RouteSelectionState extends State<RouteSelection> {
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = _filteredRoutes[index];
-                      return SizedBox(
-                        height: 57,
-                        child: ListTile(
-                          horizontalTitleGap: 0,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                          leading: Icon(
-                            Icons.route,
-                            size: 16,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                          title: Text(
-                            route['route_name'] ?? 'Unknown Route',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        elevation: 1,
+                        color:
+                            isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          onTap: () => _selectRoute(route),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? const Color(0xFF2A2A2A)
+                                        : const Color(0xFFEEEEEE),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.route,
+                                    size: 20,
+                                    color: const Color(0xFF00CC58),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        route['route_name'] ?? 'Unknown Route',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212),
+                                        ),
+                                      ),
+                                      if (route['description'] != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          route['description'],
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12,
+                                            color: isDarkMode
+                                                ? const Color(0xFFAAAAAA)
+                                                : const Color(0xFF515151),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: isDarkMode
+                                      ? const Color(0xFFAAAAAA)
+                                      : const Color(0xFF515151),
+                                ),
+                              ],
                             ),
                           ),
-                          subtitle: Text(
-                            route['description'] ?? 'No description available',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              color: isDarkMode
-                                  ? const Color(0xFFAAAAAA)
-                                  : const Color(0xFF515151),
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.pop(context, route);
-                          },
                         ),
                       );
                     },

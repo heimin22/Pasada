@@ -85,8 +85,11 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
   void initState() {
     super.initState();
     _themeController.initialize();
+  }
 
-    // Cache the initial theme mode
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _memoryManager.addToCache('isDarkMode', _themeController.isDarkMode);
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
 import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
@@ -81,6 +82,37 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
     if (result != null && mounted) {
       setState(() => selectedRoute = result);
+
+      debugPrint('Selected route: ${result!['route_name']}');
+      debugPrint('Route details: $result');
+
+      // Get origin and destination coordinates
+      LatLng? originCoordinates = result['origin_coordinates'];
+      LatLng? destinationCoordinates = result['destination_coordinates'];
+      String? destinationName = result['destination_name']?.toString();
+
+      if (result['intermediate_coordinates'] != null) {
+        debugPrint(
+            'Route has intermediate coordinates: ${result['intermediate_coordinates']}');
+
+        // Use the new method for route polylines with origin and destination
+        mapScreenKey.currentState?.generateRoutePolyline(
+          result['intermediate_coordinates'],
+          originCoordinates: originCoordinates,
+          destinationCoordinates: destinationCoordinates,
+          destinationName: destinationName,
+        );
+      } else {
+        debugPrint('Route does not have intermediate coordinates');
+
+        // Fallback to the original method if no intermediate coordinates
+        if (originCoordinates != null && destinationCoordinates != null) {
+          mapScreenKey.currentState?.generatePolylineBetween(
+            originCoordinates,
+            destinationCoordinates,
+          );
+        }
+      }
     }
   }
 
@@ -844,7 +876,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           color: const Color(0xFF00CC58),
                         ),
                         onPressed: () {
-                          _bookingAnimationController.forward();
+                          // Instead of forwarding the animation controller, just hide the notification
+                          setState(() {
+                            isNotificationVisible = false;
+                            measureContainer();
+                          });
                         },
                       ),
                     ),

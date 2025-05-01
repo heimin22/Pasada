@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,7 @@ class MapScreen extends StatefulWidget {
   final LatLng? dropOffLocation;
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
+  final Map<String, dynamic>? selectedRoute;
 
   const MapScreen({
     super.key,
@@ -29,6 +31,7 @@ class MapScreen extends StatefulWidget {
     this.dropOffLocation,
     this.bottomPadding = 0.07,
     this.onEtaUpdated,
+    this.selectedRoute,
   });
 
   @override
@@ -75,6 +78,13 @@ class MapScreenState extends State<MapScreen>
 
   // Add this field to store the current controller
   GoogleMapController? _mapController;
+
+  // Add this property to the MapScreenState class
+  bool showRouteEndIndicator = false;
+  String routeEndName = '';
+
+  // Add this property to the MapScreenState class
+  Map<MarkerId, Marker> markers = {};
 
   // Override methods
   /// state of the app
@@ -348,6 +358,140 @@ class MapScreenState extends State<MapScreen>
       return false;
     }
     return true;
+  }
+
+  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
+      {LatLng? originCoordinates,
+      LatLng? destinationCoordinates,
+      String? destinationName}) async {
+    try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      // Create a list to hold all points in the route
+      List<LatLng> routePoints = [];
+
+      // Add origin point if provided
+      if (originCoordinates != null) {
+        routePoints.add(originCoordinates);
+        debugPrint(
+            'Added origin point: ${originCoordinates.latitude}, ${originCoordinates.longitude}');
+      }
+
+      // Add intermediate points
+      if (intermediateCoordinates.isNotEmpty) {
+        for (var point in intermediateCoordinates) {
+          if (point is Map &&
+              point.containsKey('lat') &&
+              point.containsKey('lng')) {
+            final lat = double.parse(point['lat'].toString());
+            final lng = double.parse(point['lng'].toString());
+            routePoints.add(LatLng(lat, lng));
+            debugPrint('Added intermediate point: $lat, $lng');
+          }
+        }
+      }
+
+      // Add destination point if provided
+      if (destinationCoordinates != null) {
+        routePoints.add(destinationCoordinates);
+        debugPrint(
+            'Added destination point: ${destinationCoordinates.latitude}, ${destinationCoordinates.longitude}');
+      }
+
+      if (routePoints.isEmpty) {
+        debugPrint('No valid points for route polyline');
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          polylines.clear(); // Clear existing polylines
+
+          polylines[const PolylineId('route_path')] = Polyline(
+            polylineId: const PolylineId('route_path'),
+            points: routePoints,
+            color: const Color(0xFFFFCE21), // Yellow color for route polylines
+            width: 8,
+            // geodesic: false,
+          );
+
+          if (destinationCoordinates != null) {
+            // Create a custom marker for the destination
+            final BitmapDescriptor customIcon =
+                BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            );
+
+            // Add the destination marker
+            final markerId = MarkerId('route_destination');
+            markers[markerId] = Marker(
+              markerId: markerId,
+              position: destinationCoordinates,
+              icon: customIcon,
+              infoWindow: InfoWindow(
+                title: 'End of Route',
+                snippet: destinationName ?? 'Final destination',
+              ),
+            );
+
+            // Show the info window immediately
+            Future.delayed(Duration(milliseconds: 500), () async {
+              if (mounted) {
+                final GoogleMapController controller =
+                    await mapController.future;
+                controller.showMarkerInfoWindow(markerId);
+              }
+            });
+
+            // Enable the route end indicator
+            showRouteEndIndicator = true;
+            routeEndName = destinationName ?? 'End of Route';
+          }
+        });
+
+        // Calculate bounds for camera
+        double southLat = routePoints.first.latitude;
+        double northLat = routePoints.first.latitude;
+        double westLng = routePoints.first.longitude;
+        double eastLng = routePoints.first.longitude;
+
+        for (LatLng point in routePoints) {
+          southLat = math.min(southLat, point.latitude);
+          northLat = math.max(northLat, point.latitude);
+          westLng = math.min(westLng, point.longitude);
+          eastLng = math.max(eastLng, point.longitude);
+        }
+
+        // Add padding to the bounds
+        final double padding = 0.01;
+        southLat -= padding;
+        northLat += padding;
+        westLng -= padding;
+        eastLng += padding;
+
+        final GoogleMapController controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(southLat, westLng),
+              northeast: LatLng(northLat, eastLng),
+            ),
+            20,
+          ),
+        );
+
+        // Debug the points to verify they're in the correct order
+        debugPrint('Route points in order (${routePoints.length} points):');
+        for (int i = 0; i < routePoints.length; i++) {
+          debugPrint(
+              'Point $i: ${routePoints[i].latitude}, ${routePoints[i].longitude}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error generating route polyline: $e');
+      showError('Error: ${e.toString()}');
+    }
   }
 
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
@@ -624,27 +768,32 @@ class MapScreenState extends State<MapScreen>
   }
 
   Set<Marker> buildMarkers() {
-    final markers = <Marker>{};
+    final markerSet = <Marker>{};
 
-    // Pickup marker
+    // Add pickup marker
     if (widget.pickUpLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('pickup'),
+      final pickupMarkerId = MarkerId('pickup');
+      markers[pickupMarkerId] = Marker(
+        markerId: pickupMarkerId,
         position: widget.pickUpLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ));
+      );
     }
 
-    // Dropoff marker
+    // Add dropoff marker
     if (widget.dropOffLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
+      final dropoffMarkerId = MarkerId('dropoff');
+      markers[dropoffMarkerId] = Marker(
+        markerId: dropoffMarkerId,
         position: widget.dropOffLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ));
+      );
     }
 
-    return markers;
+    // Convert map to set
+    markerSet.addAll(markers.values);
+
+    return markerSet;
   }
 
   @override
@@ -652,6 +801,7 @@ class MapScreenState extends State<MapScreen>
     super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isLocationInitialized) {
@@ -668,61 +818,65 @@ class MapScreenState extends State<MapScreen>
                   color: Color(0xFF067837),
                 ),
               )
-            : GoogleMap(
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  mapController.complete(controller);
-                },
-                style: Theme.of(context).brightness == Brightness.dark
-                    ? '''[
-                        {
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#746855"}]
-                        },
-                        {
-                          "elementType": "labels.text.stroke",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#38414e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry.stroke",
-                          "stylers": [{"color": "#212a37"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#9ca5b3"}]
-                        }
-                      ]'''
-                    : '',
-                initialCameraPosition: CameraPosition(
-                  target: currentLocation!,
-                  zoom: 15.0,
-                ),
-                markers: buildMarkers(),
-                polylines: Set<Polyline>.of(polylines.values),
-                padding: EdgeInsets.only(
-                  bottom: screenHeight * widget.bottomPadding,
-                  left: screenWidth * 0.04,
-                ),
-                mapType: MapType.normal,
-                buildingsEnabled: false,
-                myLocationButtonEnabled: false,
-                indoorViewEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: true,
-                trafficEnabled: false,
-                rotateGesturesEnabled: true,
-                myLocationEnabled: true,
+            : Stack(
+                children: [
+                  GoogleMap(
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      mapController.complete(controller);
+                    },
+                    style: isDarkMode
+                        ? '''[
+                            {
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#746855"}]
+                            },
+                            {
+                              "elementType": "labels.text.stroke",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#38414e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry.stroke",
+                              "stylers": [{"color": "#212a37"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#9ca5b3"}]
+                            }
+                          ]'''
+                        : '',
+                    initialCameraPosition: CameraPosition(
+                      target: currentLocation!,
+                      zoom: 15.0,
+                    ),
+                    markers: buildMarkers(),
+                    polylines: Set<Polyline>.of(polylines.values),
+                    padding: EdgeInsets.only(
+                      bottom: screenHeight * widget.bottomPadding,
+                      left: screenWidth * 0.04,
+                    ),
+                    mapType: MapType.normal,
+                    buildingsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    indoorViewEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: true,
+                    trafficEnabled: false,
+                    rotateGesturesEnabled: true,
+                    myLocationEnabled: true,
+                  ),
+                ],
               ),
       ),
     );

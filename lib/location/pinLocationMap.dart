@@ -136,6 +136,9 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   ]''';
 
+  // Add this variable to store the GoogleMapController
+  GoogleMapController? _mapController;
+
   // Add this variable to store the current map style
   String _currentMapStyle = '';
 
@@ -205,15 +208,12 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   void _initializeMapStyle() {
     // Get cached map style
     final cachedStyle = _memoryManager.getFromCache(MAP_STYLE_KEY);
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    if (isDarkMode) {
-      _currentMapStyle = cachedStyle ?? darkMapStyle;
-      if (cachedStyle == null) {
-        _memoryManager.addToCache(MAP_STYLE_KEY, darkMapStyle);
-      }
-    } else {
-      _currentMapStyle = '';
+    // Don't access Theme.of(context) here
+    _currentMapStyle = cachedStyle ?? '';
+
+    if (cachedStyle == null) {
+      _memoryManager.addToCache(MAP_STYLE_KEY, '');
     }
   }
 
@@ -243,6 +243,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   void onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    _mapController = controller;
     isMapReady = true;
 
     // Debounce camera movements
@@ -256,13 +257,21 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Update map style when theme changes
+    // Move theme-dependent code here
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final newStyle = isDarkMode ? darkMapStyle : '';
     if (_currentMapStyle != newStyle) {
       setState(() {
         _currentMapStyle = newStyle;
+        if (_mapController != null) {
+          // Use GoogleMap.style property instead of deprecated setMapStyle
+          // This will be applied when the map is rebuilt
+          _currentMapStyle = newStyle;
+        }
       });
+
+      // Update cache if needed
+      _memoryManager.addToCache(MAP_STYLE_KEY, newStyle);
     }
   }
 
