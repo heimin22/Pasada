@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/stop.dart';
 
 class StopsService {
   final supabase = Supabase.instance.client;
 
-  Future<List<Map<String, dynamic>>> getStopsForRoute(int routeID) async {
+  // Get all active stops for a specific route
+  Future<List<Stop>> getStopsForRoute(int routeID) async {
     try {
       final response = await supabase
           .from('allowed_stops')
@@ -14,15 +16,15 @@ class StopsService {
           .eq('is_active', true)
           .order('stop_order');
 
-      return response;
+      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
     } catch (e) {
       debugPrint('Error fetching stops: $e');
       return [];
     }
   }
 
-  Future<Map<String, dynamic>?> getNearestStop(
-      double lat, double lng, int routeID) async {
+  // Get the nearest stop to user's location for a specific route
+  Future<Stop?> getNearestStop(double lat, double lng, int routeID) async {
     try {
       final response = await supabase.rpc('find_nearest_stop', params: {
         'user_lat': lat,
@@ -31,12 +33,45 @@ class StopsService {
       });
 
       if (response != null) {
-        return response;
+        return Stop.fromJson(response);
       }
       return null;
     } catch (e) {
       debugPrint('Error fetching nearest stop: $e');
       return null;
+    }
+  }
+
+  // Get all active stops across all routes
+  Future<List<Stop>> getAllActiveStops() async {
+    try {
+      final response = await supabase
+          .from('allowed_stops')
+          .select('*, official_routes!inner(officialroute_id)')
+          .eq('is_active', true)
+          .order('stop_order');
+
+      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+    } catch (e) {
+      debugPrint('Error fetching all stops: $e');
+      return [];
+    }
+  }
+
+  // Search for stops by name or address
+  Future<List<Stop>> searchStops(String query) async {
+    try {
+      final response = await supabase
+          .from('allowed_stops')
+          .select('*, official_routes!inner(officialroute_id)')
+          .eq('is_active', true)
+          .or('stop_name.ilike.%$query%,stop_address.ilike.%$query%')
+          .order('stop_name');
+
+      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+    } catch (e) {
+      debugPrint('Error searching stops: $e');
+      return [];
     }
   }
 
@@ -88,7 +123,7 @@ class StopsService {
     }
   }
 
-  // Delete a stop (or mark as inactive)
+  // Deactivate a stop (mark as inactive)
   Future<bool> deactivateStop(int stopID) async {
     try {
       await supabase
