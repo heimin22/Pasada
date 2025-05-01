@@ -398,6 +398,8 @@ class MapScreenState extends State<MapScreen>
             points: routePoints,
             color: const Color(0xFFFFCE21), // Yellow color for route polylines
             width: 8,
+            geodesic:
+                false, // Set to false to ensure straight lines between points
           );
         });
 
@@ -431,6 +433,13 @@ class MapScreenState extends State<MapScreen>
             20,
           ),
         );
+
+        // Debug the points to verify they're in the correct order
+        debugPrint('Route points in order:');
+        for (int i = 0; i < routePoints.length; i++) {
+          debugPrint(
+              'Point $i: ${routePoints[i].latitude}, ${routePoints[i].longitude}');
+        }
       }
     } catch (e) {
       debugPrint('Error generating route polyline: $e');
