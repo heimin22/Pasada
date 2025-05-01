@@ -89,6 +89,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Get origin and destination coordinates
       LatLng? originCoordinates = result['origin_coordinates'];
       LatLng? destinationCoordinates = result['destination_coordinates'];
+      String? destinationName = result['destination_name']?.toString();
 
       if (result['intermediate_coordinates'] != null) {
         debugPrint(
@@ -99,6 +100,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           result['intermediate_coordinates'],
           originCoordinates: originCoordinates,
           destinationCoordinates: destinationCoordinates,
+          destinationName: destinationName,
         );
       } else {
         debugPrint('Route does not have intermediate coordinates');

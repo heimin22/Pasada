@@ -79,6 +79,13 @@ class MapScreenState extends State<MapScreen>
   // Add this field to store the current controller
   GoogleMapController? _mapController;
 
+  // Add this property to the MapScreenState class
+  bool showRouteEndIndicator = false;
+  String routeEndName = '';
+
+  // Add this property to the MapScreenState class
+  Map<MarkerId, Marker> markers = {};
+
   // Override methods
   /// state of the app
   @override
@@ -354,7 +361,9 @@ class MapScreenState extends State<MapScreen>
   }
 
   Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
-      {LatLng? originCoordinates, LatLng? destinationCoordinates}) async {
+      {LatLng? originCoordinates,
+      LatLng? destinationCoordinates,
+      String? destinationName}) async {
     try {
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
@@ -402,16 +411,36 @@ class MapScreenState extends State<MapScreen>
           );
 
           if (destinationCoordinates != null) {
+            // Create a custom marker for the destination
             final BitmapDescriptor customIcon =
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+                BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            );
 
-            selectedDropOffMarker = Marker(
-              markerId: const MarkerId('route_destination'),
+            // Add the destination marker
+            final markerId = MarkerId('route_destination');
+            markers[markerId] = Marker(
+              markerId: markerId,
               position: destinationCoordinates,
               icon: customIcon,
-              infoWindow: const InfoWindow(
-                  title: 'Destination', snippet: 'Final destination'),
+              infoWindow: InfoWindow(
+                title: 'End of Route',
+                snippet: destinationName ?? 'Final destination',
+              ),
             );
+
+            // Show the info window immediately
+            Future.delayed(Duration(milliseconds: 500), () async {
+              if (mounted) {
+                final GoogleMapController controller =
+                    await mapController.future;
+                controller.showMarkerInfoWindow(markerId);
+              }
+            });
+
+            // Enable the route end indicator
+            showRouteEndIndicator = true;
+            routeEndName = destinationName ?? 'End of Route';
           }
         });
 
@@ -445,13 +474,6 @@ class MapScreenState extends State<MapScreen>
             20,
           ),
         );
-
-        // Debug the points to verify they're in the correct order
-        debugPrint('Route points in order:');
-        for (int i = 0; i < routePoints.length; i++) {
-          debugPrint(
-              'Point $i: ${routePoints[i].latitude}, ${routePoints[i].longitude}');
-        }
       }
     } catch (e) {
       debugPrint('Error generating route polyline: $e');
@@ -733,32 +755,32 @@ class MapScreenState extends State<MapScreen>
   }
 
   Set<Marker> buildMarkers() {
-    final markers = <Marker>{};
+    final markerSet = <Marker>{};
 
-    // Pickup marker
+    // Add pickup marker
     if (widget.pickUpLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('pickup'),
+      final pickupMarkerId = MarkerId('pickup');
+      markers[pickupMarkerId] = Marker(
+        markerId: pickupMarkerId,
         position: widget.pickUpLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ));
+      );
     }
 
-    // Dropoff marker
+    // Add dropoff marker
     if (widget.dropOffLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
+      final dropoffMarkerId = MarkerId('dropoff');
+      markers[dropoffMarkerId] = Marker(
+        markerId: dropoffMarkerId,
         position: widget.dropOffLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ));
+      );
     }
 
-    // Add route destination marker if it exists
-    if (selectedDropOffMarker != null) {
-      markers.add(selectedDropOffMarker!);
-    }
+    // Convert map to set
+    markerSet.addAll(markers.values);
 
-    return markers;
+    return markerSet;
   }
 
   @override
@@ -766,6 +788,7 @@ class MapScreenState extends State<MapScreen>
     super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isLocationInitialized) {
@@ -789,7 +812,7 @@ class MapScreenState extends State<MapScreen>
                       _mapController = controller;
                       mapController.complete(controller);
                     },
-                    style: Theme.of(context).brightness == Brightness.dark
+                    style: isDarkMode
                         ? '''[
                             {
                               "elementType": "geometry",
@@ -842,7 +865,7 @@ class MapScreenState extends State<MapScreen>
                   ),
 
                   // Custom end of route indicator
-                  if (selectedDropOffMarker != null)
+                  if (showRouteEndIndicator)
                     Positioned(
                       bottom: screenHeight * 0.15,
                       right: screenWidth * 0.05,
@@ -850,9 +873,9 @@ class MapScreenState extends State<MapScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF1E1E1E).withOpacity(0.9)
-                              : Colors.white.withOpacity(0.9),
+                          color: isDarkMode
+                              ? const Color(0xFF1E1E1E)
+                              : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
@@ -872,15 +895,13 @@ class MapScreenState extends State<MapScreen>
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'End of Route',
+                              routeEndName,
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white
-                                    : Colors.black87,
+                                color:
+                                    isDarkMode ? Colors.white : Colors.black87,
                               ),
                             ),
                           ],
