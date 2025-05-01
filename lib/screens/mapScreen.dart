@@ -368,54 +368,120 @@ class MapScreenState extends State<MapScreen>
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
 
-      // Create a list to hold all points in the route
-      List<LatLng> routePoints = [];
-
-      // Add origin point if provided
-      if (originCoordinates != null) {
-        routePoints.add(originCoordinates);
-        debugPrint(
-            'Added origin point: ${originCoordinates.latitude}, ${originCoordinates.longitude}');
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey.isEmpty) {
+        if (kDebugMode) {
+          print('API key not found');
+        }
+        return;
       }
 
-      // Add intermediate points
+      final polylinePoints = PolylinePoints();
+
+      // Convert intermediate coordinates to waypoints format
+      List<Map<String, dynamic>> intermediates = [];
       if (intermediateCoordinates.isNotEmpty) {
         for (var point in intermediateCoordinates) {
           if (point is Map &&
               point.containsKey('lat') &&
               point.containsKey('lng')) {
-            final lat = double.parse(point['lat'].toString());
-            final lng = double.parse(point['lng'].toString());
-            routePoints.add(LatLng(lat, lng));
-            debugPrint('Added intermediate point: $lat, $lng');
+            intermediates.add({
+              'location': {
+                'latLng': {
+                  'latitude': double.parse(point['lat'].toString()),
+                  'longitude': double.parse(point['lng'].toString())
+                }
+              }
+            });
           }
         }
       }
 
-      // Add destination point if provided
-      if (destinationCoordinates != null) {
-        routePoints.add(destinationCoordinates);
-        debugPrint(
-            'Added destination point: ${destinationCoordinates.latitude}, ${destinationCoordinates.longitude}');
-      }
+      // Routes API request
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask':
+            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+      };
 
-      if (routePoints.isEmpty) {
-        debugPrint('No valid points for route polyline');
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': originCoordinates?.latitude,
+              'longitude': originCoordinates?.longitude,
+            },
+          },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': destinationCoordinates?.latitude,
+              'longitude': destinationCoordinates?.longitude,
+            },
+          },
+        },
+        'intermediates': intermediates,
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+
+      debugPrint('Request Body: $body');
+
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        showError('Please try again.');
+        if (kDebugMode) {
+          print('No response from the server');
+        }
         return;
       }
 
+      final data = json.decode(response);
+
+      // Add response validation
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        if (kDebugMode) {
+          print('No routes found');
+        }
+        return;
+      }
+
+      // Null checking for nested properties
+      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
+      if (polyline == null) {
+        if (kDebugMode) {
+          print('No polyline found in the response');
+        }
+        return;
+      }
+
+      // Decode the polyline
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(polyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      // Update UI with the polyline
       if (mounted) {
         setState(() {
-          polylines.clear(); // Clear existing polylines
-
+          polylines.clear();
           polylines[const PolylineId('route_path')] = Polyline(
             polylineId: const PolylineId('route_path'),
-            points: routePoints,
-            color: const Color(0xFFFFCE21), // Yellow color for route polylines
+            points: polylineCoordinates,
+            color: const Color(0xFFFFCE21),
             width: 8,
-            // geodesic: false,
           );
 
+          // Add destination marker if provided
           if (destinationCoordinates != null) {
             // Create a custom marker for the destination
             final BitmapDescriptor customIcon =
@@ -451,12 +517,12 @@ class MapScreenState extends State<MapScreen>
         });
 
         // Calculate bounds for camera
-        double southLat = routePoints.first.latitude;
-        double northLat = routePoints.first.latitude;
-        double westLng = routePoints.first.longitude;
-        double eastLng = routePoints.first.longitude;
+        double southLat = polylineCoordinates.first.latitude;
+        double northLat = polylineCoordinates.first.latitude;
+        double westLng = polylineCoordinates.first.longitude;
+        double eastLng = polylineCoordinates.first.longitude;
 
-        for (LatLng point in routePoints) {
+        for (LatLng point in polylineCoordinates) {
           southLat = math.min(southLat, point.latitude);
           northLat = math.max(northLat, point.latitude);
           westLng = math.min(westLng, point.longitude);
@@ -482,10 +548,11 @@ class MapScreenState extends State<MapScreen>
         );
 
         // Debug the points to verify they're in the correct order
-        debugPrint('Route points in order (${routePoints.length} points):');
-        for (int i = 0; i < routePoints.length; i++) {
+        debugPrint(
+            'Route points in order (${polylineCoordinates.length} points):');
+        for (int i = 0; i < polylineCoordinates.length; i++) {
           debugPrint(
-              'Point $i: ${routePoints[i].latitude}, ${routePoints[i].longitude}');
+              'Point $i: ${polylineCoordinates[i].latitude}, ${polylineCoordinates[i].longitude}');
         }
       }
     } catch (e) {
