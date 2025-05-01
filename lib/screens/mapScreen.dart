@@ -398,9 +398,21 @@ class MapScreenState extends State<MapScreen>
             points: routePoints,
             color: const Color(0xFFFFCE21), // Yellow color for route polylines
             width: 8,
-            geodesic:
-                false, // Set to false to ensure straight lines between points
+            // geodesic: false,
           );
+
+          if (destinationCoordinates != null) {
+            final BitmapDescriptor customIcon =
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
+
+            selectedDropOffMarker = Marker(
+              markerId: const MarkerId('route_destination'),
+              position: destinationCoordinates,
+              icon: customIcon,
+              infoWindow: const InfoWindow(
+                  title: 'Destination', snippet: 'Final destination'),
+            );
+          }
         });
 
         // Calculate bounds for camera
@@ -741,6 +753,11 @@ class MapScreenState extends State<MapScreen>
       ));
     }
 
+    // Add route destination marker if it exists
+    if (selectedDropOffMarker != null) {
+      markers.add(selectedDropOffMarker!);
+    }
+
     return markers;
   }
 
@@ -765,61 +782,112 @@ class MapScreenState extends State<MapScreen>
                   color: Color(0xFF067837),
                 ),
               )
-            : GoogleMap(
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  mapController.complete(controller);
-                },
-                style: Theme.of(context).brightness == Brightness.dark
-                    ? '''[
-                        {
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#746855"}]
-                        },
-                        {
-                          "elementType": "labels.text.stroke",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#38414e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry.stroke",
-                          "stylers": [{"color": "#212a37"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#9ca5b3"}]
-                        }
-                      ]'''
-                    : '',
-                initialCameraPosition: CameraPosition(
-                  target: currentLocation!,
-                  zoom: 15.0,
-                ),
-                markers: buildMarkers(),
-                polylines: Set<Polyline>.of(polylines.values),
-                padding: EdgeInsets.only(
-                  bottom: screenHeight * widget.bottomPadding,
-                  left: screenWidth * 0.04,
-                ),
-                mapType: MapType.normal,
-                buildingsEnabled: false,
-                myLocationButtonEnabled: false,
-                indoorViewEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: true,
-                trafficEnabled: false,
-                rotateGesturesEnabled: true,
-                myLocationEnabled: true,
+            : Stack(
+                children: [
+                  GoogleMap(
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      mapController.complete(controller);
+                    },
+                    style: Theme.of(context).brightness == Brightness.dark
+                        ? '''[
+                            {
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#746855"}]
+                            },
+                            {
+                              "elementType": "labels.text.stroke",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#38414e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry.stroke",
+                              "stylers": [{"color": "#212a37"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#9ca5b3"}]
+                            }
+                          ]'''
+                        : '',
+                    initialCameraPosition: CameraPosition(
+                      target: currentLocation!,
+                      zoom: 15.0,
+                    ),
+                    markers: buildMarkers(),
+                    polylines: Set<Polyline>.of(polylines.values),
+                    padding: EdgeInsets.only(
+                      bottom: screenHeight * widget.bottomPadding,
+                      left: screenWidth * 0.04,
+                    ),
+                    mapType: MapType.normal,
+                    buildingsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    indoorViewEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: true,
+                    trafficEnabled: false,
+                    rotateGesturesEnabled: true,
+                    myLocationEnabled: true,
+                  ),
+
+                  // Custom end of route indicator
+                  if (selectedDropOffMarker != null)
+                    Positioned(
+                      bottom: screenHeight * 0.15,
+                      right: screenWidth * 0.05,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF1E1E1E).withOpacity(0.9)
+                              : Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              color: const Color(0xFFFFCE21),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'End of Route',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black87,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
       ),
     );
