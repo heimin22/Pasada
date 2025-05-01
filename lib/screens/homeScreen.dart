@@ -81,6 +81,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
     if (result != null && mounted) {
       setState(() => selectedRoute = result);
+
+      if (result['origin_coordinates'] != null &&
+          result['destination_coordinates'] != null) {
+        mapScreenKey.currentState?.generatePolylineBetween(
+          result['origin_coordinates'],
+          result['destination_coordinates'],
+        );
+      }
     }
   }
 

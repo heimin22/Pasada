@@ -210,43 +210,82 @@ class _RouteSelectionState extends State<RouteSelection> {
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = _filteredRoutes[index];
-                      return SizedBox(
-                        height: 57,
-                        child: ListTile(
-                          horizontalTitleGap: 0,
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 16),
-                          leading: Icon(
-                            Icons.route,
-                            size: 16,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                          title: Text(
-                            route['route_name'] ?? 'Unknown Route',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        elevation: 1,
+                        color:
+                            isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          onTap: () => _selectRoute(route),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? const Color(0xFF2A2A2A)
+                                        : const Color(0xFFEEEEEE),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.route,
+                                    size: 20,
+                                    color: const Color(0xFF00CC58),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        route['route_name'] ?? 'Unknown Route',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212),
+                                        ),
+                                      ),
+                                      if (route['description'] != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          route['description'],
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12,
+                                            color: isDarkMode
+                                                ? const Color(0xFFAAAAAA)
+                                                : const Color(0xFF515151),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.chevron_right,
+                                  color: isDarkMode
+                                      ? const Color(0xFFAAAAAA)
+                                      : const Color(0xFF515151),
+                                ),
+                              ],
                             ),
                           ),
-                          subtitle: Text(
-                            route['description'] ?? 'No description available',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 12,
-                              color: isDarkMode
-                                  ? const Color(0xFFAAAAAA)
-                                  : const Color(0xFF515151),
-                            ),
-                          ),
-                          onTap: () {
-                            _selectRoute(route);
-                          },
                         ),
                       );
                     },
