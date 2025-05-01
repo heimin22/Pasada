@@ -36,6 +36,8 @@ class _RouteSelectionState extends State<RouteSelection> {
 
   Future<void> _loadRoutes() async {
     try {
+      setState(() => _isLoading = true);
+
       final session = Supabase.instance.client.auth.currentSession;
       debugPrint('Current session: ${session != null ? "Active" : "None"}');
       if (session != null) {
@@ -54,10 +56,9 @@ class _RouteSelectionState extends State<RouteSelection> {
       final response = await Supabase.instance.client
           .from('official_routes')
           .select(
-              'route_name, description, origin_lat, origin_lng, destination_lat, destination_lng')
+              'route_name, description, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, origin_name, destination_name, status')
+          .eq('status', 'active')
           .order('route_name');
-      // .select('route_name, description')
-      // .eq('status', 'active');
 
       debugPrint('Raw Response: $response');
       debugPrint('Response type: ${response.runtimeType}');
@@ -93,7 +94,13 @@ class _RouteSelectionState extends State<RouteSelection> {
           _isLoading = false;
         });
       }
-      debugPrint('Routes loaded: ${_routes.length}');
+      for (var route in _routes) {
+        if (route['route_name'] == 'Sangandaan to Ilaya' ||
+            route['route_name'] == 'Ilaya to Sangandaan') {
+          debugPrint(
+              '${route['route_name']} intermediate points: ${route['intermediate_points']}');
+        }
+      }
     } catch (error) {
       debugPrint("Error loading routes: $error");
       if (mounted) {

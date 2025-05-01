@@ -22,6 +22,7 @@ class MapScreen extends StatefulWidget {
   final LatLng? dropOffLocation;
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
+  final Map<String, dynamic>? selectedRoute;
 
   const MapScreen({
     super.key,
@@ -29,6 +30,7 @@ class MapScreen extends StatefulWidget {
     this.dropOffLocation,
     this.bottomPadding = 0.07,
     this.onEtaUpdated,
+    this.selectedRoute,
   });
 
   @override
@@ -357,9 +359,7 @@ class MapScreenState extends State<MapScreen>
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey.isEmpty) {
-        if (kDebugMode) {
-          print('API key not found');
-        }
+        showError('API Key is not configured!');
         return;
       }
 
@@ -374,7 +374,11 @@ class MapScreenState extends State<MapScreen>
         'X-Goog-FieldMask':
             'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
       };
-      final body = jsonEncode({
+
+      final bool isUsingPredefinedRoute = widget.selectedRoute != null &&
+          widget.selectedRoute!['route_name'] != 'Select Route';
+
+      Map<String, dynamic> requestBody = {
         'origin': {
           'location': {
             'latLng': {
@@ -395,9 +399,35 @@ class MapScreenState extends State<MapScreen>
         'polylineEncoding': 'ENCODED_POLYLINE',
         'computeAlternativeRoutes': false,
         'routingPreference': 'TRAFFIC_AWARE',
-      });
+      };
 
-      debugPrint('Request Body: $body');
+      if (isUsingPredefinedRoute &&
+          widget.selectedRoute!['intermediate_coordinates'] != null) {
+        List<Map<String, dynamic>> intermediates = [];
+
+        final coordinates = widget.selectedRoute!['intermediate_coordinates'];
+        if (coordinates is List) {
+          for (var coordinate in coordinates) {
+            intermediates.add({
+              'location': {
+                'latLng': {
+                  'latitude': double.parse(coordinate['lat'].toString()),
+                  'longitude': double.parse(coordinate['lng'].toString()),
+                },
+              },
+            });
+          }
+        }
+
+        if (intermediates.isNotEmpty) {
+          requestBody['waypoints'] = intermediates;
+          debugPrint(
+              'Added ${intermediates.length} intermediate points to route request');
+        }
+      }
+
+      final body = json.encode(requestBody);
+      debugPrint('Request Body: $requestBody');
 
       // ito naman na yung gagamitin yung NetworkUtility
       final response =
