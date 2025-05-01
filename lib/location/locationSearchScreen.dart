@@ -13,11 +13,12 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'package:pasada_passenger_app/services/recentSearchService.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/models/stop.dart';
 import 'locationListTile.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 
 class SearchLocationScreen extends StatefulWidget {
-  // final Function(SelectedLocation)? onLocationSelected;
   final bool isPickup;
   const SearchLocationScreen({super.key, required this.isPickup});
 
@@ -29,17 +30,27 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   final TextEditingController searchController = TextEditingController();
   List<AutocompletePrediction> placePredictions = [];
   List<RecentSearch> recentSearches = [];
+  List<Stop> allowedStops = [];
   HomeScreenPageState? homeScreenState;
   Timer? _debounce;
   bool isLoading = false;
   HomeScreenPageState? homeScreenPageState;
   LatLng? currentLocation;
+  final StopsService _stopsService = StopsService();
 
   @override
   void initState() {
     super.initState();
     searchController.addListener(onSearchChanged);
     loadRecentSearches();
+    loadAllowedStops();
+  }
+
+  Future<void> loadAllowedStops() async {
+    final stops = await _stopsService.getAllActiveStops();
+    setState(() {
+      allowedStops = stops;
+    });
   }
 
   Future<void> loadRecentSearches() async {
@@ -61,6 +72,23 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     );
   }
 
+  void onStopSelected(Stop stop) async {
+    if (widget.isPickup) {
+      final shouldProceed = await checkPickupDistance(stop.coordinates);
+      if (!shouldProceed) return;
+    }
+
+    final selectedLocation = SelectedLocation(
+      "${stop.name}\n${stop.address}",
+      stop.coordinates,
+    );
+
+    // Save to recent searches
+    await RecentSearchService.addRecentSearch(selectedLocation);
+
+    Navigator.pop(context, selectedLocation);
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -73,8 +101,38 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     setState(() => isLoading = true);
 
     _debounce = Timer(const Duration(milliseconds: 1500), () {
-      placeAutocomplete(searchController.text);
+      if (searchController.text.isEmpty) {
+        setState(() {
+          placePredictions = [];
+          isLoading = false;
+        });
+        return;
+      }
+
+      // Search in allowed stops first
+      searchAllowedStops(searchController.text);
     });
+  }
+
+  Future<void> searchAllowedStops(String query) async {
+    try {
+      final stops = await _stopsService.searchStops(query);
+
+      if (stops.isNotEmpty) {
+        setState(() {
+          allowedStops = stops;
+          placePredictions = [];
+          isLoading = false;
+        });
+      } else {
+        // If no stops found, fall back to Google Places API
+        placeAutocomplete(query);
+      }
+    } catch (e) {
+      debugPrint('Error searching stops: $e');
+      // Fall back to Google Places API
+      placeAutocomplete(query);
+    }
   }
 
   Future<void> placeAutocomplete(String query) async {
@@ -376,7 +434,38 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             color:
                 isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
           ),
-          if (searchController.text.isEmpty && recentSearches.isNotEmpty) ...[
+          if (searchController.text.isEmpty && allowedStops.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Available Stops',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: allowedStops.length,
+                itemBuilder: (context, index) => LocationListTile(
+                  press: () => onStopSelected(allowedStops[index]),
+                  location:
+                      "${allowedStops[index].name}\n${allowedStops[index].address}",
+                ),
+              ),
+            ),
+          ] else if (searchController.text.isEmpty &&
+              recentSearches.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -417,6 +506,18 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 itemBuilder: (context, index) => LocationListTile(
                   press: () => onRecentSearchSelected(recentSearches[index]),
                   location: recentSearches[index].address,
+                ),
+              ),
+            ),
+          ] else if (searchController.text.isNotEmpty &&
+              allowedStops.isNotEmpty) ...[
+            Expanded(
+              child: ListView.builder(
+                itemCount: allowedStops.length,
+                itemBuilder: (context, index) => LocationListTile(
+                  press: () => onStopSelected(allowedStops[index]),
+                  location:
+                      "${allowedStops[index].name}\n${allowedStops[index].address}",
                 ),
               ),
             ),
