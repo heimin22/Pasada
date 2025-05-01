@@ -353,32 +353,41 @@ class MapScreenState extends State<MapScreen>
     return true;
   }
 
-  Future<void> generateRoutePolyline(
-      List<dynamic> intermediateCoordinates) async {
+  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
+      {LatLng? originCoordinates, LatLng? destinationCoordinates}) async {
     try {
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
 
-      if (intermediateCoordinates.isEmpty) {
-        debugPrint('No intermediate coordinates provided');
-        return;
+      // Create a list to hold all points in the route
+      List<LatLng> routePoints = [];
+
+      // Add origin point if provided
+      if (originCoordinates != null) {
+        routePoints.add(originCoordinates);
       }
 
-      // convert the list of coordinates to LatLng objects
-      List<LatLng> routePoints = [];
-      for (var point in intermediateCoordinates) {
-        if (point is Map &&
-            point.containsKey('lat') &&
-            point.containsKey('lng')) {
-          routePoints.add(LatLng(
-            double.parse(point['lat'].toString()),
-            double.parse(point['lng'].toString()),
-          ));
+      // Add intermediate points
+      if (intermediateCoordinates.isNotEmpty) {
+        for (var point in intermediateCoordinates) {
+          if (point is Map &&
+              point.containsKey('lat') &&
+              point.containsKey('lng')) {
+            routePoints.add(LatLng(
+              double.parse(point['lat'].toString()),
+              double.parse(point['lng'].toString()),
+            ));
+          }
         }
       }
 
+      // Add destination point if provided
+      if (destinationCoordinates != null) {
+        routePoints.add(destinationCoordinates);
+      }
+
       if (routePoints.isEmpty) {
-        debugPrint('Failed to parse intermediate coordinates');
+        debugPrint('No valid points for route polyline');
         return;
       }
 
@@ -387,41 +396,42 @@ class MapScreenState extends State<MapScreen>
           polylines[const PolylineId('route_path')] = Polyline(
             polylineId: const PolylineId('route_path'),
             points: routePoints,
-            color: const Color(0xFFFFCE21),
+            color: const Color(0xFFFFCE21), // Yellow color for route polylines
             width: 8,
           );
         });
-      }
 
-      double southLat = routePoints.first.latitude;
-      double northLat = routePoints.first.latitude;
-      double westLng = routePoints.first.longitude;
-      double eastLng = routePoints.first.longitude;
+        // Calculate bounds for camera
+        double southLat = routePoints.first.latitude;
+        double northLat = routePoints.first.latitude;
+        double westLng = routePoints.first.longitude;
+        double eastLng = routePoints.first.longitude;
 
-      for (LatLng point in routePoints) {
-        southLat = math.min(southLat, point.latitude);
-        northLat = math.max(northLat, point.latitude);
-        westLng = math.min(westLng, point.longitude);
-        eastLng = math.max(eastLng, point.longitude);
-      }
+        for (LatLng point in routePoints) {
+          southLat = math.min(southLat, point.latitude);
+          northLat = math.max(northLat, point.latitude);
+          westLng = math.min(westLng, point.longitude);
+          eastLng = math.max(eastLng, point.longitude);
+        }
 
-      // Add padding to the bounds
-      final double padding = 0.01;
-      southLat -= padding;
-      northLat += padding;
-      westLng -= padding;
-      eastLng += padding;
+        // Add padding to the bounds
+        final double padding = 0.01;
+        southLat -= padding;
+        northLat += padding;
+        westLng -= padding;
+        eastLng += padding;
 
-      final GoogleMapController controller = await mapController.future;
-      controller.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(southLat, westLng),
-            northeast: LatLng(northLat, eastLng),
+        final GoogleMapController controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(southLat, westLng),
+              northeast: LatLng(northLat, eastLng),
+            ),
+            20,
           ),
-          20,
-        ),
-      );
+        );
+      }
     } catch (e) {
       debugPrint('Error generating route polyline: $e');
       showError('Error: ${e.toString()}');
