@@ -21,11 +21,13 @@ import 'package:pasada_passenger_app/screens/homeScreen.dart';
 class SearchLocationScreen extends StatefulWidget {
   final bool isPickup;
   final int? routeID; // Add this parameter
+  final Map<String, dynamic>? routeDetails; // Add this parameter
 
   const SearchLocationScreen({
     super.key,
     required this.isPickup,
     this.routeID, // Make it optional to maintain backward compatibility
+    this.routeDetails, // Make it optional to maintain backward compatibility
   });
 
   @override
@@ -37,6 +39,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   List<AutocompletePrediction> placePredictions = [];
   List<RecentSearch> recentSearches = [];
   List<Stop> allowedStops = [];
+  List<Stop> _filteredStops = [];
   HomeScreenPageState? homeScreenState;
   Timer? _debounce;
   bool isLoading = false;
@@ -54,28 +57,66 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         'SearchLocationScreen initialized with routeID: ${widget.routeID}');
 
     loadRecentSearches();
-    loadAllowedStops();
+
+    // If we have route details, generate local test stops
+    if (widget.routeID != null && widget.routeDetails != null) {
+      generateLocalTestStops();
+    } else {
+      // Otherwise try to load from database
+      loadAllowedStops();
+    }
+  }
+
+  // Generate local test stops based on route details
+  void generateLocalTestStops() {
+    if (widget.routeDetails != null && widget.routeID != null) {
+      final testStops = Stop.generateTestStopsForRoute(
+        widget.routeID!,
+        widget.routeDetails!,
+      );
+
+      setState(() {
+        allowedStops = testStops;
+        _filteredStops = testStops; // Initialize filtered stops with all stops
+        isLoading = false;
+      });
+
+      debugPrint(
+          'Generated ${testStops.length} local test stops for route ${widget.routeID}');
+    } else {
+      loadAllowedStops();
+    }
   }
 
   Future<void> loadAllowedStops() async {
     setState(() => isLoading = true);
 
-    List<Stop> stops;
-    if (widget.routeID != null) {
-      // If a route ID is provided, get stops for that route
-      stops = await _stopsService.getStopsForRoute(widget.routeID!);
-      debugPrint('Loaded ${stops.length} stops for route ${widget.routeID}');
-    } else {
-      // Otherwise, get all active stops
-      stops = await _stopsService.getAllActiveStops();
-      debugPrint('Loaded ${stops.length} active stops');
-    }
+    try {
+      List<Stop> stops = [];
 
-    if (mounted) {
-      setState(() {
-        allowedStops = stops;
-        isLoading = false;
-      });
+      if (widget.routeID != null) {
+        // If a route ID is provided, get stops for that route
+        debugPrint('Loading stops for route ID: ${widget.routeID}');
+        stops = await _stopsService.getStopsForRoute(widget.routeID!);
+        debugPrint('Loaded ${stops.length} stops for route ${widget.routeID}');
+      } else {
+        // Otherwise, get all active stops
+        stops = await _stopsService.getAllActiveStops();
+        debugPrint('Loaded ${stops.length} active stops across all routes');
+      }
+
+      if (mounted) {
+        setState(() {
+          allowedStops = stops;
+          _filteredStops = stops; // Initialize filtered stops with all stops
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading stops: $e');
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -126,35 +167,39 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     setState(() => isLoading = true);
 
-    _debounce = Timer(const Duration(milliseconds: 1500), () {
+    _debounce = Timer(const Duration(milliseconds: 800), () {
       if (searchController.text.isEmpty) {
         setState(() {
           placePredictions = [];
+          _filteredStops =
+              allowedStops; // Reset filtered stops to show all stops
           isLoading = false;
         });
         return;
       }
 
-      // Search in allowed stops first
-      searchAllowedStops(searchController.text);
+      // If we have stops, search them first
+      if (allowedStops.isNotEmpty) {
+        searchAllowedStops(searchController.text);
+      } else {
+        // Otherwise, go directly to Google Places API
+        placeAutocomplete(searchController.text);
+      }
     });
   }
 
   Future<void> searchAllowedStops(String query) async {
     try {
-      List<Stop> stops;
-      if (widget.routeID != null) {
-        // If a route ID is provided, search stops for that route
-        stops = await _stopsService.searchStopsInRoute(query, widget.routeID!);
-      } else {
-        // Otherwise, search all active stops
-        stops = await _stopsService.searchStops(query);
-      }
+      // Filter stops locally since we can't modify the database
+      final filteredStops = allowedStops.where((stop) {
+        return stop.name.toLowerCase().contains(query.toLowerCase()) ||
+            stop.address.toLowerCase().contains(query.toLowerCase());
+      }).toList();
 
-      if (stops.isNotEmpty) {
+      if (filteredStops.isNotEmpty) {
         setState(() {
-          allowedStops = stops;
-          placePredictions = [];
+          _filteredStops = filteredStops; // Store filtered stops
+          placePredictions = []; // Clear place predictions
           isLoading = false;
         });
       } else {
@@ -475,113 +520,147 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ),
               ),
             ),
-          ] else if (searchController.text.isEmpty &&
-              recentSearches.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Recent Searches',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: recentSearches.length,
-                itemBuilder: (context, index) => LocationListTile(
-                  press: () => onRecentSearchSelected(recentSearches[index]),
-                  location: recentSearches[index].address,
-                ),
-              ),
-            ),
-          ] else if (allowedStops.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    searchController.text.isEmpty
-                        ? 'Available Stops'
-                        : 'Search Results',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: allowedStops.length,
-                itemBuilder: (context, index) => LocationListTile(
-                  press: () => onStopSelected(allowedStops[index]),
-                  location:
-                      "${allowedStops[index].name}\n${allowedStops[index].address}",
-                ),
-              ),
-            ),
-          ] else if (placePredictions.isNotEmpty) ...[
-            Expanded(
-              child: ListView.builder(
-                itemCount: placePredictions.length,
-                itemBuilder: (context, index) => LocationListTile(
-                  press: () => onPlaceSelected(placePredictions[index]),
-                  location: placePredictions[index].description!,
-                ),
-              ),
-            ),
           ] else ...[
             Expanded(
-              child: Center(
-                child: Text(
-                  'No locations found',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
+              child: ListView(
+                children: [
+                  // Show recent searches if available and search is empty
+                  if (searchController.text.isEmpty &&
+                      recentSearches.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Recent Searches',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                          // Add Clear All button
+                          GestureDetector(
+                            onTap: () async {
+                              await RecentSearchService.clearRecentSearches();
+                              setState(() {
+                                recentSearches = [];
+                              });
+                            },
+                            child: Text(
+                              'Clear All',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF067837),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Recent searches list
+                    ...recentSearches.map((search) => LocationListTile(
+                          press: () => onRecentSearchSelected(search),
+                          location: search.address,
+                        )),
+                  ],
+
+                  // Show allowed stops if available
+                  if (searchController.text.isEmpty &&
+                      allowedStops.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Available Stops',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                        ),
+                      ),
+                    ),
+                    ...allowedStops.map((stop) => LocationListTile(
+                          press: () => onStopSelected(stop),
+                          location: "${stop.name}\n${stop.address}",
+                        )),
+                  ]
+                  // Show filtered stops if searching
+                  else if (searchController.text.isNotEmpty &&
+                      _filteredStops.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Search Results',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                        ),
+                      ),
+                    ),
+                    ..._filteredStops.map((stop) => LocationListTile(
+                          press: () => onStopSelected(stop),
+                          location: "${stop.name}\n${stop.address}",
+                        )),
+                  ]
+                  // Show place predictions if available
+                  else if (placePredictions.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Search Results',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                        ),
+                      ),
+                    ),
+                    ...placePredictions.map((prediction) => LocationListTile(
+                          press: () => onPlaceSelected(prediction),
+                          location: prediction.description!,
+                        )),
+                  ]
+                  // Show no locations found message
+                  else if (searchController.text.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Center(
+                        child: Text(
+                          'No locations found',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
-                  : const Color(0xFFF5F5F5),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(10)),
-              boxShadow: [
-                BoxShadow(
-                  color: isDarkMode
-                      ? const Color(0xFF000000)
-                      : const Color(0xFFD2D2D2),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
+          // Pin location button at the bottom
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: ElevatedButton(
               onPressed: () {

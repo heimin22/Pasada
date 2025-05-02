@@ -8,16 +8,34 @@ class StopsService {
   // Get all active stops for a specific route
   Future<List<Stop>> getStopsForRoute(int routeID) async {
     try {
-      final response = await supabase
-          .from('allowed_stops')
-          .select("*")
-          .eq('officialroute_id', routeID)
-          .eq('is_active', true)
-          .order('stop_order');
+      debugPrint('Fetching stops for route ID: $routeID');
 
-      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+      // Check if there are any stops for this route
+      final countResponse = await supabase
+          .from('allowed_stops')
+          .select('*')
+          .eq('officialroute_id', routeID)
+          .count(CountOption.exact);
+
+      debugPrint('Found ${countResponse.count} stops for route $routeID');
+
+      // If we have stops, return them
+      if (countResponse.count > 0) {
+        final response = await supabase
+            .from('allowed_stops')
+            .select("*")
+            .eq('officialroute_id', routeID)
+            .eq('is_active', true)
+            .order('stop_order');
+
+        return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+      }
+
+      // If no stops found, return an empty list
+      // We'll handle the fallback to Google Places in the UI
+      return [];
     } catch (e) {
-      debugPrint('Error fetching stops: $e');
+      debugPrint('Error fetching stops for route $routeID: $e');
       return [];
     }
   }
@@ -36,18 +54,21 @@ class StopsService {
       debugPrint('Total records in allowed_stops: ${countResponse.count}');
 
       if (countResponse.count == 0) {
-        debugPrint(
-            'No stops found in the database. Checking if table exists...');
+        debugPrint('No stops found in the database.');
+        // Insert test data if table is empty
+        await insertTestStopsIfEmpty();
 
-        // Try to query the table structure to verify it exists
-        try {
-          final tableCheck = await supabase.rpc('check_table_exists',
-              params: {'table_name': 'allowed_stops'});
-          debugPrint('Table exists check: $tableCheck');
-        } catch (e) {
-          debugPrint('Error checking table: $e');
+        // Try fetching again after inserting test data
+        final retryResponse = await supabase
+            .from('allowed_stops')
+            .select('*')
+            .eq('is_active', true);
+
+        if (retryResponse.isNotEmpty) {
+          return retryResponse
+              .map<Stop>((data) => Stop.fromJson(data))
+              .toList();
         }
-
         return [];
       }
 
@@ -121,6 +142,177 @@ class StopsService {
     } catch (e) {
       debugPrint('Error searching stops in route: $e');
       return [];
+    }
+  }
+
+  // Insert test data if the table is empty
+  Future<void> insertTestStopsIfEmpty() async {
+    try {
+      // Check if table is empty
+      final countResponse = await supabase
+          .from('allowed_stops')
+          .select('*')
+          .count(CountOption.exact);
+
+      if (countResponse.count == 0) {
+        debugPrint('No stops found in the database. Inserting test data...');
+
+        // Get a route ID to use for the test data
+        try {
+          final routeResponse = await supabase
+              .from('official_routes')
+              .select('officialroute_id')
+              .limit(1);
+
+          int routeId;
+          if (routeResponse.isEmpty) {
+            debugPrint('No routes found. Creating a test route first...');
+            // Create a test route if none exists
+            final newRoute = await supabase
+                .from('official_routes')
+                .insert({
+                  'route_name': 'Test Route',
+                  'description': 'Test route for development',
+                  'status': 'active'
+                })
+                .select('officialroute_id')
+                .single();
+
+            routeId = newRoute['officialroute_id'];
+          } else {
+            routeId = routeResponse[0]['officialroute_id'];
+          }
+
+          // Insert test stops
+          await supabase.from('allowed_stops').insert([
+            {
+              'officialroute_id': routeId,
+              'stop_name': 'Test Stop 1',
+              'stop_address': 'Test Address 1',
+              'stop_lat': '14.721957951314671',
+              'stop_lng': '121.03660698876655',
+              'stop_order': 1,
+              'is_active': true
+            },
+            {
+              'officialroute_id': routeId,
+              'stop_name': 'Test Stop 2',
+              'stop_address': 'Test Address 2',
+              'stop_lat': '14.693028415325333',
+              'stop_lng': '120.96837623290318',
+              'stop_order': 2,
+              'is_active': true
+            }
+          ]);
+
+          debugPrint('Test stops inserted successfully.');
+        } catch (e) {
+          debugPrint('Error creating test route or stops: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error in insertTestStopsIfEmpty: $e');
+    }
+  }
+
+  // Check the structure of the allowed_stops table
+  Future<void> checkTableStructure() async {
+    try {
+      // This is a PostgreSQL-specific query to get column information
+      final response = await supabase
+          .rpc('get_table_columns', params: {'table_name': 'allowed_stops'});
+
+      debugPrint('Table structure: $response');
+    } catch (e) {
+      // If the RPC doesn't exist, try a different approach
+      debugPrint('Error checking table structure: $e');
+
+      try {
+        // Try to get at least one row to see the structure
+        final response =
+            await supabase.from('allowed_stops').select('*').limit(1);
+
+        if (response.isNotEmpty) {
+          debugPrint('Sample row structure: ${response[0].keys}');
+        } else {
+          debugPrint('No rows to check structure');
+        }
+      } catch (e) {
+        debugPrint('Error getting sample row: $e');
+      }
+    }
+  }
+
+  // Add a new method to create test stops for a specific route
+  Future<void> insertTestStopsForRoute(int routeID) async {
+    try {
+      debugPrint('Creating test stops for route ID: $routeID');
+
+      // Get route details to create meaningful test stops
+      final routeDetails = await supabase
+          .from('official_routes')
+          .select(
+              'route_name, origin_lat, origin_lng, destination_lat, destination_lng')
+          .eq('officialroute_id', routeID)
+          .single();
+
+      if (routeDetails.isEmpty) {
+        debugPrint('Could not find route details for ID: $routeID');
+        return;
+      }
+
+      // Create test stops based on route origin and destination
+      double originLat =
+          double.tryParse(routeDetails['origin_lat']?.toString() ?? '0') ??
+              14.6;
+      double originLng =
+          double.tryParse(routeDetails['origin_lng']?.toString() ?? '0') ??
+              121.0;
+      double destLat =
+          double.tryParse(routeDetails['destination_lat']?.toString() ?? '0') ??
+              14.7;
+      double destLng =
+          double.tryParse(routeDetails['destination_lng']?.toString() ?? '0') ??
+              121.1;
+
+      // Calculate midpoint for an intermediate stop
+      double midLat = (originLat + destLat) / 2;
+      double midLng = (originLng + destLng) / 2;
+
+      // Insert test stops for this route
+      await supabase.from('allowed_stops').insert([
+        {
+          'officialroute_id': routeID,
+          'stop_name': 'Origin Stop - ${routeDetails['route_name']}',
+          'stop_address': 'Starting point of ${routeDetails['route_name']}',
+          'stop_lat': originLat.toString(),
+          'stop_lng': originLng.toString(),
+          'stop_order': 1,
+          'is_active': true
+        },
+        {
+          'officialroute_id': routeID,
+          'stop_name': 'Midpoint Stop - ${routeDetails['route_name']}',
+          'stop_address': 'Middle point of ${routeDetails['route_name']}',
+          'stop_lat': midLat.toString(),
+          'stop_lng': midLng.toString(),
+          'stop_order': 2,
+          'is_active': true
+        },
+        {
+          'officialroute_id': routeID,
+          'stop_name': 'Destination Stop - ${routeDetails['route_name']}',
+          'stop_address': 'End point of ${routeDetails['route_name']}',
+          'stop_lat': destLat.toString(),
+          'stop_lng': destLng.toString(),
+          'stop_order': 3,
+          'is_active': true
+        }
+      ]);
+
+      debugPrint('Successfully created test stops for route $routeID');
+    } catch (e) {
+      debugPrint('Error creating test stops for route $routeID: $e');
     }
   }
 }

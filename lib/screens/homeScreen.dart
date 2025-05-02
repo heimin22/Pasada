@@ -14,6 +14,7 @@ import 'package:pasada_passenger_app/location/locationButton.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -87,6 +88,26 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
       debugPrint('Selected route: ${result!['route_name']}');
       debugPrint('Route details: $result');
+
+      // Make sure we have the route ID
+      if (result['officialroute_id'] == null) {
+        try {
+          final routeResponse = await Supabase.instance.client
+              .from('official_routes')
+              .select('officialroute_id')
+              .eq('route_name', result['route_name'])
+              .single();
+
+          setState(() {
+            selectedRoute!['officialroute_id'] =
+                routeResponse['officialroute_id'];
+          });
+          debugPrint(
+              'Retrieved route ID: ${selectedRoute!['officialroute_id']}');
+        } catch (e) {
+          debugPrint('Error retrieving route ID: $e');
+        }
+      }
 
       // Get origin and destination coordinates
       LatLng? originCoordinates = result['origin_coordinates'];
@@ -223,12 +244,36 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  void navigateToSearch(BuildContext context, bool isPickup) async {
+  Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
     // Debug the entire selectedRoute object
     debugPrint('Selected route: $selectedRoute');
 
-    // The field might be named differently in the route object
-    int? routeId = selectedRoute?['id'] ?? selectedRoute?['officialroute_id'];
+    int? routeId;
+
+    // If selectedRoute doesn't have officialroute_id, query it from the database
+    if (selectedRoute != null) {
+      try {
+        final routeName = selectedRoute?['route_name'];
+        if (routeName != null && selectedRoute?['officialroute_id'] == null) {
+          final response = await Supabase.instance.client
+              .from('official_routes')
+              .select('officialroute_id')
+              .eq('route_name', routeName)
+              .single();
+
+          if (response.isNotEmpty) {
+            routeId = response['officialroute_id'];
+            // Update the selectedRoute with the ID for future use
+            selectedRoute?['officialroute_id'] = routeId;
+          }
+        } else if (selectedRoute?['officialroute_id'] != null) {
+          routeId = selectedRoute?['officialroute_id'];
+        }
+      } catch (e) {
+        debugPrint('Error retrieving route ID: $e');
+      }
+    }
+
     debugPrint('Navigating to search with routeID: $routeId');
 
     final result = await Navigator.of(context, rootNavigator: true).push(
@@ -236,6 +281,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         builder: (context) => SearchLocationScreen(
           isPickup: isPickup,
           routeID: routeId,
+          routeDetails: selectedRoute, // Pass the entire route details
         ),
       ),
     );

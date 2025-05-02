@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Stop {
@@ -7,7 +6,7 @@ class Stop {
   final String name;
   final String address;
   final LatLng coordinates;
-  final int stopOrder;
+  final int order;
   final bool isActive;
 
   Stop({
@@ -16,62 +15,74 @@ class Stop {
     required this.name,
     required this.address,
     required this.coordinates,
-    required this.stopOrder,
+    required this.order,
     required this.isActive,
   });
 
   factory Stop.fromJson(Map<String, dynamic> json) {
-    try {
-      debugPrint('Parsing stop data: $json');
-
-      // Check if required fields exist
-      if (json['allowedstop_id'] == null) {
-        debugPrint('Missing allowedstop_id in data');
-      }
-      if (json['officialroute_id'] == null) {
-        debugPrint('Missing officialroute_id in data');
-      }
-      if (json['stop_name'] == null) {
-        debugPrint('Missing stop_name in data');
-      }
-      if (json['stop_address'] == null) {
-        debugPrint('Missing stop_address in data');
-      }
-      if (json['stop_lat'] == null) {
-        debugPrint('Missing stop_lat in data');
-      }
-      if (json['stop_lng'] == null) {
-        debugPrint('Missing stop_lng in data');
-      }
-
-      return Stop(
-        id: json['allowedstop_id'],
-        routeId: json['officialroute_id'],
-        name: json['stop_name'] ?? 'Unknown Stop',
-        address: json['stop_address'] ?? 'No address',
-        coordinates: LatLng(
-          double.parse(json['stop_lat'] ?? '0'),
-          double.parse(json['stop_lng'] ?? '0'),
-        ),
-        stopOrder: json['stop_order'] ?? 0,
-        isActive: json['is_active'] ?? true,
-      );
-    } catch (e) {
-      debugPrint('Error in Stop.fromJson: $e');
-      rethrow;
-    }
+    return Stop(
+      id: json['id'] ?? json['stop_id'] ?? 0,
+      routeId: json['officialroute_id'] ?? 0,
+      name: json['stop_name'] ?? '',
+      address: json['stop_address'] ?? '',
+      coordinates: LatLng(
+        double.parse(json['stop_lat'] ?? '0'),
+        double.parse(json['stop_lng'] ?? '0'),
+      ),
+      order: json['stop_order'] ?? 0,
+      isActive: json['is_active'] ?? true,
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'allowedstop_id': id, // Updated to match your schema
-      'officialroute_id': routeId,
-      'stop_name': name,
-      'stop_address': address,
-      'stop_lat': coordinates.latitude.toString(),
-      'stop_lng': coordinates.longitude.toString(),
-      'stop_order': stopOrder,
-      'is_active': isActive,
-    };
+  // Create a method to generate test stops for a route
+  static List<Stop> generateTestStopsForRoute(
+      int routeId, Map<String, dynamic> routeDetails) {
+    // Extract route coordinates
+    double originLat =
+        double.tryParse(routeDetails['origin_lat']?.toString() ?? '0') ?? 14.6;
+    double originLng =
+        double.tryParse(routeDetails['origin_lng']?.toString() ?? '0') ?? 121.0;
+    double destLat =
+        double.tryParse(routeDetails['destination_lat']?.toString() ?? '0') ??
+            14.7;
+    double destLng =
+        double.tryParse(routeDetails['destination_lng']?.toString() ?? '0') ??
+            121.1;
+
+    // Calculate midpoint
+    double midLat = (originLat + destLat) / 2;
+    double midLng = (originLng + destLng) / 2;
+
+    String routeName = routeDetails['route_name'] ?? 'Unknown Route';
+
+    return [
+      Stop(
+        id: -1, // Use negative IDs for local test data
+        routeId: routeId,
+        name: 'Origin - $routeName',
+        address: 'Starting point of $routeName',
+        coordinates: LatLng(originLat, originLng),
+        order: 1,
+        isActive: true,
+      ),
+      Stop(
+        id: -2,
+        routeId: routeId,
+        name: 'Midpoint - $routeName',
+        address: 'Middle point of $routeName',
+        coordinates: LatLng(midLat, midLng),
+        order: 2,
+        isActive: true,
+      ),
+      Stop(
+        id: -3,
+        routeId: routeId,
+        name: 'Destination - $routeName',
+        address: 'End point of $routeName',
+        coordinates: LatLng(destLat, destLng),
+        order: 3,
+        isActive: true,
+      ),
+    ];
   }
 }

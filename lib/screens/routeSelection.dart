@@ -116,18 +116,17 @@ class _RouteSelectionState extends State<RouteSelection> {
     debugPrint('Selected route data: $route');
 
     // Make sure the route has an ID field
-    if (route['id'] == null && route['officialroute_id'] == null) {
+    if (route['officialroute_id'] == null) {
       // Try to get the ID from the database
       try {
         final routeDetails = await Supabase.instance.client
             .from('official_routes')
-            .select('id, officialroute_id')
+            .select('officialroute_id')
             .eq('route_name', route['route_name'])
             .single();
 
-        if (routeDetails != null) {
-          route['officialroute_id'] =
-              routeDetails['id'] ?? routeDetails['officialroute_id'];
+        if (routeDetails.isNotEmpty) {
+          route['officialroute_id'] = routeDetails['officialroute_id'];
           debugPrint('Retrieved route ID: ${route['officialroute_id']}');
         }
       } catch (e) {
