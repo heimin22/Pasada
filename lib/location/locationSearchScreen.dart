@@ -58,34 +58,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
     loadRecentSearches();
 
-    // If we have route details, generate local test stops
-    if (widget.routeID != null && widget.routeDetails != null) {
-      generateLocalTestStops();
-    } else {
-      // Otherwise try to load from database
-      loadAllowedStops();
-    }
-  }
-
-  // Generate local test stops based on route details
-  void generateLocalTestStops() {
-    if (widget.routeDetails != null && widget.routeID != null) {
-      final testStops = Stop.generateTestStopsForRoute(
-        widget.routeID!,
-        widget.routeDetails!,
-      );
-
-      setState(() {
-        allowedStops = testStops;
-        _filteredStops = testStops; // Initialize filtered stops with all stops
-        isLoading = false;
-      });
-
-      debugPrint(
-          'Generated ${testStops.length} local test stops for route ${widget.routeID}');
-    } else {
-      loadAllowedStops();
-    }
+    // Always load stops from the database, don't use test stops
+    loadAllowedStops();
   }
 
   Future<void> loadAllowedStops() async {
