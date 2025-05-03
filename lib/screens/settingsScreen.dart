@@ -5,6 +5,8 @@ import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
 import '../main.dart';
+import '../services/notificationService.dart';
+import '../functions/notification_preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -104,6 +106,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 ),
               );
             }),
+            buildNotificationToggle(),
           ],
         ),
       ),
@@ -238,5 +241,36 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         );
       }
     }
+  }
+
+  Widget buildNotificationToggle() {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return FutureBuilder<bool>(
+          future: NotificationPreference.getNotificationStatus(),
+          builder: (context, snapshot) {
+            final bool notificationEnabled = snapshot.data ?? true;
+
+            return SwitchListTile(
+              title: const Text('Booking Availability Notification'),
+              subtitle:
+                  const Text('Show notification when you can book a ride'),
+              value: notificationEnabled,
+              onChanged: (bool value) async {
+                await NotificationPreference.setNotificationStatus(value);
+
+                if (value) {
+                  NotificationService.showAvailabilityNotification();
+                } else {
+                  NotificationService.cancelNotification(1);
+                }
+
+                setState(() {});
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }

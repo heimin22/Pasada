@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/material.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin
@@ -56,5 +55,9 @@ class NotificationService {
       'Hello! Magbook ka na, sige na.',
       platformChannelSpecifics,
     );
+  }
+
+  static Future<void> cancelNotification(int id) async {
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 }
