@@ -61,8 +61,8 @@ class PreferencesScreenState extends State<PreferencesScreen> {
         msg: 'Notifications are enabled',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Color(0xFFF5F5F5),
-        textColor: Color(0xFF121212),
+        backgroundColor: Color(0xFF121212),
+        textColor: Color(0xFFF5F5F5),
       );
     } else {
       await NotificationService.cancelNotification(1);
@@ -70,8 +70,8 @@ class PreferencesScreenState extends State<PreferencesScreen> {
         msg: "Notifications are disabled",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Color(0xFFF5F5F5),
-        textColor: Color(0xFF121212),
+        backgroundColor: Color(0xFF121212),
+        textColor: Color(0xFFF5F5F5),
       );
     }
   }

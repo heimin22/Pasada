@@ -107,6 +107,7 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
       listenable: _themeController,
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Pasada',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(

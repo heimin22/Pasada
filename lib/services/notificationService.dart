@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_local_notifications/src/flutter_local_notifications_plugin.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin
@@ -26,17 +29,22 @@ class NotificationService {
 
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveBackgroundNotificationResponse:
-          (NotificationResponse response) {
-        debugPrint(
-            'Background notification clicked with payload: ${response.payload}');
-      },
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('Notification clicked with payload: ${response.payload}');
+        _handleNotificationTap();
       },
     );
 
     await _requestPermissions();
+  }
+
+  static void _handleNotificationTap() {
+    if (navigatorKey.currentState != null) {
+      navigatorKey.currentState!.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const selectionScreen()),
+        (route) => false,
+      );
+    }
   }
 
   static Future<void> showAvailabilityNotification() async {
