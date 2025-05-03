@@ -65,6 +65,8 @@ dependencies:
   gotrue: ^2.11.1
   path: ^1.9.1
   intl: ^0.20.2
+  firebase_messaging: ^15.2.5
+  flutter_local_notifications: ^19.1.0
 
 dev_dependencies:
   # The "flutter_lints" package below contains a set of recommended lints to
