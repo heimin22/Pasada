@@ -10,9 +10,13 @@ import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notification service
+  await NotificationService.initialize();
 
   // Initialize MemoryManager singleton
   final memoryManager = MemoryManager();
@@ -85,6 +89,10 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
   void initState() {
     super.initState();
     _themeController.initialize();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.showAvailabilityNotification();
+    });
   }
 
   @override
@@ -99,6 +107,7 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
       listenable: _themeController,
       builder: (context, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Pasada',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(

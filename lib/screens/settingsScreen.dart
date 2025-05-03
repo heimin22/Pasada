@@ -96,14 +96,18 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             buildSettingsListItem('Contact Support', screenWidth, () {
               debugPrint('Contact support tapped');
             }),
-            buildSettingsListItem('Privacy Policy', screenWidth, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PrivacyPolicyScreen(),
-                ),
-              );
-            }),
+            buildSettingsListItem(
+              'Privacy Policy',
+              screenWidth,
+              () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacyPolicyScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
