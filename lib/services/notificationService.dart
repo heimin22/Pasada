@@ -26,4 +26,35 @@ class NotificationService {
       initializationSettings,
     );
   }
+
+  static Future<void> showAvailabilityNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'pasada_availability',
+      'Booking Availability',
+      channelDescription: 'Hello! Magbook ka na, sige na.',
+      importance: Importance.high,
+      priority: Priority.high,
+      ongoing: true,
+    );
+
+    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      presentAlert: false,
+      presentBadge: false,
+      presentSound: false,
+    );
+
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      android: androidPlatformChannelSpecifics,
+      iOS: iOSPlatformChannelSpecifics,
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      1,
+      'Booking Availability',
+      'Hello! Magbook ka na, sige na.',
+      platformChannelSpecifics,
+    );
+  }
 }
