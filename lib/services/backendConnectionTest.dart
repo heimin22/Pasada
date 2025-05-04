@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -11,12 +13,16 @@ class BackendConnectionTest {
 
   Future<void> testDirectConnection() async {
     try {
+      debugPrint('Attempting to connect to: $backendUrl/health');
       final response = await http.get(Uri.parse('$backendUrl/health'));
       debugPrint('Direct connection test:');
       debugPrint('Status code: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
     } catch (e) {
-      debugPrint('Direct connection test failed: $e');
+      if (e is SocketException) {
+        debugPrint(
+            'Socket error: ${e.message}, address: ${e.address}, port: ${e.port}');
+      }
     }
   }
 
