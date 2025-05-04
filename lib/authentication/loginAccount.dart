@@ -102,7 +102,6 @@ class LoginScreen extends State<LoginPage> {
       );
 
       if (mounted) {
-        // successful login
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => selectionScreen()));
       }
