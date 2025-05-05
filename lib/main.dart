@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
@@ -11,9 +13,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/services/backendConnectionTest.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp();
 
   // Initialize notification service
   await NotificationService.initialize();
@@ -59,6 +65,12 @@ Future<void> main() async {
   } catch (e) {
     debugPrint("Failed to initialize Supabase: $e");
     return;
+  }
+
+  // Test backend connection
+  if (kDebugMode) {
+    final tester = BackendConnectionTest();
+    await tester.runAllTests();
   }
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);

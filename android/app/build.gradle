@@ -2,7 +2,11 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
+
+// Apply the Google Services plugin after the other plugins
+apply plugin: 'com.google.gms.google-services'
 
 def getLocalProperties = {
     Properties properties = new Properties()
