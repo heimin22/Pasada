@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'localDatabaseService.dart';
 import 'bookingDetails.dart';
+import 'package:location/location.dart';
 
 class BookingService {
   final LocalDatabaseService _localDbService = LocalDatabaseService();
   final supabase = Supabase.instance.client;
+  StreamSubscription<LocationData>? _locationSubscription;
+
+  void startLocationTracking(String passengerID) {}
 
   // Create a new booking and save it locally
   Future<int?> createBooking({
