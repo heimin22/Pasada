@@ -250,6 +250,55 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     String tempPreference = _seatingPreference.value;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+          title: Text(
+            'Preferences',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Seating'),
+                value: 'Seating',
+                groupValue: tempPreference,
+                onChanged: (value) => tempPreference = value!,
+              ),
+              RadioListTile<String>(
+                title: const Text('Standing'),
+                value: 'Standing',
+                groupValue: tempPreference,
+                onChanged: (value) => tempPreference = value!,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _seatingPreference.value = tempPreference;
+                Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF067837),
+              ),
+              child: const Text('Confirm'),
+            ),
+          ]),
+    );
   }
 
   Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
@@ -548,8 +597,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                 PaymentDetailsContainer(
                                   paymentMethod:
                                       selectedPaymentMethod ?? 'Cash',
-                                  fare:
-                                      currentFare, // Use the calculated fare instead of hardcoded 150.0
+                                  fare: currentFare,
+                                  seatingPreference: _seatingPreference.value,
                                   onCancelBooking: _handleBookingCancellation,
                                 ),
                               ],
@@ -605,7 +654,72 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   buildLocationRow(svgAssetDropOff, selectedDropOffLocation,
                       false, screenWidth, iconSize,
                       enabled: isRouteSelected),
-                  SizedBox(height: screenWidth * 0.04),
+                  SizedBox(height: 27),
+                  if (isRouteSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: _showSeatingPreferenceDialog,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.event_seat,
+                                  size: 24, // Match payment method icon size
+                                  color: const Color(
+                                      0xFF00CC58), // Match payment method icon color
+                                ),
+                                const SizedBox(
+                                    width: 12), // Match payment method spacing
+                                Text(
+                                  'Preference:',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isRouteSelected
+                                        ? (isDarkMode
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212))
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                ValueListenableBuilder<String>(
+                                  valueListenable: _seatingPreference,
+                                  builder: (context, preference, _) => Text(
+                                    preference,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: isRouteSelected
+                                          ? (isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212))
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: isRouteSelected
+                                      ? (isDarkMode
+                                          ? const Color(0xFFF5F5F5)
+                                          : const Color(0xFF121212))
+                                      : Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   InkWell(
                     onTap: isRouteSelected
                         ? () async {
@@ -623,52 +737,41 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             }
                           }
                         : null,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? const Color(0xFF2D2D2D)
-                            : const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDarkMode
-                              ? const Color(0xFF3D3D3D)
-                              : const Color(0xFFE0E0E0),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payment,
-                            size: 24,
-                            color: const Color(0xFF00CC58),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            selectedPaymentMethod ?? 'Select Payment Method',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isRouteSelected
-                                  ? (isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212))
-                                  : Colors.grey,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.payment,
+                              size: 24,
+                              color: const Color(0xFF00CC58),
                             ),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: isRouteSelected
-                                ? (isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212))
-                                : Colors.grey,
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedPaymentMethod ?? 'Select Payment Method',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isRouteSelected
+                                    ? (isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212))
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: isRouteSelected
+                              ? (isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212))
+                              : Colors.grey,
+                        ),
+                      ],
                     ),
                   ),
                   SizedBox(height: screenWidth * 0.05),

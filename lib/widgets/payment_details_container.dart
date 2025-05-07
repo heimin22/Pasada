@@ -4,12 +4,14 @@ class PaymentDetailsContainer extends StatelessWidget {
   final String paymentMethod;
   final VoidCallback onCancelBooking;
   final double fare;
+  final String seatingPreference;
 
   const PaymentDetailsContainer({
     super.key,
     required this.paymentMethod,
     required this.onCancelBooking,
     this.fare = 15.0,
+    this.seatingPreference = 'Seating',
   });
 
   @override
