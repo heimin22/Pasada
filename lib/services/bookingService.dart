@@ -28,7 +28,7 @@ class BookingService {
           .insert({
             'passenger_id': passengerId,
             'route_id': routeId,
-            'ride_status': 'searching',
+            'ride_status': 'requested',
             'pickup_address': pickupAddress,
             'pickup_lat': pickupCoordinates.latitude,
             'pickup_lng': pickupCoordinates.longitude,
