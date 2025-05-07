@@ -36,7 +36,7 @@ class BookingService {
             'dropoff_lat': dropoffCoordinates.latitude,
             'dropoff_lng': dropoffCoordinates.longitude,
             'payment_method': paymentMethod,
-            'seating_preference': seatingPreference,
+            'seat_type': seatingPreference,
             'fare': fare,
             'created_at': DateTime.now().toIso8601String(),
           })
@@ -83,7 +83,7 @@ class BookingService {
       passengerId: passengerId,
       driverId: 0, // Will be updated when a driver is assigned
       routeId: routeId,
-      rideStatus: 'searching',
+      rideStatus: 'requested',
       pickupAddress: pickupAddress,
       pickupCoordinates: pickupCoordinates,
       dropoffAddress: dropoffAddress,
