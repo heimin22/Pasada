@@ -13,7 +13,52 @@ class BookingService {
   final supabase = Supabase.instance.client;
   StreamSubscription<LocationData>? _locationSubscription;
 
-  void startLocationTracking(String passengerID) {}
+  void startLocationTracking(String passengerID) {
+    stopLocationTracking();
+
+    final location = Location();
+
+    location.changeSettings(
+      accuracy: LocationAccuracy.high,
+      interval: 10000,
+    );
+
+    _locationSubscription = location.onLocationChanged.listen((locationData) {
+      if (locationData.latitude != null && locationData.longitude != null) {
+        _updatePassengerLocation(
+          passengerID,
+          locationData.latitude!,
+          locationData.longitude!,
+        );
+      }
+    });
+
+    debugPrint('Location tracking started for passenger $passengerID');
+  }
+
+  void stopLocationTracking() {
+    _locationSubscription?.cancel();
+    _locationSubscription = null;
+    debugPrint('Location tracking stopped');
+  }
+
+  Future<void> _updatePassengerLocation(
+    String passengerID,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      await supabase.rpc('update_passenger_location', params: {
+        'passenger_id': passengerID,
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+
+      debugPrint('Passenger location updated: $latitude, $longitude');
+    } catch (e) {
+      debugPrint('Error updating passenger location: $e');
+    }
+  }
 
   // Create a new booking and save it locally
   Future<int?> createBooking({
