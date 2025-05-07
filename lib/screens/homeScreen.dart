@@ -73,6 +73,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late Animation<double> _downwardAnimation;
   late Animation<double> _upwardAnimation;
 
+  final ValueNotifier<String> _seatingPreference =
+      ValueNotifier<String>('Seating');
+
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
 
@@ -244,6 +247,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
+  Future<void> _showSeatingPreferenceDialog() async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    String tempPreference = _seatingPreference.value;
+  }
+
   Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
     // Debug the entire selectedRoute object
     debugPrint('Selected route: $selectedRoute');
@@ -389,6 +397,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
             return Stack(
               children: [
+                ValueListenableBuilder<String>(
+                  valueListenable: _seatingPreference,
+                  builder: (context, preference, _) => SizedBox(),
+                ),
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
