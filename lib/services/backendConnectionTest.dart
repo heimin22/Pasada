@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,10 +17,21 @@ class BackendConnectionTest {
       debugPrint('Direct connection test:');
       debugPrint('Status code: ${response.statusCode}');
       debugPrint('Response body: ${response.body}');
+
+      // Add status code interpretation
+      if (response.statusCode == 502) {
+        debugPrint(
+            'ERROR: 502 Bad Gateway - The server is likely down or misconfigured');
+      } else if (response.statusCode != 200) {
+        debugPrint(
+            'ERROR: Unexpected status code - Server is responding but with errors');
+      }
     } catch (e) {
       if (e is SocketException) {
         debugPrint(
             'Socket error: ${e.message}, address: ${e.address}, port: ${e.port}');
+      } else {
+        debugPrint('Connection error: $e');
       }
     }
   }
