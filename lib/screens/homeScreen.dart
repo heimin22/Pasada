@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
+import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -78,6 +82,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
+
+  // Add a state variable to track if a driver is assigned
+  bool isDriverAssigned = false;
 
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
@@ -223,11 +230,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  void _handleBookingConfirmation() {
+  void _handleBookingConfirmation() async {
     setState(() {
       isBookingConfirmed = true;
     });
+
     _bookingAnimationController.forward();
+
+    // Start location tracking for the passenger
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      final bookingService = BookingService();
+      bookingService.startLocationTracking(user.id);
+    }
+
+    // Simulate driver assignment after a delay
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          isDriverAssigned = true;
+        });
+      }
+    });
   }
 
   void _handleBookingCancellation() {
@@ -585,23 +609,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               -_upwardAnimation.value), // Use upward animation
                           child: Opacity(
                             opacity: _bookingAnimationController.value,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                BookingStatusContainer(),
-                                BookingDetailsContainer(
-                                  pickupLocation: selectedPickUpLocation,
-                                  dropoffLocation: selectedDropOffLocation,
-                                  etaText: etaText,
-                                ),
-                                PaymentDetailsContainer(
-                                  paymentMethod:
-                                      selectedPaymentMethod ?? 'Cash',
-                                  fare: currentFare,
-                                  seatingPreference: _seatingPreference.value,
-                                  onCancelBooking: _handleBookingCancellation,
-                                ),
-                              ],
+                            child: BookingStatusManager(
+                              pickupLocation: selectedPickUpLocation,
+                              dropoffLocation: selectedDropOffLocation,
+                              ETA: etaText,
+                              paymentMethod: selectedPaymentMethod ?? 'Cash',
+                              fare: currentFare,
+                              onCancelBooking: _handleBookingCancellation,
+                              driverName: 'Juan Dela Cruz',
+                              plateNumber: 'ABC 1234',
+                              vehicleModel: 'Toyota Vios',
+                              phoneNumber: '09123456789',
+                              isDriverAssigned:
+                                  isDriverAssigned, // Pass the state
                             ),
                           ),
                         );

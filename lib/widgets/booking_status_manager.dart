@@ -3,6 +3,7 @@ import 'booking_status_container.dart';
 import 'booking_details_container.dart';
 import 'payment_details_container.dart';
 import 'driver_details_container.dart';
+import 'driver_loading_container.dart';
 import '../location/selectedLocation.dart';
 
 class BookingStatusManager extends StatelessWidget {
@@ -16,6 +17,7 @@ class BookingStatusManager extends StatelessWidget {
   final String plateNumber;
   final String vehicleModel;
   final String phoneNumber;
+  final bool isDriverAssigned;
 
   const BookingStatusManager({
     super.key,
@@ -29,6 +31,7 @@ class BookingStatusManager extends StatelessWidget {
     required this.plateNumber,
     required this.vehicleModel,
     required this.phoneNumber,
+    this.isDriverAssigned = false,
   });
 
   @override
@@ -37,23 +40,31 @@ class BookingStatusManager extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            const BookingStatusContainer(),
+            // Show either the loading container or the status container
+            isDriverAssigned
+                ? const BookingStatusContainer()
+                : const DriverLoadingContainer(),
+
             BookingDetailsContainer(
               pickupLocation: pickupLocation,
               dropoffLocation: dropoffLocation,
               etaText: ETA,
             ),
+
             PaymentDetailsContainer(
               paymentMethod: paymentMethod,
               fare: fare,
               onCancelBooking: onCancelBooking,
             ),
-            DriverDetailsContainer(
-              driverName: driverName,
-              plateNumber: plateNumber,
-              vehicleModel: vehicleModel,
-              phoneNumber: phoneNumber,
-            ),
+
+            // Only show driver details if a driver is assigned
+            if (isDriverAssigned)
+              DriverDetailsContainer(
+                driverName: driverName,
+                plateNumber: plateNumber,
+                vehicleModel: vehicleModel,
+                phoneNumber: phoneNumber,
+              ),
           ],
         ),
       ),
