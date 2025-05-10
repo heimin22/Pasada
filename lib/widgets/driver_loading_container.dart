@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
-class BookingStatusContainer extends StatefulWidget {
-  const BookingStatusContainer({super.key});
+class DriverLoadingContainer extends StatefulWidget {
+  const DriverLoadingContainer({super.key});
 
   @override
-  State<BookingStatusContainer> createState() => BookingStatusContainerState();
+  State<DriverLoadingContainer> createState() => _DriverLoadingContainerState();
 }
 
-class BookingStatusContainerState extends State<BookingStatusContainer> {
-  final List<String> _statusMessages = [
-    'Naghahanap na po ng driver...',
-    'Wait lang, boss...',
-    'Mabilisan lang \'to promise...',
-    '\'Wag mo munang cancel hehe...',
+class _DriverLoadingContainerState extends State<DriverLoadingContainer> {
+  final List<String> _loadingMessages = [
+    'Saglit lang boss...',
+    'Parating na si driver...',
+    'Kaunting kembot na lang...',
+    '\'Wag mo na pong i-cancel please hehehe...',
   ];
   int _currentMessageIndex = 0;
 
@@ -23,11 +23,11 @@ class BookingStatusContainerState extends State<BookingStatusContainer> {
   }
 
   void _startMessageRotation() {
-    Future.delayed(const Duration(seconds: 6), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _currentMessageIndex =
-              (_currentMessageIndex + 1) % _statusMessages.length;
+              (_currentMessageIndex + 1) % _loadingMessages.length;
         });
         _startMessageRotation();
       }
@@ -66,11 +66,10 @@ class BookingStatusContainerState extends State<BookingStatusContainer> {
           const SizedBox(width: 16),
           Expanded(
             child: Text(
-              _statusMessages[_currentMessageIndex],
+              _loadingMessages[_currentMessageIndex],
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),

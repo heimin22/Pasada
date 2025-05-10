@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
-import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
-import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
+// import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/services/bookingService.dart';
+// import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
+// import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+// import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart';
@@ -73,8 +77,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late Animation<double> _downwardAnimation;
   late Animation<double> _upwardAnimation;
 
+  final ValueNotifier<String> _seatingPreference =
+      ValueNotifier<String>('Sitting');
+
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
+
+  // Add a state variable to track if a driver is assigned
+  bool isDriverAssigned = false;
 
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
@@ -220,11 +230,80 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  void _handleBookingConfirmation() {
+  void _handleBookingConfirmation() async {
     setState(() {
       isBookingConfirmed = true;
     });
+
     _bookingAnimationController.forward();
+
+    // Get the current user
+    final user = supabase.auth.currentUser;
+    if (user != null && selectedRoute != null) {
+      // Create booking in Supabase and locally
+      final bookingService = BookingService();
+
+      // Make sure we have the route ID
+      int routeId = selectedRoute!['officialroute_id'] ?? 0;
+
+      // Create the booking
+      final bookingId = await bookingService.createBooking(
+        passengerId: user.id,
+        routeId: routeId,
+        pickupAddress: selectedPickUpLocation?.address ?? 'Unknown location',
+        pickupCoordinates:
+            selectedPickUpLocation?.coordinates ?? const LatLng(0, 0),
+        dropoffAddress: selectedDropOffLocation?.address ?? 'Unknown location',
+        dropoffCoordinates:
+            selectedDropOffLocation?.coordinates ?? const LatLng(0, 0),
+        paymentMethod: selectedPaymentMethod ?? 'Cash',
+        seatingPreference: _seatingPreference.value,
+        fare: currentFare,
+      );
+
+      if (bookingId != null) {
+        debugPrint('Booking created with ID: $bookingId');
+
+        // Start location tracking for the passenger
+        bookingService.startLocationTracking(user.id);
+
+        // Simulate driver assignment after a delay
+        Future.delayed(const Duration(seconds: 10), () {
+          if (mounted) {
+            setState(() {
+              isDriverAssigned = true;
+            });
+          }
+        });
+      } else {
+        // Handle booking creation failure
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Unable to create booking. Please try again.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: const Color(0xFF1E1E1E),
+            textColor: const Color(0xFFF5F5F5),
+          );
+
+          // Revert the booking confirmation UI
+          _handleBookingCancellation();
+        }
+      }
+    } else {
+      // Handle case where user is not logged in or route is not selected
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Unable to create booking. Please try again.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: const Color(0xFF1E1E1E),
+          textColor: const Color(0xFFF5F5F5),
+        );
+        // Revert the booking confirmation UI
+        _handleBookingCancellation();
+      }
+    }
   }
 
   void _handleBookingCancellation() {
@@ -242,6 +321,60 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         containerHeight = box.size.height;
       });
     }
+  }
+
+  Future<void> _showSeatingPreferenceDialog() async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    String tempPreference = _seatingPreference.value;
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+          title: Text(
+            'Preferences',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RadioListTile<String>(
+                title: const Text('Sitting'),
+                value: 'Sitting',
+                groupValue: tempPreference,
+                onChanged: (value) => tempPreference = value!,
+              ),
+              RadioListTile<String>(
+                title: const Text('Standing'),
+                value: 'Standing',
+                groupValue: tempPreference,
+                onChanged: (value) => tempPreference = value!,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                _seatingPreference.value = tempPreference;
+                Navigator.pop(context);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF067837),
+              ),
+              child: const Text('Confirm'),
+            ),
+          ]),
+    );
   }
 
   Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
@@ -389,6 +522,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
             return Stack(
               children: [
+                ValueListenableBuilder<String>(
+                  valueListenable: _seatingPreference,
+                  builder: (context, preference, _) => SizedBox(),
+                ),
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
@@ -524,23 +661,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               -_upwardAnimation.value), // Use upward animation
                           child: Opacity(
                             opacity: _bookingAnimationController.value,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                BookingStatusContainer(),
-                                BookingDetailsContainer(
-                                  pickupLocation: selectedPickUpLocation,
-                                  dropoffLocation: selectedDropOffLocation,
-                                  etaText: etaText,
-                                ),
-                                PaymentDetailsContainer(
-                                  paymentMethod:
-                                      selectedPaymentMethod ?? 'Cash',
-                                  fare:
-                                      currentFare, // Use the calculated fare instead of hardcoded 150.0
-                                  onCancelBooking: _handleBookingCancellation,
-                                ),
-                              ],
+                            child: BookingStatusManager(
+                              pickupLocation: selectedPickUpLocation,
+                              dropoffLocation: selectedDropOffLocation,
+                              ETA: etaText,
+                              paymentMethod: selectedPaymentMethod ?? 'Cash',
+                              fare: currentFare,
+                              onCancelBooking: _handleBookingCancellation,
+                              driverName: 'Juan Dela Cruz',
+                              plateNumber: 'ABC 1234',
+                              vehicleModel: 'Toyota Vios',
+                              phoneNumber: '09123456789',
+                              isDriverAssigned:
+                                  isDriverAssigned, // Pass the state
                             ),
                           ),
                         );
@@ -593,7 +726,72 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   buildLocationRow(svgAssetDropOff, selectedDropOffLocation,
                       false, screenWidth, iconSize,
                       enabled: isRouteSelected),
-                  SizedBox(height: screenWidth * 0.04),
+                  SizedBox(height: 27),
+                  if (isRouteSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: InkWell(
+                        onTap: _showSeatingPreferenceDialog,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.event_seat,
+                                  size: 24, // Match payment method icon size
+                                  color: const Color(
+                                      0xFF00CC58), // Match payment method icon color
+                                ),
+                                const SizedBox(
+                                    width: 12), // Match payment method spacing
+                                Text(
+                                  'Preference:',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isRouteSelected
+                                        ? (isDarkMode
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212))
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                ValueListenableBuilder<String>(
+                                  valueListenable: _seatingPreference,
+                                  builder: (context, preference, _) => Text(
+                                    preference,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: isRouteSelected
+                                          ? (isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212))
+                                          : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16,
+                                  color: isRouteSelected
+                                      ? (isDarkMode
+                                          ? const Color(0xFFF5F5F5)
+                                          : const Color(0xFF121212))
+                                      : Colors.grey,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   InkWell(
                     onTap: isRouteSelected
                         ? () async {
@@ -611,52 +809,41 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             }
                           }
                         : null,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isDarkMode
-                            ? const Color(0xFF2D2D2D)
-                            : const Color(0xFFFFFFFF),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDarkMode
-                              ? const Color(0xFF3D3D3D)
-                              : const Color(0xFFE0E0E0),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payment,
-                            size: 24,
-                            color: const Color(0xFF00CC58),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            selectedPaymentMethod ?? 'Select Payment Method',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isRouteSelected
-                                  ? (isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212))
-                                  : Colors.grey,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.payment,
+                              size: 24,
+                              color: const Color(0xFF00CC58),
                             ),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                            color: isRouteSelected
-                                ? (isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212))
-                                : Colors.grey,
-                          ),
-                        ],
-                      ),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedPaymentMethod ?? 'Select Payment Method',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isRouteSelected
+                                    ? (isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212))
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: isRouteSelected
+                              ? (isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212))
+                              : Colors.grey,
+                        ),
+                      ],
                     ),
                   ),
                   SizedBox(height: screenWidth * 0.05),

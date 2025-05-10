@@ -2,7 +2,7 @@ name: pasada_passenger_app
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -28,71 +28,65 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  flutter:
-    sdk: flutter
-  postgres: ^3.4.7
-  supabase_flutter: ^2.8.2
-  supabase: ^2.6.1
-  shared_preferences: ^2.5.3
-  uuid: ^4.5.1
-  cupertino_icons: ^1.0.8
-  fluttertoast: ^8.2.10
-  connectivity_plus: ^6.1.1
-  flutter_dotenv: ^5.2.1
-  flutter_animate: ^4.5.2
-  flutter_svg: ^2.0.16
-  google_maps_flutter: ^2.12.1
-  google_maps_flutter_android: ^2.14.11
-  geolocator: ^13.0.2
-  geocoding: ^3.0.0
-  flutter_typeahead: ^5.2.0
-  location: ^8.0.0
-  url_launcher: ^6.3.1
-  webview_flutter: ^4.10.0  
-#  h3_flutter: ^0.6.6
-  dio: ^5.7.0
-  get: ^4.6.6
-  curved_navigation_bar: ^1.0.6
-  flutter_google_maps_webservices: ^1.1.1
-  flutter_polyline_points: ^2.1.0
-  http: ^1.2.2
-  sqflite: ^2.4.2
   app_links: ^6.4.0
   cached_network_image: ^3.4.1
-  image_picker: ^1.1.2
-  permission_handler: ^12.0.0+1 
-  flutter_markdown: ^0.7.7
-  gotrue: ^2.11.1
-  path: ^1.9.1
-  intl: ^0.20.2
+  connectivity_plus: ^6.1.1
+  cupertino_icons: ^1.0.8
+  curved_navigation_bar: ^1.0.6
+  dio: ^5.7.0
+  firebase_core: ^3.13.0
   firebase_messaging: ^15.2.5
+  flutter:
+    sdk: flutter
+  flutter_animate: ^4.5.2
+  flutter_dotenv: ^5.2.1
+  flutter_google_maps_webservices: ^1.1.1
   flutter_local_notifications: ^19.1.0
+  flutter_markdown: ^0.7.7
+  flutter_polyline_points: ^2.1.0
+  flutter_svg: ^2.0.16
+  flutter_typeahead: ^5.2.0
+  fluttertoast: ^8.2.10
+  geocoding: ^3.0.0
+  geolocator: ^13.0.2
+  get: ^4.6.6
+  google_maps_flutter: ^2.12.1
+  google_maps_flutter_android: ^2.14.11
+  gotrue: ^2.11.1
+  http: ^1.2.2
+  image_picker: ^1.1.2
+  intl: ^0.20.2
+  location: ^8.0.0
+  path: ^1.9.1
+  permission_handler: ^12.0.0+1
+  postgres: ^3.4.7
+  shared_preferences: ^2.5.3
+  sqflite: ^2.4.2
+  supabase: ^2.6.1
+  supabase_flutter: ^2.8.2
+  url_launcher: ^6.3.1
+  uuid: ^4.5.1
+  webview_flutter: ^4.10.0
 
 dev_dependencies:
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
+  build_runner: ^2.4.14
+  coverage: ^1.11.1
+  flutter_gen_runner: ^5.8.0
+  flutter_launcher_icons: ^0.14.2
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
-  build_runner: ^2.4.14
-  json_serializable: ^6.9.2
-  mockito: ^5.4.5
   integration_test:
     sdk: flutter
-  test: ^1.25.8
-  flutter_launcher_icons: ^0.14.2
-  flutter_gen_runner: ^5.8.0
-  coverage: ^1.11.1
+  json_serializable: ^6.9.2
   logger: ^2.5.0
+  mockito: ^5.4.5
+  test: ^1.25.8
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
@@ -171,4 +165,3 @@ flutter:
           weight: 400
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-

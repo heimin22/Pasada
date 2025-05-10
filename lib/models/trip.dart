@@ -18,14 +18,38 @@ class Trip {
   });
 
   factory Trip.fromJson(Map<String, dynamic> json) {
+    // Create a safe copy of the JSON data
+    final safeJson = Map<String, dynamic>.from(json);
+
+    // Ensure coordinate fields are properly handled
+    final List<String> coordinateFields = [
+      'pickup_lat',
+      'pickup_lng',
+      'dropoff_lat',
+      'dropoff_lng'
+    ];
+
+    for (final field in coordinateFields) {
+      if (safeJson.containsKey(field)) {
+        if (safeJson[field] == null || safeJson[field] == 'null') {
+          safeJson[field] = 0.0;
+        } else if (safeJson[field] is String) {
+          // Convert string coordinates to double
+          safeJson[field] = double.tryParse(safeJson[field]) ?? 0.0;
+        }
+      }
+    }
+
     return Trip(
-      id: json['id'],
-      status: json['status'],
-      originAddress: json['origin_address'],
-      destinationAddress: json['destination_address'],
-      fare: json['fare'].toDouble(),
-      driverId: json['driver_id'],
-      passengerId: json['passenger_id'],
+      id: safeJson['booking_id'].toString(),
+      status: safeJson['ride_status'] ?? '',
+      originAddress: safeJson['pickup_address'] ?? '',
+      destinationAddress: safeJson['dropoff_address'] ?? '',
+      fare: (safeJson['fare'] is num)
+          ? safeJson['fare'].toDouble()
+          : double.tryParse(safeJson['fare']?.toString() ?? '0') ?? 0.0,
+      driverId: safeJson['driver_id']?.toString(),
+      passengerId: safeJson['passenger_id'] ?? '',
     );
   }
 }
