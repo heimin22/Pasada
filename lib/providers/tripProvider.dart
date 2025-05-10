@@ -78,21 +78,31 @@ class TripProvider extends ChangeNotifier {
             filter: PostgresChangeFilter(
               type: PostgresChangeFilterType.eq,
               column: 'booking_id',
-              value: currentTrip!.id,
+              value: int.tryParse(currentTrip!.id) ?? currentTrip!.id,
             ),
             callback: (payload) {
               try {
-                if (payload.newRecord['booking_id'] == currentTrip?.id) {
+                if (payload.newRecord['booking_id'].toString() ==
+                    currentTrip?.id.toString()) {
                   // Create a safe copy of the payload data
                   final Map<String, dynamic> safeRecord =
                       Map<String, dynamic>.from(payload.newRecord);
 
-                  if (safeRecord.containsKey('current_location') &&
-                      (safeRecord['current_location'] == null ||
-                          safeRecord['current_location'] == 'null')) {
-                    safeRecord.remove('current_location');
-                  }
+                  final List<String> coordinateFields = [
+                    'pickup_lat',
+                    'pickup_lng',
+                    'dropoff_lat',
+                    'dropoff_lng'
+                  ];
 
+                  // Remove coordinate fields if they are null or 'null'
+                  for (final field in coordinateFields) {
+                    if (safeRecord.containsKey(field) &&
+                        (safeRecord[field] == null ||
+                            safeRecord[field] == 'null')) {
+                      safeRecord.remove(field);
+                    }
+                  }
                   // Update the trip with the safe data
                   currentTrip = Trip.fromJson(safeRecord);
                   notifyListeners();
