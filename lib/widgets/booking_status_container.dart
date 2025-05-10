@@ -68,8 +68,9 @@ class BookingStatusContainerState extends State<BookingStatusContainer> {
             child: Text(
               _statusMessages[_currentMessageIndex],
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
