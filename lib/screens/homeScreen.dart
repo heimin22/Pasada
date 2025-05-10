@@ -78,7 +78,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late Animation<double> _upwardAnimation;
 
   final ValueNotifier<String> _seatingPreference =
-      ValueNotifier<String>('Seating');
+      ValueNotifier<String>('Sitting');
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
@@ -237,21 +237,73 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     _bookingAnimationController.forward();
 
-    // Start location tracking for the passenger
+    // Get the current user
     final user = supabase.auth.currentUser;
-    if (user != null) {
+    if (user != null && selectedRoute != null) {
+      // Create booking in Supabase and locally
       final bookingService = BookingService();
-      bookingService.startLocationTracking(user.id);
-    }
 
-    // Simulate driver assignment after a delay
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() {
-          isDriverAssigned = true;
+      // Make sure we have the route ID
+      int routeId = selectedRoute!['officialroute_id'] ?? 0;
+
+      // Create the booking
+      final bookingId = await bookingService.createBooking(
+        passengerId: user.id,
+        routeId: routeId,
+        pickupAddress: selectedPickUpLocation?.address ?? 'Unknown location',
+        pickupCoordinates:
+            selectedPickUpLocation?.coordinates ?? const LatLng(0, 0),
+        dropoffAddress: selectedDropOffLocation?.address ?? 'Unknown location',
+        dropoffCoordinates:
+            selectedDropOffLocation?.coordinates ?? const LatLng(0, 0),
+        paymentMethod: selectedPaymentMethod ?? 'Cash',
+        seatingPreference: _seatingPreference.value,
+        fare: currentFare,
+      );
+
+      if (bookingId != null) {
+        debugPrint('Booking created with ID: $bookingId');
+
+        // Start location tracking for the passenger
+        bookingService.startLocationTracking(user.id);
+
+        // Simulate driver assignment after a delay
+        Future.delayed(const Duration(seconds: 10), () {
+          if (mounted) {
+            setState(() {
+              isDriverAssigned = true;
+            });
+          }
         });
+      } else {
+        // Handle booking creation failure
+        if (mounted) {
+          Fluttertoast.showToast(
+            msg: 'Unable to create booking. Please try again.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: const Color(0xFF1E1E1E),
+            textColor: const Color(0xFFF5F5F5),
+          );
+
+          // Revert the booking confirmation UI
+          _handleBookingCancellation();
+        }
       }
-    });
+    } else {
+      // Handle case where user is not logged in or route is not selected
+      if (mounted) {
+        Fluttertoast.showToast(
+          msg: 'Unable to create booking. Please try again.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: const Color(0xFF1E1E1E),
+          textColor: const Color(0xFFF5F5F5),
+        );
+        // Revert the booking confirmation UI
+        _handleBookingCancellation();
+      }
+    }
   }
 
   void _handleBookingCancellation() {
@@ -293,8 +345,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             mainAxisSize: MainAxisSize.min,
             children: [
               RadioListTile<String>(
-                title: const Text('Seating'),
-                value: 'Seating',
+                title: const Text('Sitting'),
+                value: 'Sitting',
                 groupValue: tempPreference,
                 onChanged: (value) => tempPreference = value!,
               ),
