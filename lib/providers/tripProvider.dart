@@ -65,20 +65,53 @@ class TripProvider extends ChangeNotifier {
   void setupRealtimeSubscription() {
     _tripChannel?.unsubscribe();
 
-    _tripChannel = supabase.channel('public:bookings').onPostgresChanges(
-          event: PostgresChangeEvent.update,
-          schema: 'public',
-          table: 'bookings',
-          callback: (payload) {
-            if (payload.newRecord['id'] == currentTrip?.id) {
-              currentTrip =
-                  Trip.fromJson(Map<String, dynamic>.from(payload.newRecord));
-              notifyListeners();
-            }
-          },
-        );
+    if (currentTrip == null || currentTrip?.id == null) {
+      debugPrint('Cannot set up realtime subscription: No valid trip ID');
+      return;
+    }
 
-    _tripChannel?.subscribe();
+    try {
+      _tripChannel = supabase.channel('bookings').onPostgresChanges(
+            event: PostgresChangeEvent.update,
+            schema: 'public',
+            table: 'bookings',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'booking_id',
+              value: currentTrip!.id,
+            ),
+            callback: (payload) {
+              try {
+                if (payload.newRecord['booking_id'] == currentTrip?.id) {
+                  // Create a safe copy of the payload data
+                  final Map<String, dynamic> safeRecord =
+                      Map<String, dynamic>.from(payload.newRecord);
+
+                  if (safeRecord.containsKey('current_location') &&
+                      (safeRecord['current_location'] == null ||
+                          safeRecord['current_location'] == 'null')) {
+                    safeRecord.remove('current_location');
+                  }
+
+                  // Update the trip with the safe data
+                  currentTrip = Trip.fromJson(safeRecord);
+                  notifyListeners();
+                  debugPrint('Trip updated via realtime: ${currentTrip?.id}');
+                }
+              } catch (e) {
+                debugPrint('Error processing realtime payload: $e');
+                // Continue subscription despite error in a single update
+              }
+            },
+          );
+
+      _tripChannel?.subscribe();
+      debugPrint(
+          'Realtime subscription setup for booking ID: ${currentTrip?.id}');
+    } catch (e) {
+      debugPrint('Error setting up realtime subscription: $e');
+      // You might want to implement a retry mechanism here
+    }
   }
 
   @override
