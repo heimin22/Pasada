@@ -224,7 +224,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
                       title: _getTimeBasedGreeting(),
                       subtitle: 'Welcome sa Pasada!',
                       content: 'Swipe to learn more about our app',
-                      icon: Icons.nightlight_round,
+                      icon: _getTimeBasedIcon(),
                     ),
                     _buildPage(
                       title: 'Easy Booking',
@@ -418,6 +418,17 @@ class PasadaHomePageState extends State<PasadaHomePage>
         colors: [Color(0xFF2E3B4E), Color(0xFF1C1F2E)],
         transform: GradientRotation(21 * 3.14159 / 180),
       );
+    }
+  }
+
+  IconData _getTimeBasedIcon() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return Icons.wb_sunny_rounded; // Morning sun
+    } else if (hour >= 12 && hour < 18) {
+      return Icons.wb_twilight_rounded; // Afternoon
+    } else {
+      return Icons.nightlight_round; // Evening and night
     }
   }
 

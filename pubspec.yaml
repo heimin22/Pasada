@@ -113,6 +113,7 @@ flutter:
     - assets/svg/settingsSelectedIcon.svg
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
+    - assets/svg/pasadaLogoWithoutText.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg

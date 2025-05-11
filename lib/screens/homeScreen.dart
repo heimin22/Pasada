@@ -324,8 +324,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   void _updateDriverDetails(Map<String, dynamic> driverData) {
     if (mounted) return;
 
-    final driver = driverData?['driver'];
-    final booking = driverData?['booking'];
+    final driver = driverData['driver'];
+    final booking = driverData['booking'];
 
     setState(() {
       // driverFirstName = driver['driver_name'];
