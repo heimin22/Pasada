@@ -15,23 +15,24 @@ class TripService {
     required String paymentMethod,
   }) async {
     return await _api.post<Map<String, dynamic>>(
-      'trips/request',
-      body: {
-        'origin_latitude': originLatitude,
-        'origin_longitude': originLongitude,
-        'origin_address': originAddress,
-        'destination_latitude': destinationLatitude,
-        'destination_longitude': destinationLongitude,
-        'destination_address': destinationAddress,
-        'route_trip': routeTrip,
-        'fare': fare,
-        'payment_method': paymentMethod,
-      },
-    );
+          'trips/request',
+          body: {
+            'origin_latitude': originLatitude,
+            'origin_longitude': originLongitude,
+            'origin_address': originAddress,
+            'destination_latitude': destinationLatitude,
+            'destination_longitude': destinationLongitude,
+            'destination_address': destinationAddress,
+            'route_trip': routeTrip,
+            'fare': fare,
+            'payment_method': paymentMethod,
+          },
+        ) ??
+        {};
   }
 
   Future<Map<String, dynamic>> getCurrentTrip() async {
-    return await _api.get<Map<String, dynamic>>('trips/current');
+    return await _api.get<Map<String, dynamic>>('trips/current') ?? {};
   }
 
   Future<void> acceptTrip(String tripId) async {
