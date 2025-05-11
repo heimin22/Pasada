@@ -11,7 +11,8 @@ import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+// import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
 // import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -213,6 +214,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadLocation();
       measureContainer();
+      showOnboardingDialog(context);
     });
   }
 
