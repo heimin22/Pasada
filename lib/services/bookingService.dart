@@ -164,6 +164,25 @@ class BookingService {
     }
   }
 
+  Future<bool> assignDriver(int bookingId) async {
+    try {
+      // Get the booking details
+      final response = await supabase.functions
+          .invoke('assign-driver', body: {'booking_id': bookingId});
+
+      if (response.status != 200) {
+        debugPrint('Failed to assign driver: ${response.data}');
+        return false;
+      }
+
+      debugPrint('Driver assigned successfully');
+      return true;
+    } catch (e) {
+      debugPrint('Error assigning driver: $e');
+      return false;
+    }
+  }
+
   // Get booking details from local database
   Future<BookingDetails?> getLocalBookingDetails(int bookingId) async {
     return await _localDbService.getBookingDetails(bookingId);
