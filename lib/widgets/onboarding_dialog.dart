@@ -170,6 +170,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
           style: TextStyle(
             fontSize: 16,
             fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
             color:
                 isDarkMode ? const Color(0xFFDEDEDE) : const Color(0xFF1E1E1E),
           ),

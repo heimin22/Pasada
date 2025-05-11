@@ -90,7 +90,7 @@ class DriverDetailsContainer extends StatelessWidget {
                     Text(
                       '$vehicleModel • $plateNumber',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w500,
                         fontFamily: 'Inter',
                         color: isDarkMode
