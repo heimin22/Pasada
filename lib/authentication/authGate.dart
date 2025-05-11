@@ -8,15 +8,34 @@ authenticated - main page
 */
 
 import 'package:flutter/material.dart';
-// import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
-// import 'package:pasada_passenger_app/authentication/loginAccount.dart';
+import 'package:pasada_passenger_app/screens/introductionScreen.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../screens/selectionScreen.dart';
-
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _hasSeenOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _hasSeenOnboarding = prefs.getBool('hasSeenOnboarding') ?? false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,14 +52,21 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-        // check if there is a valid session currently
-        // final session = snapshot.hasData ? snapshot.data!.session : null;
-
         final session = snapshot.data?.session;
 
-        return session != null
-            ? const selectionScreen()
-            : const PasadaHomePage();
+        if (session != null) {
+          // User is logged in
+          return const selectionScreen();
+        } else {
+          // User is not logged in
+          if (_hasSeenOnboarding) {
+            // User has seen onboarding, show introduction screen
+            return const IntroductionScreen();
+          } else {
+            // User has not seen onboarding, show onboarding
+            return const PasadaHomePage();
+          }
+        }
       },
     );
   }
