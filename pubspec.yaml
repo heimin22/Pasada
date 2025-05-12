@@ -83,6 +83,12 @@ dev_dependencies:
   mockito: ^5.4.5
   test: ^1.25.8
 
+flutter_launcher_icons:
+  android: true
+  remove_alpha_ios: true
+  ios: true
+  image_path: "assets/png/pasadaAppIcon.png"
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.
@@ -114,6 +120,8 @@ flutter:
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
     - assets/svg/pasadaLogoWithoutText.svg
+    - assets/png/pasadaAppIcon.png
+    - assets/svg/pasadaAppIcon.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
