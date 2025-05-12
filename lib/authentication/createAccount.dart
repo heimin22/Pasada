@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
@@ -56,6 +57,43 @@ class CreateAccountScreen extends State<CAPage> {
 
   // internet connection
   final Connectivity connectivity = Connectivity();
+
+  LinearGradient _getTimeBasedGradient() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      // Morning
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF236078), Color(0xFF439464)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFCFA425), Color(0xFF26AB37)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 18 && hour < 22) {
+      // Evening
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFB45F4F), Color(0xFF705776)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else {
+      // Night
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF2E3B4E), Color(0xFF1C1F2E)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    }
+  }
 
   // sign up
   Future<void> SigningUp() async {
@@ -123,53 +161,64 @@ class CreateAccountScreen extends State<CAPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar to white icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
-      body: Column(
-        children: [
-          // Back button with its own padding
-          Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height * 0.07,
-              left: MediaQuery.of(context).size.height * 0.01,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: _getTimeBasedGradient(),
+        ),
+        child: Column(
+          children: [
+            // Back button with its own padding
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).size.height * 0.07,
+                left: MediaQuery.of(context).size.height * 0.01,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: buildBackButton(),
+              ),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: buildBackButton(),
-            ),
-          ),
-          // Expanded widget to fill remaining space with main content
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.01,
-                  left: MediaQuery.of(context).size.height * 0.035,
-                  right: MediaQuery.of(context).size.height * 0.035,
-                  bottom: MediaQuery.of(context).size.height * 0.035,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    buildHeader(),
-                    buildPassengerEmailNumberText(),
-                    buildPassengerEmailNumberInput(),
-                    buildPassengerPassText(),
-                    buildPassengerPassInput(),
-                    buildConfirmPassText(),
-                    buildConfirmPassInput(),
-                    buildCreateAccountButton(),
-                    buildOrDesign(),
-                    buildSignUpGoogle(),
-                  ],
+            // Expanded widget to fill remaining space with main content
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height * 0.01,
+                    left: MediaQuery.of(context).size.height * 0.035,
+                    right: MediaQuery.of(context).size.height * 0.035,
+                    bottom: MediaQuery.of(context).size.height * 0.035,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      buildHeader(),
+                      buildPassengerEmailNumberText(),
+                      buildPassengerEmailNumberInput(),
+                      buildPassengerPassText(),
+                      buildPassengerPassInput(),
+                      buildConfirmPassText(),
+                      buildConfirmPassInput(),
+                      buildCreateAccountButton(),
+                      buildOrDesign(),
+                      buildSignUpGoogle(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -183,7 +232,7 @@ class CreateAccountScreen extends State<CAPage> {
         },
         icon: Icon(
           Icons.arrow_back,
-          color: Color(0xFF121212),
+          color: Color(0xFFF5F5F5),
         ),
       ),
     );
@@ -207,9 +256,7 @@ class CreateAccountScreen extends State<CAPage> {
             top: MediaQuery.of(context).size.height * 0.01,
           ),
           // margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
-          height: 80,
-          width: 80,
-          child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+          child: SvgPicture.asset('assets/svg/pasadaLogoWithoutText.svg'),
         ),
 
         /// Create your account text
@@ -219,7 +266,7 @@ class CreateAccountScreen extends State<CAPage> {
           child: const Text(
             'Create your account',
             style: TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
               fontWeight: FontWeight.w700,
               fontSize: 24,
             ),
@@ -233,7 +280,7 @@ class CreateAccountScreen extends State<CAPage> {
               EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
           child: Text(
             'Join the Pasada app and make your ride easier',
-            style: TextStyle(color: Color(0xFF121212)),
+            style: TextStyle(color: Color(0xFFF5F5F5)),
           ),
         ),
       ],
@@ -250,7 +297,7 @@ class CreateAccountScreen extends State<CAPage> {
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                color: Color(0xFF121212)),
+                color: Color(0xFFF5F5F5)),
           ),
         ],
       ),
@@ -265,26 +312,29 @@ class CreateAccountScreen extends State<CAPage> {
         height: 45,
         child: TextField(
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
           ),
           controller: emailController,
+          cursorColor: Color(0xFF00CC58),
           decoration: InputDecoration(
             labelText: 'Enter your email',
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
               fontSize: 12,
-              color: Color(0xFF515151),
+              color: Color(0xFFAAAAAA),
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
@@ -293,6 +343,7 @@ class CreateAccountScreen extends State<CAPage> {
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -310,7 +361,7 @@ class CreateAccountScreen extends State<CAPage> {
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                color: Color(0xFF121212)),
+                color: Color(0xFFF5F5F5)),
           ),
         ],
       ),
@@ -325,17 +376,18 @@ class CreateAccountScreen extends State<CAPage> {
         height: 45,
         child: TextField(
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
           ),
           controller: passwordController,
+          cursorColor: Color(0xFF00CC58),
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Enter your password',
             suffixIcon: IconButton(
-              color: const Color(0xFF121212),
+              color: const Color(0xFFF5F5F5),
               onPressed: () {
                 setState(() {
                   isPasswordVisible = !isPasswordVisible;
@@ -349,14 +401,16 @@ class CreateAccountScreen extends State<CAPage> {
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
               fontSize: 12,
-              color: Color(0xFF515151),
+              color: Color(0xFFAAAAAA),
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0XFF121212),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
@@ -365,6 +419,7 @@ class CreateAccountScreen extends State<CAPage> {
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -382,7 +437,7 @@ class CreateAccountScreen extends State<CAPage> {
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                color: Color(0xFF121212)),
+                color: Color(0xFFF5F5F5)),
           ),
         ],
       ),
@@ -397,17 +452,18 @@ class CreateAccountScreen extends State<CAPage> {
         height: 45,
         child: TextField(
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
           ),
           controller: confirmPasswordController,
+          cursorColor: Color(0xFF00CC58),
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Confirm your password',
             suffixIcon: IconButton(
-              color: const Color(0xFF121212),
+              color: const Color(0xFFF5F5F5),
               onPressed: () {
                 setState(() {
                   isPasswordVisible = !isPasswordVisible;
@@ -421,14 +477,16 @@ class CreateAccountScreen extends State<CAPage> {
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
               fontSize: 12,
-              color: Color(0xFF515151),
+              color: Color(0xFFAAAAAA),
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0XFF121212),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
@@ -437,6 +495,7 @@ class CreateAccountScreen extends State<CAPage> {
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -452,7 +511,7 @@ class CreateAccountScreen extends State<CAPage> {
         child: ElevatedButton(
           onPressed: isLoading ? null : SigningUp,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: const Color(0xFFF5F5F5),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
@@ -463,14 +522,14 @@ class CreateAccountScreen extends State<CAPage> {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    color: Color(0xFFF5F5F5),
+                    color: Color(0xFF00CC58),
                     strokeWidth: 2,
                   ),
                 )
               : const Text(
                   'Continue',
                   style: TextStyle(
-                    color: Color(0xFFF2F2F2),
+                    color: Color(0xFF00CC58),
                     fontWeight: FontWeight.w600,
                     fontSize: 20,
                   ),
@@ -526,31 +585,45 @@ class CreateAccountScreen extends State<CAPage> {
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: Colors.transparent,
+            foregroundColor: const Color(0xFFF5F5F5),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
+              side: const BorderSide(
+                color: Color(0xFFF5F5F5),
+                width: 2,
+              ),
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/svg/googleIcon.svg',
-                height: 24,
-                width: 24,
-              ),
-              const SizedBox(width: 25),
-              const Text(
-                'Sign-up with Google',
-                style: TextStyle(
-                  color: Color(0xFFF2F2F2),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
+          child: isGoogleLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFF5F5F5),
+                    strokeWidth: 2,
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/svg/googleIcon.svg',
+                      height: 24,
+                      width: 24,
+                    ),
+                    const SizedBox(width: 25),
+                    const Text(
+                      'Sign-up with Google',
+                      style: TextStyle(
+                        color: Color(0xFFF5F5F5),
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

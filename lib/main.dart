@@ -361,6 +361,13 @@ class PasadaHomePageState extends State<PasadaHomePage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
     _animationController.forward();
+
+    // Set status bar to white icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // White icons
+      statusBarBrightness: Brightness.dark, // Dark background (for iOS)
+    ));
   }
 
   @override

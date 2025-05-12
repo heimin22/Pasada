@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 
 class IntroductionScreen extends StatefulWidget {
@@ -32,6 +33,13 @@ class _IntroductionScreenState extends State<IntroductionScreen>
     );
 
     _animationController.forward();
+
+    // Set status bar to white icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // White icons
+      statusBarBrightness: Brightness.dark, // Dark background (for iOS)
+    ));
   }
 
   @override
