@@ -103,10 +103,6 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
   void initState() {
     super.initState();
     _themeController.initialize();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService.showAvailabilityNotification();
-    });
   }
 
   @override

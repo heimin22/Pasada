@@ -175,15 +175,11 @@ class BookingService {
         body: {'booking_id': bookingId},
       );
 
-      if (response == null || response.isEmpty) {
-        debugPrint('Failed to assign driver: No response from server');
-        return false;
-      }
-
       debugPrint('Driver assignment initiated: $response');
       return true;
     } catch (e) {
       debugPrint('Error requesting driver assignment: $e');
+      // Return false instead of throwing to handle the error gracefully
       return false;
     }
   }
