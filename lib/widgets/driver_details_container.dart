@@ -50,8 +50,9 @@ class DriverDetailsContainer extends StatelessWidget {
           Text(
             'Driver Details',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
               color: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
@@ -77,8 +78,9 @@ class DriverDetailsContainer extends StatelessWidget {
                     Text(
                       driverName,
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
                         color: isDarkMode
                             ? const Color(0xFFF5F5F5)
                             : const Color(0xFF121212),
@@ -89,6 +91,8 @@ class DriverDetailsContainer extends StatelessWidget {
                       '$vehicleModel • $plateNumber',
                       style: TextStyle(
                         fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
                         color: isDarkMode
                             ? const Color(0xFFAAAAAA)
                             : const Color(0xFF515151),

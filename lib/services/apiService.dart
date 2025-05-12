@@ -1,17 +1,17 @@
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
-  final dynamic data;
 
-  ApiException(this.message, {this.statusCode, this.data});
+  ApiException(this.message, {this.statusCode});
 
   @override
-  String toString() => 'ApiException: $message (status code: $statusCode)';
+  String toString() => 'ApiException: $message (Status: $statusCode)';
 }
 
 class ApiService {
@@ -26,7 +26,7 @@ class ApiService {
 
   final supabase = Supabase.instance.client;
 
-  Future<Map<String, dynamic>> _getHeaders() async {
+  Future<Map<String, String>> _getHeaders() async {
     final token = supabase.auth.currentSession?.accessToken;
 
     if (token == null) {
@@ -39,106 +39,65 @@ class ApiService {
     };
   }
 
-  Future<T> _handleResponse<T>(
-    http.Response response, {
-    T? Function(Map<String, dynamic>)? parser,
-  }) async {
+  Future<T?> get<T>(String endpoint) async {
     try {
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        if (parser != null) {
-          return parser(body) as T; // Ensure type safety
-        }
-        return body as T; // Ensure type safety
-      } else {
-        throw ApiException(
-          body['error'] ?? 'Request failed',
-          statusCode: response.statusCode,
-          data: body,
-        );
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error parsing response: $e',
-          statusCode: response.statusCode);
-    }
-  }
-
-  Future<T> get<T>(
-    String endpoint, {
-    Map<String, dynamic>? queryParameters,
-    T? Function(Map<String, dynamic>)? parser,
-  }) async {
-    try {
-      final uri = Uri.parse('$baseUrl/$endpoint')
-          .replace(queryParameters: queryParameters);
+      final headers = await _getHeaders();
       final response = await http.get(
-        uri,
-        headers: (await _getHeaders())
-            .map((key, value) => MapEntry(key, value.toString())),
+        Uri.parse('$baseUrl/$endpoint'),
+        headers: headers,
       );
-      return _handleResponse<T>(response, parser: parser);
+
+      return _handleResponse<T>(response);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error making GET request: $e');
+      debugPrint('GET request failed: $e');
+      return null;
     }
   }
 
-  Future<T> post<T>(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    T? Function(Map<String, dynamic>)? parser,
-  }) async {
+  Future<T?> post<T>(String endpoint, {Map<String, dynamic>? body}) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/$endpoint'),
-        headers: (await _getHeaders())
-            .map((key, value) => MapEntry(key, value.toString())),
-        body: jsonEncode(body),
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
       );
-      return _handleResponse<T>(response, parser: parser);
+
+      return _handleResponse<T>(response);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error making POST request: $e');
+      debugPrint('POST request failed: $e');
+      return null;
     }
   }
 
-  Future<T> put<T>(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    T? Function(Map<String, dynamic>)? parser,
-  }) async {
+  Future<T?> put<T>(String endpoint, {Map<String, dynamic>? body}) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.put(
         Uri.parse('$baseUrl/$endpoint'),
-        headers: (await _getHeaders())
-            .map((key, value) => MapEntry(key, value.toString())),
-        body: jsonEncode(body),
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
       );
-      return _handleResponse<T>(response, parser: parser);
+
+      return _handleResponse<T>(response);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error making PUT request: $e');
+      debugPrint('PUT request failed: $e');
+      return null;
     }
   }
 
-  Future<T> delete<T>(
-    String endpoint, {
-    Map<String, dynamic>? body,
-    T? Function(Map<String, dynamic>)? parser,
-  }) async {
-    try {
-      final response = await http.delete(
-        Uri.parse('$baseUrl/$endpoint'),
-        headers: (await _getHeaders())
-            .map((key, value) => MapEntry(key, value.toString())),
-        body: jsonEncode(body),
+  T? _handleResponse<T>(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      if (response.body.isEmpty) return null;
+
+      final jsonResponse = jsonDecode(response.body);
+      return jsonResponse as T;
+    } else {
+      debugPrint('API error: ${response.statusCode} - ${response.body}');
+      throw ApiException(
+        'Request failed with status: ${response.statusCode}',
+        statusCode: response.statusCode,
       );
-      return _handleResponse<T>(response, parser: parser);
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Error making DELETE request: $e');
     }
   }
 }

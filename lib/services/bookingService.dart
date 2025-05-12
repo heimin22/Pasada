@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'localDatabaseService.dart';
 import 'bookingDetails.dart';
 import 'package:location/location.dart';
+import 'apiService.dart';
 
 class BookingService {
   final LocalDatabaseService _localDbService = LocalDatabaseService();
@@ -161,6 +162,29 @@ class BookingService {
       debugPrint('Booking $bookingId status updated to $newStatus');
     } catch (e) {
       debugPrint('Error updating booking status: $e');
+    }
+  }
+
+  Future<bool> assignDriver(int bookingId) async {
+    try {
+      final apiService = ApiService();
+
+      // Call the external backend API to find a driver
+      final response = await apiService.post<Map<String, dynamic>>(
+        'bookings/assign-driver',
+        body: {'booking_id': bookingId},
+      );
+
+      if (response == null || response.isEmpty) {
+        debugPrint('Failed to assign driver: No response from server');
+        return false;
+      }
+
+      debugPrint('Driver assignment initiated: $response');
+      return true;
+    } catch (e) {
+      debugPrint('Error requesting driver assignment: $e');
+      return false;
     }
   }
 

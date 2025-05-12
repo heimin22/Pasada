@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
+import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
-import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -193,21 +193,109 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   void showLogoutDialog() async {
     final AuthService authService = AuthService();
     final rootNavigator = Navigator.of(context, rootNavigator: true);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     try {
       final confirmLogout = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Log out?'),
-          content: const Text('Are you sure you want to log out?'),
-          actions: <Widget>[
-            TextButton(
+          contentPadding: const EdgeInsets.all(24),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Log out?',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                  fontSize: 24,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                height: 1,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+                width: double.infinity,
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to log out?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                  color: isDarkMode
+                      ? const Color(0xFFDEDEDE)
+                      : const Color(0xFF1E1E1E),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: const Color(0xFF00CC58),
+                    width: 3,
+                  ),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 60),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                ),
+              ),
             ),
-            TextButton(
+            const SizedBox(width: 13),
+            ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Logout'),
-            )
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 60),
+                backgroundColor: const Color(0xFFD7481D),
+                foregroundColor: const Color(0xFFF5F5F5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -228,9 +316,11 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         );
         await authService.logout();
         if (!context.mounted) return;
-        rootNavigator.pop();
+        rootNavigator.pop(); // Close loading dialog
+
+        // Navigate directly to IntroductionScreen instead of PasadaPassenger
         rootNavigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => PasadaPassenger()),
+          MaterialPageRoute(builder: (context) => const IntroductionScreen()),
           (Route<dynamic> route) => false,
         );
       }

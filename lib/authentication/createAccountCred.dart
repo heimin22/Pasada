@@ -26,50 +26,98 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   bool isChecked = false;
   bool isLoading = false;
 
+  LinearGradient _getTimeBasedGradient() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      // Morning
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF236078), Color(0xFF439464)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFCFA425), Color(0xFF26AB37)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 18 && hour < 22) {
+      // Evening
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFB45F4F), Color(0xFF705776)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else {
+      // Night
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF2E3B4E), Color(0xFF1C1F2E)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Set status bar to white icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height * 0.07,
-              left: MediaQuery.of(context).size.height * 0.01,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: _getTimeBasedGradient(),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).size.height * 0.07,
+                left: MediaQuery.of(context).size.height * 0.01,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: buildBackButton(),
+              ),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: buildBackButton(),
-            ),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.10,
-                  left: MediaQuery.of(context).size.height * 0.035,
-                  right: MediaQuery.of(context).size.height * 0.035,
-                  bottom: MediaQuery.of(context).size.height * 0.035,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    buildHeader(),
-                    buildPassengerDisplayNameText(),
-                    buildPassengerDisplayNameInput(),
-                    buildPassengerContactNumberText(),
-                    buildPassengerContactNumberInput(),
-                    buildTermsCheckbox(),
-                    buildCreateAccountButton(),
-                  ],
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height * 0.10,
+                    left: MediaQuery.of(context).size.height * 0.035,
+                    right: MediaQuery.of(context).size.height * 0.035,
+                    bottom: MediaQuery.of(context).size.height * 0.035,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      buildHeader(),
+                      buildPassengerDisplayNameText(),
+                      buildPassengerDisplayNameInput(),
+                      buildPassengerContactNumberText(),
+                      buildPassengerContactNumberInput(),
+                      buildTermsCheckbox(),
+                      buildCreateAccountButton(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -82,7 +130,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           // navigate back to the previous screen
           Navigator.pop(context);
         },
-        icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
+        icon: Icon(Icons.arrow_back, color: Color(0xFFF5F5F5)),
       ),
     );
   }
@@ -104,10 +152,9 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           margin: EdgeInsets.only(
             top: MediaQuery.of(context).size.height * 0.01,
           ),
-          // margin: EdgeInsets.only(top:80.0, bottom: 30.0, right:300.0),
-          height: 80,
-          width: 80,
-          child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+          child: SvgPicture.asset(
+            'assets/svg/pasadaLogoWithoutText.svg',
+          ),
         ),
 
         /// Create your account text
@@ -117,7 +164,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           child: const Text(
             'Create your account',
             style: TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
               fontWeight: FontWeight.w700,
               fontSize: 24,
             ),
@@ -131,7 +178,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.0025),
           child: Text(
             'Join the Pasada app and make your ride easier',
-            style: TextStyle(color: Color(0xFF121212)),
+            style: TextStyle(color: Color(0xFFF5F5F5)),
           ),
         ),
       ],
@@ -143,7 +190,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
       child: Text(
         'Name',
-        style: TextStyle(color: Color(0xFF121212), fontWeight: FontWeight.w700),
+        style: TextStyle(color: Color(0xFFF5F5F5), fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -156,8 +203,9 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         height: 45,
         child: TextField(
           controller: firstNameController,
+          cursorColor: Color(0xFF00CC58),
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
@@ -166,21 +214,25 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             labelText: 'Enter your name',
             labelStyle: const TextStyle(
               fontSize: 12,
+              color: Color(0xFFAAAAAA),
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -194,7 +246,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       child: Text(
         'Contact Number',
         style: TextStyle(
-          color: Color(0xFF121212),
+          color: Color(0xFFF5F5F5),
           fontWeight: FontWeight.w700,
           fontFamily: 'Inter',
         ),
@@ -210,13 +262,14 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         height: 45,
         child: TextField(
           controller: contactController,
+          cursorColor: Color(0xFF00CC58),
           keyboardType: TextInputType.phone,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(10),
           ],
           style: TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
               fontSize: 14,
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter'),
@@ -236,7 +289,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                   const Text(
                     '+63 |',
                     style: TextStyle(
-                      color: Color(0xFF121212),
+                      color: Color(0xFFF5F5F5),
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Inter',
                     ),
@@ -248,21 +301,25 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             labelStyle: const TextStyle(
               fontSize: 12,
               fontFamily: 'Inter',
+              color: Color(0xFFAAAAAA),
             ),
             floatingLabelStyle: const TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFF121212),
+                color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -281,6 +338,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             padding: EdgeInsets.only(top: 10, left: 0),
             child: Checkbox(
               value: isChecked,
+              checkColor: Color(0xFFF5F5F5),
               activeColor: Color(0xFF00CC58),
               onChanged: (newBool) {
                 setState(() {
@@ -299,7 +357,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xff121212),
+                    color: Color(0xFFF5F5F5),
                   ),
                   children: [
                     const TextSpan(
@@ -309,7 +367,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                     TextSpan(
                       text: 'Privacy Policy',
                       style: const TextStyle(
-                        color: Color(0xFF121212),
+                        color: Color(0xFFF5F5F5),
                         decoration: TextDecoration.underline,
                       ),
                       recognizer: TapGestureRecognizer()
@@ -340,7 +398,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         child: ElevatedButton(
           onPressed: isLoading ? null : () => handleSignUp(),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: const Color(0xFFF5F5F5),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
@@ -351,7 +409,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
               : const Text(
                   'Sign-up',
                   style: TextStyle(
-                    color: Color(0xFFF2F2F2),
+                    color: Color(0xFF00CC58),
                     fontWeight: FontWeight.w600,
                     fontSize: 20,
                   ),

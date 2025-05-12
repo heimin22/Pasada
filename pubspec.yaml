@@ -113,6 +113,7 @@ flutter:
     - assets/svg/settingsSelectedIcon.svg
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
+    - assets/svg/pasadaLogoWithoutText.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
@@ -163,5 +164,7 @@ flutter:
           weight: 700
         - asset: fonts/Inter_28pt-Regular.ttf
           weight: 400
+        - asset: fonts/Inter_18pt-Medium.ttf
+          weight: 500
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

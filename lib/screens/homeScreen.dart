@@ -8,9 +8,11 @@ import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
 // import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
+import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+// import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
 // import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -212,6 +214,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadLocation();
       measureContainer();
+      showOnboardingDialog(context);
     });
   }
 
@@ -267,27 +270,39 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         // Start location tracking for the passenger
         bookingService.startLocationTracking(user.id);
 
-        // Simulate driver assignment after a delay
-        Future.delayed(const Duration(seconds: 10), () {
-          if (mounted) {
+        try {
+          final success = await bookingService.assignDriver(bookingId);
+          if (success) {
             setState(() {
               isDriverAssigned = true;
             });
-          }
-        });
-      } else {
-        // Handle booking creation failure
-        if (mounted) {
-          Fluttertoast.showToast(
-            msg: 'Unable to create booking. Please try again.',
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: const Color(0xFF1E1E1E),
-            textColor: const Color(0xFFF5F5F5),
-          );
 
-          // Revert the booking confirmation UI
-          _handleBookingCancellation();
+            final driverAssignmentService = Driverassignmentservice();
+            driverAssignmentService.pollForDriverAssignment(
+              bookingId,
+              (driverData) {
+                setState(() {
+                  isDriverAssigned = true;
+                  debugPrint('Driver assigned: ${driverData?['driver']}');
+                });
+
+                // _updateDriverDetails(driverData);
+              },
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            Fluttertoast.showToast(
+              msg: 'Unable to create booking. Please try again.',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: const Color(0xFF1E1E1E),
+              textColor: const Color(0xFFF5F5F5),
+            );
+
+            // Revert the booking confirmation UI
+            _handleBookingCancellation();
+          }
         }
       }
     } else {
@@ -304,6 +319,23 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         _handleBookingCancellation();
       }
     }
+  }
+
+  void _updateDriverDetails(Map<String, dynamic> driverData) {
+    if (mounted) return;
+
+    final driver = driverData['driver'];
+    final booking = driverData['booking'];
+
+    setState(() {
+      // driverFirstName = driver['driver_name'];
+      // driverPlateNumber = driver['plate_number'];
+      // driverProfilePicture = driver['profile_picture'];
+      // driverContactNumber = driver['contact_number'];
+      // bookingId = booking['booking_id'];
+      // bookingStatus = booking['ride_status'];
+      // bookingDetails = booking;
+    });
   }
 
   void _handleBookingCancellation() {
@@ -325,55 +357,115 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    String tempPreference = _seatingPreference.value;
+    final screenSize = MediaQuery.of(context).size;
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-          title: Text(
-            'Preferences',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: isDarkMode
+        contentPadding: const EdgeInsets.all(24),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Seating Preferences',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Inter',
+                fontSize: 24,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              height: 1,
+              color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
+              width: double.infinity,
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pili ka, nakaupo ba o nakatayo?',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                color: isDarkMode
+                    ? const Color(0xFFDEDEDE)
+                    : const Color(0xFF1E1E1E),
+              ),
+            ),
+            const SizedBox(height: 24), // Added spacing here
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              _seatingPreference.value = 'Sitting';
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 60),
+              backgroundColor: const Color(0xFF00CC58),
+              foregroundColor: const Color(0xFFF5F5F5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Sitting',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 18,
+              ),
             ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: const Text('Sitting'),
-                value: 'Sitting',
-                groupValue: tempPreference,
-                onChanged: (value) => tempPreference = value!,
+          const SizedBox(width: 13),
+          ElevatedButton(
+            onPressed: () {
+              _seatingPreference.value = 'Standing';
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: const Color(0xFF00CC58),
+                  width: 3,
+                ),
               ),
-              RadioListTile<String>(
-                title: const Text('Standing'),
-                value: 'Standing',
-                groupValue: tempPreference,
-                onChanged: (value) => tempPreference = value!,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 60),
+              backgroundColor: Colors.transparent,
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Standing',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 18,
               ),
-            ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                _seatingPreference.value = tempPreference;
-                Navigator.pop(context);
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF067837),
-              ),
-              child: const Text('Confirm'),
-            ),
-          ]),
+        ],
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+      ),
     );
   }
 
@@ -661,20 +753,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               -_upwardAnimation.value), // Use upward animation
                           child: Opacity(
                             opacity: _bookingAnimationController.value,
-                            child: BookingStatusManager(
-                              pickupLocation: selectedPickUpLocation,
-                              dropoffLocation: selectedDropOffLocation,
-                              ETA: etaText,
-                              paymentMethod: selectedPaymentMethod ?? 'Cash',
-                              fare: currentFare,
-                              onCancelBooking: _handleBookingCancellation,
-                              driverName: 'Juan Dela Cruz',
-                              plateNumber: 'ABC 1234',
-                              vehicleModel: 'Toyota Vios',
-                              phoneNumber: '09123456789',
-                              isDriverAssigned:
-                                  isDriverAssigned, // Pass the state
-                            ),
+                            // child: BookingStatusManager(
+                            //   pickupLocation: selectedPickUpLocation,
+                            //   dropoffLocation: selectedDropOffLocation,
+                            //   ETA: etaText,
+                            //   paymentMethod: selectedPaymentMethod ?? 'Cash',
+                            //   fare: currentFare,
+                            //   onCancelBooking: _handleBookingCancellation,
+                            //   driverName: driverData?['driver_name'],
+                            //   plateNumber: driverData?['plate_number'],
+                            //   vehicleModel: driverData?['vehicle_model'],
+                            //   phoneNumber: driverData?['contact_number'],
+                            //   isDriverAssigned: isDriverAssigned,
+                            // ),
                           ),
                         );
                       },
