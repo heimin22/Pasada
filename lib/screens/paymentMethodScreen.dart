@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String? currentSelection;
@@ -31,7 +32,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return RadioListTile<String>(
       contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 3.0),
+          const EdgeInsets.symmetric(horizontal: 24.0, vertical: 2.0),
       title: Text(
         title,
         style: TextStyle(
@@ -53,27 +54,10 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
               }
             }
           : null,
-      // use the provided leading icon
-      secondary: Radio<String>(
-        value: value,
-        groupValue: selectPaymentMethod,
-        onChanged: enabled
-            ? (String? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    selectPaymentMethod = newValue;
-                  });
-                  Navigator.pop(context, newValue);
-                }
-              }
-            : null,
-        activeColor: Color(0xFF00CC58),
-      ),
-      // dito yung icon
-      controlAffinity: ListTileControlAffinity
-          .leading, // para mapunta yung radio button sa right
-      // leading property sa right icon
-      // leading: leadingIcon,
+      // Remove the secondary radio button
+      secondary: leadingIcon,
+      // Keep control affinity as trailing to have radio on right
+      controlAffinity: ListTileControlAffinity.trailing,
       selected: selectPaymentMethod == value,
       activeColor: Color(0xFF067837),
     );
@@ -83,7 +67,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
   Widget buildSectionHeader(String title) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
       child: Text(
         title,
         style: TextStyle(
@@ -121,42 +105,70 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
           isDarkMode ? const Color(0xFF121212) : const Color(0xFFF2F2F2),
       body: ListView(
         children: [
+          const SizedBox(height: 16),
+          // Informational message
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+            child: Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF121212)
+                    : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(
+                  color: const Color(0xFF00CC58),
+                  width: 1.0,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    color: const Color(0xFF00CC58),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Warning: Please choose the correct payment method for the passenger to avoid any payment issues.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           // Cash option
           buildSectionHeader('Cash Payment'),
           buildPaymentOption(
             title: 'Cash',
             value: 'Cash',
-            leadingIcon: const Icon(Icons.money, color: Color(0xFF00CC58)),
+            leadingIcon:
+                const Icon(Icons.money_rounded, color: Color(0xFF00CC58)),
           ),
           buildSectionHeader('Cashless'),
-          // Paymongo option (disabled)
           buildPaymentOption(
             title: 'Paymongo',
             value: 'Paymongo',
-            leadingIcon: Image.asset(
-              'assets/svg/paymongo_logo.svg',
+            leadingIcon: SvgPicture.asset(
+              'assets/svg/paymongo_svg.svg',
               width: 24,
               height: 24,
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.credit_card, color: Color(0xFF00CC58));
-              },
+              placeholderBuilder: (context) =>
+                  const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
             ),
-            enabled: false,
-          ),
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Text(
-              'Cashless payment will be available soon.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                color: isDarkMode
-                    ? const Color(0xFFAAAAAA)
-                    : const Color(0xFF515151),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            enabled: true,
           ),
         ],
       ),

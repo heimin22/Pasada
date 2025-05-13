@@ -122,6 +122,7 @@ flutter:
     - assets/svg/pasadaLogoWithoutText.svg
     - assets/png/pasadaAppIcon.png
     - assets/svg/pasadaAppIcon.svg
+    - assets/svg/paymongo_svg.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
