@@ -902,6 +902,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               MaterialPageRoute(
                                 builder: (context) => PaymentMethodScreen(
                                   currentSelection: selectedPaymentMethod,
+                                  fare: currentFare,
                                 ),
                                 fullscreenDialog: true,
                               ),

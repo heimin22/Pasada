@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/screens/paymongo_payment_screen.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String? currentSelection;
+  final double fare;
 
   const PaymentMethodScreen({
     super.key,
     this.currentSelection,
+    required this.fare,
   });
 
   @override
@@ -224,7 +227,17 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context, selectPaymentMethod);
+                    // Navigate to the Paymongo payment flow
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => PaymongoPaymentScreen(
+                    //       paymentMethod: selectPaymentMethod!,
+                    //       amount: (widget.fare * 100)
+                    //           .toInt(), // Convert to smallest currency unit (centavos)
+                    //     ),
+                    //   ),
+                    // );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00CC58),

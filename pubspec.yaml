@@ -58,6 +58,7 @@ dependencies:
   intl: ^0.20.2
   location: ^8.0.0
   path: ^1.9.1
+  paymongo_sdk: ^1.7.0
   permission_handler: ^12.0.0+1
   postgres: ^3.4.7
   shared_preferences: ^2.5.3
@@ -179,3 +180,6 @@ flutter:
           weight: 500
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  http: ^1.2.2
