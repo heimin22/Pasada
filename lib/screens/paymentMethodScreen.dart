@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/screens/paymongo_payment_screen.dart';
+import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String? currentSelection;
@@ -252,10 +252,10 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   child: const Text(
                     'Proceed to Payment',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      fontFamily: 'Inter',
-                    ),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Inter',
+                        color: Color(0xFFF5F5F5)),
                   ),
                 ),
               ),

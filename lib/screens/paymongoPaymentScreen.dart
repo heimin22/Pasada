@@ -3,6 +3,7 @@ import 'package:paymongo_sdk/paymongo_sdk.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:pasada_passenger_app/screens/paymentWebViewScreen.dart';
 
 class PaymongoPaymentScreen extends StatefulWidget {
   final String paymentMethod;
@@ -206,7 +207,7 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
         throw Exception('Paymongo API keys not configured');
       }
 
-      // pick the right "flavor" of client: public or secret
+      // Initialize clients
       final publicClient = PaymongoClient<PaymongoPublic>(publicKey);
       final secretClient = PaymongoClient<PaymongoSecret>(secretKey);
 
@@ -224,14 +225,18 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
         ),
       );
 
+      // Define success and failed URLs
+      const successUrl = 'pasada://payment-success';
+      const failedUrl = 'pasada://payment-failed';
+
       // Create source for GCash/Maya
       final source = SourceAttributes(
         type: widget.paymentMethod.toLowerCase(),
         amount: widget.amount,
         currency: 'PHP',
-        redirect: Redirect(
-          success: 'pasada://payment-success',
-          failed: 'pasada://payment-failed',
+        redirect: const Redirect(
+          success: successUrl,
+          failed: failedUrl,
         ),
         billing: billing,
       );
@@ -240,21 +245,37 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
       final paymentUrl = result.attributes?.redirect.checkoutUrl ?? '';
 
       if (paymentUrl.isNotEmpty) {
-        // TODO: Replace with actual WebView implementation
-        // For now, simulate successful payment
-        await Future.delayed(const Duration(seconds: 2));
+        // Open WebView for payment
+        final paymentSuccess = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (context) => PaymentWebViewScreen(
+                  url: paymentUrl,
+                  successUrl: successUrl,
+                  failedUrl: failedUrl,
+                ),
+              ),
+            ) ??
+            false;
 
-        // Create payment after successful checkout (similar to the sample)
-        final paymentSource = PaymentSource(id: result.id, type: "source");
-        final paymentAttr = CreatePaymentAttributes(
-          amount: widget.amount,
-          currency: 'PHP',
-          description: "Pasada Ride Payment",
-          source: paymentSource,
-        );
+        if (paymentSuccess) {
+          // Create payment after successful checkout
+          final paymentSource = PaymentSource(id: result.id, type: "source");
+          final paymentAttr = CreatePaymentAttributes(
+            amount: widget.amount,
+            currency: 'PHP',
+            description: "Pasada Ride Payment",
+            source: paymentSource,
+          );
 
-        await secretClient.instance.payment.create(paymentAttr);
-        _onPaymentSuccess();
+          await secretClient.instance.payment.create(paymentAttr);
+          _onPaymentSuccess();
+        } else {
+          setState(() {
+            isLoading = false;
+            statusMessage = 'Payment was cancelled or failed.';
+          });
+        }
       } else {
         throw Exception('Failed to get payment URL');
       }
