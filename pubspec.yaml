@@ -123,6 +123,8 @@ flutter:
     - assets/png/pasadaAppIcon.png
     - assets/svg/pasadaAppIcon.svg
     - assets/svg/paymongo_svg.svg
+    - assets/svg/gcash_logo.svg
+    - assets/svg/maya_logo.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg

@@ -132,16 +132,34 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Warning: Please choose the correct payment method for the passenger to avoid any payment issues.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212),
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Warning: Please choose the correct payment method for the passenger to avoid any payment issues.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Note: If cashless payment is selected, the fare will be automatically paid once you are picked up by the driver.',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -157,12 +175,24 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
             leadingIcon:
                 const Icon(Icons.money_rounded, color: Color(0xFF00CC58)),
           ),
-          buildSectionHeader('Cashless'),
+          buildSectionHeader('Online Payment'),
           buildPaymentOption(
-            title: 'Paymongo',
-            value: 'Paymongo',
+            title: 'GCash',
+            value: 'GCash',
             leadingIcon: SvgPicture.asset(
-              'assets/svg/paymongo_svg.svg',
+              'assets/svg/gcash_logo.svg',
+              width: 24,
+              height: 24,
+              placeholderBuilder: (context) =>
+                  const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
+            ),
+            enabled: true,
+          ),
+          buildPaymentOption(
+            title: 'Maya',
+            value: 'Maya',
+            leadingIcon: SvgPicture.asset(
+              'assets/svg/maya_logo.svg',
               width: 24,
               height: 24,
               placeholderBuilder: (context) =>
