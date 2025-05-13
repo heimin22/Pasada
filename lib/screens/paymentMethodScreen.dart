@@ -228,16 +228,16 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     // Navigate to the Paymongo payment flow
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (_) => PaymongoPaymentScreen(
-                    //       paymentMethod: selectPaymentMethod!,
-                    //       amount: (widget.fare * 100)
-                    //           .toInt(), // Convert to smallest currency unit (centavos)
-                    //     ),
-                    //   ),
-                    // );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PaymongoPaymentScreen(
+                          paymentMethod: selectPaymentMethod!,
+                          amount: (widget.fare * 100)
+                              .toInt(), // Convert to smallest currency unit (centavos)
+                        ),
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00CC58),
