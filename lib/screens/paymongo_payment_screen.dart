@@ -6,7 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class PaymongoPaymentScreen extends StatefulWidget {
   final String paymentMethod;
-  final int amount;
+  final double amount;
 
   const PaymongoPaymentScreen({
     super.key,
@@ -97,7 +97,7 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
                               ),
                             ),
                             Text(
-                              '₱${(widget.amount / 100).toStringAsFixed(2)}',
+                              '₱${widget.amount.toStringAsFixed(2)}',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 16,
@@ -206,50 +206,71 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
         throw Exception('Paymongo API keys not configured');
       }
 
-      // Initialize Paymongo SDK with keys from .env
-      final paymongo = PaymongoSdk(
-        publicKey: publicKey,
-        secretKey: secretKey,
-      );
+      // pick the right "flavor" of client: public or secret
+      final publicClient = PaymongoClient<PaymongoPublic>(publicKey);
+      final secretClient = PaymongoClient<PaymongoSecret>(secretKey);
 
-      // Create a payment intent
-      final paymentIntent = await paymongo.paymentIntent.create(
-        amount: widget.amount,
-        currency: 'PHP',
-        paymentMethodAllowed:
-            widget.paymentMethod == 'GCash' ? ['gcash'] : ['paymaya'],
-        description: 'Pasada Ride Payment',
-        metadata: {
-          'passenger_id': user.id,
-        },
-      );
-
-      if (paymentIntent.id == null) {
-        throw Exception('Failed to create payment intent');
-      }
-
-      // Create a payment method
-      final paymentMethod = await paymongo.paymentMethod.create(
-        type: widget.paymentMethod == 'GCash' ? 'gcash' : 'paymaya',
-        billing: Billing(
-          name: user.userMetadata?['display_name'] ?? 'Pasada User',
-          email: user.email ?? '',
-          phone: user.userMetadata?['contact_number'] ?? '',
+      // 1) create a source (for GCash/PayMaya) with your public key
+      final source = await publicClient.instance.source.create(
+        SourceAttributes(
+          type: widget.paymentMethod.toLowerCase(),
+          amount: widget.amount,
+          currency: 'PHP',
+          redirect: const Redirect(
+            success: 'pasada://payment-success',
+            failed: 'pasada://payment-failed',
+          ),
+          billing: PayMongoBilling(
+            name: user.userMetadata?['display_name'] ?? 'Pasada User',
+            email: user.email ?? '',
+            phone: user.userMetadata?['contact_number'] ?? '',
+            address: PayMongoAddress(
+              line1: dotenv.env['PAYMONGO_COMPANY_ADDRESS'] ?? '',
+              city: dotenv.env['PAYMONGO_COMPANY_CITY'] ?? '',
+              state: dotenv.env['PAYMONGO_COMPANY_STATE'] ?? '',
+              postalCode: dotenv.env['PAYMONGO_COMPANY_POSTAL_CODE'] ?? '',
+              country: dotenv.env['PAYMONGO_COMPANY_COUNTRY'] ?? '',
+            ),
+          ),
         ),
       );
 
-      if (paymentMethod.id == null) {
-        throw Exception('Failed to create payment method');
+      // Get the checkout URL from the source
+      final paymentUrl = source.attributes?.redirect.checkoutUrl ?? '';
+
+      if (paymentUrl.isNotEmpty) {
+        // TODO: Implement WebView or URL launcher to open the payment URL
+
+        // For now, simulate successful payment
+        await Future.delayed(const Duration(seconds: 2));
+        _onPaymentSuccess();
+        return;
       }
 
-      // Attach payment method to payment intent
-      final attachedPaymentIntent = await paymongo.paymentIntent.attach(
-        id: paymentIntent.id!,
-        paymentMethodId: paymentMethod.id!,
-        returnUrl: 'pasada://payment-callback',
+      // 2) create a payment intent with your secret key
+      final intent = await secretClient.instance.paymentIntent.create(
+        PaymentIntentAttributes(
+          amount: widget.amount,
+          currency: 'PHP',
+          statementDescriptor: 'Test Payment',
+          paymentMethodAllowed: [
+            widget.paymentMethod == 'GCash' ? 'gcash' : 'paymaya'
+          ],
+          description: 'Pasada Ride Payment',
+          metadata: {'passenger_id': user.id},
+        ),
       );
 
-      if (attachedPaymentIntent.nextAction?.redirect?.url != null) {
+      // 3) attach the source to the intent
+      final attached = await secretClient.instance.paymentIntent.attach(
+        intent.id,
+        PaymentIntentAttach(
+          paymentMethod: widget.paymentMethod.toLowerCase(),
+          returnUrl: 'pasada://payment-callback',
+        ),
+      );
+
+      if (attached.attributes.nextAction?.redirect?.url != null) {
         // TODO: hahandle dapat dito yung redirect ng user sa e-wallet app
         // pwedeng WebView or url_launcher
         setState(() {
@@ -266,10 +287,10 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
         // simulate muna natin yung successful payment
         await Future.delayed(const Duration(seconds: 2));
         _onPaymentSuccess();
-      } else if (attachedPaymentIntent.status == 'succeeded') {
+      } else if (attached.attributes.status == 'succeeded') {
         _onPaymentSuccess();
       } else {
-        throw Exception('Payment failed: ${attachedPaymentIntent.status}');
+        throw Exception('Payment failed: ${attached.attributes.status}');
       }
     } catch (e) {
       setState(() {

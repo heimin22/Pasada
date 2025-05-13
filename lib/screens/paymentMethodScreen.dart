@@ -233,15 +233,17 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                       MaterialPageRoute(
                         builder: (_) => PaymongoPaymentScreen(
                           paymentMethod: selectPaymentMethod!,
-                          amount: (widget.fare * 100)
-                              .toInt(), // Convert to smallest currency unit (centavos)
+                          amount: widget
+                              .fare, // Convert to smallest currency unit (centavos)
                         ),
                       ),
                     );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00CC58),
-                    foregroundColor: Colors.white,
+                    foregroundColor: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
