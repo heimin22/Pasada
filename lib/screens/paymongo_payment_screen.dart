@@ -210,87 +210,53 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
       final publicClient = PaymongoClient<PaymongoPublic>(publicKey);
       final secretClient = PaymongoClient<PaymongoSecret>(secretKey);
 
-      // 1) create a source (for GCash/PayMaya) with your public key
-      final source = await publicClient.instance.source.create(
-        SourceAttributes(
-          type: widget.paymentMethod.toLowerCase(),
-          amount: widget.amount,
-          currency: 'PHP',
-          redirect: const Redirect(
-            success: 'pasada://payment-success',
-            failed: 'pasada://payment-failed',
-          ),
-          billing: PayMongoBilling(
-            name: user.userMetadata?['display_name'] ?? 'Pasada User',
-            email: user.email ?? '',
-            phone: user.userMetadata?['contact_number'] ?? '',
-            address: PayMongoAddress(
-              line1: dotenv.env['PAYMONGO_COMPANY_ADDRESS'] ?? '',
-              city: dotenv.env['PAYMONGO_COMPANY_CITY'] ?? '',
-              state: dotenv.env['PAYMONGO_COMPANY_STATE'] ?? '',
-              postalCode: dotenv.env['PAYMONGO_COMPANY_POSTAL_CODE'] ?? '',
-              country: dotenv.env['PAYMONGO_COMPANY_COUNTRY'] ?? '',
-            ),
-          ),
+      // Create billing info
+      final billing = PayMongoBilling(
+        name: user.userMetadata?['display_name'] ?? 'Pasada User',
+        email: user.email ?? '',
+        phone: user.userMetadata?['contact_number'] ?? '',
+        address: PayMongoAddress(
+          line1: dotenv.env['PAYMONGO_COMPANY_ADDRESS'] ?? '',
+          city: dotenv.env['PAYMONGO_COMPANY_CITY'] ?? '',
+          state: dotenv.env['PAYMONGO_COMPANY_STATE'] ?? '',
+          postalCode: dotenv.env['PAYMONGO_COMPANY_POSTAL_CODE'] ?? '',
+          country: dotenv.env['PAYMONGO_COMPANY_COUNTRY'] ?? 'PH',
         ),
       );
 
-      // Get the checkout URL from the source
-      final paymentUrl = source.attributes?.redirect.checkoutUrl ?? '';
+      // Create source for GCash/Maya
+      final source = SourceAttributes(
+        type: widget.paymentMethod.toLowerCase(),
+        amount: widget.amount,
+        currency: 'PHP',
+        redirect: Redirect(
+          success: 'pasada://payment-success',
+          failed: 'pasada://payment-failed',
+        ),
+        billing: billing,
+      );
+
+      final result = await publicClient.instance.source.create(source);
+      final paymentUrl = result.attributes?.redirect.checkoutUrl ?? '';
 
       if (paymentUrl.isNotEmpty) {
-        // TODO: Implement WebView or URL launcher to open the payment URL
-
+        // TODO: Replace with actual WebView implementation
         // For now, simulate successful payment
         await Future.delayed(const Duration(seconds: 2));
-        _onPaymentSuccess();
-        return;
-      }
 
-      // 2) create a payment intent with your secret key
-      final intent = await secretClient.instance.paymentIntent.create(
-        PaymentIntentAttributes(
+        // Create payment after successful checkout (similar to the sample)
+        final paymentSource = PaymentSource(id: result.id, type: "source");
+        final paymentAttr = CreatePaymentAttributes(
           amount: widget.amount,
           currency: 'PHP',
-          statementDescriptor: 'Test Payment',
-          paymentMethodAllowed: [
-            widget.paymentMethod == 'GCash' ? 'gcash' : 'paymaya'
-          ],
-          description: 'Pasada Ride Payment',
-          metadata: {'passenger_id': user.id},
-        ),
-      );
+          description: "Pasada Ride Payment",
+          source: paymentSource,
+        );
 
-      // 3) attach the source to the intent
-      final attached = await secretClient.instance.paymentIntent.attach(
-        intent.id,
-        PaymentIntentAttach(
-          paymentMethod: widget.paymentMethod.toLowerCase(),
-          returnUrl: 'pasada://payment-callback',
-        ),
-      );
-
-      if (attached.attributes.nextAction?.redirect?.url != null) {
-        // TODO: hahandle dapat dito yung redirect ng user sa e-wallet app
-        // pwedeng WebView or url_launcher
-        setState(() {
-          isLoading = false;
-          statusMessage =
-              'Payment processing. You will be redirected to complete the payment.';
-        });
-
-        // ganito kasi dapat yung flow niyan
-        // 1. open yung URL in a WebView
-        // 2. handle yung redirect back duon sa app
-        // 3. check yung payment status
-
-        // simulate muna natin yung successful payment
-        await Future.delayed(const Duration(seconds: 2));
-        _onPaymentSuccess();
-      } else if (attached.attributes.status == 'succeeded') {
+        await secretClient.instance.payment.create(paymentAttr);
         _onPaymentSuccess();
       } else {
-        throw Exception('Payment failed: ${attached.attributes.status}');
+        throw Exception('Failed to get payment URL');
       }
     } catch (e) {
       setState(() {
