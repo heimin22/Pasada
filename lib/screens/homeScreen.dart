@@ -579,9 +579,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        mapScreenKey.currentState?.generatePolylineBetween(
-          selectedPickUpLocation!.coordinates,
-          selectedDropOffLocation!.coordinates,
+        // Use updateLocations to respect the selected route's polyline
+        mapScreenKey.currentState?.updateLocations(
+          pickup: selectedPickUpLocation!.coordinates,
+          dropoff: selectedDropOffLocation!.coordinates,
         );
       });
     }
@@ -662,6 +663,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         .addPostFrameCallback((_) => measureContainer());
                   },
                   selectedRoute: selectedRoute,
+                  routePolyline:
+                      selectedRoute?['polyline_coordinates'] as List<LatLng>?,
                 ),
 
                 // Route Selection at the top

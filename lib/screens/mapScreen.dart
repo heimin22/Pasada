@@ -24,6 +24,7 @@ class MapScreen extends StatefulWidget {
   final Function(String)? onEtaUpdated;
   final Function(double)? onFareUpdated;
   final Map<String, dynamic>? selectedRoute;
+  final List<LatLng>? routePolyline;
 
   const MapScreen({
     super.key,
@@ -33,6 +34,7 @@ class MapScreen extends StatefulWidget {
     this.onEtaUpdated,
     this.onFareUpdated,
     this.selectedRoute,
+    this.routePolyline,
   });
 
   @override
@@ -153,7 +155,18 @@ class MapScreenState extends State<MapScreen>
       }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
-      generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
+      // Use the selected route's polyline segment if available
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        generatePolylineAlongRoute(
+          widget.pickUpLocation!,
+          widget.dropOffLocation!,
+          widget.routePolyline!,
+        );
+      } else {
+        // Fallback to direct route if no official polyline
+        generatePolylineBetween(
+            widget.pickUpLocation!, widget.dropOffLocation!);
+      }
     }
   }
 
@@ -346,9 +359,16 @@ class MapScreenState extends State<MapScreen>
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
-      generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      // Check if we have route polyline data from the route selection
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        // Generate a polyline that follows the official route
+        generatePolylineAlongRoute(selectedPickupLatLng!,
+            selectedDropOffLatLng!, widget.routePolyline!);
+      } else {
+        // Fallback to direct route if no official route polyline is available
+        generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      }
     }
-    // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
   Future<bool> checkNetworkConnection() async {
@@ -914,6 +934,140 @@ class MapScreenState extends State<MapScreen>
     markerSet.addAll(markers.values);
 
     return markerSet;
+  }
+
+  // Add this method to find the nearest point on the route polyline
+  LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
+    if (routePolyline.isEmpty) return point;
+
+    double minDistance = double.infinity;
+    LatLng nearestPoint = routePolyline.first;
+
+    for (int i = 0; i < routePolyline.length - 1; i++) {
+      final LatLng start = routePolyline[i];
+      final LatLng end = routePolyline[i + 1];
+
+      // Find the nearest point on this segment
+      final LatLng nearestOnSegment =
+          findNearestPointOnSegment(point, start, end);
+      final double distance = calculateDistance(point, nearestOnSegment);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = nearestOnSegment;
+      }
+    }
+
+    return nearestPoint;
+  }
+
+  // Helper method to find nearest point on a line segment
+  LatLng findNearestPointOnSegment(LatLng point, LatLng start, LatLng end) {
+    final double x = point.latitude;
+    final double y = point.longitude;
+    final double x1 = start.latitude;
+    final double y1 = start.longitude;
+    final double x2 = end.latitude;
+    final double y2 = end.longitude;
+
+    // Calculate squared length of segment
+    final double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 == 0) return start; // If segment is a point, return that point
+
+    // Calculate projection of point onto line
+    final double t =
+        max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
+
+    // Calculate nearest point on line segment
+    final double projX = x1 + t * (x2 - x1);
+    final double projY = y1 + t * (y2 - y1);
+
+    return LatLng(projX, projY);
+  }
+
+  // Helper method to calculate distance between two points
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371; // in kilometers
+
+    // Convert latitude and longitude from degrees to radians
+    final double lat1 = point1.latitude * (pi / 180);
+    final double lon1 = point1.longitude * (pi / 180);
+    final double lat2 = point2.latitude * (pi / 180);
+    final double lon2 = point2.longitude * (pi / 180);
+
+    // Haversine formula
+    final double dLat = lat2 - lat1;
+    final double dLon = lon2 - lon1;
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c; // Distance in kilometers
+  }
+
+  void generatePolylineAlongRoute(
+      LatLng start, LatLng end, List<LatLng> routePolyline) {
+    // Find the nearest points on the route to our start and end points
+    LatLng startOnRoute = findNearestPointOnRoute(start, routePolyline);
+    LatLng endOnRoute = findNearestPointOnRoute(end, routePolyline);
+
+    // Find indices of these points in the route
+    int startIdx = 0;
+    int endIdx = routePolyline.length - 1;
+    double minStartDist = double.infinity;
+    double minEndDist = double.infinity;
+
+    for (int i = 0; i < routePolyline.length; i++) {
+      final double startDist =
+          calculateDistance(startOnRoute, routePolyline[i]);
+      final double endDist = calculateDistance(endOnRoute, routePolyline[i]);
+
+      if (startDist < minStartDist) {
+        minStartDist = startDist;
+        startIdx = i;
+      }
+
+      if (endDist < minEndDist) {
+        minEndDist = endDist;
+        endIdx = i;
+      }
+    }
+
+    // Ensure start comes before end on the route
+    if (startIdx > endIdx) {
+      final temp = startIdx;
+      startIdx = endIdx;
+      endIdx = temp;
+    }
+
+    // Extract the portion of the route between start and end
+    final List<LatLng> routeSegment = [];
+    routeSegment.add(start); // Add actual start point
+
+    // Add all points along the route between start and end indices
+    routeSegment.addAll(routePolyline.sublist(startIdx + 1, endIdx));
+
+    routeSegment.add(end); // Add actual end point
+
+    // Update the polyline
+    setState(() {
+      polylines.clear();
+      polylines[const PolylineId('route_path')] = Polyline(
+        polylineId: const PolylineId('route_path'),
+        points: routeSegment,
+        color: const Color(0xFF067837),
+        width: 8,
+      );
+
+      // Calculate fare based on this segment
+      final double routeDistance = getRouteDistance(routeSegment);
+      final double fare = calculateFare(routeDistance);
+      fareAmount = fare;
+
+      if (widget.onFareUpdated != null) {
+        widget.onFareUpdated!(fare);
+      }
+    });
   }
 
   @override
