@@ -349,39 +349,96 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         builder: (BuildContext context) {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           return AlertDialog(
-            title: Text(
-              'Distance warning',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+            contentPadding: const EdgeInsets.all(24),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Distance Warning',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                    fontSize: 24,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                  width: double.infinity,
+                ),
+              ],
             ),
             content: Text(
-              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              'The selected ${widget.isPickup ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
-                fontSize: 14,
+                fontSize: 13,
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
               ),
             ),
-            actions: <Widget>[
-              TextButton(
+            actions: [
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF067837),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: const Color(0xFFD7481D),
+                      width: 3,
+                    ),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('Continue'),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 13),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: const Color(0xFFD7481D),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ],
           );
