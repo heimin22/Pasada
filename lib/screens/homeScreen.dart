@@ -9,6 +9,8 @@ import 'package:pasada_passenger_app/screens/routeSelection.dart';
 // import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
@@ -87,6 +89,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add a state variable to track if a driver is assigned
   bool isDriverAssigned = false;
+
+  String driverName = '';
+  String plateNumber = '';
+  String vehicleModel = '';
+  String phoneNumber = '';
 
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
@@ -215,6 +222,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       loadLocation();
       measureContainer();
       showOnboardingDialog(context);
+      // Show booking availability notification when HomeScreen is loaded
+      NotificationService.showAvailabilityNotification();
     });
   }
 
@@ -273,21 +282,40 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         try {
           final success = await bookingService.assignDriver(bookingId);
           if (success) {
+            // Set driver assignment status to false initially
             setState(() {
-              isDriverAssigned = true;
+              isDriverAssigned = false;
             });
 
-            final driverAssignmentService = Driverassignmentservice();
-            driverAssignmentService.pollForDriverAssignment(
-              bookingId,
-              (driverData) {
-                setState(() {
-                  isDriverAssigned = true;
-                  debugPrint('Driver assigned: ${driverData?['driver']}');
-                });
+            final driverAssignmentService = DriverAssignmentService();
+            driverAssignmentService.pollForDriverAssignment(bookingId,
+                (driverData) {
+              // Update driver details and set isDriverAssigned to true
+              _updateDriverDetails(driverData);
+            }, onError: () {
+              // Handle polling errors
+              setState(() {
+                isDriverAssigned = false;
+              });
 
-                // _updateDriverDetails(driverData);
-              },
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      'Failed to connect to driver service. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+
+              // Cancel the booking
+              _handleBookingCancellation();
+            });
+          } else {
+            // Show error message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Failed to request a driver. Please try again.'),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         } catch (e) {
@@ -321,23 +349,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  void _updateDriverDetails(Map<String, dynamic> driverData) {
-    if (mounted) return;
-
-    final driver = driverData['driver'];
-    final booking = driverData['booking'];
-
-    setState(() {
-      // driverFirstName = driver['driver_name'];
-      // driverPlateNumber = driver['plate_number'];
-      // driverProfilePicture = driver['profile_picture'];
-      // driverContactNumber = driver['contact_number'];
-      // bookingId = booking['booking_id'];
-      // bookingStatus = booking['ride_status'];
-      // bookingDetails = booking;
-    });
-  }
-
   void _handleBookingCancellation() {
     setState(() {
       isBookingConfirmed = false;
@@ -357,7 +368,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final screenSize = MediaQuery.of(context).size;
+    // final screenSize = MediaQuery.of(context).size;
 
     await showDialog(
       context: context,
@@ -753,19 +764,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               -_upwardAnimation.value), // Use upward animation
                           child: Opacity(
                             opacity: _bookingAnimationController.value,
-                            // child: BookingStatusManager(
-                            //   pickupLocation: selectedPickUpLocation,
-                            //   dropoffLocation: selectedDropOffLocation,
-                            //   ETA: etaText,
-                            //   paymentMethod: selectedPaymentMethod ?? 'Cash',
-                            //   fare: currentFare,
-                            //   onCancelBooking: _handleBookingCancellation,
-                            //   driverName: driverData?['driver_name'],
-                            //   plateNumber: driverData?['plate_number'],
-                            //   vehicleModel: driverData?['vehicle_model'],
-                            //   phoneNumber: driverData?['contact_number'],
-                            //   isDriverAssigned: isDriverAssigned,
-                            // ),
+                            child: BookingStatusManager(
+                              pickupLocation: selectedPickUpLocation,
+                              dropoffLocation: selectedDropOffLocation,
+                              ETA: etaText,
+                              paymentMethod: selectedPaymentMethod ?? 'Cash',
+                              fare: currentFare,
+                              onCancelBooking: _handleBookingCancellation,
+                              driverName: driverName,
+                              plateNumber: plateNumber,
+                              vehicleModel: vehicleModel,
+                              phoneNumber: phoneNumber,
+                              isDriverAssigned: isDriverAssigned,
+                            ),
                           ),
                         );
                       },
@@ -884,13 +895,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       ),
                     ),
                   InkWell(
-                    onTap: isRouteSelected
+                    onTap: (isRouteSelected &&
+                            selectedPickUpLocation != null &&
+                            selectedDropOffLocation != null)
                         ? () async {
                             final result = await Navigator.push<String>(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => PaymentMethodScreen(
                                   currentSelection: selectedPaymentMethod,
+                                  fare: currentFare,
                                 ),
                                 fullscreenDialog: true,
                               ),
@@ -916,7 +930,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isRouteSelected
+                                color: (isRouteSelected &&
+                                        selectedPickUpLocation != null &&
+                                        selectedDropOffLocation != null)
                                     ? (isDarkMode
                                         ? const Color(0xFFF5F5F5)
                                         : const Color(0xFF121212))
@@ -928,7 +944,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         Icon(
                           Icons.arrow_forward_ios,
                           size: 16,
-                          color: isRouteSelected
+                          color: (isRouteSelected &&
+                                  selectedPickUpLocation != null &&
+                                  selectedDropOffLocation != null)
                               ? (isDarkMode
                                   ? const Color(0xFFF5F5F5)
                                   : const Color(0xFF121212))
@@ -1250,5 +1268,22 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         );
       },
     );
+  }
+
+  void _updateDriverDetails(Map<String, dynamic> driverData) {
+    if (!mounted) return;
+
+    final driver = driverData['driver'];
+    final vehicle = driver['vehicle'];
+
+    setState(() {
+      driverName = driver['name'] ?? 'Driver';
+      plateNumber = vehicle?['plate_number'] ?? 'Unknown';
+      vehicleModel = vehicle?['model'] ?? 'Vehicle';
+      phoneNumber = driver['phone_number'] ?? '';
+
+      // This will trigger the BookingStatusManager to show the driver details
+      isDriverAssigned = true;
+    });
   }
 }

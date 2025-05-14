@@ -175,11 +175,6 @@ class BookingService {
         body: {'booking_id': bookingId},
       );
 
-      if (response == null || response.isEmpty) {
-        debugPrint('Failed to assign driver: No response from server');
-        return false;
-      }
-
       debugPrint('Driver assignment initiated: $response');
       return true;
     } catch (e) {
@@ -196,5 +191,10 @@ class BookingService {
   // Delete booking from local database
   Future<void> deleteLocalBooking(int bookingId) async {
     await _localDbService.deleteBookingDetails(bookingId);
+  }
+
+  bool isOnlinePaymentAllowed(double fare) {
+    // Minimum payment for online methods is ₱20.00 (2000 centavos)
+    return fare >= 20.0;
   }
 }
