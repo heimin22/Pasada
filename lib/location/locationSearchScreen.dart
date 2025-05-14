@@ -60,6 +60,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
     loadRecentSearches();
 
+    // Get current location
+    _getCurrentLocation();
+
     // Always load stops from the database, don't use test stops
     loadAllowedStops();
   }
@@ -283,39 +286,96 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text(
-              'Distance warning',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+            contentPadding: const EdgeInsets.all(24),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Distance Warning',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                    fontSize: 24,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                  width: double.infinity,
+                ),
+              ],
             ),
             content: Text(
-              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              'The selected ${widget.isPickup ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
-                fontSize: 14,
+                fontSize: 13,
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
               ),
             ),
-            actions: <Widget>[
-              TextButton(
+            actions: [
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF067837),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: const Color(0xFFD7481D),
+                      width: 3,
+                    ),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('Continue'),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 13),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: const Color(0xFFD7481D),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ],
           );
@@ -323,8 +383,41 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       );
       return proceed ?? false;
     }
-
     return true;
+  }
+
+  // Add method to get current location
+  Future<void> _getCurrentLocation() async {
+    try {
+      final Location locationService = Location();
+
+      // Check if location service is enabled
+      bool serviceEnabled = await locationService.serviceEnabled();
+      if (!serviceEnabled) {
+        serviceEnabled = await locationService.requestService();
+        if (!serviceEnabled) return;
+      }
+
+      // Check if permission is granted
+      PermissionStatus permissionStatus = await locationService.hasPermission();
+      if (permissionStatus == PermissionStatus.denied) {
+        permissionStatus = await locationService.requestPermission();
+        if (permissionStatus != PermissionStatus.granted) return;
+      }
+
+      // Get location
+      final LocationData locationData = await locationService.getLocation();
+      if (mounted) {
+        setState(() {
+          currentLocation = LatLng(
+            locationData.latitude!,
+            locationData.longitude!,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint("Error getting current location: $e");
+    }
   }
 
   @override
