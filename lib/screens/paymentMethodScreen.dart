@@ -29,7 +29,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
 
   void _updatePaymentType(String? paymentMethod) {
     setState(() {
-      isOnlinePayment = paymentMethod == 'GCash' || paymentMethod == 'Maya';
+      isOnlinePayment = paymentMethod == 'GCash' || paymentMethod == 'PayMaya';
     });
   }
 
@@ -206,7 +206,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 ),
                 buildPaymentOption(
                   title: 'Maya',
-                  value: 'Maya',
+                  value: 'PayMaya',
                   leadingIcon: SvgPicture.asset(
                     'assets/svg/maya_logo.svg',
                     width: 24,

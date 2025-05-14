@@ -895,7 +895,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       ),
                     ),
                   InkWell(
-                    onTap: isRouteSelected
+                    onTap: (isRouteSelected &&
+                            selectedPickUpLocation != null &&
+                            selectedDropOffLocation != null)
                         ? () async {
                             final result = await Navigator.push<String>(
                               context,
@@ -928,7 +930,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: isRouteSelected
+                                color: (isRouteSelected &&
+                                        selectedPickUpLocation != null &&
+                                        selectedDropOffLocation != null)
                                     ? (isDarkMode
                                         ? const Color(0xFFF5F5F5)
                                         : const Color(0xFF121212))
@@ -940,7 +944,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         Icon(
                           Icons.arrow_forward_ios,
                           size: 16,
-                          color: isRouteSelected
+                          color: (isRouteSelected &&
+                                  selectedPickUpLocation != null &&
+                                  selectedDropOffLocation != null)
                               ? (isDarkMode
                                   ? const Color(0xFFF5F5F5)
                                   : const Color(0xFF121212))
