@@ -22,12 +22,14 @@ class SearchLocationScreen extends StatefulWidget {
   final bool isPickup;
   final int? routeID; // Add this parameter
   final Map<String, dynamic>? routeDetails; // Add this parameter
+  final List<LatLng>? routePolyline; // Add this parameter
 
   const SearchLocationScreen({
     super.key,
     required this.isPickup,
     this.routeID, // Make it optional to maintain backward compatibility
     this.routeDetails, // Make it optional to maintain backward compatibility
+    this.routePolyline, // Make it optional to maintain backward compatibility
   });
 
   @override
@@ -641,8 +643,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        PinLocationStateful(isPickup: widget.isPickup),
+                    builder: (context) => PinLocationStateful(
+                      isPickup: widget.isPickup,
+                      routePolyline: widget.routePolyline, // Pass the polyline
+                    ),
                   ),
                 ).then((result) {
                   if (result != null && result is SelectedLocation) {
@@ -743,8 +747,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  PinLocationStateful(isPickup: widget.isPickup),
+              builder: (context) => PinLocationStateful(
+                isPickup: widget.isPickup,
+                routePolyline: widget.routePolyline, // Pass the polyline
+              ),
             ),
           ).then((result) {
             if (result != null && result is SelectedLocation) {

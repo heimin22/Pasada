@@ -488,11 +488,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
   }
 
-  Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
-    // Debug the entire selectedRoute object
-    debugPrint('Selected route: $selectedRoute');
-
+  Future<void> _navigateToLocationSearch(bool isPickup) async {
     int? routeId;
+    List<LatLng>? routePolyline;
 
     // If selectedRoute doesn't have officialroute_id, query it from the database
     if (selectedRoute != null) {
@@ -513,6 +511,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         } else if (selectedRoute?['officialroute_id'] != null) {
           routeId = selectedRoute?['officialroute_id'];
         }
+
+        // Get the polyline coordinates if available
+        if (selectedRoute?['polyline_coordinates'] != null) {
+          routePolyline = selectedRoute?['polyline_coordinates'];
+        }
       } catch (e) {
         debugPrint('Error retrieving route ID: $e');
       }
@@ -526,6 +529,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           isPickup: isPickup,
           routeID: routeId,
           routeDetails: selectedRoute, // Pass the entire route details
+          routePolyline: routePolyline, // Pass the polyline coordinates
         ),
       ),
     );
@@ -1011,7 +1015,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         location != null ? splitLocation(location.address) : ['', ''];
 
     return InkWell(
-      onTap: enabled ? () => navigateToSearch(context, isPickup) : null,
+      onTap: enabled ? () => _navigateToLocationSearch(isPickup) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
