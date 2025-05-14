@@ -89,6 +89,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add a state variable to track if a driver is assigned
   bool isDriverAssigned = false;
+  // Add a flag to ensure onboarding is requested only once
+  bool _hasOnboardingBeenCalled = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -218,17 +220,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       }
     });
 
+    // Replace the existing post-frame callback with a guarded version
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_hasOnboardingBeenCalled) return;
+      _hasOnboardingBeenCalled = true;
+
       loadLocation();
       measureContainer();
-      // Only show onboarding dialog if not shown elsewhere
-      if (!await SharedPreferences.getInstance().then(
-          (prefs) => prefs.getBool('onboarding_shown_in_home') ?? false)) {
-        await showOnboardingDialog(context);
-        await SharedPreferences.getInstance()
-            .then((prefs) => prefs.setBool('onboarding_shown_in_home', true));
-      }
-      // Show booking availability notification when HomeScreen is loaded
+
+      // Show onboarding dialog for new users
+      await showOnboardingDialog(context);
+
       NotificationService.showAvailabilityNotification();
     });
   }
