@@ -89,6 +89,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add a state variable to track if a driver is assigned
   bool isDriverAssigned = false;
+  // Add a flag to ensure onboarding is requested only once
+  bool _hasOnboardingBeenCalled = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -218,11 +220,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Replace the existing post-frame callback with a guarded version
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_hasOnboardingBeenCalled) return;
+      _hasOnboardingBeenCalled = true;
+
       loadLocation();
       measureContainer();
-      showOnboardingDialog(context);
-      // Show booking availability notification when HomeScreen is loaded
+
+      // Show onboarding dialog for new users
+      await showOnboardingDialog(context);
+
       NotificationService.showAvailabilityNotification();
     });
   }
@@ -480,11 +488,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
   }
 
-  Future<void> navigateToSearch(BuildContext context, bool isPickup) async {
-    // Debug the entire selectedRoute object
-    debugPrint('Selected route: $selectedRoute');
-
+  Future<void> _navigateToLocationSearch(bool isPickup) async {
     int? routeId;
+    List<LatLng>? routePolyline;
 
     // If selectedRoute doesn't have officialroute_id, query it from the database
     if (selectedRoute != null) {
@@ -505,6 +511,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         } else if (selectedRoute?['officialroute_id'] != null) {
           routeId = selectedRoute?['officialroute_id'];
         }
+
+        // Get the polyline coordinates if available
+        if (selectedRoute?['polyline_coordinates'] != null) {
+          routePolyline = selectedRoute?['polyline_coordinates'];
+        }
       } catch (e) {
         debugPrint('Error retrieving route ID: $e');
       }
@@ -518,6 +529,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           isPickup: isPickup,
           routeID: routeId,
           routeDetails: selectedRoute, // Pass the entire route details
+          routePolyline: routePolyline, // Pass the polyline coordinates
         ),
       ),
     );
@@ -1003,7 +1015,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         location != null ? splitLocation(location.address) : ['', ''];
 
     return InkWell(
-      onTap: enabled ? () => navigateToSearch(context, isPickup) : null,
+      onTap: enabled ? () => _navigateToLocationSearch(isPickup) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

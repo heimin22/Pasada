@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/landmarkService.dart';
@@ -12,6 +13,7 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -33,7 +35,13 @@ class PinLocationStateless extends StatelessWidget {
 
 class PinLocationStateful extends StatefulWidget {
   final bool isPickup;
-  const PinLocationStateful({super.key, required this.isPickup});
+  final List<LatLng>? routePolyline;
+
+  const PinLocationStateful({
+    super.key,
+    required this.isPickup,
+    this.routePolyline,
+  });
 
   @override
   State<PinLocationStateful> createState() => _PinLocationStatefulState();
@@ -44,6 +52,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   static const String MAP_CACHE_KEY = 'map_state';
   static const String LAST_LOCATION_KEY = 'last_known_location';
   static const String MAP_STYLE_KEY = 'map_style';
+  bool isLocationValid = false;
 
   // Add dark mode map style
   final String darkMapStyle = '''[
@@ -276,6 +285,26 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   }
 
   void handleMapTap(LatLng tappedPosition) async {
+    // Check if the tapped position is near the polyline
+    bool isNearRoute = true;
+    if (widget.routePolyline != null) {
+      isNearRoute = isPointNearPolyline(tappedPosition, 100);
+    }
+
+    setState(() {
+      isLocationValid = isNearRoute;
+    });
+
+    if (!isNearRoute) {
+      // Show a toast or message that the location must be on the route
+      Fluttertoast.showToast(
+        msg: "Please select a location along the route",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+      );
+      return;
+    }
+
     setState(() {
       isFindingLandmark = true;
       pinnedLocation = tappedPosition;
@@ -320,39 +349,96 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         builder: (BuildContext context) {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
           return AlertDialog(
-            title: Text(
-              'Distance warning',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+            contentPadding: const EdgeInsets.all(24),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Distance Warning',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                    fontSize: 24,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                  width: double.infinity,
+                ),
+              ],
             ),
             content: Text(
-              'The selected pick-up location is quite far from your current location. Do you want to continue?',
+              'The selected ${widget.isPickup ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
-                fontSize: 14,
+                fontSize: 13,
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
               ),
             ),
-            actions: <Widget>[
-              TextButton(
+            actions: [
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF067837),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: const Color(0xFFD7481D),
+                      width: 3,
+                    ),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: Colors.transparent,
+                  foregroundColor:
+                      Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                child: const Text('Continue'),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 13),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 60),
+                  backgroundColor: const Color(0xFFD7481D),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                  ),
+                ),
               ),
             ],
           );
@@ -421,6 +507,24 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         });
 
         final center = await getMapCenter();
+
+        bool isNearRoute = true;
+        if (widget.routePolyline != null) {
+          isNearRoute = isPointNearPolyline(center, 100);
+        }
+
+        setState(() {
+          isLocationValid = isNearRoute;
+        });
+
+        if (!isNearRoute) {
+          setState(() {
+            addressNotifier.value = "Please select a location along the route";
+            isFindingLandmark = false;
+          });
+          return;
+        }
+
         final cacheKey = 'location_${center.latitude}_${center.longitude}';
 
         // Check cache first
@@ -472,6 +576,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           setState(() {
             addressNotifier.value = "Error finding location";
             isFindingLandmark = false;
+            isLocationValid = false;
           });
         }
       }
@@ -579,6 +684,64 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   }
 
+  // Add this method to check if a point is close to the polyline
+  bool isPointNearPolyline(LatLng point, double threshold) {
+    if (widget.routePolyline == null || widget.routePolyline!.isEmpty) {
+      return true; // If no polyline, allow all points
+    }
+
+    // Find the minimum distance from the point to any segment of the polyline
+    double minDistance = double.infinity;
+
+    for (int i = 0; i < widget.routePolyline!.length - 1; i++) {
+      final LatLng start = widget.routePolyline![i];
+      final LatLng end = widget.routePolyline![i + 1];
+
+      // Calculate distance from point to line segment
+      final double distance = distanceToLineSegment(point, start, end);
+      if (distance < minDistance) {
+        minDistance = distance;
+      }
+
+      // Early exit if we found a close enough point
+      if (minDistance <= threshold) {
+        return true;
+      }
+    }
+
+    return minDistance <= threshold;
+  }
+
+  // Calculate distance from point to line segment
+  double distanceToLineSegment(LatLng point, LatLng start, LatLng end) {
+    // Convert to cartesian coordinates for simplicity
+    final double x = point.latitude;
+    final double y = point.longitude;
+    final double x1 = start.latitude;
+    final double y1 = start.longitude;
+    final double x2 = end.latitude;
+    final double y2 = end.longitude;
+
+    // Calculate squared length of segment
+    final double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 == 0) {
+      // If segment is a point, return distance to that point
+      return sqrt(pow(x - x1, 2) + pow(y - y1, 2));
+    }
+
+    // Calculate projection of point onto line
+    final double t =
+        max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
+
+    // Calculate nearest point on line segment
+    final double projX = x1 + t * (x2 - x1);
+    final double projY = y1 + t * (y2 - y1);
+
+    // Return distance to nearest point
+    return sqrt(pow(x - projX, 2) + pow(y - projY, 2)) *
+        111000; // Convert to meters (approx)
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -637,6 +800,16 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             onCameraIdle: () {
               fetchLocationAtCenter();
             },
+            polylines: widget.routePolyline != null
+                ? {
+                    Polyline(
+                      polylineId: const PolylineId('route_polyline'),
+                      points: widget.routePolyline!,
+                      color: const Color(0xFF067837),
+                      width: 5,
+                    )
+                  }
+                : <Polyline>{},
           ),
           Center(
             child: Container(
@@ -736,47 +909,24 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           buildLocationInfo(),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              // check kapag nagsesearch pa rin
-              if (isFindingLandmark) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text("Still finding location, please wait a moment..."),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                return;
-              }
-              // check kapag may valid location na mapapass back
-              if (pinnedLocation != null &&
-                  addressNotifier.value.isNotEmpty &&
-                  addressNotifier.value != "Searching..." &&
-                  addressNotifier.value != "Searching for location..." &&
-                  addressNotifier.value != "Unable to find location") {
-                final selectedLoc =
-                    SelectedLocation(addressNotifier.value, pinnedLocation!);
-                checkDistanceAndReturn(selectedLoc);
-                // Navigator.pop(context,
-                //     SelectedLocation(addressNotifier.value, pinnedLocation!));
-              } else if (pinnedLocation != null) {
-                // may coordinates pero walang readable address
-                // use na lang ng generic address pukingina niyan
-                // Navigator.pop(context,
-                //     SelectedLocation(addressNotifier.value, pinnedLocation!));
-                final selectedLoc =
-                    SelectedLocation("Unknown Location", pinnedLocation!);
-                checkDistanceAndReturn(selectedLoc);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(
-                      'Unable to confirm this location. Please try a different area.'),
-                  duration: Duration(seconds: 3),
-                ));
-              }
-            },
+            onPressed: (isLocationValid &&
+                    pinnedLocation != null &&
+                    addressNotifier.value.isNotEmpty &&
+                    addressNotifier.value != "Searching..." &&
+                    addressNotifier.value != "Searching for location..." &&
+                    addressNotifier.value != "Unable to find location" &&
+                    addressNotifier.value !=
+                        "Please select a location along the route" &&
+                    !isFindingLandmark)
+                ? () {
+                    final selectedLoc = SelectedLocation(
+                        addressNotifier.value, pinnedLocation!);
+                    checkDistanceAndReturn(selectedLoc);
+                  }
+                : null, // Disable button if location is invalid
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF067837),
+              disabledBackgroundColor: const Color(0xFFD3D3D3),
               minimumSize: Size(double.infinity, 50),
             ),
             child: Text(
@@ -801,6 +951,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
             address == "Searching for location..." ||
             isFindingLandmark;
 
+        final bool isInvalidLocation =
+            address == "Please select a location along the route" ||
+                !isLocationValid;
+
         final parts = address.isNotEmpty ? splitLocation(address) : ['', ''];
         final landmark = parts[0];
         final addressDetail = parts[1];
@@ -809,12 +963,19 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            SvgPicture.asset(
-              "assets/svg/pindropoff.svg",
-              width: 24,
-              height: 24,
-            ),
-            SizedBox(width: 14),
+            // Change to warning icon when location is invalid
+            isInvalidLocation
+                ? Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.red,
+                    size: 24,
+                  )
+                : SvgPicture.asset(
+                    "assets/svg/pindropoff.svg",
+                    width: 24,
+                    height: 24,
+                  ),
+            const SizedBox(width: 12),
             Expanded(
               child: isSearching
                   ? Row(
@@ -824,14 +985,18 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Color(0xFF067837),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF00E865)
+                                    : const Color(0xFF067837),
                           ),
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: 8),
                         Text(
-                          "Finding location...",
+                          "Searching for location...",
                           style: TextStyle(
                             fontSize: 14,
+                            fontWeight: FontWeight.w500,
                             fontFamily: 'Inter',
                             color:
                                 Theme.of(context).brightness == Brightness.dark
@@ -845,36 +1010,43 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          landmark.isNotEmpty
-                              ? landmark
-                              : "Move the map to select a location",
+                          isInvalidLocation
+                              ? "Invalid Location"
+                              : (landmark.isNotEmpty
+                                  ? landmark
+                                  : "Move the map to select a location"),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'Inter',
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
+                            color: isInvalidLocation
+                                ? Colors.red
+                                : Theme.of(context).brightness ==
+                                        Brightness.dark
                                     ? const Color(0xFFF5F5F5)
                                     : const Color(0xFF121212),
                           ),
                         ),
-                        if (addressDetail.isNotEmpty)
-                          Text(
-                            addressDetail,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                              fontFamily: 'Inter',
-                              color: Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? const Color(0xFFAAAAAA)
-                                  : const Color(0xFF515151),
-                            ),
+                        Text(
+                          isInvalidLocation
+                              ? "Please select a location along the route"
+                              : (addressDetail.isNotEmpty ? addressDetail : ""),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'Inter',
+                            color: isInvalidLocation
+                                ? Colors.redAccent
+                                : Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? const Color(0xFFAAAAAA)
+                                    : const Color(0xFF515151),
                           ),
+                        ),
                       ],
                     ),
             ),

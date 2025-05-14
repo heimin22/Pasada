@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class OnboardingDialog extends StatefulWidget {
   const OnboardingDialog({super.key});
@@ -211,21 +212,67 @@ class OnboardingPage {
   });
 }
 
+// Add a flag to prevent multiple dialogs
+bool _isOnboardingDialogShowing = false;
+
+// Function to show the onboarding dialog
+Future<void> showOnboardingDialog(BuildContext context) async {
+  // Check if dialog is already showing
+  if (_isOnboardingDialogShowing) {
+    debugPrint('Onboarding dialog already showing, ignoring duplicate call');
+    return;
+  }
+
+  // Request location permissions first
+  await _requestLocationPermissions();
+
+  // Get shared preferences
+  final prefs = await SharedPreferences.getInstance();
+
+  // Check if user is new by looking for a specific flag
+  final isNewUser = !(prefs.getBool('user_onboarded') ?? false);
+
+  // Only show for new users and if not already shown
+  if (isNewUser && await shouldShowOnboarding()) {
+    if (context.mounted) {
+      _isOnboardingDialogShowing = true;
+
+      // Mark as shown immediately to prevent race conditions
+      await prefs.setBool('user_onboarded', true);
+      debugPrint('Showing onboarding dialog for new user');
+
+      try {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const OnboardingDialog(),
+        );
+
+        // After dialog is closed, mark onboarding as complete
+        await prefs.setBool('onboarding_complete', true);
+      } finally {
+        _isOnboardingDialogShowing = false;
+      }
+    }
+  }
+}
+
 // Helper function to check if onboarding should be shown
 Future<bool> shouldShowOnboarding() async {
   final prefs = await SharedPreferences.getInstance();
   return !(prefs.getBool('onboarding_complete') ?? false);
 }
 
-// Function to show the onboarding dialog
-Future<void> showOnboardingDialog(BuildContext context) async {
-  if (await shouldShowOnboarding()) {
-    if (context.mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const OnboardingDialog(),
-      );
-    }
+// Helper function to request location permissions
+Future<void> _requestLocationPermissions() async {
+  // Request location permissions
+  await Permission.location.request();
+
+  // For background location on Android, we need to request it separately
+  if (await Permission.location.isGranted) {
+    await Permission.locationAlways.request();
   }
+
+  // Request notification permissions
+  await Permission.notification.request();
 }
