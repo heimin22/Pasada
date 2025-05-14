@@ -217,15 +217,44 @@ Future<bool> shouldShowOnboarding() async {
   return !(prefs.getBool('onboarding_complete') ?? false);
 }
 
+// Add a flag to prevent multiple dialogs
+bool _isOnboardingDialogShowing = false;
+
 // Function to show the onboarding dialog
 Future<void> showOnboardingDialog(BuildContext context) async {
+  // Check if dialog is already showing
+  if (_isOnboardingDialogShowing) {
+    debugPrint('Onboarding dialog already showing, ignoring duplicate call');
+    return;
+  }
+
+  // Get shared preferences
+  final prefs = await SharedPreferences.getInstance();
+  final dialogShownRecently =
+      prefs.getBool('onboarding_dialog_shown_timestamp') ?? false;
+
+  // If shown recently, don't show again
+  if (dialogShownRecently) {
+    debugPrint('Onboarding dialog shown recently, skipping');
+    return;
+  }
+
   if (await shouldShowOnboarding()) {
     if (context.mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const OnboardingDialog(),
-      );
+      _isOnboardingDialogShowing = true;
+      // Mark as shown immediately to prevent race conditions
+      await prefs.setBool('onboarding_dialog_shown_timestamp', true);
+      debugPrint('Showing onboarding dialog');
+
+      try {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const OnboardingDialog(),
+        );
+      } finally {
+        _isOnboardingDialogShowing = false;
+      }
     }
   }
 }

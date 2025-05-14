@@ -56,6 +56,7 @@ class _AuthGateState extends State<AuthGate> {
 
         if (session != null) {
           // User is logged in
+          debugPrint('User logged in, navigating to selection screen');
           return const selectionScreen();
         } else {
           // User is not logged in

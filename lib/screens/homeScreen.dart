@@ -218,10 +218,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       loadLocation();
       measureContainer();
-      showOnboardingDialog(context);
+      // Only show onboarding dialog if not shown elsewhere
+      if (!await SharedPreferences.getInstance().then(
+          (prefs) => prefs.getBool('onboarding_shown_in_home') ?? false)) {
+        await showOnboardingDialog(context);
+        await SharedPreferences.getInstance()
+            .then((prefs) => prefs.setBool('onboarding_shown_in_home', true));
+      }
       // Show booking availability notification when HomeScreen is loaded
       NotificationService.showAvailabilityNotification();
     });
