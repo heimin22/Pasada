@@ -179,7 +179,6 @@ class BookingService {
       return true;
     } catch (e) {
       debugPrint('Error requesting driver assignment: $e');
-      // Return false instead of throwing to handle the error gracefully
       return false;
     }
   }
@@ -192,5 +191,10 @@ class BookingService {
   // Delete booking from local database
   Future<void> deleteLocalBooking(int bookingId) async {
     await _localDbService.deleteBookingDetails(bookingId);
+  }
+
+  bool isOnlinePaymentAllowed(double fare) {
+    // Minimum payment for online methods is ₱20.00 (2000 centavos)
+    return fare >= 20.0;
   }
 }

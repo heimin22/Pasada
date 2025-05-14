@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
+import 'package:pasada_passenger_app/services/bookingService.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String? currentSelection;
@@ -19,17 +20,21 @@ class PaymentMethodScreen extends StatefulWidget {
 class PaymentMethodScreenState extends State<PaymentMethodScreen> {
   String? selectPaymentMethod;
   bool isOnlinePayment = false;
+  final BookingService _bookingService = BookingService();
+  bool _isOnlinePaymentAllowed = true;
 
   @override
   void initState() {
     super.initState();
     selectPaymentMethod = widget.currentSelection;
     _updatePaymentType(selectPaymentMethod);
+    _isOnlinePaymentAllowed =
+        _bookingService.isOnlinePaymentAllowed(widget.fare);
   }
 
   void _updatePaymentType(String? paymentMethod) {
     setState(() {
-      isOnlinePayment = paymentMethod == 'GCash' || paymentMethod == 'PayMaya';
+      isOnlinePayment = paymentMethod == 'GCash';
     });
   }
 
@@ -41,6 +46,10 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     bool enabled = true,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final bool isOnlineOption = value == 'GCash' || value == 'PayMaya';
+    final bool optionEnabled =
+        enabled && (!isOnlineOption || _isOnlinePaymentAllowed);
+
     return RadioListTile<String>(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 24.0, vertical: 2.0),
@@ -50,12 +59,14 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
           fontFamily: 'Inter',
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          color: optionEnabled
+              ? (isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212))
+              : Colors.grey,
         ),
       ),
       value: value,
       groupValue: selectPaymentMethod,
-      onChanged: enabled
+      onChanged: optionEnabled
           ? (String? newValue) {
               if (newValue != null) {
                 setState(() {
@@ -197,18 +208,6 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   value: 'GCash',
                   leadingIcon: SvgPicture.asset(
                     'assets/svg/gcash_logo.svg',
-                    width: 24,
-                    height: 24,
-                    placeholderBuilder: (context) =>
-                        const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
-                  ),
-                  enabled: true,
-                ),
-                buildPaymentOption(
-                  title: 'Maya',
-                  value: 'PayMaya',
-                  leadingIcon: SvgPicture.asset(
-                    'assets/svg/maya_logo.svg',
                     width: 24,
                     height: 24,
                     placeholderBuilder: (context) =>

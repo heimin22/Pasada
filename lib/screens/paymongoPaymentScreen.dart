@@ -347,10 +347,6 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
                   'card': {'request_three_d_secure': 'any'}
                 },
                 'description': 'Pasada Ride Payment',
-                'redirect': {
-                  'success': successRedirect,
-                  'failed': failedRedirect,
-                },
               },
             }
           }),
