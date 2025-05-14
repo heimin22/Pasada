@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -20,16 +21,16 @@ import 'package:pasada_passenger_app/screens/homeScreen.dart';
 
 class SearchLocationScreen extends StatefulWidget {
   final bool isPickup;
-  final int? routeID; // Add this parameter
-  final Map<String, dynamic>? routeDetails; // Add this parameter
-  final List<LatLng>? routePolyline; // Add this parameter
+  final int? routeID;
+  final Map<String, dynamic>? routeDetails;
+  final List<LatLng>? routePolyline;
 
   const SearchLocationScreen({
     super.key,
     required this.isPickup,
-    this.routeID, // Make it optional to maintain backward compatibility
-    this.routeDetails, // Make it optional to maintain backward compatibility
-    this.routePolyline, // Make it optional to maintain backward compatibility
+    this.routeID,
+    this.routeDetails,
+    this.routePolyline,
   });
 
   @override
@@ -47,39 +48,33 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   bool isLoading = false;
   HomeScreenPageState? homeScreenPageState;
   LatLng? currentLocation;
-  final StopsService _stopsService = StopsService();
+  StopsService _stopsService = StopsService();
 
   @override
   void initState() {
     super.initState();
     searchController.addListener(onSearchChanged);
+    _stopsService = StopsService();
 
-    // Debug the route ID
-    debugPrint(
-        'SearchLocationScreen initialized with routeID: ${widget.routeID}');
+    // Initialize location service
+    _initializeLocation();
 
+    // Load stops and recent searches
+    loadStops();
     loadRecentSearches();
-
-    // Get current location
-    _getCurrentLocation();
-
-    // Always load stops from the database, don't use test stops
-    loadAllowedStops();
   }
 
-  Future<void> loadAllowedStops() async {
+  Future<void> loadStops() async {
     setState(() => isLoading = true);
 
     try {
       List<Stop> stops = [];
 
       if (widget.routeID != null) {
-        // If a route ID is provided, get stops for that route
         debugPrint('Loading stops for route ID: ${widget.routeID}');
         stops = await _stopsService.getStopsForRoute(widget.routeID!);
         debugPrint('Loaded ${stops.length} stops for route ${widget.routeID}');
       } else {
-        // Otherwise, get all active stops
         stops = await _stopsService.getAllActiveStops();
         debugPrint('Loaded ${stops.length} active stops across all routes');
       }
@@ -87,7 +82,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       if (mounted) {
         setState(() {
           allowedStops = stops;
-          _filteredStops = stops; // Initialize filtered stops with all stops
+          _filteredStops = stops;
           isLoading = false;
         });
       }
@@ -150,8 +145,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       if (searchController.text.isEmpty) {
         setState(() {
           placePredictions = [];
-          _filteredStops =
-              allowedStops; // Reset filtered stops to show all stops
+          _filteredStops = allowedStops;
           isLoading = false;
         });
         return;
@@ -161,7 +155,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       if (allowedStops.isNotEmpty) {
         searchAllowedStops(searchController.text);
       } else {
-        // Otherwise, go directly to Google Places API
         placeAutocomplete(searchController.text);
       }
     });
@@ -177,17 +170,15 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
       if (filteredStops.isNotEmpty) {
         setState(() {
-          _filteredStops = filteredStops; // Store filtered stops
-          placePredictions = []; // Clear place predictions
+          _filteredStops = filteredStops;
+          placePredictions = [];
           isLoading = false;
         });
       } else {
-        // If no stops found, fall back to Google Places API
         placeAutocomplete(query);
       }
     } catch (e) {
       debugPrint('Error searching stops: $e');
-      // Fall back to Google Places API
       placeAutocomplete(query);
     }
   }
@@ -214,7 +205,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       {
         "input": query,
         "key": apiKey,
-        "components": "country:PH", // limit to Philippines
+        "components": "country:PH",
       },
     );
 
@@ -243,7 +234,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       "maps.googleapis.com",
       "maps/api/place/details/json",
       {
-        "place_id": prediction.placeID, // Ensure correct property name
+        "place_id": prediction.placeID,
         "key": apiKey,
         "fields": "geometry,name"
       },
@@ -312,7 +303,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               ],
             ),
             content: Text(
-              'The selected ${widget.isPickup ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
+              'The selected pick-up location is quite far from your current location',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
@@ -349,7 +340,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -373,7 +364,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
-                    fontSize: 18,
+                    fontSize: 16,
                   ),
                 ),
               ),
@@ -386,26 +377,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     return true;
   }
 
-  // Add method to get current location
-  Future<void> _getCurrentLocation() async {
+  Future<void> _initializeLocation() async {
     try {
       final Location locationService = Location();
-
-      // Check if location service is enabled
-      bool serviceEnabled = await locationService.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await locationService.requestService();
-        if (!serviceEnabled) return;
-      }
-
-      // Check if permission is granted
-      PermissionStatus permissionStatus = await locationService.hasPermission();
-      if (permissionStatus == PermissionStatus.denied) {
-        permissionStatus = await locationService.requestPermission();
-        if (permissionStatus != PermissionStatus.granted) return;
-      }
-
-      // Get location
       final LocationData locationData = await locationService.getLocation();
       if (mounted) {
         setState(() {
@@ -533,6 +507,93 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                         await locationService.getLocation();
                     final LatLng currentLatLng =
                         LatLng(locationData.latitude!, locationData.longitude!);
+
+                    // Check if current location is near the route
+                    bool isNearRoute = true;
+                    if (widget.routePolyline != null &&
+                        widget.routePolyline!.isNotEmpty) {
+                      isNearRoute = isPointNearPolyline(currentLatLng, 100);
+                    }
+
+                    if (!isNearRoute) {
+                      // Show warning dialog
+                      final bool? proceed = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (BuildContext context) {
+                          final isDarkMode =
+                              Theme.of(context).brightness == Brightness.dark;
+                          return AlertDialog(
+                            contentPadding: const EdgeInsets.all(24),
+                            title: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Location Warning',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'Inter',
+                                    fontSize: 24,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  height: 1,
+                                  color: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                  width: double.infinity,
+                                ),
+                              ],
+                            ),
+                            content: Text(
+                              'Your current location is not within the selected route.',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
+                              ),
+                            ),
+                            actions: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00CC58),
+                                    foregroundColor: const Color(0xFFF5F5F5),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                  ),
+                                  child: Text(
+                                    'OK',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: const Color(0xFFF5F5F5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (proceed != true) return;
+                    }
+
                     final SelectedLocation? currentLocation =
                         await reverseGeocode(currentLatLng);
                     if (currentLocation != null && mounted) {
@@ -876,5 +937,76 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         ),
       ),
     );
+  }
+
+  // Add this method to check if a point is close to the polyline
+  bool isPointNearPolyline(LatLng point, double threshold) {
+    if (widget.routePolyline == null || widget.routePolyline!.isEmpty) {
+      return true; // If no polyline, allow all points
+    }
+
+    // Find the minimum distance from the point to any segment of the polyline
+    double minDistance = double.infinity;
+
+    for (int i = 0; i < widget.routePolyline!.length - 1; i++) {
+      final LatLng start = widget.routePolyline![i];
+      final LatLng end = widget.routePolyline![i + 1];
+
+      // Calculate distance from point to line segment
+      final double distance = distanceToLineSegment(point, start, end);
+      if (distance < minDistance) {
+        minDistance = distance;
+      }
+
+      // Early exit if we found a close enough point
+      if (minDistance <= threshold) {
+        return true;
+      }
+    }
+
+    return minDistance <= threshold;
+  }
+
+  // Helper method to calculate distance from point to line segment
+  double distanceToLineSegment(LatLng p, LatLng v, LatLng w) {
+    // Calculate squared length of line segment
+    final double l2 = calculateSquaredDistance(v, w);
+    if (l2 == 0.0) return calculateDistance(p, v); // v == w case
+
+    final double t = max(0, min(1, dotProduct(p, v, w) / l2));
+    final LatLng projection = LatLng(
+      v.latitude + t * (w.latitude - v.latitude),
+      v.longitude + t * (w.longitude - v.longitude),
+    );
+
+    return calculateDistance(p, projection);
+  }
+
+  // Calculate squared distance between two points
+  double calculateSquaredDistance(LatLng p1, LatLng p2) {
+    final double dx = p1.latitude - p2.latitude;
+    final double dy = p1.longitude - p2.longitude;
+    return dx * dx + dy * dy;
+  }
+
+  // Calculate actual distance between two points in meters
+  double calculateDistance(LatLng p1, LatLng p2) {
+    // Using the Haversine formula to calculate distance
+    const double earthRadius = 6371000; // Earth radius in meters
+    final double lat1 = p1.latitude * pi / 180;
+    final double lat2 = p2.latitude * pi / 180;
+    final double dLat = (p2.latitude - p1.latitude) * pi / 180;
+    final double dLon = (p2.longitude - p1.longitude) * pi / 180;
+
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  // Calculate dot product for projection calculation
+  double dotProduct(LatLng p, LatLng v, LatLng w) {
+    return (p.latitude - v.latitude) * (w.latitude - v.latitude) +
+        (p.longitude - v.longitude) * (w.longitude - v.longitude);
   }
 }
