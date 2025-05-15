@@ -18,6 +18,7 @@ import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
 import 'locationListTile.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 class SearchLocationScreen extends StatefulWidget {
   final bool isPickup;
@@ -125,32 +126,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       if (stop.order <= widget.pickupOrder!) {
         await showDialog(
           context: context,
-          builder: (context) => AlertDialog(
+          builder: (context) => ResponsiveDialog(
+            title: 'Invalid Stop Order',
             contentPadding: const EdgeInsets.all(24),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Invalid Stop Order',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'Inter',
-                    fontSize: 24,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 1,
-                  color: isDarkMode
-                      ? const Color(0xFFF5F5F5)
-                      : const Color(0xFF121212),
-                  width: double.infinity,
-                ),
-              ],
-            ),
             content: Text(
               'Drop-off must be after pick-up for this route.',
               style: TextStyle(
@@ -346,103 +324,77 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       final bool? proceed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            contentPadding:
-                EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Distance Warning',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'Inter',
-                    fontSize: MediaQuery.of(context).size.width * 0.06,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
+        builder: (BuildContext context) => ResponsiveDialog(
+          title: 'Distance Warning',
+          contentPadding:
+              EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
+          content: Text(
+            'The selected pick-up location is quite far from your current location',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(
+                    color: const Color(0xFFD7481D),
+                    width: 3,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 1,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFFF5F5F5)
-                      : const Color(0xFF121212),
-                  width: double.infinity,
-                ),
-              ],
-            ),
-            content: Text(
-              'The selected pick-up location is quite far from your current location',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: isDarkMode
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 40),
+                backgroundColor: Colors.transparent,
+                foregroundColor: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                ),
               ),
             ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(
-                      color: const Color(0xFFD7481D),
-                      width: 3,
-                    ),
-                  ),
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
-                  backgroundColor: Colors.transparent,
-                  foregroundColor:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                  ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 40),
+                backgroundColor: const Color(0xFFD7481D),
+                foregroundColor: const Color(0xFFF5F5F5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 15,
                 ),
               ),
-              const SizedBox(width: 13),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
-                  backgroundColor: const Color(0xFFD7481D),
-                  foregroundColor: const Color(0xFFF5F5F5),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text(
-                  'Continue',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       );
       return proceed ?? false;
     }
@@ -652,7 +604,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 14,
+                                      fontSize: 15,
                                       color: const Color(0xFFF5F5F5),
                                     ),
                                   ),

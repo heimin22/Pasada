@@ -411,7 +411,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final screenSize = MediaQuery.of(context).size;
+    // final screenSize = MediaQuery.of(context).size;
 
     await showDialog(
       context: context,
@@ -425,16 +425,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               'Pili ka, nakaupo ba o nakatayo?',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
                 color: isDarkMode
                     ? const Color(0xFFDEDEDE)
                     : const Color(0xFF1E1E1E),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
           ],
         ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -447,7 +448,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               ),
               elevation: 0,
               shadowColor: Colors.transparent,
-              minimumSize: const Size(150, 60),
+              minimumSize: const Size(150, 40),
               backgroundColor: const Color(0xFF00CC58),
               foregroundColor: const Color(0xFFF5F5F5),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -457,11 +458,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                fontSize: 18,
+                fontSize: 15,
               ),
             ),
           ),
-          const SizedBox(width: 13),
           ElevatedButton(
             onPressed: () {
               _seatingPreference.value = 'Standing';
@@ -477,18 +477,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               ),
               elevation: 0,
               shadowColor: Colors.transparent,
-              minimumSize: const Size(150, 60),
+              minimumSize: const Size(150, 40),
               backgroundColor: Colors.transparent,
-              foregroundColor: Theme.of(context).brightness == Brightness.dark
+              foregroundColor: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text(
               'Standing',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                fontSize: 18,
+                fontSize: 15,
               ),
             ),
           ),

@@ -5,6 +5,7 @@ import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -198,32 +199,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     try {
       final confirmLogout = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
+        builder: (dialogContext) => ResponsiveDialog(
+          title: 'Log out?',
           contentPadding: const EdgeInsets.all(24),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Log out?',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontFamily: 'Inter',
-                  fontSize: 24,
-                  color: isDarkMode
-                      ? const Color(0xFFF5F5F5)
-                      : const Color(0xFF121212),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                height: 1,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-                width: double.infinity,
-              ),
-            ],
-          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,9 +217,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                       : const Color(0xFF1E1E1E),
                 ),
               ),
-              const SizedBox(height: 24),
             ],
           ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
           actions: [
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -255,9 +233,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 ),
                 elevation: 0,
                 shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 60),
+                minimumSize: const Size(150, 40),
                 backgroundColor: Colors.transparent,
-                foregroundColor: Theme.of(context).brightness == Brightness.dark
+                foregroundColor: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),
                 padding:
@@ -268,11 +246,10 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontFamily: 'Inter',
-                  fontSize: 18,
+                  fontSize: 15,
                 ),
               ),
             ),
-            const SizedBox(width: 13),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               style: ElevatedButton.styleFrom(
@@ -281,7 +258,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 ),
                 elevation: 0,
                 shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 60),
+                minimumSize: const Size(150, 40),
                 backgroundColor: const Color(0xFFD7481D),
                 foregroundColor: const Color(0xFFF5F5F5),
                 padding:
@@ -292,7 +269,7 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontFamily: 'Inter',
-                  fontSize: 18,
+                  fontSize: 15,
                 ),
               ),
             ),

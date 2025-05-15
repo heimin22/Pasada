@@ -428,7 +428,7 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
     });
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final screenSize = MediaQuery.of(context).size;
+    // final screenSize = MediaQuery.of(context).size;
 
     showDialog(
       context: context,
@@ -457,7 +457,6 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
               ),
               elevation: 0,
               shadowColor: Colors.transparent,
-              minimumSize: const Size(double.infinity, 40),
               backgroundColor: const Color(0xFF00CC58),
               foregroundColor: const Color(0xFFF5F5F5),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

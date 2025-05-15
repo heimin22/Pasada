@@ -4,15 +4,17 @@ class ResponsiveDialog extends StatelessWidget {
   final String title;
   final Widget content;
   final List<Widget>? actions;
+  final MainAxisAlignment actionsAlignment;
   final EdgeInsets? contentPadding;
 
   const ResponsiveDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.actions,
+    this.actionsAlignment = MainAxisAlignment.end,
     this.contentPadding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +35,8 @@ class ResponsiveDialog extends StatelessWidget {
       ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: screenSize.width * 0.9,
-          maxHeight: screenSize.height * 0.8,
+          maxWidth: double.infinity,
+          maxHeight: screenSize.height * 0.5,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -57,7 +59,7 @@ class ResponsiveDialog extends StatelessWidget {
                             : const Color(0xFF121212),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 3),
                     Container(
                       height: 1,
                       color: isDarkMode
@@ -76,8 +78,14 @@ class ResponsiveDialog extends StatelessWidget {
                 Padding(
                   padding: padding,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: actions!,
+                    mainAxisAlignment: actionsAlignment,
+                    children: [
+                      for (int i = 0; i < actions!.length; i++) ...[
+                        Expanded(child: actions![i]),
+                        if (i < actions!.length - 1)
+                          SizedBox(width: screenSize.width * 0.02),
+                      ],
+                    ],
                   ),
                 ),
             ],
