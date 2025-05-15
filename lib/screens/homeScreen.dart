@@ -557,6 +557,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     debugPrint('Navigating to search with routeID: $routeId');
 
+    // Determine pick-up stop order for drop-off validation
+    int? pickupOrder;
+    if (!isPickup && selectedPickUpLocation != null && routeId != null) {
+      final stopsService = StopsService();
+      final pickupStop = await stopsService.findClosestStop(
+          selectedPickUpLocation!.coordinates, routeId);
+      pickupOrder = pickupStop?.order;
+    }
+
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SearchLocationScreen(
@@ -564,6 +573,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           routeID: routeId,
           routeDetails: selectedRoute, // Pass the entire route details
           routePolyline: routePolyline, // Pass the polyline coordinates
+          pickupOrder: pickupOrder,
         ),
       ),
     );

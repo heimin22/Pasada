@@ -24,6 +24,7 @@ class SearchLocationScreen extends StatefulWidget {
   final int? routeID;
   final Map<String, dynamic>? routeDetails;
   final List<LatLng>? routePolyline;
+  final int? pickupOrder;
 
   const SearchLocationScreen({
     super.key,
@@ -31,6 +32,7 @@ class SearchLocationScreen extends StatefulWidget {
     this.routeID,
     this.routeDetails,
     this.routePolyline,
+    this.pickupOrder,
   });
 
   @override
@@ -117,23 +119,74 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(stop.coordinates);
       if (!shouldProceed) return;
-    } else if (widget.routeID != null) {
-      // This is a dropoff location, check if it comes after the pickup
-      final homeScreen = context.findAncestorStateOfType<HomeScreenPageState>();
-      if (homeScreen?.selectedPickUpLocation != null) {
-        final stopsService = StopsService();
-        final pickupStop = await stopsService.findClosestStop(
-            homeScreen!.selectedPickUpLocation!.coordinates, widget.routeID!);
-
-        if (pickupStop != null && stop.order <= pickupStop.order) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Drop-off must be after pick-up on this route'),
-              backgroundColor: Colors.red,
+    } else if (widget.routeID != null && widget.pickupOrder != null) {
+      // This is a dropoff location, enforce stop order
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      if (stop.order <= widget.pickupOrder!) {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            contentPadding: const EdgeInsets.all(24),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invalid Stop Order',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Inter',
+                    fontSize: 24,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  height: 1,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                  width: double.infinity,
+                ),
+              ],
             ),
-          );
-          return;
-        }
+            content: Text(
+              'Drop-off must be after pick-up for this route.',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor: const Color(0xFF00CC58),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        return;
       }
     }
 
