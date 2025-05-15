@@ -14,6 +14,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -194,45 +195,33 @@ class MapScreenState extends State<MapScreen>
       final bool? proceed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              'Distance warning',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+        builder: (BuildContext context) => ResponsiveDialog(
+          title: 'Distance warning',
+          content: Text(
+            'The selected pick-up location is quite far from your current location. Do you want to continue?',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
-            content: Text(
-              'The selected pick-up location is quite far from your current location. Do you want to continue?',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Inter',
-                fontSize: 14,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
             ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF067837),
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF067837),
-                ),
-                child: const Text('Continue'),
-              ),
-            ],
-          );
-        },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
       );
       return proceed ?? false;
     }
@@ -855,8 +844,8 @@ class MapScreenState extends State<MapScreen>
   void showAlertDialog(String title, String content) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
+      builder: (context) => ResponsiveDialog(
+        title: title,
         content: Text(content),
         actions: [
           TextButton(
@@ -875,8 +864,8 @@ class MapScreenState extends State<MapScreen>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Error'),
+      builder: (context) => ResponsiveDialog(
+        title: 'Location Error',
         content: const Text('Enable location services to continue.'),
         actions: [
           TextButton(
@@ -888,9 +877,6 @@ class MapScreenState extends State<MapScreen>
           ),
           TextButton(
             onPressed: () async {
-              // Navigator.of(context).pop();
-              // await initLocation();
-              // if (mounted) getLocationUpdates();
               errorDialogVisible = false;
               Navigator.pop(context);
               await initializeLocation();

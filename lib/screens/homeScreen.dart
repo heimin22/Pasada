@@ -25,6 +25,7 @@ import '../location/locationSearchScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 // import 'package:pasada_passenger_app/models/stop.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -414,32 +415,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        contentPadding: EdgeInsets.all(screenSize.width * 0.05),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Seating Preferences',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: screenSize.width * 0.06,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 1,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-              width: double.infinity,
-            ),
-          ],
-        ),
+      builder: (context) => ResponsiveDialog(
+        title: 'Seating Preferences',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,7 +432,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     : const Color(0xFF1E1E1E),
               ),
             ),
-            const SizedBox(height: 24), // Added spacing here
+            const SizedBox(height: 24),
           ],
         ),
         actions: [
@@ -505,7 +482,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               foregroundColor: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text(
               'Standing',
@@ -517,7 +493,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             ),
           ),
         ],
-        actionsAlignment: MainAxisAlignment.spaceEvenly,
       ),
     );
   }

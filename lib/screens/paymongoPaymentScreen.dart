@@ -6,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_passenger_app/screens/paymentWebViewScreen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 class PaymongoPaymentScreen extends StatefulWidget {
   final String paymentMethod;
@@ -432,95 +433,45 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Container(
-          width: double.infinity,
-          constraints: BoxConstraints(
-            maxWidth: screenSize.width * 0.9,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Payment Successful',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Inter',
-                        fontSize: 24,
-                        color: isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      height: 1,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
-                      width: double.infinity,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Your payment has been processed successfully.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
-                        color: isDarkMode
-                            ? const Color(0xFFDEDEDE)
-                            : const Color(0xFF1E1E1E),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(context,
-                          true); // Return to previous screen with success result
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      minimumSize: const Size(double.infinity, 40),
-                      backgroundColor: const Color(0xFF00CC58),
-                      foregroundColor: const Color(0xFFF5F5F5),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      builder: (context) => ResponsiveDialog(
+        title: 'Payment Successful',
+        content: Text(
+          'Your payment has been processed successfully.',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
+            color:
+                isDarkMode ? const Color(0xFFDEDEDE) : const Color(0xFF1E1E1E),
           ),
         ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context, true);
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(double.infinity, 40),
+              backgroundColor: const Color(0xFF00CC58),
+              foregroundColor: const Color(0xFFF5F5F5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 18,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
