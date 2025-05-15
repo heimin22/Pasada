@@ -410,12 +410,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    // final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery.of(context).size;
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        contentPadding: const EdgeInsets.all(24),
+        contentPadding: EdgeInsets.all(screenSize.width * 0.05),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -424,7 +424,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontFamily: 'Inter',
-                fontSize: 24,
+                fontSize: screenSize.width * 0.06,
                 color: isDarkMode
                     ? const Color(0xFFF5F5F5)
                     : const Color(0xFF121212),

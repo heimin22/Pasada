@@ -348,7 +348,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return AlertDialog(
-            contentPadding: const EdgeInsets.all(24),
+            contentPadding:
+                EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -357,7 +358,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontFamily: 'Inter',
-                    fontSize: 24,
+                    fontSize: MediaQuery.of(context).size.width * 0.06,
                     color: isDarkMode
                         ? const Color(0xFFF5F5F5)
                         : const Color(0xFF121212),
