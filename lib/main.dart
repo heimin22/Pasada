@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
@@ -17,11 +17,25 @@ import 'package:pasada_passenger_app/services/backendConnectionTest.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// Define a top-level handler for background messages
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
+  await NotificationService.showNotification(
+    title: message.notification?.title ?? 'Pasada',
+    body: message.notification?.body ?? 'You have a new notification',
+  );
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
   await Firebase.initializeApp();
+
+  // Set up Firebase Messaging background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Initialize notification service
   await NotificationService.initialize();
@@ -64,6 +78,9 @@ Future<void> main() async {
         retryAttempts: 3, // Reduced from 10 for security
       ),
     );
+
+    // Now that Supabase is initialized, save the FCM token
+    await NotificationService.saveTokenAfterInit();
   } catch (e) {
     debugPrint("Failed to initialize Supabase: $e");
     return;

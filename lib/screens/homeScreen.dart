@@ -234,6 +234,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Show onboarding dialog for new users
       await showOnboardingDialog(context);
 
+      // Use the updated notification service
       NotificationService.showAvailabilityNotification();
     });
   }
