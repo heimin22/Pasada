@@ -117,6 +117,24 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(stop.coordinates);
       if (!shouldProceed) return;
+    } else if (widget.routeID != null) {
+      // This is a dropoff location, check if it comes after the pickup
+      final homeScreen = context.findAncestorStateOfType<HomeScreenPageState>();
+      if (homeScreen?.selectedPickUpLocation != null) {
+        final stopsService = StopsService();
+        final pickupStop = await stopsService.findClosestStop(
+            homeScreen!.selectedPickUpLocation!.coordinates, widget.routeID!);
+
+        if (pickupStop != null && stop.order <= pickupStop.order) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Drop-off must be after pick-up on this route'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+      }
     }
 
     final selectedLocation = SelectedLocation(
@@ -798,8 +816,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PinLocationStateful(
-                      isPickup: widget.isPickup,
-                      routePolyline: widget.routePolyline, // Pass the polyline
+                      locationType: widget.isPickup ? 'pickup' : 'dropoff',
+                      routePolyline: widget.routePolyline,
+                      onLocationSelected: (SelectedLocation selectedLocation) {
+                        Navigator.pop(context, selectedLocation);
+                      }, // Pass the polyline
                     ),
                   ),
                 ).then((result) {
@@ -902,8 +923,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             context,
             MaterialPageRoute(
               builder: (context) => PinLocationStateful(
-                isPickup: widget.isPickup,
-                routePolyline: widget.routePolyline, // Pass the polyline
+                locationType: widget.isPickup ? 'pickup' : 'dropoff',
+                routePolyline: widget.routePolyline,
+                onLocationSelected: (SelectedLocation selectedLocation) {
+                  Navigator.pop(context, selectedLocation);
+                }, // Pass the polyline
               ),
             ),
           ).then((result) {

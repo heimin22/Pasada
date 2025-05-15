@@ -23,6 +23,8 @@ import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+// import 'package:pasada_passenger_app/models/stop.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -251,6 +253,38 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   void _handleBookingConfirmation() async {
+    // Prevent reverse booking: ensure drop-off stop order > pick-up stop order
+    if (selectedRoute != null &&
+        selectedPickUpLocation != null &&
+        selectedDropOffLocation != null) {
+      final int routeId = selectedRoute!['officialroute_id'] ?? 0;
+      final stopsService = StopsService();
+
+      // Find closest stops to our selected locations
+      final pickupStop = await stopsService.findClosestStop(
+          selectedPickUpLocation!.coordinates, routeId);
+
+      final dropoffStop = await stopsService.findClosestStop(
+          selectedDropOffLocation!.coordinates, routeId);
+
+      debugPrint(
+          'Pickup stop: ${pickupStop?.name}, order: ${pickupStop?.order}');
+      debugPrint(
+          'Dropoff stop: ${dropoffStop?.name}, order: ${dropoffStop?.order}');
+
+      if (pickupStop != null && dropoffStop != null) {
+        if (dropoffStop.order <= pickupStop.order) {
+          Fluttertoast.showToast(
+            msg:
+                'Invalid route: drop-off must be after pick-up for this route.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+          return;
+        }
+      }
+    }
+
     setState(() {
       isBookingConfirmed = true;
     });
@@ -523,7 +557,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     debugPrint('Navigating to search with routeID: $routeId');
 
-    final result = await Navigator.of(context, rootNavigator: true).push(
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SearchLocationScreen(
           isPickup: isPickup,
