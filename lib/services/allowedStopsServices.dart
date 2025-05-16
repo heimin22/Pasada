@@ -1,6 +1,8 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/stop.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class StopsService {
   final supabase = Supabase.instance.client;
@@ -313,6 +315,76 @@ class StopsService {
       debugPrint('Successfully created test stops for route $routeID');
     } catch (e) {
       debugPrint('Error creating test stops for route $routeID: $e');
+    }
+  }
+
+  Future<Stop?> findClosestStop(LatLng coordinates, int routeID) async {
+    try {
+      final stops = await getStopsInOrder(routeID);
+      if (stops.isEmpty) return null;
+
+      double minDistance = double.infinity;
+      Stop? closestStop;
+
+      for (var stop in stops) {
+        final double distance = _calculatedDistance(
+          coordinates.latitude,
+          coordinates.longitude,
+          stop.coordinates.latitude,
+          stop.coordinates.longitude,
+        );
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestStop = stop;
+        }
+      }
+
+      return minDistance < 0.5 ? closestStop : null;
+    } catch (e) {
+      debugPrint('Error finding closest stop: $e');
+      return null;
+    }
+  }
+
+  double _calculatedDistance(
+    double lat1,
+    double lng1,
+    double lat2,
+    double lng2,
+  ) {
+    const double earthRadius = 6371.0;
+    final double dLat = _degreesToRadians(lat2 - lat1);
+    final double dLng = _degreesToRadians(lng2 - lng1);
+
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            sin(dLng / 2) *
+            sin(dLng / 2);
+
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * (pi / 180);
+  }
+
+  // Get stops in order for a route
+  Future<List<Stop>> getStopsInOrder(int routeID) async {
+    try {
+      final response = await supabase
+          .from('allowed_stops')
+          .select("*")
+          .eq('officialroute_id', routeID)
+          .eq('is_active', true)
+          .order('stop_order');
+
+      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+    } catch (e) {
+      debugPrint('Error getting stops in order for route $routeID: $e');
+      return [];
     }
   }
 }

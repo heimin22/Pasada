@@ -14,6 +14,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/models/stop.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -27,20 +29,33 @@ class PinLocationStateless extends StatelessWidget {
         fontFamily: 'Inter',
         useMaterial3: true,
       ),
-      home: const PinLocationStateful(isPickup: true),
+      home: PinLocationStateful(
+        locationType: 'pickup',
+        onLocationSelected: (location) {
+          debugPrint('Location selected: ${location.address}');
+        },
+      ),
       routes: <String, WidgetBuilder>{},
     );
   }
 }
 
 class PinLocationStateful extends StatefulWidget {
-  final bool isPickup;
+  final String locationType; // 'pickup' or 'dropoff'
+  final Function(SelectedLocation) onLocationSelected;
   final List<LatLng>? routePolyline;
+  final LatLng? initialLocation;
+  final LatLng? pickupLocation; // Add this to know the pickup location
+  final Map<String, dynamic>? selectedRoute;
 
   const PinLocationStateful({
     super.key,
-    required this.isPickup,
+    required this.locationType,
+    required this.onLocationSelected,
     this.routePolyline,
+    this.initialLocation,
+    this.pickupLocation,
+    this.selectedRoute,
   });
 
   @override
@@ -291,18 +306,24 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
       isNearRoute = isPointNearPolyline(tappedPosition, 100);
     }
 
+    // Check if the selection follows route direction
+    bool isValidDirection = await validateRouteDirection(tappedPosition);
+
     setState(() {
-      isLocationValid = isNearRoute;
+      isLocationValid = isNearRoute && isValidDirection;
     });
 
     if (!isNearRoute) {
-      // Show a toast or message that the location must be on the route
       Fluttertoast.showToast(
         msg: "Please select a location along the route",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
       );
       return;
+    }
+
+    if (!isValidDirection) {
+      return; // Toast already shown in validateRouteDirection
     }
 
     setState(() {
@@ -322,7 +343,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         final selectedLoc = SelectedLocation(
             "${landmark['name']}\n${landmark['address']}", tappedPosition);
         // Navigator.pop(context, selectedLoc);
-        checkDistanceAndReturn(selectedLoc);
+        widget.onLocationSelected(selectedLoc);
       });
     } else {
       final location = await reverseGeocode(tappedPosition);
@@ -375,7 +396,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               ],
             ),
             content: Text(
-              'The selected ${widget.isPickup ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
+              'The selected ${widget.locationType == 'pickup' ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
@@ -684,6 +705,61 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     }
   }
 
+  Future<bool> validateRouteDirection(LatLng newLocation) async {
+    // If this is a pickup location or we don't have route info, no validation needed
+    if (widget.locationType != 'dropoff' || widget.selectedRoute == null) {
+      return true;
+    }
+
+    if (widget.pickupLocation != null) {
+      final int routeId = widget.selectedRoute!['officialroute_id'] ?? 0;
+      final stops = await StopsService().getStopsForRoute(routeId);
+
+      // Find the closest stops to our pickup and potential dropoff
+      Stop? closestPickupStop;
+      Stop? closestDropoffStop;
+      double minPickupDist = double.infinity;
+      double minDropoffDist = double.infinity;
+
+      for (var stop in stops) {
+        // Calculate distance to pickup
+        final pickupDist = calculateDistance(
+            LatLng(stop.coordinates.latitude, stop.coordinates.longitude),
+            widget.pickupLocation!);
+
+        // Calculate distance to potential dropoff
+        final dropoffDist = calculateDistance(
+            LatLng(stop.coordinates.latitude, stop.coordinates.longitude),
+            newLocation);
+
+        if (pickupDist < minPickupDist) {
+          minPickupDist = pickupDist;
+          closestPickupStop = stop;
+        }
+
+        if (dropoffDist < minDropoffDist) {
+          minDropoffDist = dropoffDist;
+          closestDropoffStop = stop;
+        }
+      }
+
+      // Check if dropoff comes after pickup in the route
+      if (closestPickupStop != null &&
+          closestDropoffStop != null &&
+          closestDropoffStop.order <= closestPickupStop.order) {
+        Fluttertoast.showToast(
+          msg:
+              'Invalid selection: drop-off must be after pick-up on this route',
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.CENTER,
+        );
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   // Add this method to check if a point is close to the polyline
   bool isPointNearPolyline(LatLng point, double threshold) {
     if (widget.routePolyline == null || widget.routePolyline!.isEmpty) {
@@ -740,6 +816,26 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     // Return distance to nearest point
     return sqrt(pow(x - projX, 2) + pow(y - projY, 2)) *
         111000; // Convert to meters (approx)
+  }
+
+  // Helper method to calculate distance between two points
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371000; // in meters
+
+    // Convert latitude and longitude from degrees to radians
+    final double lat1 = point1.latitude * (pi / 180);
+    final double lon1 = point1.longitude * (pi / 180);
+    final double lat2 = point2.latitude * (pi / 180);
+    final double lon2 = point2.longitude * (pi / 180);
+
+    // Haversine formula
+    final double dLat = lat2 - lat1;
+    final double dLon = lon2 - lon1;
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c; // Distance in meters
   }
 
   @override
@@ -921,7 +1017,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                 ? () {
                     final selectedLoc = SelectedLocation(
                         addressNotifier.value, pinnedLocation!);
-                    checkDistanceAndReturn(selectedLoc);
+                    widget.onLocationSelected(selectedLoc);
                   }
                 : null, // Disable button if location is invalid
             style: ElevatedButton.styleFrom(
@@ -930,7 +1026,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
               minimumSize: Size(double.infinity, 50),
             ),
             child: Text(
-              'Confirm ${widget.isPickup ? 'Pick-up' : 'Drop-off'} Location',
+              'Confirm ${widget.locationType == 'pickup' ? 'Pick-up' : 'Drop-off'} Location',
               style: TextStyle(
                 color: const Color(0xFFF5F5F5),
                 fontWeight: FontWeight.w600,

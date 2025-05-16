@@ -20,17 +20,28 @@ class Stop {
   });
 
   factory Stop.fromJson(Map<String, dynamic> json) {
+    // Safely parse numeric values from dynamic JSON
+    final id = int.tryParse(
+            json['id']?.toString() ?? json['stop_id']?.toString() ?? '') ??
+        0;
+    final routeId =
+        int.tryParse(json['officialroute_id']?.toString() ?? '') ?? 0;
+    final name = json['stop_name']?.toString() ?? '';
+    final address = json['stop_address']?.toString() ?? '';
+    final lat = double.tryParse(json['stop_lat']?.toString() ?? '') ?? 0.0;
+    final lng = double.tryParse(json['stop_lng']?.toString() ?? '') ?? 0.0;
+    final order = int.tryParse(json['stop_order']?.toString() ?? '') ?? 0;
+    final isActive = json['is_active'] is bool
+        ? json['is_active'] as bool
+        : (json['is_active']?.toString().toLowerCase() == 'true');
     return Stop(
-      id: json['id'] ?? json['stop_id'] ?? 0,
-      routeId: json['officialroute_id'] ?? 0,
-      name: json['stop_name'] ?? '',
-      address: json['stop_address'] ?? '',
-      coordinates: LatLng(
-        double.parse(json['stop_lat'] ?? '0'),
-        double.parse(json['stop_lng'] ?? '0'),
-      ),
-      order: json['stop_order'] ?? 0,
-      isActive: json['is_active'] ?? true,
+      id: id,
+      routeId: routeId,
+      name: name,
+      address: address,
+      coordinates: LatLng(lat, lng),
+      order: order,
+      isActive: isActive,
     );
   }
 

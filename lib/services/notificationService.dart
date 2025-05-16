@@ -3,39 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  await NotificationService.initialize();
-  await NotificationService.showNotification(
-    title: message.notification?.title ?? 'Default Title',
-    body: message.notification?.body ?? 'Default Body',
-  );
-}
-
 class NotificationService {
   static final FlutterLocalNotificationsPlugin
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
 
   static Future<void> initialize() async {
     await _requestPermissions();
 
-    final String? fcmToken = await _firebaseMessaging.getToken();
-    debugPrint('FCM Token: $fcmToken');
-
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
+    // Initialize local notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -60,20 +42,53 @@ class NotificationService {
       },
     );
 
-    await _requestPermissions();
+    // Set up FCM handlers
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
+
+    // Get FCM token and save it - but only if Supabase is initialized
+    try {
+      final String? fcmToken = await _firebaseMessaging.getToken();
+      if (fcmToken != null) {
+        debugPrint('FCM Token: $fcmToken');
+        // Only save token if Supabase is initialized
+        await saveTokenToDatabase(fcmToken);
+      }
+
+      // Listen for token refreshes
+      _firebaseMessaging.onTokenRefresh.listen((newToken) {
+        saveTokenToDatabase(newToken);
+      });
+    } catch (e) {
+      debugPrint('Error initializing FCM: $e');
+    }
+  }
+
+  // This method can be called after Supabase is fully initialized
+  static Future<void> saveTokenAfterInit() async {
+    try {
+      final String? fcmToken = await _firebaseMessaging.getToken();
+      if (fcmToken != null) {
+        await saveTokenToDatabase(fcmToken);
+      }
+    } catch (e) {
+      debugPrint('Error saving token after init: $e');
+    }
   }
 
   static Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    debugPrint('Got a message whilst in the background.');
     debugPrint('Foreground message received: ${message.data}');
 
     if (message.notification != null) {
-      debugPrint('Foreground message title: ${message.notification}');
+      await showNotification(
+        title: message.notification?.title ?? 'Pasada',
+        body: message.notification?.body ?? 'You have a new notification',
+      );
     }
   }
 
   static Future<void> _handleBackgroundMessageTap(RemoteMessage message) async {
-    debugPrint('Background message received: ${message.data}');
+    debugPrint('Background message tapped: ${message.data}');
     _handleNotificationTap();
   }
 
@@ -82,39 +97,43 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
-    final bool notificationsEnabled =
-        await NotificationPreference.getNotificationStatus();
-    if (!notificationsEnabled) return;
+    try {
+      final bool notificationsEnabled =
+          await NotificationPreference.getNotificationStatus();
+      if (!notificationsEnabled) return;
 
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'pasada_notifications',
-      'Pasada Notifications',
-      channelDescription: 'Notifications for Pasada',
-      importance: Importance.high,
-      priority: Priority.high,
-      category: AndroidNotificationCategory.service,
-    );
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'pasada_notifications',
+        'Pasada Notifications',
+        channelDescription: 'Notifications for Pasada',
+        importance: Importance.high,
+        priority: Priority.high,
+        category: AndroidNotificationCategory.service,
+      );
 
-    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
-        DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+      const DarwinNotificationDetails iOSPlatformChannelSpecifics =
+          DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: iOSPlatformChannelSpecifics,
-    );
+      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+        android: androidPlatformChannelSpecifics,
+        iOS: iOSPlatformChannelSpecifics,
+      );
 
-    await _flutterLocalNotificationsPlugin.show(
-      0,
-      title,
-      body,
-      platformChannelSpecifics,
-      payload: payload,
-    );
+      await _flutterLocalNotificationsPlugin.show(
+        0,
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: payload,
+      );
+    } catch (e) {
+      debugPrint('Error showing notification: $e');
+    }
   }
 
   static void _handleNotificationTap() {
@@ -126,42 +145,53 @@ class NotificationService {
     }
   }
 
+  // Send booking availability notification via FCM
   static Future<void> showAvailabilityNotification() async {
-    // Check if notifications are enabled before showing
-    final bool notificationsEnabled =
-        await NotificationPreference.getNotificationStatus();
-    if (!notificationsEnabled) return;
+    try {
+      // Check if notifications are enabled before showing
+      final bool notificationsEnabled =
+          await NotificationPreference.getNotificationStatus();
+      if (!notificationsEnabled) return;
 
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'pasada_availability',
-      'Booking Availability',
-      channelDescription: 'Hello! Magbook ka na, sige na.',
-      importance: Importance.high,
-      priority: Priority.high,
-      ongoing: true,
-      autoCancel: false,
-      category: AndroidNotificationCategory.service,
-    );
+      // Get current user
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        debugPrint('No user logged in, showing generic notification');
+        await showNotification(
+          title: 'Pasada',
+          body: 'You can now book a ride!',
+        );
+        return;
+      }
 
-    const DarwinNotificationDetails iOSPlatformChannelSpecifics =
-        DarwinNotificationDetails(
-      presentAlert: false,
-      presentBadge: false,
-      presentSound: false,
-    );
+      try {
+        // Get user's display name
+        final userData = await Supabase.instance.client
+            .from('passenger')
+            .select('display_name')
+            .eq('id', user.id)
+            .single();
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-      iOS: iOSPlatformChannelSpecifics,
-    );
+        final String userName = userData['display_name'] ?? 'user';
 
-    await _flutterLocalNotificationsPlugin.show(
-      1,
-      'Booking Availability',
-      'Hello! Magbook ka na, sige na.',
-      platformChannelSpecifics,
-    );
+        // For local notification fallback
+        await showNotification(
+          title: 'Pasada',
+          body: 'Hello $userName, pwedeng-pwede ka na magbook, boss!',
+        );
+
+        // The actual FCM notification will be sent from the server
+        // This is just a local fallback
+      } catch (e) {
+        debugPrint('Error getting user data: $e');
+        await showNotification(
+          title: 'Pasada',
+          body: 'You can now book a ride!',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error showing availability notification: $e');
+    }
   }
 
   static Future<void> cancelNotification(int id) async {
@@ -178,35 +208,58 @@ class NotificationService {
   }
 
   static Future<void> _requestPermissions() async {
-    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
+    try {
+      // Request permission for FCM
+      final NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
 
-    if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
+      debugPrint('FCM permission status: ${settings.authorizationStatus}');
+
+      // Request permission for local notifications
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                  AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidImplementation != null) {
+        await androidImplementation.requestNotificationsPermission();
+      }
+    } catch (e) {
+      debugPrint('Error requesting permissions: $e');
     }
   }
 
   // Save FCM token to your backend (Supabase in this case)
   static Future<void> saveTokenToDatabase(String token) async {
-    // Get current user ID from Supabase
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      try {
-        await Supabase.instance.client.from('user_fcm_tokens').upsert(
-          {
-            'user_id': user.id,
-            'fcm_token': token,
-            'updated_at': DateTime.now().toIso8601String(),
-            'device_info':
-                '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'
-          },
-          onConflict: 'user_id',
-        );
-        debugPrint('FCM token saved to database');
-      } catch (e) {
-        debugPrint('Error saving FCM token: $e');
+    try {
+      // Get current user ID from Supabase
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user != null) {
+        try {
+          await Supabase.instance.client.from('user_fcm_tokens').upsert(
+            {
+              'user_id': user.id,
+              'fcm_token': token,
+              'updated_at': DateTime.now().toIso8601String(),
+              'device_info':
+                  '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'
+            },
+            onConflict: 'user_id',
+          );
+          debugPrint('FCM token saved to database');
+        } catch (e) {
+          debugPrint('Error saving FCM token: $e');
+        }
+      } else {
+        debugPrint('No user logged in, cannot save token');
       }
+    } catch (e) {
+      debugPrint('Error in saveTokenToDatabase: $e');
     }
   }
 }

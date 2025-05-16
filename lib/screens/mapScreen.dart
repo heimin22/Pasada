@@ -14,6 +14,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:intl/intl.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -24,6 +26,7 @@ class MapScreen extends StatefulWidget {
   final Function(String)? onEtaUpdated;
   final Function(double)? onFareUpdated;
   final Map<String, dynamic>? selectedRoute;
+  final List<LatLng>? routePolyline;
 
   const MapScreen({
     super.key,
@@ -33,6 +36,7 @@ class MapScreen extends StatefulWidget {
     this.onEtaUpdated,
     this.onFareUpdated,
     this.selectedRoute,
+    this.routePolyline,
   });
 
   @override
@@ -153,7 +157,23 @@ class MapScreenState extends State<MapScreen>
       }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
-      generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
+      debugPrint('MapScreen - Both pickup and dropoff locations are set');
+      // Use the selected route's polyline segment if available
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        debugPrint('MapScreen - Using route polyline');
+        generatePolylineAlongRoute(
+          widget.pickUpLocation!,
+          widget.dropOffLocation!,
+          widget.routePolyline!,
+        );
+      } else {
+        // Fallback to direct route if no official polyline
+        debugPrint('MapScreen - Using direct route');
+        generatePolylineBetween(
+            widget.pickUpLocation!, widget.dropOffLocation!);
+      }
+    } else {
+      debugPrint('MapScreen - Missing pickup or dropoff location');
     }
   }
 
@@ -181,45 +201,33 @@ class MapScreenState extends State<MapScreen>
       final bool? proceed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text(
-              'Distance warning',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+        builder: (BuildContext context) => ResponsiveDialog(
+          title: 'Distance warning',
+          content: Text(
+            'The selected pick-up location is quite far from your current location. Do you want to continue?',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
             ),
-            content: Text(
-              'The selected pick-up location is quite far from your current location. Do you want to continue?',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Inter',
-                fontSize: 14,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
             ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF067837),
               ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF067837),
-                ),
-                child: const Text('Continue'),
-              ),
-            ],
-          );
-        },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
       );
       return proceed ?? false;
     }
@@ -346,9 +354,16 @@ class MapScreenState extends State<MapScreen>
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
-      generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      // Check if we have route polyline data from the route selection
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        // Generate a polyline that follows the official route
+        generatePolylineAlongRoute(selectedPickupLatLng!,
+            selectedDropOffLatLng!, widget.routePolyline!);
+      } else {
+        // Fallback to direct route if no official route polyline is available
+        generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      }
     }
-    // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
   Future<bool> checkNetworkConnection() async {
@@ -680,6 +695,32 @@ class MapScreenState extends State<MapScreen>
             debugPrint('onFareUpdated callback is null');
           }
 
+          // Add ETA update similar to generatePolylineAlongRoute
+          final legs = data['routes'][0]['legs'];
+          if (legs is List && legs.isNotEmpty) {
+            final firstLeg = legs[0];
+            final duration = firstLeg['duration'];
+            if (duration != null && duration['seconds'] != null) {
+              final durationSeconds = duration['seconds'];
+              final etaTextValue = formatDuration(durationSeconds);
+              debugPrint('MapScreen - ETA calculated: $etaTextValue');
+              setState(() {
+                etaText = etaTextValue;
+              });
+              if (widget.onEtaUpdated != null) {
+                debugPrint(
+                    'MapScreen - Calling onEtaUpdated with: $etaTextValue');
+                widget.onEtaUpdated!(etaTextValue);
+              } else {
+                debugPrint('MapScreen - onEtaUpdated is null');
+              }
+            } else {
+              debugPrint('MapScreen - duration or seconds is null');
+            }
+          } else {
+            debugPrint('MapScreen - legs is empty or not a list');
+          }
+
           // calculate bounds that include start, destination and all polyline points
           double southLat = start.latitude;
           double northLat = start.latitude;
@@ -721,38 +762,9 @@ class MapScreenState extends State<MapScreen>
           );
         }
 
-        final legs = data['routes'][0]['legs'];
-        if (legs is! List || legs.isEmpty) {
-          debugPrint('Legs data is invalid: $legs');
-          setState(() => etaText = 'N/A');
-          return;
+        if (kDebugMode) {
+          print('Failed to generate route: $response');
         }
-
-        final firstLeg = legs[0];
-        final duration = firstLeg['duration'];
-        if (duration is! String || !duration.endsWith('s')) {
-          debugPrint('Invalid duration format: $duration');
-          setState(() => etaText = 'N/A');
-          return;
-        }
-
-        final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
-        final durationSeconds = int.tryParse(secondsString) ?? 0;
-        final durationText = formatDuration(durationSeconds);
-
-        setState(() => etaText = durationText);
-        if (widget.onEtaUpdated != null) {
-          widget.onEtaUpdated!(durationText);
-        }
-
-        // debug testing
-        debugPrint('API Response: ${json.encode(data)}'); // Full response
-        debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-        debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
-        return;
-      }
-      if (kDebugMode) {
-        print('Failed to generate route: $response');
       }
     } catch (e) {
       showError('Error: ${e.toString()}');
@@ -797,14 +809,10 @@ class MapScreenState extends State<MapScreen>
   }
 
   String formatDuration(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-
-    return hours > 0
-        ? '${hours}h ${minutes}m'
-        : minutes > 0
-            ? '$minutes mins'
-            : '<1 min';
+    // Calculate arrival time based on current time and duration
+    final now = DateTime.now();
+    final arrivalTime = now.add(Duration(seconds: totalSeconds));
+    return DateFormat('h:mm a').format(arrivalTime);
   }
 
   void showDebugToast(String message) {
@@ -835,8 +843,8 @@ class MapScreenState extends State<MapScreen>
   void showAlertDialog(String title, String content) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
+      builder: (context) => ResponsiveDialog(
+        title: title,
         content: Text(content),
         actions: [
           TextButton(
@@ -855,8 +863,8 @@ class MapScreenState extends State<MapScreen>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Error'),
+      builder: (context) => ResponsiveDialog(
+        title: 'Location Error',
         content: const Text('Enable location services to continue.'),
         actions: [
           TextButton(
@@ -868,9 +876,6 @@ class MapScreenState extends State<MapScreen>
           ),
           TextButton(
             onPressed: () async {
-              // Navigator.of(context).pop();
-              // await initLocation();
-              // if (mounted) getLocationUpdates();
               errorDialogVisible = false;
               Navigator.pop(context);
               await initializeLocation();
@@ -914,6 +919,143 @@ class MapScreenState extends State<MapScreen>
     markerSet.addAll(markers.values);
 
     return markerSet;
+  }
+
+  // Add this method to find the nearest point on the route polyline
+  LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
+    if (routePolyline.isEmpty) return point;
+
+    double minDistance = double.infinity;
+    LatLng nearestPoint = routePolyline.first;
+
+    for (int i = 0; i < routePolyline.length - 1; i++) {
+      final LatLng start = routePolyline[i];
+      final LatLng end = routePolyline[i + 1];
+
+      // Find the nearest point on this segment
+      final LatLng nearestOnSegment =
+          findNearestPointOnSegment(point, start, end);
+      final double distance = calculateDistance(point, nearestOnSegment);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = nearestOnSegment;
+      }
+    }
+
+    return nearestPoint;
+  }
+
+  // Helper method to find nearest point on a line segment
+  LatLng findNearestPointOnSegment(LatLng point, LatLng start, LatLng end) {
+    final double x = point.latitude;
+    final double y = point.longitude;
+    final double x1 = start.latitude;
+    final double y1 = start.longitude;
+    final double x2 = end.latitude;
+    final double y2 = end.longitude;
+
+    // Calculate squared length of segment
+    final double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 == 0) return start; // If segment is a point, return that point
+
+    // Calculate projection of point onto line
+    final double t =
+        max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
+
+    // Calculate nearest point on line segment
+    final double projX = x1 + t * (x2 - x1);
+    final double projY = y1 + t * (y2 - y1);
+
+    return LatLng(projX, projY);
+  }
+
+  // Helper method to calculate distance between two points
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371; // in kilometers
+
+    // Convert latitude and longitude from degrees to radians
+    final double lat1 = point1.latitude * (pi / 180);
+    final double lon1 = point1.longitude * (pi / 180);
+    final double lat2 = point2.latitude * (pi / 180);
+    final double lon2 = point2.longitude * (pi / 180);
+
+    // Haversine formula
+    final double dLat = lat2 - lat1;
+    final double dLon = lon2 - lon1;
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c; // Distance in kilometers
+  }
+
+  Future<void> generatePolylineAlongRoute(
+      LatLng start, LatLng end, List<LatLng> routePolyline) async {
+    debugPrint(
+        'MapScreen - generatePolylineAlongRoute called with start: $start, end: $end');
+
+    // Find the nearest points on the route to our start and end points
+    LatLng startOnRoute = findNearestPointOnRoute(start, routePolyline);
+    LatLng endOnRoute = findNearestPointOnRoute(end, routePolyline);
+
+    // Find indices of these points in the route
+    int startIdx = 0;
+    int endIdx = routePolyline.length - 1;
+    double minStartDist = double.infinity;
+    double minEndDist = double.infinity;
+
+    for (int i = 0; i < routePolyline.length; i++) {
+      final double startDist =
+          calculateDistance(startOnRoute, routePolyline[i]);
+      final double endDist = calculateDistance(endOnRoute, routePolyline[i]);
+
+      if (startDist < minStartDist) {
+        minStartDist = startDist;
+        startIdx = i;
+      }
+
+      if (endDist < minEndDist) {
+        minEndDist = endDist;
+        endIdx = i;
+      }
+    }
+
+    // Ensure start comes before end on the route
+    if (startIdx > endIdx) {
+      final temp = startIdx;
+      startIdx = endIdx;
+      endIdx = temp;
+    }
+
+    // Extract the portion of the route between start and end
+    final List<LatLng> routeSegment = [];
+    routeSegment.add(start); // Add actual start point
+
+    // Add all points along the route between start and end indices
+    routeSegment.addAll(routePolyline.sublist(startIdx + 1, endIdx));
+
+    routeSegment.add(end); // Add actual end point
+
+    // Update the polyline
+    setState(() {
+      polylines.clear();
+      polylines[const PolylineId('route_path')] = Polyline(
+        polylineId: const PolylineId('route_path'),
+        points: routeSegment,
+        color: const Color(0xFF067837),
+        width: 8,
+      );
+
+      // Calculate fare based on this segment
+      final double routeDistance = getRouteDistance(routeSegment);
+      final double fare = calculateFare(routeDistance);
+      fareAmount = fare;
+
+      if (widget.onFareUpdated != null) {
+        widget.onFareUpdated!(fare);
+      }
+    });
   }
 
   @override

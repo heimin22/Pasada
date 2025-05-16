@@ -23,6 +23,9 @@ import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+// import 'package:pasada_passenger_app/models/stop.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -231,6 +234,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Show onboarding dialog for new users
       await showOnboardingDialog(context);
 
+      // Use the updated notification service
       NotificationService.showAvailabilityNotification();
     });
   }
@@ -251,6 +255,38 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   void _handleBookingConfirmation() async {
+    // Prevent reverse booking: ensure drop-off stop order > pick-up stop order
+    if (selectedRoute != null &&
+        selectedPickUpLocation != null &&
+        selectedDropOffLocation != null) {
+      final int routeId = selectedRoute!['officialroute_id'] ?? 0;
+      final stopsService = StopsService();
+
+      // Find closest stops to our selected locations
+      final pickupStop = await stopsService.findClosestStop(
+          selectedPickUpLocation!.coordinates, routeId);
+
+      final dropoffStop = await stopsService.findClosestStop(
+          selectedDropOffLocation!.coordinates, routeId);
+
+      debugPrint(
+          'Pickup stop: ${pickupStop?.name}, order: ${pickupStop?.order}');
+      debugPrint(
+          'Dropoff stop: ${dropoffStop?.name}, order: ${dropoffStop?.order}');
+
+      if (pickupStop != null && dropoffStop != null) {
+        if (dropoffStop.order <= pickupStop.order) {
+          Fluttertoast.showToast(
+            msg:
+                'Invalid route: drop-off must be after pick-up for this route.',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+          return;
+        }
+      }
+    }
+
     setState(() {
       isBookingConfirmed = true;
     });
@@ -380,32 +416,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        contentPadding: const EdgeInsets.all(24),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Seating Preferences',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Inter',
-                fontSize: 24,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              height: 1,
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-              width: double.infinity,
-            ),
-          ],
-        ),
+      builder: (context) => ResponsiveDialog(
+        title: 'Seating Preferences',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,16 +426,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               'Pili ka, nakaupo ba o nakatayo?',
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 fontFamily: 'Inter',
                 color: isDarkMode
                     ? const Color(0xFFDEDEDE)
                     : const Color(0xFF1E1E1E),
               ),
             ),
-            const SizedBox(height: 24), // Added spacing here
+            const SizedBox(height: 12),
           ],
         ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -436,7 +449,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               ),
               elevation: 0,
               shadowColor: Colors.transparent,
-              minimumSize: const Size(150, 60),
+              minimumSize: const Size(150, 40),
               backgroundColor: const Color(0xFF00CC58),
               foregroundColor: const Color(0xFFF5F5F5),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -446,11 +459,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                fontSize: 18,
+                fontSize: 15,
               ),
             ),
           ),
-          const SizedBox(width: 13),
           ElevatedButton(
             onPressed: () {
               _seatingPreference.value = 'Standing';
@@ -466,9 +478,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               ),
               elevation: 0,
               shadowColor: Colors.transparent,
-              minimumSize: const Size(150, 60),
+              minimumSize: const Size(150, 40),
               backgroundColor: Colors.transparent,
-              foregroundColor: Theme.of(context).brightness == Brightness.dark
+              foregroundColor: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -478,12 +490,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                fontSize: 18,
+                fontSize: 15,
               ),
             ),
           ),
         ],
-        actionsAlignment: MainAxisAlignment.spaceEvenly,
       ),
     );
   }
@@ -523,13 +534,23 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     debugPrint('Navigating to search with routeID: $routeId');
 
-    final result = await Navigator.of(context, rootNavigator: true).push(
+    // Determine pick-up stop order for drop-off validation
+    int? pickupOrder;
+    if (!isPickup && selectedPickUpLocation != null && routeId != null) {
+      final stopsService = StopsService();
+      final pickupStop = await stopsService.findClosestStop(
+          selectedPickUpLocation!.coordinates, routeId);
+      pickupOrder = pickupStop?.order;
+    }
+
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => SearchLocationScreen(
           isPickup: isPickup,
           routeID: routeId,
           routeDetails: selectedRoute, // Pass the entire route details
           routePolyline: routePolyline, // Pass the polyline coordinates
+          pickupOrder: pickupOrder,
         ),
       ),
     );
@@ -579,9 +600,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        mapScreenKey.currentState?.generatePolylineBetween(
-          selectedPickUpLocation!.coordinates,
-          selectedDropOffLocation!.coordinates,
+        // Use updateLocations to respect the selected route's polyline
+        mapScreenKey.currentState?.updateLocations(
+          pickup: selectedPickUpLocation!.coordinates,
+          dropoff: selectedDropOffLocation!.coordinates,
         );
       });
     }
@@ -648,6 +670,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   bottomPadding: calculateBottomPadding() /
                       MediaQuery.of(context).size.height,
                   onEtaUpdated: (eta) {
+                    debugPrint('HomeScreen received ETA update: "$eta"');
                     setState(() => etaText = eta);
                     WidgetsBinding.instance
                         .addPostFrameCallback((_) => measureContainer());
@@ -662,6 +685,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         .addPostFrameCallback((_) => measureContainer());
                   },
                   selectedRoute: selectedRoute,
+                  routePolyline:
+                      selectedRoute?['polyline_coordinates'] as List<LatLng>?,
                 ),
 
                 // Route Selection at the top

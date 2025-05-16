@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+// import 'package:intl/intl.dart';
 import '../location/selectedLocation.dart';
 
 class BookingDetailsContainer extends StatelessWidget {
@@ -15,24 +15,18 @@ class BookingDetailsContainer extends StatelessWidget {
   });
 
   String formatETA() {
-    final now = DateTime.now();
+    debugPrint('BookingDetailsContainer - Received etaText: "$etaText"');
 
-    int minutes = 0;
-    if (etaText.contains('h')) {
-      final parts = etaText.split(' ');
-      minutes += int.parse(parts[0].replaceAll('h', '')) * 60;
-      if (parts.length > 1) {
-        minutes += int.parse(parts[1].replaceAll('m', ''));
-      }
-    } else if (etaText.contains('mins')) {
-      // Parse "X mins" format
-      minutes = int.parse(etaText.replaceAll(' mins', ''));
-    } else if (etaText == '<1 min') {
-      minutes = 1;
+    // If etaText is empty or not provided, return a default value
+    if (etaText.isEmpty || etaText == '--') {
+      debugPrint('BookingDetailsContainer - Returning "Calculating..."');
+      return 'Calculating...';
     }
 
-    final arrivalTime = now.add(Duration(minutes: minutes));
-    return DateFormat('h:mm a').format(arrivalTime);
+    // Since etaText is now already formatted as a time (e.g., "3:45 PM"),
+    // we can just return it directly
+    debugPrint('BookingDetailsContainer - Returning etaText: "$etaText"');
+    return etaText;
   }
 
   @override
@@ -84,11 +78,11 @@ class BookingDetailsContainer extends StatelessWidget {
             Icons.location_on,
             isDarkMode,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _buildInfoRow(
             context,
-            'Estimated Time',
-            'Arrival at $formattedETA',
+            'ETA',
+            formattedETA,
             Icons.access_time,
             isDarkMode,
           ),
