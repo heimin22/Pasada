@@ -589,7 +589,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
-                                  onPressed: () => Navigator.pop(context, true),
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF00CC58),
                                     foregroundColor: const Color(0xFFF5F5F5),

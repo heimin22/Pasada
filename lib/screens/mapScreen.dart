@@ -15,6 +15,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:intl/intl.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -156,8 +157,10 @@ class MapScreenState extends State<MapScreen>
       }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
+      debugPrint('MapScreen - Both pickup and dropoff locations are set');
       // Use the selected route's polyline segment if available
       if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        debugPrint('MapScreen - Using route polyline');
         generatePolylineAlongRoute(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
@@ -165,9 +168,12 @@ class MapScreenState extends State<MapScreen>
         );
       } else {
         // Fallback to direct route if no official polyline
+        debugPrint('MapScreen - Using direct route');
         generatePolylineBetween(
             widget.pickUpLocation!, widget.dropOffLocation!);
       }
+    } else {
+      debugPrint('MapScreen - Missing pickup or dropoff location');
     }
   }
 
@@ -689,6 +695,32 @@ class MapScreenState extends State<MapScreen>
             debugPrint('onFareUpdated callback is null');
           }
 
+          // Add ETA update similar to generatePolylineAlongRoute
+          final legs = data['routes'][0]['legs'];
+          if (legs is List && legs.isNotEmpty) {
+            final firstLeg = legs[0];
+            final duration = firstLeg['duration'];
+            if (duration != null && duration['seconds'] != null) {
+              final durationSeconds = duration['seconds'];
+              final etaTextValue = formatDuration(durationSeconds);
+              debugPrint('MapScreen - ETA calculated: $etaTextValue');
+              setState(() {
+                etaText = etaTextValue;
+              });
+              if (widget.onEtaUpdated != null) {
+                debugPrint(
+                    'MapScreen - Calling onEtaUpdated with: $etaTextValue');
+                widget.onEtaUpdated!(etaTextValue);
+              } else {
+                debugPrint('MapScreen - onEtaUpdated is null');
+              }
+            } else {
+              debugPrint('MapScreen - duration or seconds is null');
+            }
+          } else {
+            debugPrint('MapScreen - legs is empty or not a list');
+          }
+
           // calculate bounds that include start, destination and all polyline points
           double southLat = start.latitude;
           double northLat = start.latitude;
@@ -730,38 +762,9 @@ class MapScreenState extends State<MapScreen>
           );
         }
 
-        final legs = data['routes'][0]['legs'];
-        if (legs is! List || legs.isEmpty) {
-          debugPrint('Legs data is invalid: $legs');
-          setState(() => etaText = 'N/A');
-          return;
+        if (kDebugMode) {
+          print('Failed to generate route: $response');
         }
-
-        final firstLeg = legs[0];
-        final duration = firstLeg['duration'];
-        if (duration is! String || !duration.endsWith('s')) {
-          debugPrint('Invalid duration format: $duration');
-          setState(() => etaText = 'N/A');
-          return;
-        }
-
-        final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
-        final durationSeconds = int.tryParse(secondsString) ?? 0;
-        final durationText = formatDuration(durationSeconds);
-
-        setState(() => etaText = durationText);
-        if (widget.onEtaUpdated != null) {
-          widget.onEtaUpdated!(durationText);
-        }
-
-        // debug testing
-        debugPrint('API Response: ${json.encode(data)}'); // Full response
-        debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-        debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
-        return;
-      }
-      if (kDebugMode) {
-        print('Failed to generate route: $response');
       }
     } catch (e) {
       showError('Error: ${e.toString()}');
@@ -806,14 +809,10 @@ class MapScreenState extends State<MapScreen>
   }
 
   String formatDuration(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-
-    return hours > 0
-        ? '${hours}h ${minutes}m'
-        : minutes > 0
-            ? '$minutes mins'
-            : '<1 min';
+    // Calculate arrival time based on current time and duration
+    final now = DateTime.now();
+    final arrivalTime = now.add(Duration(seconds: totalSeconds));
+    return DateFormat('h:mm a').format(arrivalTime);
   }
 
   void showDebugToast(String message) {
@@ -991,8 +990,11 @@ class MapScreenState extends State<MapScreen>
     return earthRadius * c; // Distance in kilometers
   }
 
-  void generatePolylineAlongRoute(
-      LatLng start, LatLng end, List<LatLng> routePolyline) {
+  Future<void> generatePolylineAlongRoute(
+      LatLng start, LatLng end, List<LatLng> routePolyline) async {
+    debugPrint(
+        'MapScreen - generatePolylineAlongRoute called with start: $start, end: $end');
+
     // Find the nearest points on the route to our start and end points
     LatLng startOnRoute = findNearestPointOnRoute(start, routePolyline);
     LatLng endOnRoute = findNearestPointOnRoute(end, routePolyline);

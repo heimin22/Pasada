@@ -670,6 +670,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   bottomPadding: calculateBottomPadding() /
                       MediaQuery.of(context).size.height,
                   onEtaUpdated: (eta) {
+                    debugPrint('HomeScreen received ETA update: "$eta"');
                     setState(() => etaText = eta);
                     WidgetsBinding.instance
                         .addPostFrameCallback((_) => measureContainer());

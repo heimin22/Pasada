@@ -52,20 +52,12 @@ class NotificationService {
       if (fcmToken != null) {
         debugPrint('FCM Token: $fcmToken');
         // Only save token if Supabase is initialized
-        if (Supabase.instance != null &&
-            Supabase.instance.client.auth != null) {
-          await saveTokenToDatabase(fcmToken);
-        } else {
-          debugPrint('Supabase not initialized yet, token will be saved later');
-        }
+        await saveTokenToDatabase(fcmToken);
       }
 
       // Listen for token refreshes
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        if (Supabase.instance != null &&
-            Supabase.instance.client.auth != null) {
-          saveTokenToDatabase(newToken);
-        }
+        saveTokenToDatabase(newToken);
       });
     } catch (e) {
       debugPrint('Error initializing FCM: $e');
@@ -161,16 +153,6 @@ class NotificationService {
           await NotificationPreference.getNotificationStatus();
       if (!notificationsEnabled) return;
 
-      // Check if Supabase is initialized
-      if (Supabase.instance == null) {
-        debugPrint('Supabase not initialized, showing generic notification');
-        await showNotification(
-          title: 'Pasada',
-          body: 'You can now book a ride!',
-        );
-        return;
-      }
-
       // Get current user
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
@@ -255,12 +237,6 @@ class NotificationService {
   // Save FCM token to your backend (Supabase in this case)
   static Future<void> saveTokenToDatabase(String token) async {
     try {
-      // Check if Supabase is initialized
-      if (Supabase.instance == null) {
-        debugPrint('Supabase not initialized, cannot save token');
-        return;
-      }
-
       // Get current user ID from Supabase
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
