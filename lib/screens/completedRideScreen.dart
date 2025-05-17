@@ -5,6 +5,13 @@ import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
 
+void main() {
+  runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: CompletedRideScreen(arrivedTime: DateTime.now()),
+  ));
+}
+
 class CompletedRideScreen extends StatefulWidget {
   final DateTime arrivedTime;
   const CompletedRideScreen({super.key, required this.arrivedTime});
@@ -66,12 +73,10 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
       Fluttertoast.showToast(
         msg: 'Could not launch email',
         toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
+        gravity: ToastGravity.BOTTOM,
         timeInSecForIosWeb: 1,
-        backgroundColor:
-            isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-        textColor:
-            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        backgroundColor: const Color(0xFF121212),
+        textColor: const Color(0xFFF5F5F5),
       );
     }
   }
@@ -87,28 +92,37 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
         appBar: AppBar(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212)),
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const selectionScreen()),
-              );
-            },
+          leadingWidth: 60,
+          leading: Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child: IconButton(
+              icon: Icon(Icons.arrow_back_ios,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const selectionScreen()),
+                );
+              },
+            ),
           ),
           actions: [
-            TextButton(
-              onPressed: _launchEmail,
-              child: Text(
-                'Contact Support',
-                style: TextStyle(
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                    fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: TextButton(
+                onPressed: _launchEmail,
+                child: Text(
+                  'Contact Support',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                      fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
@@ -145,17 +159,20 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                 'Arrived\nSuccessfully!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 30,
                     color: isDarkMode
                         ? const Color(0xFFF5F5F5)
                         : const Color(0xFF121212)),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 'Arrived at $formattedTime',
                 style: TextStyle(
-                    fontSize: 16,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
                     color: isDarkMode ? Colors.grey[300] : Colors.grey[700]),
               ),
               const SizedBox(height: 16),
@@ -171,7 +188,9 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                   'View Ride Receipt',
                   style: TextStyle(
                       decoration: TextDecoration.underline,
-                      fontSize: 16,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                       color: isDarkMode
                           ? const Color(0xFFF5F5F5)
                           : const Color(0xFF121212)),
