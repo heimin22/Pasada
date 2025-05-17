@@ -428,7 +428,6 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
     });
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    // final screenSize = MediaQuery.of(context).size;
 
     showDialog(
       context: context,
@@ -448,8 +447,9 @@ class _PaymongoPaymentScreenState extends State<PaymongoPaymentScreen> {
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context, true);
+              Navigator.pop(context); // Close dialog
+              // Return both success status and payment method to previous screens
+              Navigator.pop(context, widget.paymentMethod);
             },
             style: ElevatedButton.styleFrom(
               shape: RoundedRectangleBorder(

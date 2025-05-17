@@ -225,18 +225,22 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate to the Paymongo payment flow
-                    Navigator.push(
+                  onPressed: () async {
+                    // Navigate to the Paymongo payment flow and await result
+                    final result = await Navigator.push<String>(
                       context,
                       MaterialPageRoute(
                         builder: (_) => PaymongoPaymentScreen(
                           paymentMethod: selectPaymentMethod!,
-                          amount: widget
-                              .fare, // Convert to smallest currency unit (centavos)
+                          amount: widget.fare,
                         ),
                       ),
                     );
+
+                    // If payment was successful, return the payment method to HomeScreen
+                    if (result != null) {
+                      Navigator.pop(context, result);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00CC58),
