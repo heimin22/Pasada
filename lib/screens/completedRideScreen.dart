@@ -5,13 +5,6 @@ import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
 
-void main() {
-  runApp(MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: CompletedRideScreen(arrivedTime: DateTime.now()),
-  ));
-}
-
 class CompletedRideScreen extends StatefulWidget {
   final DateTime arrivedTime;
   const CompletedRideScreen({super.key, required this.arrivedTime});
@@ -68,13 +61,10 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     if (await canLaunchUrl(emailUri)) {
       await launchUrl(emailUri);
     } else {
-      Navigator.pop(context);
-      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
       Fluttertoast.showToast(
         msg: 'Could not launch email',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
         backgroundColor: const Color(0xFF121212),
         textColor: const Color(0xFFF5F5F5),
       );
