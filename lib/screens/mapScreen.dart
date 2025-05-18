@@ -812,7 +812,12 @@ class MapScreenState extends State<MapScreen>
     // Calculate arrival time based on current time and duration
     final now = DateTime.now();
     final arrivalTime = now.add(Duration(seconds: totalSeconds));
-    return DateFormat('h:mm a').format(arrivalTime);
+
+    // Add a buffer time (20 minutes) for the upper range
+    final upperArrivalTime = arrivalTime.add(const Duration(minutes: 20));
+
+    // Format as a range
+    return "${DateFormat('h:mm a').format(arrivalTime)} - ${DateFormat('h:mm a').format(upperArrivalTime)}";
   }
 
   void showDebugToast(String message) {

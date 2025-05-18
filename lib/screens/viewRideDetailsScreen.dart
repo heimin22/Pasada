@@ -211,13 +211,16 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   }
 
   Future<void> _contactSupport() async {
-    // Implementation for contacting support
+    final String emailAddress = 'contact.pasada@gmail.com';
+    final String subject =
+        'Support Request: Booking ${bookingDetails['booking_id'] ?? bookingDetails['id']}';
+
+    // First try the mailto scheme (default email client)
     final Uri emailUri = Uri(
       scheme: 'mailto',
-      path: 'contact.pasada@gmail.com',
+      path: emailAddress,
       queryParameters: {
-        'subject':
-            'Support Request: Booking ${bookingDetails['booking_id'] ?? bookingDetails['id']}',
+        'subject': subject,
       },
     );
 
@@ -225,17 +228,35 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
       } else {
-        Fluttertoast.showToast(
-          msg: 'Could not launch email client',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
+        // If default email client fails, try opening Gmail directly
+        final Uri gmailUri = Uri(
+          scheme: 'https',
+          host: 'mail.google.com',
+          path: '/mail/u/0/',
+          queryParameters: {
+            'view': 'cm',
+            'fs': '1',
+            'to': emailAddress,
+            'su': subject,
+          },
         );
+
+        if (await canLaunchUrl(gmailUri)) {
+          await launchUrl(gmailUri, mode: LaunchMode.externalApplication);
+        } else {
+          // If both methods fail, show a toast with the email address
+          Fluttertoast.showToast(
+            msg: 'Could not open email client. Please email $emailAddress',
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error launching email: $e');
       Fluttertoast.showToast(
-        msg: 'Error contacting support',
-        toastLength: Toast.LENGTH_SHORT,
+        msg: 'Error contacting support. Please email $emailAddress directly.',
+        toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
       );
     }
@@ -1124,19 +1145,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     ),
                                   )
                                 : GoogleMap(
-                                    initialCameraPosition: CameraPosition(
-                                      target: _getCenterPosition(),
-                                      zoom: 13,
-                                    ),
-                                    markers: markers,
-                                    polylines:
-                                        Set<Polyline>.of(polylines.values),
-                                    onMapCreated:
-                                        (GoogleMapController controller) {
-                                      mapController = controller;
-                                      // Apply map styling based on theme
-                                      if (isDarkMode) {
-                                        controller.setMapStyle('''[
+                                    style: isDarkMode
+                                        ? '''[
                                       {
                                         "elementType": "geometry",
                                         "stylers": [{"color": "#242f3e"}]
@@ -1164,9 +1174,18 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         "elementType": "labels.text.fill",
                                         "stylers": [{"color": "#9ca5b3"}]
                                       }
-                                    ]''');
-                                      }
-
+                                    ]'''
+                                        : '',
+                                    initialCameraPosition: CameraPosition(
+                                      target: _getCenterPosition(),
+                                      zoom: 13,
+                                    ),
+                                    markers: markers,
+                                    polylines:
+                                        Set<Polyline>.of(polylines.values),
+                                    onMapCreated:
+                                        (GoogleMapController controller) {
+                                      mapController = controller;
                                       // Fit the map to show both markers and the polyline
                                       _fitMapToBounds();
                                     },

@@ -683,9 +683,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       MediaQuery.of(context).size.height,
                   onEtaUpdated: (eta) {
                     debugPrint('HomeScreen received ETA update: "$eta"');
-                    setState(() => etaText = eta);
-                    WidgetsBinding.instance
-                        .addPostFrameCallback((_) => measureContainer());
+                    if (mounted) {
+                      setState(() => etaText = eta);
+                      WidgetsBinding.instance
+                          .addPostFrameCallback((_) => measureContainer());
+                    }
                   },
                   onFareUpdated: (fare) {
                     debugPrint(
@@ -1106,7 +1108,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   ),
                 ),
                 Text(
-                  etaText,
+                  etaText != '--' ? etaText : 'Calculating...',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
