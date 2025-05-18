@@ -87,7 +87,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
           setState(() {
             bookingDetails['driver_name'] = driverResponse['full_name'];
-            bookingDetails['driver_phone'] = driverResponse['driver_number'];
+            bookingDetails['driver_number'] = driverResponse['driver_number'];
           });
 
           // If we have vehicle_id, fetch vehicle details
@@ -119,7 +119,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           setState(() {
             bookingDetails['passenger_name'] =
                 passengerResponse['display_name'];
-            bookingDetails['passenger_phone'] =
+            bookingDetails['contact_number'] =
                 passengerResponse['contact_number'];
           });
         } catch (e) {
@@ -141,32 +141,32 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       }
 
       if (bookingDetails['booking_id'] != null) {
-        // First, let's check the structure of the bookings table to understand the relationships
-        final tableInfo = await supabase
-            .rpc('get_table_info', params: {'table_name': 'bookings'});
-        debugPrint('Bookings table info: $tableInfo');
-
         // Fetch driver details directly if we have driver_id
         if (bookingDetails['driver_id'] != null) {
           try {
             final driverResponse = await supabase
-                .from('driver') // Assuming this is your driver table name
+                .from('driverTable')
                 .select('full_name, driver_number, vehicle_id')
                 .eq('driver_id', bookingDetails['driver_id'])
                 .single();
 
-            bookingDetails['driver_name'] = driverResponse['full_name'];
-            bookingDetails['driver_phone'] = driverResponse['driver_number'];
+            setState(() {
+              bookingDetails['driver_name'] = driverResponse['full_name'];
+              bookingDetails['driver_number'] = driverResponse['driver_number'];
+            });
 
             // If we have vehicle_id, fetch vehicle details
             if (driverResponse['vehicle_id'] != null) {
               final vehicleResponse = await supabase
-                  .from('vehicle')
+                  .from('vehicleTable')
                   .select('plate_number')
                   .eq('vehicle_id', driverResponse['vehicle_id'])
                   .single();
 
-              bookingDetails['plate_number'] = vehicleResponse['plate_number'];
+              setState(() {
+                bookingDetails['plate_number'] =
+                    vehicleResponse['plate_number'];
+              });
             }
           } catch (e) {
             debugPrint('Error fetching driver details: $e');
@@ -183,8 +183,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                 .eq('id', bookingDetails['passenger_id'])
                 .single();
 
-            bookingDetails['passenger_name'] =
-                passengerResponse['display_name'];
+            setState(() {
+              bookingDetails['passenger_name'] =
+                  passengerResponse['display_name'];
+            });
           } catch (e) {
             debugPrint('Error fetching passenger details: $e');
           }
@@ -630,19 +632,9 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   // Helper method to inspect database schema
   Future<void> _inspectDatabaseSchema() async {
     try {
-      // Get tables in the public schema
-      final tablesResponse = await supabase.rpc('get_tables');
-      debugPrint('Tables in database: $tablesResponse');
-
-      // Get columns for the bookings table
-      final bookingsColumnsResponse =
-          await supabase.rpc('get_columns', params: {'table_name': 'bookings'});
-      debugPrint('Bookings table columns: $bookingsColumnsResponse');
-
-      // Get foreign keys for the bookings table
-      final foreignKeysResponse = await supabase
-          .rpc('get_foreign_keys', params: {'table_name': 'bookings'});
-      debugPrint('Bookings table foreign keys: $foreignKeysResponse');
+      // Instead of calling custom functions, just log that we're checking schema
+      debugPrint(
+          'Database schema inspection skipped - using direct table queries');
     } catch (e) {
       debugPrint('Error inspecting database schema: $e');
     }
@@ -829,9 +821,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 .end, // Align text to the right
                             children: [
                               Text(
-                                bookingDetails['driverTable']?['full_name'] ??
-                                    bookingDetails['driver_name'] ??
-                                    'Driver Name',
+                                bookingDetails['driver_name'] ?? 'Driver Name',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -841,20 +831,23 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              Text(
-                                'Driver Number',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDarkMode
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    bookingDetails['driver_number'] ?? 'N/A',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isDarkMode
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                bookingDetails['vehicleTable']?['vehicleTable']
-                                        ?['plate_number'] ??
-                                    bookingDetails['plate_number'] ??
+                                bookingDetails['plate_number'] ??
                                     'Plate Number',
                                 style: TextStyle(
                                   fontSize: 14,
