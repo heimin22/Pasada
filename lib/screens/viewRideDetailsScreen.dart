@@ -4,6 +4,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:convert';
+import '../network/networkUtilities.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 class ViewRideDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? booking;
@@ -20,16 +26,35 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   Map<String, dynamic> bookingDetails = {};
   final supabase = Supabase.instance.client;
 
+  // Map-related variables
+  GoogleMapController? mapController;
+  Set<Marker> markers = {};
+  Map<PolylineId, Polyline> polylines = {};
+  bool isMapReady = false;
+  List<LatLng>? routePolyline;
+
   @override
   void initState() {
     super.initState();
+
+    // Inspect database schema to understand relationships
+    _inspectDatabaseSchema();
+
     if (widget.booking != null) {
       bookingDetails = widget.booking!;
       // Even if we have booking data, fetch additional details
-      _fetchAdditionalDetails();
+      _fetchAdditionalDetails().then((_) {
+        if (mounted) {
+          _fetchRouteAndGeneratePolyline();
+        }
+      });
     } else if (widget.bookingId != null) {
       // Fetch booking details by ID
-      fetchBookingDetails(widget.bookingId!);
+      fetchBookingDetails(widget.bookingId!).then((_) {
+        if (mounted) {
+          _fetchRouteAndGeneratePolyline();
+        }
+      });
     } else {
       // No booking data or ID provided
       setState(() => isLoading = false);
@@ -38,19 +63,69 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
   Future<void> fetchBookingDetails(int bookingId) async {
     try {
-      // Fetch booking details from Supabase
-      final response = await supabase.from('bookings').select('''
-            *,
-            passenger:id(display_name, contact_number),
-            driverTable:driver_id(name, driver_number, vehicle_id),
-            vehicleTable:vehicle_id(plate_number)
-          ''').eq('booking_id', bookingId).single();
+      // First, fetch basic booking details without relationships
+      final response = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('booking_id', bookingId)
+          .single();
 
       setState(() {
         bookingDetails = response;
         isLoading = false;
       });
       debugPrint('Fetched booking details: $bookingDetails');
+
+      // Then fetch related data separately
+      if (bookingDetails['driver_id'] != null) {
+        try {
+          final driverResponse = await supabase
+              .from('driver') // Adjust table name if needed
+              .select('full_name, driver_number, vehicle_id')
+              .eq('driver_id', bookingDetails['driver_id'])
+              .single();
+
+          setState(() {
+            bookingDetails['driver_name'] = driverResponse['full_name'];
+            bookingDetails['driver_phone'] = driverResponse['driver_number'];
+          });
+
+          // If we have vehicle_id, fetch vehicle details
+          if (driverResponse['vehicle_id'] != null) {
+            final vehicleResponse = await supabase
+                .from('vehicle')
+                .select('plate_number')
+                .eq('vehicle_id', driverResponse['vehicle_id'])
+                .single();
+
+            setState(() {
+              bookingDetails['plate_number'] = vehicleResponse['plate_number'];
+            });
+          }
+        } catch (e) {
+          debugPrint('Error fetching driver details: $e');
+        }
+      }
+
+      // Fetch passenger details
+      if (bookingDetails['passenger_id'] != null) {
+        try {
+          final passengerResponse = await supabase
+              .from('passenger')
+              .select('display_name, contact_number')
+              .eq('id', bookingDetails['passenger_id'])
+              .single();
+
+          setState(() {
+            bookingDetails['passenger_name'] =
+                passengerResponse['display_name'];
+            bookingDetails['passenger_phone'] =
+                passengerResponse['contact_number'];
+          });
+        } catch (e) {
+          debugPrint('Error fetching passenger details: $e');
+        }
+      }
     } catch (e) {
       debugPrint('Error fetching booking details: $e');
       setState(() => isLoading = false);
@@ -66,39 +141,53 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       }
 
       if (bookingDetails['booking_id'] != null) {
-        // Fetch driver and vehicle details if not already included
-        if (bookingDetails['driver_name'] == null ||
-            bookingDetails['vehicle_details'] == null ||
-            bookingDetails['plate_number'] == null) {
-          final response = await supabase.from('bookings').select('''
-                driver:driver_id(name, phone_number, vehicle_id),
-                vehicle:driver(vehicle:vehicle_id(model, plate_number))
-              ''').eq('booking_id', bookingDetails['booking_id']).single();
+        // First, let's check the structure of the bookings table to understand the relationships
+        final tableInfo = await supabase
+            .rpc('get_table_info', params: {'table_name': 'bookings'});
+        debugPrint('Bookings table info: $tableInfo');
 
-          // Update booking details with driver and vehicle info
-          if (response['driver'] != null) {
-            bookingDetails['driver_name'] = response['driver']['name'];
-            bookingDetails['driver_phone'] = response['driver']['phone_number'];
-          }
+        // Fetch driver details directly if we have driver_id
+        if (bookingDetails['driver_id'] != null) {
+          try {
+            final driverResponse = await supabase
+                .from('driver') // Assuming this is your driver table name
+                .select('full_name, driver_number, vehicle_id')
+                .eq('driver_id', bookingDetails['driver_id'])
+                .single();
 
-          if (response['vehicle'] != null &&
-              response['vehicle']['vehicle'] != null) {
-            bookingDetails['vehicle_details'] =
-                response['vehicle']['vehicle']['model'];
-            bookingDetails['plate_number'] =
-                response['vehicle']['vehicle']['plate_number'];
+            bookingDetails['driver_name'] = driverResponse['full_name'];
+            bookingDetails['driver_phone'] = driverResponse['driver_number'];
+
+            // If we have vehicle_id, fetch vehicle details
+            if (driverResponse['vehicle_id'] != null) {
+              final vehicleResponse = await supabase
+                  .from('vehicle')
+                  .select('plate_number')
+                  .eq('vehicle_id', driverResponse['vehicle_id'])
+                  .single();
+
+              bookingDetails['plate_number'] = vehicleResponse['plate_number'];
+            }
+          } catch (e) {
+            debugPrint('Error fetching driver details: $e');
           }
         }
 
         // Fetch passenger details if not already included
-        if (bookingDetails['passenger_name'] == null) {
-          final passengerResponse = await supabase
-              .from('passenger')
-              .select('name')
-              .eq('id', bookingDetails['passenger_id'])
-              .single();
+        if (bookingDetails['passenger_id'] != null &&
+            bookingDetails['passenger_name'] == null) {
+          try {
+            final passengerResponse = await supabase
+                .from('passenger')
+                .select('display_name')
+                .eq('id', bookingDetails['passenger_id'])
+                .single();
 
-          bookingDetails['passenger_name'] = passengerResponse['name'];
+            bookingDetails['passenger_name'] =
+                passengerResponse['display_name'];
+          } catch (e) {
+            debugPrint('Error fetching passenger details: $e');
+          }
         }
       }
     } catch (e) {
@@ -147,6 +236,422 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         gravity: ToastGravity.BOTTOM,
       );
     }
+  }
+
+  // Fetch route details and generate polyline
+  Future<void> _fetchRouteAndGeneratePolyline() async {
+    if (bookingDetails['pickup_lat'] == null ||
+        bookingDetails['pickup_lng'] == null ||
+        bookingDetails['dropoff_lat'] == null ||
+        bookingDetails['dropoff_lng'] == null) {
+      debugPrint('Missing coordinates for polyline');
+      return;
+    }
+
+    try {
+      final pickupLatLng = LatLng(
+          double.parse(bookingDetails['pickup_lat'].toString()),
+          double.parse(bookingDetails['pickup_lng'].toString()));
+
+      final dropoffLatLng = LatLng(
+          double.parse(bookingDetails['dropoff_lat'].toString()),
+          double.parse(bookingDetails['dropoff_lng'].toString()));
+
+      // Add markers
+      markers.add(Marker(
+        markerId: const MarkerId('pickup'),
+        position: pickupLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: InfoWindow(
+            title: 'Pickup', snippet: bookingDetails['pickup_address']),
+      ));
+
+      markers.add(Marker(
+        markerId: const MarkerId('dropoff'),
+        position: dropoffLatLng,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(
+            title: 'Dropoff', snippet: bookingDetails['dropoff_address']),
+      ));
+
+      // Check if we have a route_id to fetch the official route
+      if (bookingDetails['route_id'] != null) {
+        // Fetch the official route details
+        final routeResponse = await supabase
+            .from('official_routes')
+            .select('intermediate_coordinates')
+            .eq('officialroute_id', bookingDetails['route_id'])
+            .single();
+
+        if (routeResponse['intermediate_coordinates'] != null) {
+          var intermediateCoords = routeResponse['intermediate_coordinates'];
+
+          // If it's a string, parse it as JSON
+          if (intermediateCoords is String) {
+            try {
+              intermediateCoords = jsonDecode(intermediateCoords);
+            } catch (e) {
+              debugPrint('Failed to parse intermediate_coordinates: $e');
+            }
+          }
+
+          // Generate polyline with intermediate coordinates
+          await generateRoutePolyline(intermediateCoords,
+              originCoordinates: pickupLatLng,
+              destinationCoordinates: dropoffLatLng);
+        } else {
+          // Fallback to direct route if no intermediate coordinates
+          await generatePolylineBetween(pickupLatLng, dropoffLatLng);
+        }
+      } else {
+        // No route_id, generate direct polyline
+        await generatePolylineBetween(pickupLatLng, dropoffLatLng);
+      }
+
+      if (mounted) {
+        setState(() {
+          isMapReady = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error generating polyline: $e');
+    }
+  }
+
+  // Generate polyline with intermediate coordinates (similar to mapScreen.dart)
+  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
+      {LatLng? originCoordinates, LatLng? destinationCoordinates}) async {
+    try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey.isEmpty) {
+        debugPrint('API key not found');
+        return;
+      }
+
+      final polylinePoints = PolylinePoints();
+
+      // Convert intermediate coordinates to waypoints format
+      List<Map<String, dynamic>> intermediates = [];
+      if (intermediateCoordinates.isNotEmpty) {
+        for (var point in intermediateCoordinates) {
+          if (point is Map &&
+              point.containsKey('lat') &&
+              point.containsKey('lng')) {
+            intermediates.add({
+              'location': {
+                'latLng': {
+                  'latitude': double.parse(point['lat'].toString()),
+                  'longitude': double.parse(point['lng'].toString())
+                }
+              }
+            });
+          }
+        }
+      }
+
+      // Routes API request
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+      };
+
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': originCoordinates?.latitude,
+              'longitude': originCoordinates?.longitude,
+            },
+          },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': destinationCoordinates?.latitude,
+              'longitude': destinationCoordinates?.longitude,
+            },
+          },
+        },
+        'intermediates': intermediates,
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        debugPrint('No response from the server');
+        return;
+      }
+
+      final data = json.decode(response);
+
+      // Add response validation
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        debugPrint('No routes found');
+        return;
+      }
+
+      // Null checking for nested properties
+      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
+      if (polyline == null) {
+        debugPrint('No polyline found in the response');
+        return;
+      }
+
+      // Decode the polyline
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(polyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      // Store the route polyline for later use
+      routePolyline = polylineCoordinates;
+
+      // Update UI with the polyline
+      if (mounted) {
+        setState(() {
+          polylines.clear();
+          polylines[const PolylineId('route_path')] = Polyline(
+            polylineId: const PolylineId('route_path'),
+            points: polylineCoordinates,
+            color: const Color(0xFF067837),
+            width: 5,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint('Error generating route polyline: $e');
+    }
+  }
+
+  // Generate direct polyline between two points (similar to mapScreen.dart)
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
+    try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey.isEmpty) {
+        debugPrint('API key not found');
+        return;
+      }
+
+      final polylinePoints = PolylinePoints();
+
+      // Routes API request
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+      };
+
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': start.latitude,
+              'longitude': start.longitude,
+            },
+          },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': destination.latitude,
+              'longitude': destination.longitude,
+            },
+          },
+        },
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        debugPrint('No response from the server');
+        return;
+      }
+
+      final data = json.decode(response);
+
+      // Add response validation
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        debugPrint('No routes found');
+        return;
+      }
+
+      // Null checking for nested properties
+      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
+      if (polyline == null) {
+        debugPrint('No polyline found in the response');
+        return;
+      }
+
+      // Decode the polyline
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(polyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      // Store the route polyline for later use
+      routePolyline = polylineCoordinates;
+
+      // Update UI with the polyline
+      if (mounted) {
+        setState(() {
+          polylines.clear();
+          polylines[const PolylineId('route_path')] = Polyline(
+            polylineId: const PolylineId('route_path'),
+            points: polylineCoordinates,
+            color: const Color(0xFF067837),
+            width: 5,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint('Error generating polyline: $e');
+    }
+  }
+
+  // Check network connection
+  Future<bool> checkNetworkConnection() async {
+    try {
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity.contains(ConnectivityResult.none)) {
+        Fluttertoast.showToast(
+          msg: 'No internet connection',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+        return false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error checking network connection: $e');
+      return false;
+    }
+  }
+
+  // Helper method to get the center position between pickup and dropoff
+  LatLng _getCenterPosition() {
+    try {
+      if (bookingDetails['pickup_lat'] != null &&
+          bookingDetails['pickup_lng'] != null &&
+          bookingDetails['dropoff_lat'] != null &&
+          bookingDetails['dropoff_lng'] != null) {
+        final double pickupLat =
+            double.parse(bookingDetails['pickup_lat'].toString());
+        final double pickupLng =
+            double.parse(bookingDetails['pickup_lng'].toString());
+        final double dropoffLat =
+            double.parse(bookingDetails['dropoff_lat'].toString());
+        final double dropoffLng =
+            double.parse(bookingDetails['dropoff_lng'].toString());
+
+        return LatLng(
+          (pickupLat + dropoffLat) / 2,
+          (pickupLng + dropoffLng) / 2,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error calculating center position: $e');
+    }
+
+    // Default position if coordinates are not available
+    return const LatLng(14.617494, 120.971770); // Default to Manila
+  }
+
+  // Helper method to fit the map to show both markers
+  void _fitMapToBounds() {
+    if (mapController == null || markers.isEmpty) return;
+
+    try {
+      // Calculate the bounds that include all markers
+      double minLat = 90.0;
+      double maxLat = -90.0;
+      double minLng = 180.0;
+      double maxLng = -180.0;
+
+      for (Marker marker in markers) {
+        if (marker.position.latitude < minLat) {
+          minLat = marker.position.latitude;
+        }
+        if (marker.position.latitude > maxLat) {
+          maxLat = marker.position.latitude;
+        }
+        if (marker.position.longitude < minLng) {
+          minLng = marker.position.longitude;
+        }
+        if (marker.position.longitude > maxLng) {
+          maxLng = marker.position.longitude;
+        }
+      }
+
+      // Add padding to the bounds
+      final double padding = 0.01;
+      minLat -= padding;
+      maxLat += padding;
+      minLng -= padding;
+      maxLng += padding;
+
+      // Animate camera to show the bounds
+      mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          50, // Padding in pixels
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fitting map to bounds: $e');
+    }
+  }
+
+  // Helper method to inspect database schema
+  Future<void> _inspectDatabaseSchema() async {
+    try {
+      // Get tables in the public schema
+      final tablesResponse = await supabase.rpc('get_tables');
+      debugPrint('Tables in database: $tablesResponse');
+
+      // Get columns for the bookings table
+      final bookingsColumnsResponse =
+          await supabase.rpc('get_columns', params: {'table_name': 'bookings'});
+      debugPrint('Bookings table columns: $bookingsColumnsResponse');
+
+      // Get foreign keys for the bookings table
+      final foreignKeysResponse = await supabase
+          .rpc('get_foreign_keys', params: {'table_name': 'bookings'});
+      debugPrint('Bookings table foreign keys: $foreignKeysResponse');
+    } catch (e) {
+      debugPrint('Error inspecting database schema: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    mapController?.dispose();
+    super.dispose();
   }
 
   @override
@@ -337,7 +842,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Driver',
+                                'Driver Number',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: isDarkMode
@@ -493,7 +998,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                         ),
                         Text(
                           bookingDetails['passenger']?['display_name'] ??
-                              bookingDetails['passenger_name'] ??
+                              bookingDetails['display_name'] ??
                               'N/A',
                           style: TextStyle(
                             fontSize: 16,
@@ -512,17 +1017,105 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                       height: 200,
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: isDarkMode ? Colors.grey[800] : Colors.grey[300],
                         borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.map,
-                          size: 50,
-                          color:
-                              isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[700]!
+                              : Colors.grey[300]!,
+                          width: 1,
                         ),
                       ),
+                      clipBehavior: Clip
+                          .antiAlias, // Ensures the map respects the border radius
+                      child: isLoading || !isMapReady
+                          ?
+                          // Show loading indicator or placeholder while map is loading
+                          Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.map,
+                                    size: 50,
+                                    color: isDarkMode
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Loading route map...',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isDarkMode
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          :
+                          // Show the actual map when data is ready
+                          GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: _getCenterPosition(),
+                                zoom: 13,
+                              ),
+                              markers: markers,
+                              polylines: Set<Polyline>.of(polylines.values),
+                              onMapCreated: (GoogleMapController controller) {
+                                mapController = controller;
+
+                                // Apply map styling based on theme
+                                if (isDarkMode) {
+                                  controller.setMapStyle('''[
+                                {
+                                  "elementType": "geometry",
+                                  "stylers": [{"color": "#242f3e"}]
+                                },
+                                {
+                                  "elementType": "labels.text.fill",
+                                  "stylers": [{"color": "#746855"}]
+                                },
+                                {
+                                  "elementType": "labels.text.stroke",
+                                  "stylers": [{"color": "#242f3e"}]
+                                },
+                                {
+                                  "featureType": "road",
+                                  "elementType": "geometry",
+                                  "stylers": [{"color": "#38414e"}]
+                                },
+                                {
+                                  "featureType": "road",
+                                  "elementType": "geometry.stroke",
+                                  "stylers": [{"color": "#212a37"}]
+                                },
+                                {
+                                  "featureType": "road",
+                                  "elementType": "labels.text.fill",
+                                  "stylers": [{"color": "#9ca5b3"}]
+                                }
+                              ]''');
+                                }
+
+                                // Fit the map to show both markers and the polyline
+                                _fitMapToBounds();
+                              },
+                              zoomControlsEnabled: false,
+                              scrollGesturesEnabled:
+                                  false, // Disable map movement
+                              zoomGesturesEnabled:
+                                  false, // Disable zoom gestures
+                              rotateGesturesEnabled: false, // Disable rotation
+                              tiltGesturesEnabled: false, // Disable tilt
+                              mapToolbarEnabled: false, // Disable map toolbar
+                              myLocationEnabled:
+                                  false, // Disable my location button
+                              myLocationButtonEnabled:
+                                  false, // Disable my location button
+                              compassEnabled: false, // Disable compass
+                            ),
                     ),
 
                     const SizedBox(height: 20),
