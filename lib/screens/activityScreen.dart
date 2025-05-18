@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
+import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -61,6 +62,15 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
     }
   }
 
+  void _viewBookingDetails(Map<String, dynamic> booking) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewRideDetailsScreen(booking: booking),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -73,7 +83,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20),
               child: Text(
                 'Activity',
                 style: TextStyle(
@@ -87,14 +97,28 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
             ),
             Expanded(
               child: isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : ListView.builder(
-                      itemCount: bookings.length,
-                      itemBuilder: (context, index) {
-                        final booking = bookings[index];
-                        return BookingListItem(booking: booking);
-                      },
-                    ),
+                  ? const Center(child: CircularProgressIndicator())
+                  : bookings.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No booking history found',
+                            style: TextStyle(
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: bookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = bookings[index];
+                            return GestureDetector(
+                              onTap: () => _viewBookingDetails(booking),
+                              child: BookingListItem(booking: booking),
+                            );
+                          },
+                        ),
             ),
           ],
         ),

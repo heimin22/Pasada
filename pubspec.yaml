@@ -48,6 +48,7 @@ dependencies:
   flutter_svg: ^2.0.16
   flutter_typeahead: ^5.2.0
   fluttertoast: ^8.2.10
+  font_awesome_flutter: ^10.8.0
   geocoding: ^3.0.0
   geolocator: ^13.0.2
   get: ^4.6.6
@@ -181,6 +182,5 @@ flutter:
           weight: 500
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
 dependency_overrides:
   http: ^1.2.2

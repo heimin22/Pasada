@@ -229,6 +229,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       _hasOnboardingBeenCalled = true;
 
       loadLocation();
+      loadPaymentMethod(); // Add this line to load the payment method
       measureContainer();
 
       // Show onboarding dialog for new users
@@ -237,6 +238,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Use the updated notification service
       NotificationService.showAvailabilityNotification();
     });
+  }
+
+  // Add this method to load the saved payment method
+  void loadPaymentMethod() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMethod = prefs.getString('selectedPaymentMethod');
+    if (savedMethod != null && mounted) {
+      setState(() {
+        selectedPaymentMethod = savedMethod;
+      });
+    }
   }
 
   @override
@@ -948,6 +960,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             );
                             if (result != null && mounted) {
                               setState(() => selectedPaymentMethod = result);
+                              // Save the payment method selection
+                              final prefs =
+                                  await SharedPreferences.getInstance();
+                              prefs.setString('selectedPaymentMethod', result);
                             }
                           }
                         : null,
