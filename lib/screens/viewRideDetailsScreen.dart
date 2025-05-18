@@ -10,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import '../network/networkUtilities.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class ViewRideDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? booking;
@@ -108,12 +109,12 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       }
 
       // Fetch passenger details
-      if (bookingDetails['passenger_id'] != null) {
+      if (bookingDetails['id'] != null) {
         try {
           final passengerResponse = await supabase
               .from('passenger')
               .select('display_name, contact_number')
-              .eq('id', bookingDetails['passenger_id'])
+              .eq('id', bookingDetails['id'])
               .single();
 
           setState(() {
@@ -174,13 +175,13 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         }
 
         // Fetch passenger details if not already included
-        if (bookingDetails['passenger_id'] != null &&
+        if (bookingDetails['id'] != null &&
             bookingDetails['passenger_name'] == null) {
           try {
             final passengerResponse = await supabase
                 .from('passenger')
                 .select('display_name')
-                .eq('id', bookingDetails['passenger_id'])
+                .eq('id', bookingDetails['id'])
                 .single();
 
             setState(() {
@@ -714,302 +715,13 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Booking ID
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Booking ID',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              bookingDetails['booking_id']?.toString() ?? 'N/A',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: isDarkMode
-                                    ? Colors.grey[300]
-                                    : Colors.grey[700],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.copy, size: 18),
-                              onPressed: () => _copyToClipboard(
-                                  bookingDetails['booking_id']?.toString() ??
-                                      ''),
-                              color: isDarkMode
-                                  ? Colors.grey[300]
-                                  : Colors.grey[700],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    // Booking Date
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Booking Date',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          bookingDetails['created_at'] != null
-                              ? DateTime.parse(bookingDetails['created_at'])
-                                  .toString()
-                                  .substring(0, 16)
-                              : 'N/A',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Driver Profile Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Driver Profile Picture (Left side)
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? Colors.grey[800]
-                                : Colors.grey[300],
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.person,
-                            size: 50,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-
-                        // Driver Details (Right side)
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment
-                                .end, // Align text to the right
-                            children: [
-                              Text(
-                                bookingDetails['driver_name'] ?? 'Driver Name',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    bookingDetails['driver_number'] ?? 'N/A',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isDarkMode
-                                          ? Colors.grey[300]
-                                          : Colors.grey[700],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                bookingDetails['plate_number'] ??
-                                    'Plate Number',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDarkMode
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 45),
-
-                    // Total Fare
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total Fare',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          '₱${(bookingDetails['fare'] is num ? bookingDetails['fare'].toDouble() : double.tryParse(bookingDetails['fare']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Seating Preference
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Seating Preference',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          bookingDetails['seat_type']?.toString() ?? 'Standard',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-
-                    // Payment Method
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Payment Method',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          bookingDetails['payment_method']?.toString() ??
-                              'Cash',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-                    // Passenger Count
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Passenger Count',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          bookingDetails['passenger_count']?.toString() ?? '1',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 15),
-                    // Passenger Name
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Passenger Name',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                        Text(
-                          bookingDetails['passenger']?['display_name'] ??
-                              bookingDetails['display_name'] ??
-                              'N/A',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: isDarkMode
-                                ? Colors.grey[300]
-                                : Colors.grey[700],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // Map placeholder
+                    // Driver Profile Section (Now at the top)
                     Container(
-                      height: 200,
-                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: isDarkMode
@@ -1018,27 +730,314 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                           width: 1,
                         ),
                       ),
-                      clipBehavior: Clip
-                          .antiAlias, // Ensures the map respects the border radius
-                      child: isLoading || !isMapReady
-                          ?
-                          // Show loading indicator or placeholder while map is loading
-                          Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Driver Details',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Driver Profile Picture (Left side)
+                              Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  color: isDarkMode
+                                      ? Colors.grey[800]
+                                      : Colors.grey[300],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 50,
+                                  color: isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
+                                ),
+                              ),
+
+                              // Driver Details (Right side)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      bookingDetails['driver_name'] ??
+                                          'Driver Name',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDarkMode
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          bookingDetails['driver_number'] ??
+                                              'N/A',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: isDarkMode
+                                                ? Colors.grey[300]
+                                                : Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      bookingDetails['plate_number'] ??
+                                          'Plate Number',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: isDarkMode
+                                            ? Colors.grey[300]
+                                            : Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Booking ID and Date Section (Now second)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[700]!
+                              : Colors.grey[300]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          // Booking ID
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Booking ID',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              Row(
                                 children: [
-                                  Icon(
-                                    Icons.map,
-                                    size: 50,
+                                  Text(
+                                    bookingDetails['booking_id']?.toString() ??
+                                        'N/A',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: isDarkMode
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy, size: 18),
+                                    onPressed: () => _copyToClipboard(
+                                        bookingDetails['booking_id']
+                                                ?.toString() ??
+                                            ''),
                                     color: isDarkMode
                                         ? Colors.grey[300]
                                         : Colors.grey[700],
                                   ),
-                                  const SizedBox(height: 8),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // Booking Date
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Booking Date',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              Text(
+                                bookingDetails['created_at'] != null
+                                    ? DateTime.parse(
+                                            bookingDetails['created_at'])
+                                        .toString()
+                                        .substring(0, 16)
+                                    : 'N/A',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 16,
+                                  color: isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Fare and Payment Section (Third position unchanged)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[700]!
+                              : Colors.grey[300]!,
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Payment Details',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Total Fare
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Fare',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              Text(
+                                '₱${(bookingDetails['fare'] is num ? bookingDetails['fare'].toDouble() : double.tryParse(bookingDetails['fare']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // Seating Preference
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Seating Preference',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              Text(
+                                bookingDetails['seat_type']?.toString() ??
+                                    'Standard',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isDarkMode
+                                      ? Colors.grey[300]
+                                      : Colors.grey[700],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 15),
+
+                          // Payment Method
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Payment Method',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  // Payment method icon
+                                  _buildPaymentMethodIcon(
+                                      bookingDetails['payment_method']
+                                              ?.toString() ??
+                                          'Cash'),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    'Loading route map...',
+                                    bookingDetails['payment_method']
+                                            ?.toString() ??
+                                        'Cash',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 16,
                                       color: isDarkMode
                                           ? Colors.grey[300]
                                           : Colors.grey[700],
@@ -1046,139 +1045,214 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                   ),
                                 ],
                               ),
-                            )
-                          :
-                          // Show the actual map when data is ready
-                          GoogleMap(
-                              initialCameraPosition: CameraPosition(
-                                target: _getCenterPosition(),
-                                zoom: 13,
-                              ),
-                              markers: markers,
-                              polylines: Set<Polyline>.of(polylines.values),
-                              onMapCreated: (GoogleMapController controller) {
-                                mapController = controller;
-
-                                // Apply map styling based on theme
-                                if (isDarkMode) {
-                                  controller.setMapStyle('''[
-                                {
-                                  "elementType": "geometry",
-                                  "stylers": [{"color": "#242f3e"}]
-                                },
-                                {
-                                  "elementType": "labels.text.fill",
-                                  "stylers": [{"color": "#746855"}]
-                                },
-                                {
-                                  "elementType": "labels.text.stroke",
-                                  "stylers": [{"color": "#242f3e"}]
-                                },
-                                {
-                                  "featureType": "road",
-                                  "elementType": "geometry",
-                                  "stylers": [{"color": "#38414e"}]
-                                },
-                                {
-                                  "featureType": "road",
-                                  "elementType": "geometry.stroke",
-                                  "stylers": [{"color": "#212a37"}]
-                                },
-                                {
-                                  "featureType": "road",
-                                  "elementType": "labels.text.fill",
-                                  "stylers": [{"color": "#9ca5b3"}]
-                                }
-                              ]''');
-                                }
-
-                                // Fit the map to show both markers and the polyline
-                                _fitMapToBounds();
-                              },
-                              zoomControlsEnabled: false,
-                              scrollGesturesEnabled:
-                                  false, // Disable map movement
-                              zoomGesturesEnabled:
-                                  false, // Disable zoom gestures
-                              rotateGesturesEnabled: false, // Disable rotation
-                              tiltGesturesEnabled: false, // Disable tilt
-                              mapToolbarEnabled: false, // Disable map toolbar
-                              myLocationEnabled:
-                                  false, // Disable my location button
-                              myLocationButtonEnabled:
-                                  false, // Disable my location button
-                              compassEnabled: false, // Disable compass
-                            ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
 
                     const SizedBox(height: 20),
 
-                    // Pickup and dropoff locations
-                    Row(
-                      children: [
-                        Column(
-                          children: [
-                            Icon(
-                              Icons.circle,
-                              size: 14,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                            Container(
-                              width: 2,
-                              height: 30,
-                              color: isDarkMode
-                                  ? Colors.grey[300]
-                                  : Colors.grey[700],
-                            ),
-                            Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                          ],
+                    // Map and Location Section (Fourth position unchanged)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey[700]!
+                              : Colors.grey[300]!,
+                          width: 1,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                bookingDetails['pickup_address'] ??
-                                    'Pickup Location',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trip Route',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Map container
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!,
+                                width: 1,
                               ),
-                              const SizedBox(height: 20),
-                              Text(
-                                bookingDetails['dropoff_address'] ??
-                                    'Dropoff Location',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode
-                                      ? Colors.grey[300]
-                                      : Colors.grey[700],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: isLoading || !isMapReady
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.map,
+                                          size: 50,
+                                          color: isDarkMode
+                                              ? Colors.grey[300]
+                                              : Colors.grey[700],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Loading route map...',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: isDarkMode
+                                                ? Colors.grey[300]
+                                                : Colors.grey[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : GoogleMap(
+                                    initialCameraPosition: CameraPosition(
+                                      target: _getCenterPosition(),
+                                      zoom: 13,
+                                    ),
+                                    markers: markers,
+                                    polylines:
+                                        Set<Polyline>.of(polylines.values),
+                                    onMapCreated:
+                                        (GoogleMapController controller) {
+                                      mapController = controller;
+                                      // Apply map styling based on theme
+                                      if (isDarkMode) {
+                                        controller.setMapStyle('''[
+                                      {
+                                        "elementType": "geometry",
+                                        "stylers": [{"color": "#242f3e"}]
+                                      },
+                                      {
+                                        "elementType": "labels.text.fill",
+                                        "stylers": [{"color": "#746855"}]
+                                      },
+                                      {
+                                        "elementType": "labels.text.stroke",
+                                        "stylers": [{"color": "#242f3e"}]
+                                      },
+                                      {
+                                        "featureType": "road",
+                                        "elementType": "geometry",
+                                        "stylers": [{"color": "#38414e"}]
+                                      },
+                                      {
+                                        "featureType": "road",
+                                        "elementType": "geometry.stroke",
+                                        "stylers": [{"color": "#212a37"}]
+                                      },
+                                      {
+                                        "featureType": "road",
+                                        "elementType": "labels.text.fill",
+                                        "stylers": [{"color": "#9ca5b3"}]
+                                      }
+                                    ]''');
+                                      }
+
+                                      // Fit the map to show both markers and the polyline
+                                      _fitMapToBounds();
+                                    },
+                                    zoomControlsEnabled: false,
+                                    scrollGesturesEnabled: false,
+                                    zoomGesturesEnabled: false,
+                                    rotateGesturesEnabled: false,
+                                    tiltGesturesEnabled: false,
+                                    mapToolbarEnabled: false,
+                                    myLocationEnabled: false,
+                                    myLocationButtonEnabled: false,
+                                    compassEnabled: false,
+                                  ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Pickup and dropoff locations
+                          Row(
+                            children: [
+                              Column(
+                                children: [
+                                  Icon(
+                                    Icons.circle,
+                                    size: 14,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                  Container(
+                                    width: 2,
+                                    height: 30,
+                                    color: isDarkMode
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
+                                  ),
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      bookingDetails['pickup_address'] ??
+                                          'Pickup Location',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode
+                                            ? Colors.grey[300]
+                                            : Colors.grey[700],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      bookingDetails['dropoff_address'] ??
+                                          'Dropoff Location',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDarkMode
+                                            ? Colors.grey[300]
+                                            : Colors.grey[700],
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1212,5 +1286,35 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildPaymentMethodIcon(String paymentMethod) {
+    switch (paymentMethod) {
+      case 'GCash':
+        return SvgPicture.asset(
+          'assets/svg/gcash_logo.svg',
+          width: 24,
+          height: 24,
+        );
+      case 'PayMaya':
+      case 'Maya':
+        return SvgPicture.asset(
+          'assets/svg/maya_logo.svg',
+          width: 24,
+          height: 24,
+        );
+      case 'Cash':
+        return const Icon(
+          Icons.money_rounded,
+          color: Color(0xFF00CC58),
+          size: 24,
+        );
+      default:
+        return const Icon(
+          Icons.payment,
+          color: Color(0xFF00CC58),
+          size: 24,
+        );
+    }
   }
 }
