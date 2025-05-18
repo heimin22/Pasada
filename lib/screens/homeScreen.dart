@@ -26,6 +26,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 // import 'package:pasada_passenger_app/models/stop.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -52,6 +53,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         WidgetsBindingObserver,
         AutomaticKeepAliveClientMixin,
         TickerProviderStateMixin {
+  // Booking and polling services for cancellation
+  BookingService? _bookingService;
+  DriverAssignmentService? _driverAssignmentService;
+  int? _activeBookingId;
   final GlobalKey containerKey =
       GlobalKey(); // container key for the location container
   double containerHeight = 0.0; // container height idk might reimplement this
@@ -188,6 +193,105 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainer());
   }
 
+  // Method to restore any active booking from local database on app start
+  Future<void> loadActiveBooking() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bookingId = prefs.getInt('activeBookingId');
+    if (bookingId == null) return;
+    final localBooking =
+        await LocalDatabaseService().getBookingDetails(bookingId);
+    if (localBooking == null) {
+      await prefs.remove('activeBookingId');
+      return;
+    }
+    final status = localBooking.rideStatus;
+    if (status == 'searching' ||
+        status == 'assigned' ||
+        status == 'in_progress') {
+      setState(() {
+        isBookingConfirmed = true;
+        selectedPickUpLocation = SelectedLocation(
+          localBooking.pickupAddress,
+          localBooking.pickupCoordinates,
+        );
+        selectedDropOffLocation = SelectedLocation(
+          localBooking.dropoffAddress,
+          localBooking.dropoffCoordinates,
+        );
+        currentFare = localBooking.fare;
+      });
+      // Animate into the booking status view
+      _bookingAnimationController.forward();
+      // Restore payment method if any
+      final savedMethod = prefs.getString('selectedPaymentMethod');
+      if (savedMethod != null && mounted) {
+        setState(() => selectedPaymentMethod = savedMethod);
+      }
+      // Restore selected route details
+      try {
+        final routeResponse = await Supabase.instance.client
+            .from('official_routes')
+            .select(
+                'route_name, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, destination_name, polyline_coordinates')
+            .eq('officialroute_id', localBooking.routeId)
+            .single();
+        if (routeResponse != null) {
+          final Map<String, dynamic> routeMap =
+              Map<String, dynamic>.from(routeResponse as Map);
+          // Parse intermediate_coordinates
+          var inter = routeMap['intermediate_coordinates'];
+          if (inter is String) {
+            try {
+              inter = jsonDecode(inter);
+            } catch (_) {}
+          }
+          routeMap['intermediate_coordinates'] = inter;
+          // Parse origin/destination coords
+          routeMap['origin_coordinates'] = LatLng(
+            double.parse(routeMap['origin_lat'].toString()),
+            double.parse(routeMap['origin_lng'].toString()),
+          );
+          routeMap['destination_coordinates'] = LatLng(
+            double.parse(routeMap['destination_lat'].toString()),
+            double.parse(routeMap['destination_lng'].toString()),
+          );
+          setState(() {
+            selectedRoute = routeMap;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error restoring route: $e');
+      }
+      // Initialize map and generate route polyline
+      mapScreenKey.currentState?.initializeLocation();
+      if (selectedRoute != null) {
+        mapScreenKey.currentState?.generateRoutePolyline(
+          selectedRoute!['intermediate_coordinates'] as List<dynamic>,
+          originCoordinates: selectedRoute!['origin_coordinates'] as LatLng?,
+          destinationCoordinates:
+              selectedRoute!['destination_coordinates'] as LatLng?,
+          destinationName: selectedRoute!['destination_name']?.toString(),
+        );
+      }
+      // Resume location tracking and driver polling
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        // initialize and store services so they can be cancelled
+        _bookingService = BookingService();
+        _bookingService!.startLocationTracking(user.id);
+        _driverAssignmentService = DriverAssignmentService();
+        _driverAssignmentService!.pollForDriverAssignment(
+          bookingId,
+          (driverData) => _updateDriverDetails(driverData),
+          onError: () {/* optionally handle polling errors */},
+        );
+      }
+    } else {
+      // Completed or cancelled booking, clear saved id
+      await prefs.remove('activeBookingId');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -228,6 +332,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       if (_hasOnboardingBeenCalled) return;
       _hasOnboardingBeenCalled = true;
 
+      // Attempt to restore any active booking
+      await loadActiveBooking();
+      if (isBookingConfirmed) {
+        return;
+      }
+
       loadLocation();
       loadPaymentMethod(); // Add this line to load the payment method
       measureContainer();
@@ -266,7 +376,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  void _handleBookingConfirmation() async {
+  Future<void> _handleBookingConfirmation() async {
     // Prevent reverse booking: ensure drop-off stop order > pick-up stop order
     if (selectedRoute != null &&
         selectedPickUpLocation != null &&
@@ -309,7 +419,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final user = supabase.auth.currentUser;
     if (user != null && selectedRoute != null) {
       // Create booking in Supabase and locally
-      final bookingService = BookingService();
+      // initialize booking service for tracking
+      _bookingService = BookingService();
+      final bookingService = _bookingService!;
 
       // Make sure we have the route ID
       int routeId = selectedRoute!['officialroute_id'] ?? 0;
@@ -332,6 +444,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       if (bookingId != null) {
         debugPrint('Booking created with ID: $bookingId');
 
+        // Persist active booking for restore on app restart
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('activeBookingId', bookingId);
+        _activeBookingId = bookingId;
+
         // Start location tracking for the passenger
         bookingService.startLocationTracking(user.id);
 
@@ -343,8 +460,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               isDriverAssigned = false;
             });
 
-            final driverAssignmentService = DriverAssignmentService();
-            driverAssignmentService.pollForDriverAssignment(bookingId,
+            // initialize polling service for driver assignment
+            _driverAssignmentService = DriverAssignmentService();
+            _driverAssignmentService!.pollForDriverAssignment(bookingId,
                 (driverData) {
               // Update driver details and set isDriverAssigned to true
               _updateDriverDetails(driverData);
@@ -406,8 +524,32 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   void _handleBookingCancellation() {
+    // Stop background services
+    if (_driverAssignmentService != null) {
+      _driverAssignmentService!.stopPolling();
+    }
+    if (_bookingService != null) {
+      _bookingService!.stopLocationTracking();
+    }
+    // Clear saved active booking
+    SharedPreferences.getInstance().then((prefs) async {
+      if (_activeBookingId != null) {
+        await LocalDatabaseService().deleteBookingDetails(_activeBookingId!);
+      }
+      await prefs.remove('activeBookingId');
+      // Clear persisted pick-up and drop-off locations
+      await prefs.remove('pickup');
+      await prefs.remove('dropoff');
+    });
+    // Clear map UI and state
+    mapScreenKey.currentState?.clearAll();
     setState(() {
       isBookingConfirmed = false;
+      isDriverAssigned = false;
+      _activeBookingId = null;
+      selectedPickUpLocation = null;
+      selectedDropOffLocation = null;
+      selectedRoute = null;
     });
     _bookingAnimationController.reverse();
   }

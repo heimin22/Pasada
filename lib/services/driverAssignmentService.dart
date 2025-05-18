@@ -5,14 +5,12 @@ import 'package:pasada_passenger_app/services/apiService.dart';
 class DriverAssignmentService {
   final ApiService _apiService = ApiService();
   Timer? _pollingTimer;
-  int _failedAttempts = 0;
-  static const int _maxFailedAttempts = 3;
 
   // Poll the backend for driver assignment status
   void pollForDriverAssignment(
       int bookingId, Function(Map<String, dynamic>) onDriverAssigned,
       {Function? onError}) {
-    // Cancel any existing polling
+    // Cancel any existing polling before starting
     stopPolling();
 
     debugPrint('Starting to poll for driver assignment on booking: $bookingId');
@@ -23,42 +21,30 @@ class DriverAssignmentService {
         final response = await _apiService
             .get<Map<String, dynamic>>('trips/$bookingId/status');
 
-        // Reset failed attempts on success
-        _failedAttempts = 0;
+        debugPrint('Booking status update: $response');
 
-        if (response != null) {
-          debugPrint('Booking status update: $response');
+        // Check if a driver has been assigned
+        if (response != null &&
+            response['status'] == 'accepted' &&
+            response['driver_id'] != null) {
+          // Stop polling once we have a driver
+          stopPolling();
 
-          // Check if a driver has been assigned
-          if (response['status'] == 'accepted' &&
-              response['driver_id'] != null) {
-            // Fetch driver details
-            final driverDetails =
-                await _fetchDriverDetails(response['driver_id']);
+          // Fetch driver details
+          final driverDetails =
+              await _fetchDriverDetails(response['driver_id']);
 
-            if (driverDetails != null) {
-              // Stop polling once we have a driver
-              stopPolling();
-
-              // Call the callback with driver data
-              onDriverAssigned({
-                'booking': response,
-                'driver': driverDetails,
-              });
-            }
+          if (driverDetails != null) {
+            // Call the callback with driver data
+            onDriverAssigned({
+              'booking': response,
+              'driver': driverDetails,
+            });
           }
         }
       } catch (e) {
         debugPrint('Error polling for driver assignment: $e');
-        _failedAttempts++;
-
-        // If we've failed too many times, stop polling and notify
-        if (_failedAttempts >= _maxFailedAttempts) {
-          stopPolling();
-          if (onError != null) {
-            onError();
-          }
-        }
+        // Continue polling despite errors
       }
     });
   }
@@ -76,7 +62,6 @@ class DriverAssignmentService {
   void stopPolling() {
     _pollingTimer?.cancel();
     _pollingTimer = null;
-    _failedAttempts = 0;
     debugPrint('Stopped polling for driver assignment');
   }
 }

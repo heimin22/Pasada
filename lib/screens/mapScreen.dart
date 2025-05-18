@@ -630,144 +630,151 @@ class MapScreenState extends State<MapScreen>
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        showError('Please try again.');
-        if (kDebugMode) {
-          print('No response from the server');
-        }
+        // No response, skip polyline generation
+        debugPrint('generatePolylineBetween: no response from server');
         return;
       }
 
       final data = json.decode(response);
 
-      // add ng response validation
-      if (data['routes'] == null || data['routes'].isEmpty) {
+      // Handle routes which may be a List or a single Map
+      final dynamic routesObj = data['routes'];
+      List<dynamic> routesList;
+      if (routesObj is List) {
+        routesList = routesObj;
+      } else if (routesObj is Map) {
+        routesList = [routesObj];
+      } else {
         if (kDebugMode) {
-          print('No routes found');
+          print('Unexpected routes format: ${routesObj.runtimeType}');
         }
         return;
       }
+      if (routesList.isEmpty) {
+        if (kDebugMode) print('No routes found');
+        return;
+      }
+      final Map<String, dynamic> firstRoute =
+          Map<String, dynamic>.from(routesList.first);
+      final dynamic polylineObj = firstRoute['polyline'];
+      String? encodedPolyline;
 
-      // null checking for nested properties
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) {
-        if (kDebugMode) {
-          print('No polyline found in the response');
-        }
+      if (polylineObj is Map && polylineObj['encodedPolyline'] is String) {
+        encodedPolyline = polylineObj['encodedPolyline'] as String;
+      }
+
+      if (encodedPolyline == null) {
+        if (kDebugMode) print('No polyline found in the response');
         return;
       }
 
-      debugPrint('API Response: $data');
-      debugPrint('Routes; ${data['routes']}');
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(encodedPolyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
 
-      if (data['routes']?.isNotEmpty ?? false) {
-        final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-        List<PointLatLng> decodedPolyline =
-            polylinePoints.decodePolyline(polyline);
-        List<LatLng> polylineCoordinates = decodedPolyline
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
+      if (mounted) {
+        final double routeDistance = getRouteDistance(polylineCoordinates);
+        final double fare = calculateFare(routeDistance);
 
-        if (mounted) {
-          final double routeDistance = getRouteDistance(polylineCoordinates);
-          final double fare = calculateFare(routeDistance);
+        debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
+        debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
 
-          debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
-          debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
+        setState(() {
+          polylines = {
+            const PolylineId('route'): Polyline(
+              polylineId: const PolylineId('route'),
+              points: polylineCoordinates,
+              color: Color(0xFF067837),
+              width: 8,
+            )
+          };
 
-          setState(() {
-            polylines = {
-              const PolylineId('route'): Polyline(
-                polylineId: const PolylineId('route'),
-                points: polylineCoordinates,
-                color: Color(0xFF067837),
-                width: 8,
-              )
-            };
+          fareAmount = fare;
+        });
 
-            fareAmount = fare;
-          });
+        if (widget.onFareUpdated != null) {
+          debugPrint(
+              'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
+          widget.onFareUpdated!(fare);
+        } else {
+          debugPrint('onFareUpdated callback is null');
+        }
 
-          if (widget.onFareUpdated != null) {
-            debugPrint(
-                'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
-            widget.onFareUpdated!(fare);
-          } else {
-            debugPrint('onFareUpdated callback is null');
-          }
-
-          // Add ETA update similar to generatePolylineAlongRoute
-          final legs = data['routes'][0]['legs'];
-          if (legs is List && legs.isNotEmpty) {
-            final firstLeg = legs[0];
-            final duration = firstLeg['duration'];
-            if (duration != null && duration['seconds'] != null) {
-              final durationSeconds = duration['seconds'];
-              final etaTextValue = formatDuration(durationSeconds);
-              debugPrint('MapScreen - ETA calculated: $etaTextValue');
-              setState(() {
-                etaText = etaTextValue;
-              });
-              if (widget.onEtaUpdated != null) {
-                debugPrint(
-                    'MapScreen - Calling onEtaUpdated with: $etaTextValue');
-                widget.onEtaUpdated!(etaTextValue);
-              } else {
-                debugPrint('MapScreen - onEtaUpdated is null');
-              }
+        // Add ETA update similar to generatePolylineAlongRoute
+        final legs = routesList[0]['legs'];
+        if (legs is List && legs.isNotEmpty) {
+          final firstLeg = legs[0];
+          final duration = firstLeg['duration'];
+          if (duration != null && duration['seconds'] != null) {
+            final durationSeconds = duration['seconds'];
+            final etaTextValue = formatDuration(durationSeconds);
+            debugPrint('MapScreen - ETA calculated: $etaTextValue');
+            setState(() {
+              etaText = etaTextValue;
+            });
+            if (widget.onEtaUpdated != null) {
+              debugPrint(
+                  'MapScreen - Calling onEtaUpdated with: $etaTextValue');
+              widget.onEtaUpdated!(etaTextValue);
             } else {
-              debugPrint('MapScreen - duration or seconds is null');
+              debugPrint('MapScreen - onEtaUpdated is null');
             }
           } else {
-            debugPrint('MapScreen - legs is empty or not a list');
+            debugPrint('MapScreen - duration or seconds is null');
           }
+        } else {
+          debugPrint('MapScreen - legs is empty or not a list');
+        }
 
-          // calculate bounds that include start, destination and all polyline points
-          double southLat = start.latitude;
-          double northLat = start.latitude;
-          double westLng = start.longitude;
-          double eastLng = start.longitude;
+        // calculate bounds that include start, destination and all polyline points
+        double southLat = start.latitude;
+        double northLat = start.latitude;
+        double westLng = start.longitude;
+        double eastLng = start.longitude;
 
-          // include the destination point
-          southLat = min(southLat, destination.latitude);
-          northLat = max(northLat, destination.latitude);
-          westLng = min(westLng, destination.longitude);
-          eastLng = max(eastLng, destination.longitude);
+        // include the destination point
+        southLat = min(southLat, destination.latitude);
+        northLat = max(northLat, destination.latitude);
+        westLng = min(westLng, destination.longitude);
+        eastLng = max(eastLng, destination.longitude);
 
-          // include all polyline points
-          for (LatLng point in polylineCoordinates) {
-            southLat = min(southLat, point.latitude);
-            northLat = max(northLat, point.latitude);
-            westLng = min(westLng, point.longitude);
-            eastLng = max(eastLng, point.longitude);
-          }
+        // include all polyline points
+        for (LatLng point in polylineCoordinates) {
+          southLat = min(southLat, point.latitude);
+          northLat = max(northLat, point.latitude);
+          westLng = min(westLng, point.longitude);
+          eastLng = max(eastLng, point.longitude);
+        }
 
-          // add padding to the bounds
-          final double padding = 0.01;
-          southLat -= padding;
-          northLat += padding;
-          westLng -= padding;
-          eastLng += padding;
+        // add padding to the bounds
+        final double padding = 0.01;
+        southLat -= padding;
+        northLat += padding;
+        westLng -= padding;
+        eastLng += padding;
 
-          // create a new camera position centered within the bounds
-          final GoogleMapController controller = await mapController.future;
-          controller.animateCamera(
-            CameraUpdate.newLatLngBounds(
-              LatLngBounds(
-                southwest: LatLng(southLat, westLng),
-                northeast: LatLng(northLat, eastLng),
-              ),
-              20,
+        // create a new camera position centered within the bounds
+        final GoogleMapController controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(southLat, westLng),
+              northeast: LatLng(northLat, eastLng),
             ),
-            duration: const Duration(milliseconds: 1000),
-          );
-        }
+            20,
+          ),
+          duration: const Duration(milliseconds: 1000),
+        );
+      }
 
-        if (kDebugMode) {
-          print('Failed to generate route: $response');
-        }
+      if (kDebugMode) {
+        print('Failed to generate route: $response');
       }
     } catch (e) {
-      showError('Error: ${e.toString()}');
+      // Suppress map errors on polyline generate during restore
+      debugPrint('generatePolylineBetween error: $e');
     }
   }
 
@@ -812,12 +819,7 @@ class MapScreenState extends State<MapScreen>
     // Calculate arrival time based on current time and duration
     final now = DateTime.now();
     final arrivalTime = now.add(Duration(seconds: totalSeconds));
-
-    // Add a buffer time (20 minutes) for the upper range
-    final upperArrivalTime = arrivalTime.add(const Duration(minutes: 20));
-
-    // Format as a range
-    return "${DateFormat('h:mm a').format(arrivalTime)} - ${DateFormat('h:mm a').format(upperArrivalTime)}";
+    return DateFormat('h:mm a').format(arrivalTime);
   }
 
   void showDebugToast(String message) {
@@ -1147,5 +1149,17 @@ class MapScreenState extends State<MapScreen>
               ),
       ),
     );
+  }
+
+  // Clears all map overlays and selected locations
+  void clearAll() {
+    setState(() {
+      selectedPickupLatLng = null;
+      selectedDropOffLatLng = null;
+      polylines.clear();
+      markers.clear();
+      fareAmount = 0.0;
+      etaText = null;
+    });
   }
 }
