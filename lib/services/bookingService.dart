@@ -133,7 +133,8 @@ class BookingService {
       passengerId: passengerId,
       driverId: 0, // Will be updated when a driver is assigned
       routeId: routeId,
-      rideStatus: 'requested',
+      rideStatus:
+          'searching', // Changed from 'requested' to match allowed values
       pickupAddress: pickupAddress,
       pickupCoordinates: pickupCoordinates,
       dropoffAddress: dropoffAddress,
@@ -171,7 +172,7 @@ class BookingService {
 
       // Call the external backend API to find a driver
       final response = await apiService.post<Map<String, dynamic>>(
-        'bookings/assign-driver',
+        'api/bookings/assign-driver',
         body: {'booking_id': bookingId},
       );
 
