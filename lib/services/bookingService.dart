@@ -172,7 +172,7 @@ class BookingService {
 
       // Call the external backend API to find a driver
       final response = await apiService.post<Map<String, dynamic>>(
-        'api/bookings/assign-driver',
+        'bookings/assign-driver',
         body: {'booking_id': bookingId},
       );
 

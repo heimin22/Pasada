@@ -52,7 +52,7 @@ class DriverAssignmentService {
   Future<Map<String, dynamic>?> _fetchDriverDetails(String driverId) async {
     try {
       return await _apiService
-          .get<Map<String, dynamic>>('trips/drivers/$driverId');
+          .get<Map<String, dynamic>>('trips/driver/$driverId');
     } catch (e) {
       debugPrint('Error fetching driver details: $e');
       return null;

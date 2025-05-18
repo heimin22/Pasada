@@ -235,30 +235,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                 'route_name, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, destination_name, polyline_coordinates')
             .eq('officialroute_id', localBooking.routeId)
             .single();
-        if (routeResponse != null) {
-          final Map<String, dynamic> routeMap =
-              Map<String, dynamic>.from(routeResponse as Map);
-          // Parse intermediate_coordinates
-          var inter = routeMap['intermediate_coordinates'];
-          if (inter is String) {
-            try {
-              inter = jsonDecode(inter);
-            } catch (_) {}
-          }
-          routeMap['intermediate_coordinates'] = inter;
-          // Parse origin/destination coords
-          routeMap['origin_coordinates'] = LatLng(
-            double.parse(routeMap['origin_lat'].toString()),
-            double.parse(routeMap['origin_lng'].toString()),
-          );
-          routeMap['destination_coordinates'] = LatLng(
-            double.parse(routeMap['destination_lat'].toString()),
-            double.parse(routeMap['destination_lng'].toString()),
-          );
-          setState(() {
-            selectedRoute = routeMap;
-          });
+        final Map<String, dynamic> routeMap =
+            Map<String, dynamic>.from(routeResponse as Map);
+        // Parse intermediate_coordinates
+        var inter = routeMap['intermediate_coordinates'];
+        if (inter is String) {
+          try {
+            inter = jsonDecode(inter);
+          } catch (_) {}
         }
+        routeMap['intermediate_coordinates'] = inter;
+        // Parse origin/destination coords
+        routeMap['origin_coordinates'] = LatLng(
+          double.parse(routeMap['origin_lat'].toString()),
+          double.parse(routeMap['origin_lng'].toString()),
+        );
+        routeMap['destination_coordinates'] = LatLng(
+          double.parse(routeMap['destination_lat'].toString()),
+          double.parse(routeMap['destination_lng'].toString()),
+        );
+        setState(() {
+          selectedRoute = routeMap;
+        });
       } catch (e) {
         debugPrint('Error restoring route: $e');
       }

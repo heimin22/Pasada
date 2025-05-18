@@ -42,7 +42,7 @@ class ApiService {
   Future<T?> get<T>(String endpoint, {Map<String, String>? queryParams}) async {
     try {
       final headers = await _getHeaders();
-      final uri = Uri.parse('$baseUrl/$endpoint').replace(
+      final uri = Uri.parse('$baseUrl/api/$endpoint').replace(
         queryParameters: queryParams,
       );
 
@@ -60,7 +60,7 @@ class ApiService {
       {Map<String, dynamic>? body, Map<String, String>? queryParams}) async {
     try {
       final headers = await _getHeaders();
-      final uri = Uri.parse('$baseUrl/$endpoint').replace(
+      final uri = Uri.parse('$baseUrl/api/$endpoint').replace(
         queryParameters: queryParams,
       );
 
@@ -82,7 +82,7 @@ class ApiService {
       {Map<String, dynamic>? body, Map<String, String>? queryParams}) async {
     try {
       final headers = await _getHeaders();
-      final uri = Uri.parse('$baseUrl/$endpoint').replace(
+      final uri = Uri.parse('$baseUrl/api/$endpoint').replace(
         queryParameters: queryParams,
       );
 
