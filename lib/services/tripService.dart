@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
 
 class TripService {
@@ -32,7 +33,18 @@ class TripService {
   }
 
   Future<Map<String, dynamic>> getCurrentTrip() async {
-    return await _api.get<Map<String, dynamic>>('trips/current') ?? {};
+    final result = await _api.get<Map<String, dynamic>>('trips/current') ?? {};
+
+    // Check if driver is assigned in the trip data
+    if (result.isNotEmpty &&
+        result['driver'] != null &&
+        result['driver']['name'] != null) {
+      debugPrint('🚗 DRIVER FOUND: ${result['driver']['name']}');
+      debugPrint(
+          '🚗 Vehicle: ${result['driver']['vehicle']?['model'] ?? 'Unknown'} (${result['driver']['vehicle']?['plate_number'] ?? 'Unknown'})');
+    }
+
+    return result;
   }
 
   Future<void> acceptTrip(String tripId) async {

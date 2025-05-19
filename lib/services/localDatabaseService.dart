@@ -32,7 +32,7 @@ class LocalDatabaseService {
         booking_id INTEGER PRIMARY KEY,
         driver_id INTEGER NOT NULL,
         route_id INTEGER NOT NULL,
-        ride_status TEXT NOT NULL CHECK(ride_status IN ('requested', 'searching', 'assigned', 'in_progress', 'completed', 'cancelled', 'no_driver')),
+        ride_status TEXT NOT NULL CHECK(ride_status IN ('requested', 'searching', 'assigned', 'ongoing', 'completed', 'cancelled', 'no_driver')),
         pickup_address TEXT NOT NULL,
         pickup_lat REAL NOT NULL,
         pickup_lng REAL NOT NULL,
