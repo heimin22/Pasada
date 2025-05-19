@@ -205,9 +205,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       return;
     }
     final status = localBooking.rideStatus;
-    if (status == 'searching' ||
-        status == 'assigned' ||
-        status == 'in_progress') {
+    if (status == 'searching' || status == 'assigned' || status == 'ongoing') {
       setState(() {
         isBookingConfirmed = true;
         selectedPickUpLocation = SelectedLocation(
@@ -435,8 +433,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         dropoffCoordinates:
             selectedDropOffLocation?.coordinates ?? const LatLng(0, 0),
         paymentMethod: selectedPaymentMethod ?? 'Cash',
-        seatingPreference: _seatingPreference.value,
         fare: currentFare,
+        seatingPreference: _seatingPreference.value,
       );
 
       if (bookingId != null) {
@@ -451,7 +449,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         bookingService.startLocationTracking(user.id);
 
         try {
-          final success = await bookingService.assignDriver(bookingId);
+          final success = await bookingService.assignDriver(
+            bookingId,
+            fare: currentFare,
+            paymentMethod: selectedPaymentMethod ?? 'Cash',
+          );
           if (success) {
             // Set driver assignment status to false initially
             setState(() {
@@ -592,7 +594,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         actions: [
           ElevatedButton(
             onPressed: () {
-              _seatingPreference.value = 'Sitting';
+              _seatingPreference.value = 'sitting';
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
@@ -617,7 +619,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           ),
           ElevatedButton(
             onPressed: () {
-              _seatingPreference.value = 'Standing';
+              _seatingPreference.value = 'standing';
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(

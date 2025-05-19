@@ -166,14 +166,31 @@ class BookingService {
     }
   }
 
-  Future<bool> assignDriver(int bookingId) async {
+  Future<bool> assignDriver(int bookingId,
+      {required double fare, required String paymentMethod}) async {
     try {
       final apiService = ApiService();
-
-      // Call the external backend API to find a driver
+      // Fetch booking details from local database
+      final booking = await getLocalBookingDetails(bookingId);
+      if (booking == null) {
+        debugPrint('No booking found for ID: $bookingId');
+        return false;
+      }
+      // Call the external backend API to find a driver with required fields
       final response = await apiService.post<Map<String, dynamic>>(
         'bookings/assign-driver',
-        body: {'booking_id': bookingId},
+        body: {
+          'booking_id': bookingId,
+          'route_trip': booking.routeId,
+          'origin_latitude': booking.pickupCoordinates.latitude,
+          'origin_longitude': booking.pickupCoordinates.longitude,
+          'destination_latitude': booking.dropoffCoordinates.latitude,
+          'destination_longitude': booking.dropoffCoordinates.longitude,
+          'pickup_address': booking.pickupAddress,
+          'dropoff_address': booking.dropoffAddress,
+          'fare': fare,
+          'payment_method': paymentMethod,
+        },
       );
 
       debugPrint('Driver assignment initiated: $response');
