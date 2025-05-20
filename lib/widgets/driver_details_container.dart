@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class DriverDetailsContainer extends StatelessWidget {
   final String driverName;
@@ -13,19 +12,16 @@ class DriverDetailsContainer extends StatelessWidget {
     required this.phoneNumber,
   });
 
-  Future<void> _makePhoneCall() async {
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-    await launchUrl(launchUri);
-  }
-
-  Future<void> _sendSMS() async {
-    final Uri launchUri = Uri(scheme: 'sms', path: phoneNumber);
-    await launchUrl(launchUri);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Debug output to see what values are being passed to this widget
+    debugPrint(
+        'DriverDetailsContainer - driverName: "$driverName", plateNumber: "$plateNumber", phoneNumber: "$phoneNumber"');
+
+    // Check if we have meaningful driver data
+    final bool hasDriverData = driverName != 'Driver' && driverName.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -45,23 +41,47 @@ class DriverDetailsContainer extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Driver Details',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Inter',
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Driver Details',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+              // Show debug indicator if driver data is missing
+              if (!hasDriverData)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Missing Data',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: const Color(0xFF00CC58),
+                backgroundColor:
+                    hasDriverData ? const Color(0xFF00CC58) : Colors.grey,
                 child: Icon(
                   Icons.person,
                   color: Colors.white,
@@ -84,26 +104,23 @@ class DriverDetailsContainer extends StatelessWidget {
                             : const Color(0xFF121212),
                       ),
                     ),
+                    if (plateNumber.isNotEmpty && plateNumber != 'Unknown')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Vehicle: $plateNumber',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Inter',
+                            color: isDarkMode
+                                ? const Color(0xFFBBBBBB)
+                                : const Color(0xFF515151),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: _sendSMS,
-                    icon: Icon(
-                      Icons.message,
-                      color: const Color(0xFF00CC58),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _makePhoneCall,
-                    icon: Icon(
-                      Icons.call,
-                      color: const Color(0xFF00CC58),
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

@@ -39,11 +39,19 @@ class BookingStatusManager extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    // Log the current status and driver details for debugging
+    debugPrint(
+        'BookingStatusManager - Status: $bookingStatus, Driver assigned: $isDriverAssigned');
+    if (bookingStatus == 'accepted' || isDriverAssigned) {
+      debugPrint(
+          'Driver details - Name: $driverName, Plate: $plateNumber, Phone: $phoneNumber');
+    }
+
     return Scrollbar(
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (bookingStatus == 'accepted')
+            if (bookingStatus == 'accepted' || isDriverAssigned)
               DriverDetailsContainer(
                 driverName: driverName,
                 plateNumber: plateNumber,

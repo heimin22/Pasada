@@ -503,14 +503,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         fare: currentFare,
         seatingPreference: _seatingPreference.value,
         onDriverAssigned: (updatedBookingDetails) {
-          // Update driver details when assigned
-          _driverAssignmentService
-              ?.fetchBookingDetails(updatedBookingDetails.bookingId)
-              .then((bookingData) {
-            if (bookingData != null && bookingData['driver_id'] != null) {
-              _fetchDriverDetails(bookingData['driver_id'].toString());
-            }
-          });
+          // Use our comprehensive driver loading method
+          _loadBookingAfterDriverAssignment(updatedBookingDetails.bookingId);
         },
         onStatusChange: (status) {
           // Update the booking status
@@ -540,17 +534,47 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           // Show cancellation dialog
           showDialog(
             context: context,
+            barrierDismissible: false,
             builder: (dialogContext) {
-              return AlertDialog(
-                title: Text('No Drivers Available'),
+              final isDarkMode =
+                  Theme.of(context).brightness == Brightness.dark;
+              return ResponsiveDialog(
+                title: 'No Drivers Available',
                 content: Text(
-                    'We couldn\'t find any available drivers in your area within the time limit. Your booking has been cancelled.'),
+                  'We couldn\'t find any available drivers in your area within the time limit. Your booking has been cancelled.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    color: isDarkMode
+                        ? const Color(0xFFDEDEDE)
+                        : const Color(0xFF1E1E1E),
+                  ),
+                ),
                 actions: [
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () {
-                      Navigator.of(dialogContext).pop();
+                      Navigator.pop(dialogContext);
                     },
-                    child: Text('OK'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      backgroundColor: const Color(0xFF00CC58),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -600,17 +624,47 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           // Show a specific dialog for 404 No Drivers Available error
           showDialog(
             context: context,
+            barrierDismissible: false,
             builder: (dialogContext) {
-              return AlertDialog(
-                title: Text('No Drivers Available'),
+              final isDarkMode =
+                  Theme.of(context).brightness == Brightness.dark;
+              return ResponsiveDialog(
+                title: 'No Drivers Available',
                 content: Text(
-                    'Sorry, there are no drivers currently available in your area. Please try again later.'),
+                  'Sorry, there are no drivers currently available in your area. Please try again later.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    color: isDarkMode
+                        ? const Color(0xFFDEDEDE)
+                        : const Color(0xFF1E1E1E),
+                  ),
+                ),
                 actions: [
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () {
-                      Navigator.of(dialogContext).pop();
+                      Navigator.pop(dialogContext);
                     },
-                    child: Text('OK'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      backgroundColor: const Color(0xFF00CC58),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ],
               );
@@ -1611,18 +1665,75 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   void _updateDriverDetails(Map<String, dynamic> driverData) {
     if (!mounted) return;
 
-    final driver = driverData['driver'];
-    final vehicle = driver['vehicle'];
+    debugPrint('RAW DRIVER DATA: $driverData');
+
+    // Extract the driver object from the data
+    var driver = driverData['driver'];
+
+    // Make sure we have valid driver data
+    if (driver == null) {
+      debugPrint('Error: No driver data available in the response');
+      return;
+    }
+
+    // Check various data structures that might be returned
+    debugPrint('DRIVER DATA TYPE: ${driver.runtimeType}');
+
+    // The database function returns an array for the first item when using RPC
+    // Based on get_driver_details_by_booking function structure
+    if (driver is List && driver.isNotEmpty) {
+      debugPrint('Driver data is a List, taking first item');
+      driver = driver[0];
+    }
+
+    // Dump the driver data structure for debugging
+    if (driver is Map) {
+      debugPrint('Driver data keys: ${driver.keys.toList()}');
+    }
 
     setState(() {
-      driverName = driver['name'] ?? 'Driver';
-      plateNumber = vehicle?['plate_number'] ?? 'Unknown';
-      vehicleModel = vehicle?['model'] ?? 'Vehicle';
-      phoneNumber = driver['phone_number'] ?? '';
+      // Map the fields based on the database function get_driver_details_by_booking
+      // The function returns fields like full_name, driver_number, plate_number
+
+      // Try extracting driver name with different possible field names
+      driverName = _extractField(driver, ['full_name', 'name', 'driver_name']);
+      debugPrint('EXTRACTED driverName: $driverName');
+
+      // Try extracting plate number with different possible field names
+      plateNumber = _extractField(
+          driver, ['plate_number', 'plateNumber', 'vehicle_plate', 'plate']);
+      debugPrint('EXTRACTED plateNumber: $plateNumber');
+
+      // Try extracting phone number with different possible field names
+      phoneNumber = _extractField(driver, [
+        'driver_number',
+        'phone_number',
+        'phoneNumber',
+        'contact_number',
+        'phone'
+      ]);
+      debugPrint('EXTRACTED phoneNumber: $phoneNumber');
 
       // This will trigger the BookingStatusManager to show the driver details
       isDriverAssigned = true;
+      bookingStatus = 'accepted';
     });
+  }
+
+  // Helper method to extract a field from different possible keys
+  String _extractField(dynamic data, List<String> possibleKeys) {
+    if (data is! Map) {
+      debugPrint('Data is not a Map, cannot extract field');
+      return '';
+    }
+
+    for (var key in possibleKeys) {
+      if (data.containsKey(key) && data[key] != null) {
+        return data[key].toString();
+      }
+    }
+
+    return '';
   }
 
   // Add a method to fetch and update booking details
@@ -1664,6 +1775,136 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       _updateDriverDetails({
         'driver': driverDetails,
       });
+    }
+  }
+
+  void _loadBookingAfterDriverAssignment(int bookingId) {
+    // First try the normal booking endpoint
+    _driverAssignmentService
+        ?.fetchBookingDetails(bookingId)
+        .then((bookingData) {
+      if (bookingData != null) {
+        debugPrint('BOOKING DATA LOADED: $bookingData');
+
+        // Try to get driver ID from booking data
+        final driverId = bookingData['driver_id'];
+        if (driverId != null) {
+          debugPrint('FOUND DRIVER ID: $driverId');
+
+          // Now fetch driver details with the driver service
+          final driverService = DriverService();
+          driverService
+              .getDriverDetailsByBooking(bookingId)
+              .then((driverDetails) {
+            if (driverDetails != null) {
+              debugPrint('DRIVER DETAILS LOADED: $driverDetails');
+              _updateDriverDetails(driverDetails);
+            } else {
+              debugPrint(
+                  'ERROR: Failed to load driver details for booking $bookingId');
+
+              // Fallback attempt - try to load driver details by driver ID
+              driverService
+                  .getDriverDetails(driverId.toString())
+                  .then((directDriverDetails) {
+                if (directDriverDetails != null) {
+                  debugPrint(
+                      'DRIVER DETAILS LOADED DIRECTLY: $directDriverDetails');
+                  _updateDriverDetails(directDriverDetails);
+                } else {
+                  debugPrint('ERROR: Failed to load driver details directly');
+
+                  // Last resort - query the database directly
+                  _fetchDriverDetailsDirectlyFromDB(bookingId);
+                }
+              });
+            }
+          });
+        } else {
+          debugPrint('ERROR: No driver_id in booking data');
+          // Last resort - query the database directly
+          _fetchDriverDetailsDirectlyFromDB(bookingId);
+        }
+      } else {
+        debugPrint('ERROR: Failed to load booking data for ID $bookingId');
+        // Last resort - query the database directly
+        _fetchDriverDetailsDirectlyFromDB(bookingId);
+      }
+    });
+  }
+
+  // Fetch driver details directly from the database as a last resort
+  Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async {
+    try {
+      debugPrint(
+          'DIRECT DB QUERY: Attempting to fetch driver details for booking $bookingId');
+
+      // First get the driver_id from the booking record
+      final bookingResult = await supabase
+          .from('bookings')
+          .select('driver_id')
+          .eq('booking_id', bookingId)
+          .single();
+
+      if (bookingResult == null || !bookingResult.containsKey('driver_id')) {
+        debugPrint('DIRECT DB QUERY: No driver_id found in booking');
+        return;
+      }
+
+      final driverId = bookingResult['driver_id'];
+      debugPrint('DIRECT DB QUERY: Found driver_id $driverId');
+
+      // Get the driver details
+      final driverResult = await supabase
+          .from('driverTable')
+          .select('driver_id, full_name, driver_number, vehicle_id')
+          .eq('driver_id', driverId)
+          .single();
+
+      if (driverResult == null) {
+        debugPrint('DIRECT DB QUERY: No driver found with ID $driverId');
+        return;
+      }
+
+      debugPrint('DIRECT DB QUERY: Driver details: $driverResult');
+
+      // Get vehicle details if vehicle_id is available
+      String plateNumber = 'Unknown';
+      if (driverResult.containsKey('vehicle_id') &&
+          driverResult['vehicle_id'] != null) {
+        final vehicleId = driverResult['vehicle_id'];
+
+        final vehicleResult = await supabase
+            .from('vehicleTable')
+            .select('plate_number')
+            .eq('vehicle_id', vehicleId)
+            .single();
+
+        if (vehicleResult != null &&
+            vehicleResult.containsKey('plate_number')) {
+          plateNumber = vehicleResult['plate_number'];
+        }
+
+        debugPrint('DIRECT DB QUERY: Vehicle details: $vehicleResult');
+      }
+
+      // Update UI with the fetched details
+      setState(() {
+        driverName = driverResult['full_name'] ?? 'Driver';
+        phoneNumber = driverResult['driver_number'] ?? '';
+        this.plateNumber = plateNumber;
+
+        debugPrint('DIRECT DB QUERY: Updating UI with:');
+        debugPrint('- Name: $driverName');
+        debugPrint('- Phone: $phoneNumber');
+        debugPrint('- Plate: $plateNumber');
+
+        // This will trigger the BookingStatusManager to show the driver details
+        isDriverAssigned = true;
+        bookingStatus = 'accepted';
+      });
+    } catch (e) {
+      debugPrint('DIRECT DB QUERY: Error fetching driver details: $e');
     }
   }
 }

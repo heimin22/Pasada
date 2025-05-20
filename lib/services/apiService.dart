@@ -111,6 +111,9 @@ class ApiService {
 
     debugPrint('Response status: $statusCode, body: $responseBody');
 
+    // Debug helper to show the full response structure
+    _debugPrintResponseStructure(responseBody);
+
     if (statusCode >= 200 && statusCode < 300) {
       if (responseBody.isEmpty) return null;
 
@@ -133,5 +136,63 @@ class ApiService {
 
       throw ApiException(errorMessage, statusCode: statusCode);
     }
+  }
+
+  // Helper to print the full response structure for debugging
+  void _debugPrintResponseStructure(String responseBody) {
+    try {
+      if (responseBody.isEmpty) {
+        debugPrint('API DEBUG: Empty response body');
+        return;
+      }
+
+      final data = jsonDecode(responseBody);
+      debugPrint('API DEBUG: Response structure:');
+
+      if (data is Map) {
+        data.forEach((key, value) {
+          debugPrint('  $key: ${_formatValue(value)}');
+
+          if (value is Map) {
+            value.forEach((subKey, subValue) {
+              debugPrint('    $subKey: ${_formatValue(subValue)}');
+            });
+          } else if (value is List && value.isNotEmpty) {
+            debugPrint('    [List with ${value.length} items]');
+            if (value.first is Map) {
+              final firstItem = value.first as Map;
+              debugPrint('    First item keys: ${firstItem.keys.toList()}');
+              firstItem.forEach((itemKey, itemValue) {
+                debugPrint('      $itemKey: ${_formatValue(itemValue)}');
+              });
+            } else {
+              debugPrint('    First item: ${_formatValue(value.first)}');
+            }
+          }
+        });
+      } else if (data is List) {
+        debugPrint('  [List with ${data.length} items]');
+        if (data.isNotEmpty) {
+          if (data.first is Map) {
+            final firstItem = data.first as Map;
+            debugPrint('  First item keys: ${firstItem.keys.toList()}');
+          } else {
+            debugPrint('  First item: ${data.first}');
+          }
+        }
+      } else {
+        debugPrint('  Raw data: $data');
+      }
+    } catch (e) {
+      debugPrint('API DEBUG: Error parsing response JSON: $e');
+    }
+  }
+
+  String _formatValue(dynamic value) {
+    if (value == null) return 'null';
+    if (value is String) return '"$value"';
+    if (value is Map) return '{Map with ${value.length} entries}';
+    if (value is List) return '[List with ${value.length} items]';
+    return value.toString();
   }
 }
