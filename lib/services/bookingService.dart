@@ -166,14 +166,31 @@ class BookingService {
     }
   }
 
-  Future<bool> assignDriver(int bookingId) async {
+  Future<bool> assignDriver(int bookingId,
+      {required double fare, required String paymentMethod}) async {
     try {
       final apiService = ApiService();
-
-      // Call the external backend API to find a driver
+      // Fetch booking details from local database
+      final booking = await getLocalBookingDetails(bookingId);
+      if (booking == null) {
+        debugPrint('No booking found for ID: $bookingId');
+        return false;
+      }
+      // Call the external backend API to find a driver with required fields
       final response = await apiService.post<Map<String, dynamic>>(
-        'api/bookings/assign-driver',
-        body: {'booking_id': bookingId},
+        'bookings/assign-driver',
+        body: {
+          'booking_id': bookingId,
+          'route_trip': booking.routeId,
+          'origin_latitude': booking.pickupCoordinates.latitude,
+          'origin_longitude': booking.pickupCoordinates.longitude,
+          'destination_latitude': booking.dropoffCoordinates.latitude,
+          'destination_longitude': booking.dropoffCoordinates.longitude,
+          'pickup_address': booking.pickupAddress,
+          'dropoff_address': booking.dropoffAddress,
+          'fare': fare,
+          'payment_method': paymentMethod,
+        },
       );
 
       debugPrint('Driver assignment initiated: $response');
@@ -197,5 +214,23 @@ class BookingService {
   bool isOnlinePaymentAllowed(double fare) {
     // Minimum payment for online methods is ₱20.00 (2000 centavos)
     return fare >= 20.0;
+  }
+
+  // Fetch booking details from the API
+  Future<Map<String, dynamic>?> getBookingDetails(int bookingId) async {
+    try {
+      final apiService = ApiService();
+      final response =
+          await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
+
+      if (response != null) {
+        debugPrint('Retrieved booking details from API: $response');
+        return response;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching booking details from API: $e');
+      return null;
+    }
   }
 }

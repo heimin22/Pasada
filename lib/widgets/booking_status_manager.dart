@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'booking_status_container.dart';
 import 'booking_details_container.dart';
 import 'payment_details_container.dart';
 import 'driver_details_container.dart';
@@ -18,6 +17,7 @@ class BookingStatusManager extends StatelessWidget {
   final String vehicleModel;
   final String phoneNumber;
   final bool isDriverAssigned;
+  final String bookingStatus;
 
   const BookingStatusManager({
     super.key,
@@ -31,7 +31,8 @@ class BookingStatusManager extends StatelessWidget {
     required this.plateNumber,
     required this.vehicleModel,
     required this.phoneNumber,
-    this.isDriverAssigned = false,
+    required this.isDriverAssigned,
+    this.bookingStatus = 'requested',
   });
 
   @override
@@ -40,31 +41,24 @@ class BookingStatusManager extends StatelessWidget {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            // Show either the loading container or the status container
-            isDriverAssigned
-                ? const BookingStatusContainer()
-                : const DriverLoadingContainer(),
-
+            if (isDriverAssigned)
+              DriverDetailsContainer(
+                driverName: driverName,
+                plateNumber: plateNumber,
+                phoneNumber: phoneNumber,
+              )
+            else if (bookingStatus == 'requested')
+              const DriverLoadingContainer(),
             BookingDetailsContainer(
               pickupLocation: pickupLocation,
               dropoffLocation: dropoffLocation,
               etaText: ETA,
             ),
-
             PaymentDetailsContainer(
               paymentMethod: paymentMethod,
-              fare: fare,
               onCancelBooking: onCancelBooking,
+              fare: fare,
             ),
-
-            // Only show driver details if a driver is assigned
-            if (isDriverAssigned)
-              DriverDetailsContainer(
-                driverName: driverName,
-                plateNumber: plateNumber,
-                vehicleModel: vehicleModel,
-                phoneNumber: phoneNumber,
-              ),
           ],
         ),
       ),

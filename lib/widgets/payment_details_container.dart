@@ -11,7 +11,7 @@ class PaymentDetailsContainer extends StatelessWidget {
     required this.paymentMethod,
     required this.onCancelBooking,
     this.fare = 15.0,
-    this.seatingPreference = 'Seating',
+    this.seatingPreference = '',
   });
 
   @override
