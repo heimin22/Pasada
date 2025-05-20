@@ -9,6 +9,7 @@ import 'package:pasada_passenger_app/screens/routeSelection.dart';
 // import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
+import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
@@ -105,6 +106,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   String vehicleModel = '';
   String phoneNumber = '';
 
+  // Add a state variable to track booking status
+  String bookingStatus = 'requested';
+
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
       context,
@@ -198,12 +202,72 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final prefs = await SharedPreferences.getInstance();
     final bookingId = prefs.getInt('activeBookingId');
     if (bookingId == null) return;
+
+    // First try to get booking from API
+    _bookingService = BookingService();
+    final apiBooking = await _bookingService!.getBookingDetails(bookingId);
+
+    if (apiBooking != null) {
+      // Use API data
+      final status = apiBooking['ride_status'];
+      if (status == 'searching' ||
+          status == 'assigned' ||
+          status == 'ongoing' ||
+          status == 'requested') {
+        setState(() {
+          isBookingConfirmed = true;
+          bookingStatus = status;
+          selectedPickUpLocation = SelectedLocation(
+            apiBooking['pickup_address'],
+            LatLng(
+              double.parse(apiBooking['pickup_lat'].toString()),
+              double.parse(apiBooking['pickup_lng'].toString()),
+            ),
+          );
+          selectedDropOffLocation = SelectedLocation(
+            apiBooking['dropoff_address'],
+            LatLng(
+              double.parse(apiBooking['dropoff_lat'].toString()),
+              double.parse(apiBooking['dropoff_lng'].toString()),
+            ),
+          );
+          currentFare = double.parse(apiBooking['fare'].toString());
+          selectedPaymentMethod = apiBooking['payment_method'] ?? 'Cash';
+        });
+
+        // If driver is assigned, fetch driver details
+        if (apiBooking['driver_id'] != null) {
+          _fetchDriverDetails(apiBooking['driver_id'].toString());
+        }
+
+        // Animate into the booking status view
+        _bookingAnimationController.forward();
+
+        // Resume polling for status updates
+        _driverAssignmentService = DriverAssignmentService();
+        _driverAssignmentService!.pollForDriverAssignment(
+          bookingId,
+          (driverData) => _updateDriverDetails(driverData),
+          onError: () {/* optionally handle polling errors */},
+          onStatusChange: (status) {
+            setState(() => bookingStatus = status);
+            _fetchAndUpdateBookingDetails(bookingId);
+          },
+        );
+
+        return;
+      }
+    }
+
+    // Fallback to local database if API fails
     final localBooking =
         await LocalDatabaseService().getBookingDetails(bookingId);
     if (localBooking == null) {
       await prefs.remove('activeBookingId');
       return;
     }
+
+    // Rest of your existing code for local database fallback...
     final status = localBooking.rideStatus;
     if (status == 'searching' || status == 'assigned' || status == 'ongoing') {
       setState(() {
@@ -405,17 +469,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       }
     }
 
-    setState(() {
-      isBookingConfirmed = true;
-    });
-
-    _bookingAnimationController.forward();
-
     // Get the current user
     final user = supabase.auth.currentUser;
     if (user != null && selectedRoute != null) {
       // Create booking in Supabase and locally
-      // initialize booking service for tracking
       _bookingService = BookingService();
       final bookingService = _bookingService!;
 
@@ -445,6 +502,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         await prefs.setInt('activeBookingId', bookingId);
         _activeBookingId = bookingId;
 
+        // Now that ride_status is 'requested', show the status UI
+        setState(() {
+          isBookingConfirmed = true;
+        });
+        _bookingAnimationController.forward();
+
         // Start location tracking for the passenger
         bookingService.startLocationTracking(user.id);
 
@@ -467,6 +530,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               // Update driver details and set isDriverAssigned to true
               _updateDriverDetails(driverData);
             }, onError: () {
+              debugPrint(
+                  'pollForDriverAssignment onError invoked: cancelling booking');
               // Handle polling errors
               setState(() {
                 isDriverAssigned = false;
@@ -482,6 +547,21 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
               // Cancel the booking
               _handleBookingCancellation();
+            }, onStatusChange: (status) {
+              // Update the booking status
+              setState(() {
+                bookingStatus = status;
+                debugPrint('Booking status updated to: $status');
+
+                // If status is "accepted", we'll handle that in the onDriverAssigned callback
+                // For other statuses, we might want to update the UI accordingly
+                if (status == 'cancelled') {
+                  _handleBookingCancellation();
+                } else if (status == 'completed') {
+                  // Handle ride completion
+                  // This might involve showing a different UI or navigating to a receipt screen
+                }
+              });
             });
           } else {
             // Show error message
@@ -493,6 +573,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             );
           }
         } catch (e) {
+          debugPrint(
+              'handleBookingConfirmation exception caught: $e - cancelling booking');
           if (mounted) {
             Fluttertoast.showToast(
               msg: 'Unable to create booking. Please try again.',
@@ -508,6 +590,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         }
       }
     } else {
+      debugPrint(
+          'handleBookingConfirmation: user or route missing - cancelling booking');
       // Handle case where user is not logged in or route is not selected
       if (mounted) {
         Fluttertoast.showToast(
@@ -524,6 +608,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   void _handleBookingCancellation() {
+    debugPrint('handleBookingCancellation called');
     // Stop background services
     if (_driverAssignmentService != null) {
       _driverAssignmentService!.stopPolling();
@@ -953,8 +1038,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       animation: _bookingAnimationController,
                       builder: (context, child) {
                         return Transform.translate(
-                          offset: Offset(0,
-                              -_upwardAnimation.value), // Use upward animation
+                          offset: Offset(0, -_upwardAnimation.value),
                           child: Opacity(
                             opacity: _bookingAnimationController.value,
                             child: BookingStatusManager(
@@ -969,6 +1053,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               vehicleModel: vehicleModel,
                               phoneNumber: phoneNumber,
                               isDriverAssigned: isDriverAssigned,
+                              bookingStatus: bookingStatus,
                             ),
                           ),
                         );
@@ -1482,5 +1567,47 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // This will trigger the BookingStatusManager to show the driver details
       isDriverAssigned = true;
     });
+  }
+
+  // Add a method to fetch and update booking details
+  Future<void> _fetchAndUpdateBookingDetails(int bookingId) async {
+    _bookingService ??= BookingService();
+
+    final bookingDetails = await _bookingService!.getBookingDetails(bookingId);
+
+    if (bookingDetails != null && mounted) {
+      setState(() {
+        // Update booking status
+        bookingStatus = bookingDetails['ride_status'] ?? 'requested';
+
+        // Update other booking-related information
+        if (bookingDetails['fare'] != null) {
+          currentFare =
+              double.tryParse(bookingDetails['fare'].toString()) ?? currentFare;
+        }
+
+        // Update payment method if available
+        if (bookingDetails['payment_method'] != null) {
+          selectedPaymentMethod = bookingDetails['payment_method'];
+        }
+      });
+
+      // If driver is assigned, fetch driver details
+      if (bookingDetails['driver_id'] != null) {
+        _fetchDriverDetails(bookingDetails['driver_id'].toString());
+      }
+    }
+  }
+
+  // Add a method to fetch and update driver details
+  Future<void> _fetchDriverDetails(String driverId) async {
+    final driverService = DriverService();
+    final driverDetails = await driverService.getDriverDetails(driverId);
+
+    if (driverDetails != null && mounted) {
+      _updateDriverDetails({
+        'driver': driverDetails,
+      });
+    }
   }
 }

@@ -4,14 +4,12 @@ import 'package:url_launcher/url_launcher.dart';
 class DriverDetailsContainer extends StatelessWidget {
   final String driverName;
   final String plateNumber;
-  final String vehicleModel;
   final String phoneNumber;
 
   const DriverDetailsContainer({
     super.key,
     required this.driverName,
     required this.plateNumber,
-    required this.vehicleModel,
     required this.phoneNumber,
   });
 
@@ -84,18 +82,6 @@ class DriverDetailsContainer extends StatelessWidget {
                         color: isDarkMode
                             ? const Color(0xFFF5F5F5)
                             : const Color(0xFF121212),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$vehicleModel • $plateNumber',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
-                        color: isDarkMode
-                            ? const Color(0xFFAAAAAA)
-                            : const Color(0xFF515151),
                       ),
                     ),
                   ],

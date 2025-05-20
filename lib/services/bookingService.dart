@@ -215,4 +215,22 @@ class BookingService {
     // Minimum payment for online methods is ₱20.00 (2000 centavos)
     return fare >= 20.0;
   }
+
+  // Fetch booking details from the API
+  Future<Map<String, dynamic>?> getBookingDetails(int bookingId) async {
+    try {
+      final apiService = ApiService();
+      final response =
+          await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
+
+      if (response != null) {
+        debugPrint('Retrieved booking details from API: $response');
+        return response;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching booking details from API: $e');
+      return null;
+    }
+  }
 }
