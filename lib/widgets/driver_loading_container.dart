@@ -53,29 +53,33 @@ class _DriverLoadingContainerState extends State<DriverLoadingContainer> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.5,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              _loadingMessages[_currentMessageIndex],
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
+          Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
+                ),
               ),
-            ),
-          )
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  _loadingMessages[_currentMessageIndex],
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+              )
+            ],
+          ),
         ],
       ),
     );

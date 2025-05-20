@@ -5,6 +5,7 @@ class PaymentDetailsContainer extends StatelessWidget {
   final VoidCallback onCancelBooking;
   final double fare;
   final String seatingPreference;
+  final bool showCancelButton;
 
   const PaymentDetailsContainer({
     super.key,
@@ -12,6 +13,7 @@ class PaymentDetailsContainer extends StatelessWidget {
     required this.onCancelBooking,
     this.fare = 15.0,
     this.seatingPreference = '',
+    this.showCancelButton = true,
   });
 
   @override
@@ -83,27 +85,28 @@ class PaymentDetailsContainer extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onCancelBooking,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF3B30),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          if (showCancelButton)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onCancelBooking,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF3B30),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Cancel Booking',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFF5F5F5),
+                child: const Text(
+                  'Cancel Booking',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFFF5F5F5),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

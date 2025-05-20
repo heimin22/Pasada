@@ -37,18 +37,73 @@ class BookingStatusManager extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Log the current status and driver details for debugging
+    debugPrint(
+        'BookingStatusManager - Status: $bookingStatus, Driver assigned: $isDriverAssigned');
+    if (bookingStatus == 'accepted' || isDriverAssigned) {
+      debugPrint(
+          'Driver details - Name: $driverName, Plate: $plateNumber, Phone: $phoneNumber');
+    }
+
     return Scrollbar(
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (isDriverAssigned)
+            if (bookingStatus == 'accepted' || isDriverAssigned)
               DriverDetailsContainer(
                 driverName: driverName,
                 plateNumber: plateNumber,
                 phoneNumber: phoneNumber,
               )
             else if (bookingStatus == 'requested')
-              const DriverLoadingContainer(),
+              const DriverLoadingContainer()
+            else if (bookingStatus == 'cancelled')
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isDarkMode
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.orange,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Your booking has been cancelled',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             BookingDetailsContainer(
               pickupLocation: pickupLocation,
               dropoffLocation: dropoffLocation,
@@ -58,7 +113,8 @@ class BookingStatusManager extends StatelessWidget {
               paymentMethod: paymentMethod,
               onCancelBooking: onCancelBooking,
               fare: fare,
-            ),
+              showCancelButton: bookingStatus == 'requested',
+            )
           ],
         ),
       ),
