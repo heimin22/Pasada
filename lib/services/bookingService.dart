@@ -6,9 +6,24 @@ import 'localDatabaseService.dart';
 import 'bookingDetails.dart';
 import 'package:location/location.dart';
 import 'apiService.dart';
+import 'driverAssignmentService.dart';
+
+// Object to return from createBooking with additional error information
+class BookingResult {
+  final BookingDetails? booking;
+  final String? errorMessage;
+  final int? statusCode;
+
+  BookingResult({this.booking, this.errorMessage, this.statusCode});
+
+  bool get success => booking != null;
+  bool get isNoDriversError => statusCode == 404;
+}
 
 class BookingService {
   final LocalDatabaseService _localDbService = LocalDatabaseService();
+  final DriverAssignmentService _driverAssignmentService =
+      DriverAssignmentService();
   final supabase = Supabase.instance.client;
   StreamSubscription<LocationData>? _locationSubscription;
 
@@ -59,59 +74,173 @@ class BookingService {
     }
   }
 
-  // Create a new booking and save it locally
-  Future<int?> createBooking({
-    required String passengerId,
+  // Create a new booking by calling the backend API and save it locally
+  Future<BookingResult> createBooking({
+    required String
+        passengerId, // Used for local save, backend derives from auth
     required int routeId,
     required String pickupAddress,
     required LatLng pickupCoordinates,
     required String dropoffAddress,
     required LatLng dropoffCoordinates,
     required String paymentMethod,
-    required String seatingPreference,
+    required String
+        seatingPreference, // Note: Not used by backend 'requestTrip' or BookingDetails model
     required double fare,
+    Function(BookingDetails)? onDriverAssigned,
+    Function(String)? onStatusChange,
+    Function? onTimeout,
   }) async {
     try {
-      // First, create the booking in Supabase
-      final response = await supabase
-          .from('bookings')
-          .insert({
-            'passenger_id': passengerId,
-            'route_id': routeId,
-            'ride_status': 'accepted',
-            'pickup_address': pickupAddress,
-            'pickup_lat': pickupCoordinates.latitude,
-            'pickup_lng': pickupCoordinates.longitude,
-            'dropoff_address': dropoffAddress,
-            'dropoff_lat': dropoffCoordinates.latitude,
-            'dropoff_lng': dropoffCoordinates.longitude,
-            'payment_method': paymentMethod,
-            'seat_type': seatingPreference,
-            'fare': fare,
-            'created_at': DateTime.now().toIso8601String(),
-          })
-          .select('booking_id')
-          .single();
+      final apiService = ApiService();
 
-      final bookingId = response['booking_id'] as int;
-
-      // Then save the booking locally
-      await _saveBookingLocally(
-        bookingId: bookingId,
-        passengerId: passengerId,
-        routeId: routeId,
-        pickupAddress: pickupAddress,
-        pickupCoordinates: pickupCoordinates,
-        dropoffAddress: dropoffAddress,
-        dropoffCoordinates: dropoffCoordinates,
-        fare: fare,
+      // Call the backend endpoint that maps to requestTrip
+      // This endpoint will create the booking and attempt to assign a driver.
+      final response = await apiService.post<Map<String, dynamic>>(
+        'bookings/assign-driver', // Assuming this is the endpoint for requestTrip
+        body: {
+          // Parameters expected by requestTrip backend function
+          'route_trip': routeId,
+          'origin_latitude': pickupCoordinates.latitude,
+          'origin_longitude': pickupCoordinates.longitude,
+          'pickup_address': pickupAddress,
+          'destination_latitude': dropoffCoordinates.latitude,
+          'destination_longitude': dropoffCoordinates.longitude,
+          'dropoff_address': dropoffAddress,
+          'fare': fare,
+          'payment_method': paymentMethod,
+        },
       );
 
-      debugPrint('Booking created with ID: $bookingId');
-      return bookingId;
+      if (response != null && response.containsKey('booking')) {
+        final bookingData = response['booking'] as Map<String, dynamic>;
+
+        // Extract data from backend response
+        final bookingId = bookingData['booking_id'] as int;
+        final backendPassengerId = bookingData['passenger_id'] as String? ??
+            passengerId; // Prefer backend's if available
+        final driverId = bookingData['driver_id'] as int?;
+        final rideStatus = bookingData['ride_status'] as String;
+        final backendRouteId = bookingData['route_id'] as int;
+        final backendPickupAddress = bookingData['pickup_address'] as String;
+        final backendPickupLat = (bookingData['pickup_lat'] as num).toDouble();
+        final backendPickupLng = (bookingData['pickup_lng'] as num).toDouble();
+        final backendDropoffAddress = bookingData['dropoff_address'] as String;
+        final backendDropoffLat =
+            (bookingData['dropoff_lat'] as num).toDouble();
+        final backendDropoffLng =
+            (bookingData['dropoff_lng'] as num).toDouble();
+        final backendFare = (bookingData['fare'] as num).toDouble();
+        final createdAtString = bookingData['created_at'] as String;
+        final assignedAtString = bookingData['assigned_at'] as String?;
+
+        final createdAtDateTime = DateTime.parse(createdAtString);
+        final assignedAtDateTime = assignedAtString != null
+            ? DateTime.parse(assignedAtString)
+            : createdAtDateTime; // Default to createdAt if not assigned
+
+        // Construct BookingDetails for local storage
+        final bookingDetails = BookingDetails(
+          bookingId: bookingId,
+          passengerId: backendPassengerId,
+          driverId: driverId ?? 0,
+          routeId: backendRouteId,
+          rideStatus: rideStatus,
+          pickupAddress: backendPickupAddress,
+          pickupCoordinates: LatLng(backendPickupLat, backendPickupLng),
+          dropoffAddress: backendDropoffAddress,
+          dropoffCoordinates: LatLng(backendDropoffLat, backendDropoffLng),
+          startTime: TimeOfDay.fromDateTime(
+              createdAtDateTime), // Using createdAt for startTime
+          createdAt: createdAtDateTime,
+          fare: backendFare,
+          assignedAt: assignedAtDateTime,
+          endTime: TimeOfDay.fromDateTime(
+              createdAtDateTime), // Placeholder, can be updated later
+        );
+
+        await _localDbService.saveBookingDetails(bookingDetails);
+        debugPrint(
+            'Booking created via backend, ID: $bookingId, Status: $rideStatus. Saved locally.');
+
+        // Start polling for driver assignment with 1-minute timeout
+        if (onDriverAssigned != null ||
+            onStatusChange != null ||
+            onTimeout != null) {
+          _driverAssignmentService.pollForDriverAssignment(
+            bookingId,
+            (driverData) {
+              if (onDriverAssigned != null) {
+                // Create a new BookingDetails object with updated driver info
+                final updatedBookingDetails = BookingDetails(
+                  bookingId: bookingDetails.bookingId,
+                  passengerId: bookingDetails.passengerId,
+                  driverId: driverData['driver']['driver_id'] ?? 0,
+                  routeId: bookingDetails.routeId,
+                  rideStatus: 'accepted',
+                  pickupAddress: bookingDetails.pickupAddress,
+                  pickupCoordinates: bookingDetails.pickupCoordinates,
+                  dropoffAddress: bookingDetails.dropoffAddress,
+                  dropoffCoordinates: bookingDetails.dropoffCoordinates,
+                  startTime: bookingDetails.startTime,
+                  createdAt: bookingDetails.createdAt,
+                  fare: bookingDetails.fare,
+                  assignedAt: DateTime.now(),
+                  endTime: bookingDetails.endTime,
+                );
+
+                // Save updated booking details to local DB
+                _localDbService.saveBookingDetails(updatedBookingDetails);
+
+                // Notify caller with updated booking details
+                onDriverAssigned(updatedBookingDetails);
+              }
+            },
+            onStatusChange: (newStatus) {
+              if (onStatusChange != null) {
+                onStatusChange(newStatus);
+              }
+
+              // Update local booking status
+              _localDbService.updateLocalBookingStatus(bookingId, newStatus);
+            },
+            onTimeout: onTimeout,
+          );
+        }
+
+        return BookingResult(booking: bookingDetails);
+      } else {
+        // Handle cases where backend might not return booking (e.g., no drivers found, error)
+        // apiService.post would typically throw ApiException for non-2xx, caught below.
+        // This 'else' handles cases where post returns null or response doesn't have 'booking'.
+        String errorMessage =
+            'Failed to create booking via backend: No booking data in response.';
+        if (response != null && response.containsKey('error')) {
+          errorMessage += ' Backend error: ${response['error']}';
+          if (response.containsKey('reason')) {
+            errorMessage += ', Reason: ${response['reason']}';
+          }
+        }
+        debugPrint(errorMessage);
+        return BookingResult(errorMessage: errorMessage);
+      }
     } catch (e) {
-      debugPrint('Error creating booking: $e');
-      return null;
+      // Catches ApiExceptions from apiService.post and other errors
+      debugPrint('Error in createBooking: $e');
+
+      // Check if it's an ApiException with a 404 status code (no drivers)
+      if (e is ApiException && e.statusCode == 404) {
+        return BookingResult(
+            errorMessage: "No drivers available in your area", statusCode: 404);
+      }
+
+      // Other API exceptions
+      if (e is ApiException) {
+        return BookingResult(errorMessage: e.message, statusCode: e.statusCode);
+      }
+
+      // Generic errors
+      return BookingResult(errorMessage: "Error creating booking: $e");
     }
   }
 
@@ -133,7 +262,7 @@ class BookingService {
       passengerId: passengerId,
       driverId: 0, // Will be updated when a driver is assigned
       routeId: routeId,
-      rideStatus: 'accepted', // initial status for new bookings
+      rideStatus: 'requested', // initial status for new bookings
       pickupAddress: pickupAddress,
       pickupCoordinates: pickupCoordinates,
       dropoffAddress: dropoffAddress,
@@ -194,20 +323,20 @@ class BookingService {
           passengerId: apiBooking['passenger_id'] ?? '',
           driverId: apiBooking['driver_id'] ?? 0,
           routeId: apiBooking['route_id'] ?? 0,
-          rideStatus: apiBooking['ride_status'] ?? 'accepted',
+          rideStatus: apiBooking['ride_status'] ?? 'requested',
           pickupAddress: apiBooking['pickup_address'] ?? '',
           pickupCoordinates: LatLng(
-            apiBooking['pickup_lat'] ?? 0.0,
-            apiBooking['pickup_lng'] ?? 0.0,
+            (apiBooking['pickup_lat'] as num? ?? 0.0).toDouble(),
+            (apiBooking['pickup_lng'] as num? ?? 0.0).toDouble(),
           ),
           dropoffAddress: apiBooking['dropoff_address'] ?? '',
           dropoffCoordinates: LatLng(
-            apiBooking['dropoff_lat'] ?? 0.0,
-            apiBooking['dropoff_lng'] ?? 0.0,
+            (apiBooking['dropoff_lat'] as num? ?? 0.0).toDouble(),
+            (apiBooking['dropoff_lng'] as num? ?? 0.0).toDouble(),
           ),
           startTime: TimeOfDay.now(),
           createdAt: DateTime.now(),
-          fare: apiBooking['fare'] ?? 0.0,
+          fare: (apiBooking['fare'] as num? ?? 0.0).toDouble(),
           assignedAt: DateTime.now(),
           endTime: TimeOfDay.now(),
         );
@@ -264,9 +393,9 @@ class BookingService {
       final response =
           await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
 
-      if (response != null) {
-        debugPrint('Retrieved booking details from API: $response');
-        return response;
+      if (response != null && response.containsKey('trip')) {
+        debugPrint('Retrieved booking details from API: ${response['trip']}');
+        return response['trip'] as Map<String, dynamic>;
       }
       return null;
     } catch (e) {

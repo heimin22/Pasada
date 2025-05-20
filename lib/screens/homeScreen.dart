@@ -472,6 +472,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Get the current user
     final user = supabase.auth.currentUser;
     if (user != null && selectedRoute != null) {
+      // First show the booking UI with status "requested"
+      setState(() {
+        isBookingConfirmed = true;
+        bookingStatus =
+            'requested'; // This will trigger DriverLoadingContainer to show
+      });
+
+      // Animate to show the booking status UI
+      _bookingAnimationController.forward();
+
       // Create booking in Supabase and locally
       _bookingService = BookingService();
       final bookingService = _bookingService!;
@@ -480,7 +490,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       int routeId = selectedRoute!['officialroute_id'] ?? 0;
 
       // Create the booking
-      final bookingId = await bookingService.createBooking(
+      final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
         pickupAddress: selectedPickUpLocation?.address ?? 'Unknown location',
@@ -492,110 +502,156 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         paymentMethod: selectedPaymentMethod ?? 'Cash',
         fare: currentFare,
         seatingPreference: _seatingPreference.value,
-      );
+        onDriverAssigned: (updatedBookingDetails) {
+          // Update driver details when assigned
+          _driverAssignmentService
+              ?.fetchBookingDetails(updatedBookingDetails.bookingId)
+              .then((bookingData) {
+            if (bookingData != null && bookingData['driver_id'] != null) {
+              _fetchDriverDetails(bookingData['driver_id'].toString());
+            }
+          });
+        },
+        onStatusChange: (status) {
+          // Update the booking status
+          setState(() {
+            bookingStatus = status;
+            debugPrint('Booking status updated to: $status');
 
-      if (bookingId != null) {
-        debugPrint('Booking created with ID: $bookingId');
-
-        // Persist active booking for restore on app restart
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('activeBookingId', bookingId);
-        _activeBookingId = bookingId;
-
-        // Now that ride_status is 'requested', show the status UI
-        setState(() {
-          isBookingConfirmed = true;
-        });
-        _bookingAnimationController.forward();
-
-        // Start location tracking for the passenger
-        bookingService.startLocationTracking(user.id);
-
-        try {
-          final success = await bookingService.assignDriver(
-            bookingId,
-            fare: currentFare,
-            paymentMethod: selectedPaymentMethod ?? 'Cash',
-          );
-          if (success) {
-            // Set driver assignment status to false initially
-            setState(() {
-              isDriverAssigned = false;
-            });
-
-            // initialize polling service for driver assignment
-            _driverAssignmentService = DriverAssignmentService();
-            _driverAssignmentService!.pollForDriverAssignment(bookingId,
-                (driverData) {
-              // Update driver details and set isDriverAssigned to true
-              _updateDriverDetails(driverData);
-            }, onError: () {
-              debugPrint(
-                  'pollForDriverAssignment onError invoked: cancelling booking');
-              // Handle polling errors
-              setState(() {
-                isDriverAssigned = false;
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                      'Failed to connect to driver service. Please try again.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-
-              // Cancel the booking
+            // If status is "accepted", we'll handle that in the onDriverAssigned callback
+            // For other statuses, we might want to update the UI accordingly
+            if (status == 'cancelled') {
               _handleBookingCancellation();
-            }, onStatusChange: (status) {
-              // Update the booking status
-              setState(() {
-                bookingStatus = status;
-                debugPrint('Booking status updated to: $status');
 
-                // If status is "accepted", we'll handle that in the onDriverAssigned callback
-                // For other statuses, we might want to update the UI accordingly
-                if (status == 'cancelled') {
-                  _handleBookingCancellation();
-                } else if (status == 'completed') {
-                  // Handle ride completion
-                  // This might involve showing a different UI or navigating to a receipt screen
-                }
-              });
-            });
-          } else {
-            // Show error message
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to request a driver. Please try again.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        } catch (e) {
-          debugPrint(
-              'handleBookingConfirmation exception caught: $e - cancelling booking');
-          if (mounted) {
+              Fluttertoast.showToast(
+                msg: 'Your booking has been cancelled',
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                backgroundColor: const Color(0xFF1E1E1E),
+                textColor: const Color(0xFFF5F5F5),
+              );
+            } else if (status == 'completed') {
+              // Handle ride completion
+              // This might involve showing a different UI or navigating to a receipt screen
+            }
+          });
+        },
+        onTimeout: () {
+          // Show cancellation dialog
+          showDialog(
+            context: context,
+            builder: (dialogContext) {
+              return AlertDialog(
+                title: Text('No Drivers Available'),
+                content: Text(
+                    'We couldn\'t find any available drivers in your area within the time limit. Your booking has been cancelled.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: Text('OK'),
+                  ),
+                ],
+              );
+            },
+          ).then((_) {
+            // Clean up after dialog is dismissed
+            _handleBookingCancellation();
+
             Fluttertoast.showToast(
-              msg: 'Unable to create booking. Please try again.',
+              msg: 'No drivers available within 1 minute',
               toastLength: Toast.LENGTH_SHORT,
               gravity: ToastGravity.BOTTOM,
               backgroundColor: const Color(0xFF1E1E1E),
               textColor: const Color(0xFFF5F5F5),
             );
+          });
+        },
+      );
 
-            // Revert the booking confirmation UI
-            _handleBookingCancellation();
-          }
+      if (bookingResult.success) {
+        final newBookingDetails = bookingResult.booking!;
+        debugPrint('Booking created with ID: ${newBookingDetails.bookingId}');
+
+        // Persist active booking for restore on app restart
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('activeBookingId', newBookingDetails.bookingId);
+        _activeBookingId = newBookingDetails.bookingId;
+
+        // Update booking status from the newly created booking if available
+        setState(() {
+          bookingStatus = newBookingDetails.rideStatus;
+        });
+
+        // Start location tracking for the passenger
+        bookingService.startLocationTracking(user.id);
+
+        // Set driver assignment status to false initially
+        setState(() {
+          isDriverAssigned = false;
+        });
+
+        // initialize polling service for driver assignment (handled by createBooking now)
+        _driverAssignmentService = DriverAssignmentService();
+      } else {
+        // Handle specific error cases
+        if (bookingResult.isNoDriversError) {
+          // Show a specific dialog for 404 No Drivers Available error
+          showDialog(
+            context: context,
+            builder: (dialogContext) {
+              return AlertDialog(
+                title: Text('No Drivers Available'),
+                content: Text(
+                    'Sorry, there are no drivers currently available in your area. Please try again later.'),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop();
+                    },
+                    child: Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+
+          Fluttertoast.showToast(
+            msg: 'No drivers available in your area (Error 404)',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: const Color(0xFF1E1E1E),
+            textColor: const Color(0xFFF5F5F5),
+          );
+        } else {
+          // Show error toast for other errors
+          Fluttertoast.showToast(
+            msg: bookingResult.errorMessage ?? 'Booking creation failed',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: const Color(0xFF1E1E1E),
+            textColor: const Color(0xFFF5F5F5),
+          );
         }
+
+        // Revert booking UI if booking creation failed
+        _handleBookingCancellation();
       }
     } else {
       debugPrint(
           'handleBookingConfirmation: user or route missing - cancelling booking');
       // Handle case where user is not logged in or route is not selected
       if (mounted) {
+        String errorMsg = 'Unable to create booking.';
+        if (user == null) {
+          errorMsg = 'Authentication error. Please log in again.';
+        } else if (selectedRoute == null) {
+          errorMsg = 'No route selected. Please select a route.';
+        }
+
         Fluttertoast.showToast(
-          msg: 'Unable to create booking. Please try again.',
+          msg: errorMsg,
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           backgroundColor: const Color(0xFF1E1E1E),
