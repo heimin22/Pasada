@@ -21,18 +21,21 @@ class DriverAssignmentService {
         final response =
             await _apiService.get<Map<String, dynamic>>('bookings/$bookingId');
 
+        if (response == null) {
+          debugPrint('No response from API for booking $bookingId');
+          if (onError != null) onError();
+          return;
+        }
+
         debugPrint('Booking status update from bookings endpoint: $response');
 
         // Notify about status changes if callback provided
-        if (response != null &&
-            response['ride_status'] != null &&
-            onStatusChange != null) {
+        if (response['ride_status'] != null && onStatusChange != null) {
           onStatusChange(response['ride_status']);
         }
 
         // Check if a driver has been assigned
-        if (response != null &&
-            response['ride_status'] == 'accepted' &&
+        if (response['ride_status'] == 'accepted' &&
             response['driver_id'] != null) {
           // Stop polling once we have a driver
           stopPolling();
@@ -74,6 +77,16 @@ class DriverAssignmentService {
       return await _apiService.get<Map<String, dynamic>>('bookings/$bookingId');
     } catch (e) {
       debugPrint('Error fetching booking details: $e');
+      return null;
+    }
+  }
+
+  // Add a method to directly fetch booking details from API
+  Future<Map<String, dynamic>?> fetchBookingFromAPI(int bookingId) async {
+    try {
+      return await _apiService.get<Map<String, dynamic>>('bookings/$bookingId');
+    } catch (e) {
+      debugPrint('Error fetching booking from API: $e');
       return null;
     }
   }

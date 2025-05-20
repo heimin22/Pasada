@@ -42,16 +42,16 @@ class BookingDetails {
       'route_id': routeId,
       'ride_status': rideStatus,
       'pickup_address': pickupAddress,
-      'pickup_lat': pickupCoordinates.latitude.toString(),
-      'pickup_lng': pickupCoordinates.longitude.toString(),
+      'pickup_lat': pickupCoordinates.latitude,
+      'pickup_lng': pickupCoordinates.longitude,
       'dropoff_address': dropoffAddress,
-      'dropoff_lat': dropoffCoordinates.latitude.toString(),
-      'dropoff_lng': dropoffCoordinates.longitude.toString(),
+      'dropoff_lat': dropoffCoordinates.latitude,
+      'dropoff_lng': dropoffCoordinates.longitude,
       'start_time': '${startTime.hour}:${startTime.minute}',
       'created_at': createdAt.toIso8601String(),
       'fare': fare,
       'assigned_at': assignedAt.toIso8601String(),
-      'end_time': '${startTime.hour}:${startTime.minute}',
+      'end_time': '${endTime.hour}:${endTime.minute}',
     };
   }
 

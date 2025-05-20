@@ -22,7 +22,12 @@ class ApiService {
     return _instance;
   }
 
-  ApiService._internal() : baseUrl = dotenv.env['API_URL'] ?? '';
+  ApiService._internal() : baseUrl = dotenv.env['API_URL'] ?? '' {
+    debugPrint('API URL configured as: $baseUrl');
+    if (baseUrl.isEmpty) {
+      debugPrint('WARNING: API_URL is empty in .env file');
+    }
+  }
 
   final supabase = Supabase.instance.client;
 
@@ -120,7 +125,8 @@ class ApiService {
       String errorMessage;
       try {
         final errorJson = jsonDecode(responseBody);
-        errorMessage = errorJson['message'] ?? 'Unknown error';
+        errorMessage =
+            errorJson['message'] ?? errorJson['error'] ?? 'Unknown error';
       } catch (_) {
         errorMessage = responseBody;
       }

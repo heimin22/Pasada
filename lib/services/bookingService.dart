@@ -78,7 +78,7 @@ class BookingService {
           .insert({
             'passenger_id': passengerId,
             'route_id': routeId,
-            'ride_status': 'requested',
+            'ride_status': 'accepted',
             'pickup_address': pickupAddress,
             'pickup_lat': pickupCoordinates.latitude,
             'pickup_lng': pickupCoordinates.longitude,
@@ -133,8 +133,7 @@ class BookingService {
       passengerId: passengerId,
       driverId: 0, // Will be updated when a driver is assigned
       routeId: routeId,
-      rideStatus:
-          'searching', // Changed from 'requested' to match allowed values
+      rideStatus: 'accepted', // initial status for new bookings
       pickupAddress: pickupAddress,
       pickupCoordinates: pickupCoordinates,
       dropoffAddress: dropoffAddress,
@@ -146,7 +145,12 @@ class BookingService {
       endTime: TimeOfDay.now(),
     );
 
-    await _localDbService.saveBookingDetails(bookingDetails);
+    try {
+      await _localDbService.saveBookingDetails(bookingDetails);
+      debugPrint('Successfully saved booking $bookingId to local database');
+    } catch (e) {
+      debugPrint('Error saving booking to local database: $e');
+    }
   }
 
   // Update booking status both in Supabase and locally
@@ -170,13 +174,50 @@ class BookingService {
       {required double fare, required String paymentMethod}) async {
     try {
       final apiService = ApiService();
-      // Fetch booking details from local database
-      final booking = await getLocalBookingDetails(bookingId);
+
+      // First try to get booking from local database
+      var booking = await getLocalBookingDetails(bookingId);
+
+      // If not found locally, try to fetch from API
       if (booking == null) {
-        debugPrint('No booking found for ID: $bookingId');
-        return false;
+        debugPrint('Booking $bookingId not found locally, trying API...');
+        final apiBooking = await getBookingDetails(bookingId);
+
+        if (apiBooking == null) {
+          debugPrint('Booking $bookingId not found in API either');
+          return false;
+        }
+
+        // Create a BookingDetails object from API data
+        booking = BookingDetails(
+          bookingId: bookingId,
+          passengerId: apiBooking['passenger_id'] ?? '',
+          driverId: apiBooking['driver_id'] ?? 0,
+          routeId: apiBooking['route_id'] ?? 0,
+          rideStatus: apiBooking['ride_status'] ?? 'accepted',
+          pickupAddress: apiBooking['pickup_address'] ?? '',
+          pickupCoordinates: LatLng(
+            apiBooking['pickup_lat'] ?? 0.0,
+            apiBooking['pickup_lng'] ?? 0.0,
+          ),
+          dropoffAddress: apiBooking['dropoff_address'] ?? '',
+          dropoffCoordinates: LatLng(
+            apiBooking['dropoff_lat'] ?? 0.0,
+            apiBooking['dropoff_lng'] ?? 0.0,
+          ),
+          startTime: TimeOfDay.now(),
+          createdAt: DateTime.now(),
+          fare: apiBooking['fare'] ?? 0.0,
+          assignedAt: DateTime.now(),
+          endTime: TimeOfDay.now(),
+        );
+
+        // Save to local database for future reference
+        await _localDbService.saveBookingDetails(booking);
       }
-      // Call the external backend API to find a driver with required fields
+
+      // Now we have the booking data, proceed with API call
+      debugPrint('Attempting to assign driver for booking $bookingId');
       final response = await apiService.post<Map<String, dynamic>>(
         'bookings/assign-driver',
         body: {
