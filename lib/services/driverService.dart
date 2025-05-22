@@ -132,7 +132,7 @@ class DriverService {
     debugPrint('Processing driver response: $response');
 
     // Try to find the driver data in the response
-    dynamic driverData = null;
+    dynamic driverData;
 
     // Check common response structures
     if (response.containsKey('driver')) {
