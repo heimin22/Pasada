@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
+// import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
@@ -219,50 +219,50 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
             ),
           ),
           // Continue button for online payments
-          if (isOnlinePayment)
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    // Navigate to the Paymongo payment flow and await result
-                    final result = await Navigator.push<String>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PaymongoPaymentScreen(
-                          paymentMethod: selectPaymentMethod!,
-                          amount: widget.fare,
-                        ),
-                      ),
-                    );
+          // if (isOnlinePayment)
+          //   Padding(
+          //     padding: const EdgeInsets.all(24.0),
+          //     child: SizedBox(
+          //       width: double.infinity,
+          //       child: ElevatedButton(
+          //         onPressed: () async {
+          //           // Navigate to the Paymongo payment flow and await result
+          //           final result = await Navigator.push<String>(
+          //             context,
+          //             MaterialPageRoute(
+          //               builder: (_) => PaymongoPaymentScreen(
+          //                 paymentMethod: selectPaymentMethod!,
+          //                 amount: widget.fare,
+          //               ),
+          //             ),
+          //           );
 
-                    // If payment was successful, return the payment method to HomeScreen
-                    if (result != null) {
-                      Navigator.pop(context, result);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00CC58),
-                    foregroundColor: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Proceed to Payment',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Inter',
-                        color: Color(0xFFF5F5F5)),
-                  ),
-                ),
-              ),
-            ),
+          //           // If payment was successful, return the payment method to HomeScreen
+          //           if (result != null) {
+          //             Navigator.pop(context, result);
+          //           }
+          //         },
+          //         style: ElevatedButton.styleFrom(
+          //           backgroundColor: const Color(0xFF00CC58),
+          //           foregroundColor: isDarkMode
+          //               ? const Color(0xFFF5F5F5)
+          //               : const Color(0xFF121212),
+          //           padding: const EdgeInsets.symmetric(vertical: 14),
+          //           shape: RoundedRectangleBorder(
+          //             borderRadius: BorderRadius.circular(8),
+          //           ),
+          //         ),
+          //         child: const Text(
+          //           'Proceed to Payment',
+          //           style: TextStyle(
+          //               fontSize: 16,
+          //               fontWeight: FontWeight.w700,
+          //               fontFamily: 'Inter',
+          //               color: Color(0xFFF5F5F5)),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
         ],
       ),
     );

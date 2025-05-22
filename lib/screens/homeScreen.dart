@@ -1846,7 +1846,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           .eq('booking_id', bookingId)
           .single();
 
-      if (bookingResult == null || !bookingResult.containsKey('driver_id')) {
+      if (!bookingResult.containsKey('driver_id')) {
         debugPrint('DIRECT DB QUERY: No driver_id found in booking');
         return;
       }
@@ -1860,11 +1860,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           .select('driver_id, full_name, driver_number, vehicle_id')
           .eq('driver_id', driverId)
           .single();
-
-      if (driverResult == null) {
-        debugPrint('DIRECT DB QUERY: No driver found with ID $driverId');
-        return;
-      }
 
       debugPrint('DIRECT DB QUERY: Driver details: $driverResult');
 
@@ -1880,8 +1875,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             .eq('vehicle_id', vehicleId)
             .single();
 
-        if (vehicleResult != null &&
-            vehicleResult.containsKey('plate_number')) {
+        if (vehicleResult.containsKey('plate_number')) {
           plateNumber = vehicleResult['plate_number'];
         }
 

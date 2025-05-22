@@ -5,6 +5,7 @@ import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'package:bcrypt/bcrypt.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -55,8 +56,10 @@ class NotificationService {
         await saveTokenToDatabase(fcmToken);
       }
 
-      // Listen for token refreshes
+      // Set up token refresh listener
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
+        debugPrint('FCM Token refreshed');
+        // We'll try to save the token, but it will only work if Supabase is initialized
         saveTokenToDatabase(newToken);
       });
     } catch (e) {
@@ -237,22 +240,43 @@ class NotificationService {
   // Save FCM token to your backend (Supabase in this case)
   static Future<void> saveTokenToDatabase(String token) async {
     try {
+      bool isSupabaseInitialized = false;
+      try {
+        final _ = Supabase.instance.client;
+        isSupabaseInitialized = true;
+      } catch (e) {
+        isSupabaseInitialized = false;
+      }
+
+      if (!isSupabaseInitialized) {
+        debugPrint('Supabase not initialized, skipping token save');
+        return;
+      }
+
       // Get current user ID from Supabase
       final user = Supabase.instance.client.auth.currentUser;
+
+      // Get device info and encrypt it
+      final rawDeviceInfo =
+          '${Platform.operatingSystem} ${Platform.operatingSystemVersion}';
+      final deviceInfo = BCrypt.hashpw(rawDeviceInfo, BCrypt.gensalt());
+
       if (user != null) {
         try {
-          await Supabase.instance.client.from('user_fcm_tokens').upsert(
-            {
-              'user_id': user.id,
-              'fcm_token': token,
-              'updated_at': DateTime.now().toIso8601String(),
-              'device_info':
-                  '${Platform.operatingSystem} ${Platform.operatingSystemVersion}'
+          await Supabase.instance.client.rpc(
+            'save_fcm_token',
+            params: {
+              'p_token': token,
+              'p_device_info': deviceInfo,
             },
-            onConflict: 'user_id',
           );
           debugPrint('FCM token saved to database');
         } catch (e) {
+          if (e.toString().contains('auth') ||
+              e.toString().contains('Not initialized')) {
+            debugPrint('User not authenticated, skipping FCM token save');
+            return;
+          }
           debugPrint('Error saving FCM token: $e');
         }
       } else {
