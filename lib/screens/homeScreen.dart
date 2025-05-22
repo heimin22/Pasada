@@ -15,6 +15,7 @@ import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
 // import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+import 'package:pasada_passenger_app/widgets/loading_dialog.dart';
 import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
 // import 'package:pasada_passenger_app/widgets/payment_details_container.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,10 +71,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
-  // keep state alive my nigger
+  // keep state alive
   @override
   bool get wantKeepAlive => true;
   bool isBookingConfirmed = false;
+  bool _isInitialized = false;
 
   // state variable for the payment method
   String? selectedPaymentMethod;
@@ -389,6 +391,40 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     // Replace the existing post-frame callback with a guarded version
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Check for PageStorage flag that might reset initialization state
+      final shouldReinitialize = PageStorage.of(context).readState(
+            context,
+            identifier: const ValueKey('homeInitialized'),
+          ) ==
+          false;
+
+      if (!_isInitialized || shouldReinitialize) {
+        // Show loading dialog while initializing resources
+        LoadingDialog.show(context, message: 'Initializing resources...');
+
+        try {
+          // Initialize resources
+          await InitializationService.initialize(context);
+
+          // Mark as initialized
+          _isInitialized = true;
+
+          // Update PageStorage flag
+          PageStorage.of(context).writeState(
+            context,
+            true,
+            identifier: const ValueKey('homeInitialized'),
+          );
+        } catch (e) {
+          debugPrint('Initialization error: $e');
+        } finally {
+          // Hide loading dialog if it's still showing
+          if (context.mounted) {
+            LoadingDialog.hide(context);
+          }
+        }
+      }
+
       if (_hasOnboardingBeenCalled) return;
       _hasOnboardingBeenCalled = true;
 

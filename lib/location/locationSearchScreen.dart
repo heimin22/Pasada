@@ -77,6 +77,27 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         debugPrint('Loading stops for route ID: ${widget.routeID}');
         stops = await _stopsService.getStopsForRoute(widget.routeID!);
         debugPrint('Loaded ${stops.length} stops for route ${widget.routeID}');
+
+        // For pick-up locations, filter out the last stop (end of route)
+        if (widget.isPickup && stops.isNotEmpty) {
+          // Find the stop with the highest order (the last stop)
+          Stop? lastStop;
+          int highestOrder = -1;
+
+          for (var stop in stops) {
+            if (stop.order > highestOrder) {
+              highestOrder = stop.order;
+              lastStop = stop;
+            }
+          }
+
+          if (lastStop != null) {
+            // Remove the last stop from the list
+            debugPrint(
+                'Removing last stop (${lastStop.name}) with order $highestOrder from pick-up options');
+            stops = stops.where((stop) => stop.order != highestOrder).toList();
+          }
+        }
       } else {
         stops = await _stopsService.getAllActiveStops();
         debugPrint('Loaded ${stops.length} active stops across all routes');
@@ -98,7 +119,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   }
 
   Future<void> loadRecentSearches() async {
-    final searches = await RecentSearchService.getRecentSearches();
+    // Load route-specific recent searches if a route ID is provided
+    final searches = widget.routeID != null
+        ? await RecentSearchService.getRecentSearchesByRoute(widget.routeID)
+        : await RecentSearchService.getRecentSearches();
+
     setState(() {
       recentSearches = searches;
     });
@@ -108,6 +133,57 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(search.coordinates);
       if (!shouldProceed) return;
+
+      // Check if the location is near the final stop
+      if (widget.routeID != null) {
+        final isNearFinalStop =
+            await isLocationNearFinalStop(search.coordinates);
+        if (isNearFinalStop) {
+          // Show warning dialog
+          final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+          await showDialog(
+            context: context,
+            builder: (context) => ResponsiveDialog(
+              title: 'Invalid Pick-up Location',
+              contentPadding: const EdgeInsets.all(24),
+              content: Text(
+                'This location is too close to the final stop of the route. Please select a different pick-up location.',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    backgroundColor: const Color(0xFF00CC58),
+                    foregroundColor: const Color(0xFFF5F5F5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      }
     }
 
     Navigator.pop(
@@ -173,8 +249,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       stop.coordinates,
     );
 
-    // Save to recent searches
-    await RecentSearchService.addRecentSearch(selectedLocation);
+    // Save to recent searches with route ID
+    await RecentSearchService.addRecentSearch(selectedLocation,
+        routeId: widget.routeID);
 
     Navigator.pop(context, selectedLocation);
   }
@@ -302,10 +379,62 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         final shouldProceed =
             await checkPickupDistance(selectedLocation.coordinates);
         if (!shouldProceed) return;
+
+        // Additional check for final stop
+        if (widget.routeID != null) {
+          final isNearFinalStop =
+              await isLocationNearFinalStop(selectedLocation.coordinates);
+          if (isNearFinalStop) {
+            // Show warning dialog that this is too close to the final stop
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+            await showDialog(
+              context: context,
+              builder: (context) => ResponsiveDialog(
+                title: 'Invalid Pick-up Location',
+                contentPadding: const EdgeInsets.all(24),
+                content: Text(
+                  'This location is too close to the final stop of the route. Please select a different pick-up location.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      backgroundColor: const Color(0xFF00CC58),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        }
       }
 
-      // Save to recent searches
-      await RecentSearchService.addRecentSearch(selectedLocation);
+      // Save to recent searches with route ID
+      await RecentSearchService.addRecentSearch(selectedLocation,
+          routeId: widget.routeID);
 
       if (mounted) {
         Navigator.pop(context, selectedLocation);
@@ -619,6 +748,57 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                       if (proceed != true) return;
                     }
 
+                    // Check if current location is near final stop for pick-up
+                    if (widget.isPickup && widget.routeID != null) {
+                      final isNearFinalStop =
+                          await isLocationNearFinalStop(currentLatLng);
+                      if (isNearFinalStop) {
+                        final isDarkMode =
+                            Theme.of(context).brightness == Brightness.dark;
+                        await showDialog(
+                          context: context,
+                          builder: (context) => ResponsiveDialog(
+                            title: 'Invalid Pick-up Location',
+                            contentPadding: const EdgeInsets.all(24),
+                            content: Text(
+                              'Your current location is too close to the final stop of the route. Please select a different pick-up location.',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
+                              ),
+                            ),
+                            actions: [
+                              ElevatedButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                style: ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  backgroundColor: const Color(0xFF00CC58),
+                                  foregroundColor: const Color(0xFFF5F5F5),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                ),
+                                child: const Text(
+                                  'OK',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
                     final SelectedLocation? currentLocation =
                         await reverseGeocode(currentLatLng);
                     if (currentLocation != null && mounted) {
@@ -701,7 +881,15 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                           // Add Clear All button
                           GestureDetector(
                             onTap: () async {
-                              await RecentSearchService.clearRecentSearches();
+                              if (widget.routeID != null) {
+                                // Clear route-specific searches
+                                await RecentSearchService
+                                    .clearRecentSearchesByRoute(
+                                        widget.routeID!);
+                              } else {
+                                // Clear all searches if no specific route
+                                await RecentSearchService.clearRecentSearches();
+                              }
                               setState(() {
                                 recentSearches = [];
                               });
@@ -1039,5 +1227,37 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   double dotProduct(LatLng p, LatLng v, LatLng w) {
     return (p.latitude - v.latitude) * (w.latitude - v.latitude) +
         (p.longitude - v.longitude) * (w.longitude - v.longitude);
+  }
+
+  // Helper method to check if selected location is too close to the final stop
+  Future<bool> isLocationNearFinalStop(LatLng location) async {
+    if (widget.routeID == null) return false;
+
+    try {
+      // Get all stops for the route
+      final stops = await _stopsService.getStopsForRoute(widget.routeID!);
+
+      // Find the stop with the highest order (the final stop)
+      Stop? finalStop;
+      int highestOrder = -1;
+
+      for (var stop in stops) {
+        if (stop.order > highestOrder) {
+          highestOrder = stop.order;
+          finalStop = stop;
+        }
+      }
+
+      if (finalStop == null) return false;
+
+      // Check if the location is within X meters of the final stop (using 300m as threshold)
+      final distance = calculateDistance(location, finalStop.coordinates);
+      debugPrint('Distance to final stop: ${distance.toStringAsFixed(2)}m');
+
+      return distance < 300; // Return true if within 300 meters of final stop
+    } catch (e) {
+      debugPrint('Error checking distance to final stop: $e');
+      return false;
+    }
   }
 }
