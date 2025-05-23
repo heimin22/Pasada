@@ -5,7 +5,7 @@ class NotificationPreference {
 
   static Future<bool> getNotificationStatus() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(key) ?? true;
+    return prefs.getBool(key) ?? true; // Default to true if not set
   }
 
   static Future<void> setNotificationStatus(bool value) async {

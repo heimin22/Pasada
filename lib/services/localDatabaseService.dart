@@ -20,9 +20,18 @@ class LocalDatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  // Migration for version upgrade: drop and recreate the bookings table
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('DROP TABLE IF EXISTS $tableName');
+      await onCreate(db, newVersion);
+    }
   }
 
   // table creation for the local database
@@ -32,7 +41,7 @@ class LocalDatabaseService {
         booking_id INTEGER PRIMARY KEY,
         driver_id INTEGER NOT NULL,
         route_id INTEGER NOT NULL,
-        ride_status TEXT NOT NULL CHECK(ride_status IN ('searching', 'assigned', 'in_progress', 'completed', 'cancelled', 'no_driver')),
+        ride_status TEXT NOT NULL CHECK(ride_status IN ('accepted', 'ongoing', 'completed', 'cancelled')),
         pickup_address TEXT NOT NULL,
         pickup_lat REAL NOT NULL,
         pickup_lng REAL NOT NULL,

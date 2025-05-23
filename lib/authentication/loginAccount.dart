@@ -8,6 +8,7 @@ import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/services.dart';
 
 class LoginAccountPage extends StatefulWidget {
   const LoginAccountPage({super.key});
@@ -102,7 +103,6 @@ class LoginScreen extends State<LoginPage> {
       );
 
       if (mounted) {
-        // successful login
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => selectionScreen()));
       }
@@ -133,51 +133,62 @@ class LoginScreen extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar to white icons
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      backgroundColor: const Color(0xFFF5F5F5), // Force light mode
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              top: MediaQuery.of(context).size.height * 0.07,
-              left: MediaQuery.of(context).size.height * 0.01,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: _getTimeBasedGradient(),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).size.height * 0.07,
+                left: MediaQuery.of(context).size.height * 0.01,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: buildBackButton(),
+              ),
             ),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: buildBackButton(),
-            ),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.01,
-                  left: MediaQuery.of(context).size.height * 0.035,
-                  right: MediaQuery.of(context).size.height * 0.035,
-                  bottom: MediaQuery.of(context).size.height * 0.035,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    buildHeader(),
-                    buildPassengerEmailNumberText(),
-                    buildPassengerEmailNumberInput(),
-                    buildPassengerPassText(),
-                    buildPassengerPassInput(),
-                    buildForgotPassword(),
-                    SizedBox(height: 48),
-                    buildLogInButton(),
-                    buildOrDesign(),
-                    buildLoginGoogle(),
-                  ],
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).size.height * 0.01,
+                    left: MediaQuery.of(context).size.height * 0.035,
+                    right: MediaQuery.of(context).size.height * 0.035,
+                    bottom: MediaQuery.of(context).size.height * 0.035,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      buildHeader(),
+                      buildPassengerEmailNumberText(),
+                      buildPassengerEmailNumberInput(),
+                      buildPassengerPassText(),
+                      buildPassengerPassInput(),
+                      buildForgotPassword(),
+                      SizedBox(height: 48),
+                      buildLogInButton(),
+                      buildOrDesign(),
+                      buildLoginGoogle(),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -189,7 +200,7 @@ class LoginScreen extends State<LoginPage> {
         onPressed: () {
           Navigator.pop(context);
         },
-        icon: Icon(Icons.arrow_back, color: Color(0xFF121212)),
+        icon: Icon(Icons.arrow_back, color: Color(0xFFF5F5F5)),
       ),
     );
   }
@@ -201,25 +212,19 @@ class LoginScreen extends State<LoginPage> {
         width: double.infinity,
         height: 45,
         child: TextField(
-          controller: passwordController,
-          obscureText: !isPasswordVisible,
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
           ),
+          controller: passwordController,
+          cursorColor: Color(0xFF00CC58),
+          obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             labelText: 'Enter your password',
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-              fontFamily: 'Inter',
-              color: Color(0xFF515151),
-            ),
-            errorText: errorMessage.isNotEmpty ? errorMessage : null,
             suffixIcon: IconButton(
-              color: const Color(0xFF121212),
+              color: const Color(0xFFF5F5F5),
               onPressed: () {
                 setState(() {
                   isPasswordVisible = !isPasswordVisible;
@@ -229,12 +234,20 @@ class LoginScreen extends State<LoginPage> {
                 isPasswordVisible ? Icons.visibility : Icons.visibility_off,
               ),
             ),
-            floatingLabelStyle: const TextStyle(
-              color: Color(0XFF00CC58),
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
+              fontSize: 12,
+              color: Color(0xFFAAAAAA),
             ),
+            floatingLabelStyle: const TextStyle(
+              color: Color(0xFFF5F5F5),
+            ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
@@ -243,6 +256,7 @@ class LoginScreen extends State<LoginPage> {
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -259,26 +273,29 @@ class LoginScreen extends State<LoginPage> {
         child: TextField(
           controller: emailController,
           style: const TextStyle(
-            color: Color(0xFF121212),
+            color: Color(0xFFF5F5F5),
             fontWeight: FontWeight.w600,
             fontFamily: 'Inter',
             fontSize: 14,
           ),
+          cursorColor: Color(0xFF00CC58),
           decoration: InputDecoration(
             labelText: 'Enter your email or phone number',
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 12,
               fontFamily: 'Inter',
-              color: Color(0xFF515151),
+              color: Color(0xFFAAAAAA),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
             floatingLabelStyle: const TextStyle(
-              color: Color(0xFF00CC58),
+              color: Color(0xFFF5F5F5),
             ),
+            filled: true,
+            fillColor: Colors.black12,
             enabledBorder: const OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFC7C7C6),
+                color: Color(0xFFF5F5F5),
                 width: 1.0,
               ),
               borderRadius: BorderRadius.all(Radius.circular(10.0)),
@@ -287,6 +304,7 @@ class LoginScreen extends State<LoginPage> {
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
               ),
+              borderRadius: BorderRadius.all(Radius.circular(10.0)),
             ),
           ),
         ),
@@ -304,7 +322,7 @@ class LoginScreen extends State<LoginPage> {
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
-                color: Color(0xFF121212)),
+                color: Color(0xFFF5F5F5)),
           ),
         ],
       ),
@@ -321,7 +339,7 @@ class LoginScreen extends State<LoginPage> {
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
             ),
           ),
         ],
@@ -337,7 +355,7 @@ class LoginScreen extends State<LoginPage> {
         child: ElevatedButton(
           onPressed: isLoading ? null : login,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: const Color(0xFFF5F5F5),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
@@ -348,14 +366,14 @@ class LoginScreen extends State<LoginPage> {
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
-                    color: Color(0xFFF5F5F5),
+                    color: Color(0xFF00CC58),
                     strokeWidth: 2,
                   ),
                 )
               : const Text(
                   'Log-in',
                   style: TextStyle(
-                    color: Color(0xFFF2F2F2),
+                    color: Color(0xFF00CC58),
                     fontWeight: FontWeight.w600,
                     fontSize: 20,
                   ),
@@ -410,10 +428,15 @@ class LoginScreen extends State<LoginPage> {
                   }
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: Colors.transparent,
+            foregroundColor: const Color(0xFFF5F5F5),
             minimumSize: const Size(360, 50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10.0),
+              side: const BorderSide(
+                color: Color(0xFFF5F5F5),
+                width: 2,
+              ),
             ),
           ),
           child: Row(
@@ -428,7 +451,7 @@ class LoginScreen extends State<LoginPage> {
               const Text(
                 'Log-in with Google',
                 style: TextStyle(
-                  color: Color(0xFFF2F2F2),
+                  color: Color(0xFFF5F5F5),
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -459,7 +482,7 @@ class LoginScreen extends State<LoginPage> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
             ),
           ),
         ));
@@ -473,9 +496,7 @@ class LoginScreen extends State<LoginPage> {
           alignment: Alignment.centerLeft,
           margin:
               EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-          height: 80,
-          width: 80,
-          child: SvgPicture.asset('assets/svg/Ellipse.svg'),
+          child: SvgPicture.asset('assets/svg/pasadaLogoWithoutText.svg'),
         ),
         Container(
           margin:
@@ -483,7 +504,7 @@ class LoginScreen extends State<LoginPage> {
           child: const Text(
             'Log-in to your account',
             style: TextStyle(
-              color: Color(0xFF121212),
+              color: Color(0xFFF5F5F5),
               fontWeight: FontWeight.w700,
               fontSize: 24,
             ),
@@ -491,5 +512,43 @@ class LoginScreen extends State<LoginPage> {
         ),
       ],
     );
+  }
+
+  // Add the time-based gradient method
+  LinearGradient _getTimeBasedGradient() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      // Morning
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF236078), Color(0xFF439464)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 12 && hour < 18) {
+      // Afternoon
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFCFA425), Color(0xFF26AB37)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else if (hour >= 18 && hour < 22) {
+      // Evening
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFB45F4F), Color(0xFF705776)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    } else {
+      // Night
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF2E3B4E), Color(0xFF1C1F2E)],
+        transform: GradientRotation(21 * 3.14159 / 180),
+      );
+    }
   }
 }

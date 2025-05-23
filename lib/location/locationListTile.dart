@@ -11,7 +11,6 @@ class LocationListTile extends StatelessWidget {
   final String location;
   final VoidCallback press;
 
-  // helper method para masplit yung location into landmark and address
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
     if (parts.length < 2) return [location, ''];
@@ -27,56 +26,61 @@ class LocationListTile extends StatelessWidget {
 
     return Column(
       children: [
-        ListTile(
+        InkWell(
           onTap: press,
-          horizontalTitleGap: 0,
-          contentPadding: const EdgeInsets.only(left: 16, right: 16),
-          title: Row(
-            children: [
-              SvgPicture.asset(
-                "assets/svg/pindropoff.svg",
-                width: 16,
-                height: 16,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      landmark,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                        color: isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212),
-                      ),
-                    ),
-                    if (address.isNotEmpty) ...[
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                SvgPicture.asset(
+                  'assets/svg/pindropoff.svg',
+                  height: 16,
+                  width: 16,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        address,
+                        landmark,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                           fontFamily: 'Inter',
                           color: isDarkMode
-                              ? const Color(0xFFAAAAAA)
-                              : const Color(0xFF666666),
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
                         ),
                       ),
-                    ]
-                  ],
+                      if (address.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          address,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            fontFamily: 'Inter',
+                            color: isDarkMode
+                                ? const Color(0xFFAAAAAA)
+                                : const Color(0xFF666666),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+        Divider(
+          height: 1,
+          color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
         ),
       ],
     );

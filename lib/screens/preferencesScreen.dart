@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/profiles/theme_preferences.dart';
+import 'package:pasada_passenger_app/widgets/theme_preferences.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class PreferencesScreen extends StatefulWidget {
   const PreferencesScreen({super.key});
@@ -51,6 +53,27 @@ class PreferencesScreenState extends State<PreferencesScreen> {
   Future<void> toggleNotification(bool value) async {
     setState(() => notificationsEnabled = value);
     await NotificationPreference.setNotificationStatus(value);
+
+    // let's handle the notification service here my niggatards
+    if (value) {
+      await NotificationService.showAvailabilityNotification();
+      Fluttertoast.showToast(
+        msg: 'Notifications are enabled',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFF121212),
+        textColor: Color(0xFFF5F5F5),
+      );
+    } else {
+      await NotificationService.cancelNotification(1);
+      Fluttertoast.showToast(
+        msg: "Notifications are disabled",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Color(0xFF121212),
+        textColor: Color(0xFFF5F5F5),
+      );
+    }
   }
 
   @override
