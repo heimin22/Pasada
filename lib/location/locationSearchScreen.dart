@@ -120,13 +120,51 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   Future<void> loadRecentSearches() async {
     // Load route-specific recent searches if a route ID is provided
-    final searches = widget.routeID != null
+    List<RecentSearch> searches = widget.routeID != null
         ? await RecentSearchService.getRecentSearchesByRoute(widget.routeID)
         : await RecentSearchService.getRecentSearches();
 
-    setState(() {
-      recentSearches = searches;
-    });
+    if (widget.isPickup && widget.routeID != null && mounted) {
+      try {
+        final List<Stop> stopsForRoute =
+            await _stopsService.getStopsForRoute(widget.routeID!);
+        if (stopsForRoute.isNotEmpty) {
+          Stop? lastStop;
+          int highestOrder = -1;
+          for (var stop in stopsForRoute) {
+            if (stop.order > highestOrder) {
+              highestOrder = stop.order;
+              lastStop = stop;
+            }
+          }
+
+          if (lastStop != null) {
+            final LatLng lastStopCoordinates = lastStop.coordinates;
+            // Define a radius to consider a recent search as "the last stop"
+            // 100 meters, can be adjusted based on typical stop precision
+            const double exclusionRadiusMeters = 100.0;
+
+            searches = searches.where((recent) {
+              final distance =
+                  calculateDistance(recent.coordinates, lastStopCoordinates);
+              // Keep the search if it's further than the exclusion radius from the last stop
+              return distance > exclusionRadiusMeters;
+            }).toList();
+            debugPrint(
+                'Filtered recent searches for pick-up. Last stop: ${lastStop.name}. Original count: ${recentSearches.length}, Filtered count: ${searches.length}');
+          }
+        }
+      } catch (e) {
+        debugPrint('Error filtering recent searches against last stop: $e');
+        // Proceed with unfiltered searches in case of error during stop fetching/filtering
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        recentSearches = searches;
+      });
+    }
   }
 
   void onRecentSearchSelected(RecentSearch search) async {
