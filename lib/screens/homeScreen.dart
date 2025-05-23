@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 // import 'package:flutter_svg/svg.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/main.dart';
+// import 'package:pasada_passenger_app/main.dart';
 // import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/screens/routeSelection.dart';
 // import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
-import 'package:pasada_passenger_app/services/driverService.dart';
+// import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 // import 'package:pasada_passenger_app/widgets/booking_details_container.dart';
@@ -28,9 +28,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 // import 'package:pasada_passenger_app/models/stop.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:pasada_passenger_app/services/localDatabaseService.dart';
+// import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 import 'package:pasada_passenger_app/widgets/location_input_container.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
+import 'package:pasada_passenger_app/managers/booking_manager.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -58,9 +59,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         AutomaticKeepAliveClientMixin,
         TickerProviderStateMixin {
   // Booking and polling services for cancellation
-  BookingService? _bookingService;
-  DriverAssignmentService? _driverAssignmentService;
-  int? _activeBookingId;
+  BookingService? bookingService; // Made public
+  DriverAssignmentService? driverAssignmentService; // Made public
+  int? activeBookingId; // Made public
   final GlobalKey locationInputContainerKey = GlobalKey();
   final GlobalKey bookingStatusContainerKey = GlobalKey();
   double locationInputContainerHeight = 0.0;
@@ -92,11 +93,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   double currentFare = 0.0;
 
-  late AnimationController _bookingAnimationController;
+  late AnimationController bookingAnimationController; // Made public
   late Animation<double> _downwardAnimation;
   late Animation<double> _upwardAnimation;
 
-  final ValueNotifier<String> _seatingPreference =
+  final ValueNotifier<String> seatingPreference = // Made public
       ValueNotifier<String>('Sitting');
 
   bool get isRouteSelected =>
@@ -114,6 +115,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add a state variable to track booking status
   String bookingStatus = 'requested';
+
+  // Instantiate BookingManager
+  late BookingManager _bookingManager;
 
   Future<void> _showRouteSelection() async {
     final result = await Navigator.push(
@@ -204,167 +208,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   // Method to restore any active booking from local database on app start
-  Future<void> loadActiveBooking() async {
-    final prefs = await SharedPreferences.getInstance();
-    final bookingId = prefs.getInt('activeBookingId');
-    if (bookingId == null) return;
-
-    // First try to get booking from API
-    _bookingService = BookingService();
-    final apiBooking = await _bookingService!.getBookingDetails(bookingId);
-
-    if (apiBooking != null) {
-      // Use API data
-      final status = apiBooking['ride_status'];
-      if (status == 'searching' ||
-          status == 'assigned' ||
-          status == 'ongoing' ||
-          status == 'requested') {
-        setState(() {
-          isBookingConfirmed = true;
-          bookingStatus = status;
-          selectedPickUpLocation = SelectedLocation(
-            apiBooking['pickup_address'],
-            LatLng(
-              double.parse(apiBooking['pickup_lat'].toString()),
-              double.parse(apiBooking['pickup_lng'].toString()),
-            ),
-          );
-          selectedDropOffLocation = SelectedLocation(
-            apiBooking['dropoff_address'],
-            LatLng(
-              double.parse(apiBooking['dropoff_lat'].toString()),
-              double.parse(apiBooking['dropoff_lng'].toString()),
-            ),
-          );
-          currentFare = double.parse(apiBooking['fare'].toString());
-          selectedPaymentMethod = apiBooking['payment_method'] ?? 'Cash';
-        });
-
-        // If driver is assigned, fetch driver details
-        if (apiBooking['driver_id'] != null) {
-          _fetchDriverDetails(apiBooking['driver_id'].toString());
-        }
-
-        // Animate into the booking status view
-        _bookingAnimationController.forward();
-
-        // Resume polling for status updates
-        _driverAssignmentService = DriverAssignmentService();
-        _driverAssignmentService!.pollForDriverAssignment(
-          bookingId,
-          (driverData) => _updateDriverDetails(driverData),
-          onError: () {/* optionally handle polling errors */},
-          onStatusChange: (status) {
-            setState(() => bookingStatus = status);
-            _fetchAndUpdateBookingDetails(bookingId);
-          },
-        );
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => measureContainers());
-        return;
-      }
-    }
-
-    // Fallback to local database if API fails
-    final localBooking =
-        await LocalDatabaseService().getBookingDetails(bookingId);
-    if (localBooking == null) {
-      await prefs.remove('activeBookingId');
-      return;
-    }
-
-    // Rest of your existing code for local database fallback...
-    final status = localBooking.rideStatus;
-    if (status == 'searching' || status == 'assigned' || status == 'ongoing') {
-      setState(() {
-        isBookingConfirmed = true;
-        selectedPickUpLocation = SelectedLocation(
-          localBooking.pickupAddress,
-          localBooking.pickupCoordinates,
-        );
-        selectedDropOffLocation = SelectedLocation(
-          localBooking.dropoffAddress,
-          localBooking.dropoffCoordinates,
-        );
-        currentFare = localBooking.fare;
-      });
-      // Animate into the booking status view
-      _bookingAnimationController.forward();
-      // Restore payment method if any
-      final savedMethod = prefs.getString('selectedPaymentMethod');
-      if (savedMethod != null && mounted) {
-        setState(() => selectedPaymentMethod = savedMethod);
-      }
-      // Restore selected route details
-      try {
-        final routeResponse = await Supabase.instance.client
-            .from('official_routes')
-            .select(
-                'route_name, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, destination_name, polyline_coordinates')
-            .eq('officialroute_id', localBooking.routeId)
-            .single();
-        final Map<String, dynamic> routeMap =
-            Map<String, dynamic>.from(routeResponse as Map);
-        // Parse intermediate_coordinates
-        var inter = routeMap['intermediate_coordinates'];
-        if (inter is String) {
-          try {
-            inter = jsonDecode(inter);
-          } catch (_) {}
-        }
-        routeMap['intermediate_coordinates'] = inter;
-        // Parse origin/destination coords
-        routeMap['origin_coordinates'] = LatLng(
-          double.parse(routeMap['origin_lat'].toString()),
-          double.parse(routeMap['origin_lng'].toString()),
-        );
-        routeMap['destination_coordinates'] = LatLng(
-          double.parse(routeMap['destination_lat'].toString()),
-          double.parse(routeMap['destination_lng'].toString()),
-        );
-        setState(() {
-          selectedRoute = routeMap;
-        });
-      } catch (e) {
-        debugPrint('Error restoring route: $e');
-      }
-      // Initialize map and generate route polyline
-      mapScreenKey.currentState?.initializeLocation();
-      if (selectedRoute != null) {
-        mapScreenKey.currentState?.generateRoutePolyline(
-          selectedRoute!['intermediate_coordinates'] as List<dynamic>,
-          originCoordinates: selectedRoute!['origin_coordinates'] as LatLng?,
-          destinationCoordinates:
-              selectedRoute!['destination_coordinates'] as LatLng?,
-          destinationName: selectedRoute!['destination_name']?.toString(),
-        );
-      }
-      // Resume location tracking and driver polling
-      final user = supabase.auth.currentUser;
-      if (user != null) {
-        // initialize and store services so they can be cancelled
-        _bookingService = BookingService();
-        _bookingService!.startLocationTracking(user.id);
-        _driverAssignmentService = DriverAssignmentService();
-        _driverAssignmentService!.pollForDriverAssignment(
-          bookingId,
-          (driverData) => _updateDriverDetails(driverData),
-          onError: () {/* optionally handle polling errors */},
-        );
-      }
-    } else {
-      // Completed or cancelled booking, clear saved id
-      await prefs.remove('activeBookingId');
-    }
-    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
-  }
+  // MOVED TO BookingManager: Future<void> loadActiveBooking() async { ... }
 
   @override
   void initState() {
     super.initState();
+    _bookingManager = BookingManager(this); // Initialize BookingManager
 
-    _bookingAnimationController = AnimationController(
+    bookingAnimationController = AnimationController(
+      // Use public field
       vsync: this,
       duration: const Duration(milliseconds: 200),
     );
@@ -373,7 +225,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       begin: 0.0,
       end: 100.0,
     ).animate(CurvedAnimation(
-      parent: _bookingAnimationController,
+      parent: bookingAnimationController, // Use public field
       curve: Curves.easeOut,
     ));
 
@@ -381,11 +233,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       begin: 100.0,
       end: 0.0,
     ).animate(CurvedAnimation(
-      parent: _bookingAnimationController,
+      parent: bookingAnimationController, // Use public field
       curve: Curves.easeOut,
     ));
 
-    _bookingAnimationController.addStatusListener((status) {
+    bookingAnimationController.addStatusListener((status) {
+      // Use public field
       if (status == AnimationStatus.completed) {
         setState(() {
           isNotificationVisible = false;
@@ -423,7 +276,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       if (_hasOnboardingBeenCalled) return;
       _hasOnboardingBeenCalled = true;
 
-      await loadActiveBooking();
+      // await loadActiveBooking();
+      await _bookingManager.loadActiveBooking(); // Use BookingManager
       if (isBookingConfirmed) {
         WidgetsBinding.instance
             .addPostFrameCallback((_) => measureContainers());
@@ -451,7 +305,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
-    _bookingAnimationController.dispose();
+    bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -464,118 +318,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  Future<void> _handleBookingConfirmation() async {
-    if (selectedRoute != null &&
-        selectedPickUpLocation != null &&
-        selectedDropOffLocation != null) {
-      final int routeId = selectedRoute!['officialroute_id'] ?? 0;
-      final stopsService = StopsService();
-      final pickupStop = await stopsService.findClosestStop(
-          selectedPickUpLocation!.coordinates, routeId);
-      final dropoffStop = await stopsService.findClosestStop(
-          selectedDropOffLocation!.coordinates, routeId);
-      if (pickupStop != null && dropoffStop != null) {
-        if (dropoffStop.order <= pickupStop.order) {
-          Fluttertoast.showToast(
-              msg: 'Invalid route: drop-off must be after pick-up.');
-          return;
-        }
-      }
-    }
+  // MOVED TO BookingManager: Future<void> _handleBookingConfirmation() async { ... }
 
-    final user = supabase.auth.currentUser;
-    if (user != null && selectedRoute != null) {
-      setState(() {
-        isBookingConfirmed = true;
-        bookingStatus = 'requested';
-      });
-      _bookingAnimationController.forward();
-      WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
-
-      _bookingService = BookingService();
-      final bookingService = _bookingService!;
-      int routeId = selectedRoute!['officialroute_id'] ?? 0;
-      final bookingResult = await bookingService.createBooking(
-        passengerId: user.id,
-        routeId: routeId,
-        pickupAddress: selectedPickUpLocation?.address ?? 'Unknown',
-        pickupCoordinates:
-            selectedPickUpLocation?.coordinates ?? const LatLng(0, 0),
-        dropoffAddress: selectedDropOffLocation?.address ?? 'Unknown',
-        dropoffCoordinates:
-            selectedDropOffLocation?.coordinates ?? const LatLng(0, 0),
-        paymentMethod: selectedPaymentMethod ?? 'Cash',
-        fare: currentFare,
-        seatingPreference: _seatingPreference.value,
-        onDriverAssigned: (details) =>
-            _loadBookingAfterDriverAssignment(details.bookingId),
-        onStatusChange: (status) {
-          setState(() {
-            bookingStatus = status;
-            if (status == 'cancelled') _handleBookingCancellation();
-          });
-        },
-        onTimeout: () {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (ctx) => ResponsiveDialog(
-              title: 'No Drivers Available',
-              content:
-                  const Text('Booking cancelled due to no available drivers.'),
-              actions: [
-                ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK'))
-              ],
-            ),
-          ).then((_) => _handleBookingCancellation());
-        },
-      );
-
-      if (bookingResult.success) {
-        final details = bookingResult.booking!;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('activeBookingId', details.bookingId);
-        _activeBookingId = details.bookingId;
-        setState(() => bookingStatus = details.rideStatus);
-        bookingService.startLocationTracking(user.id);
-        setState(() => isDriverAssigned = false);
-        _driverAssignmentService = DriverAssignmentService();
-      } else {
-        Fluttertoast.showToast(
-            msg: bookingResult.errorMessage ?? 'Booking failed');
-        _handleBookingCancellation();
-      }
-    } else {
-      Fluttertoast.showToast(msg: 'User or route missing.');
-      _handleBookingCancellation();
-    }
-  }
-
-  void _handleBookingCancellation() {
-    _driverAssignmentService?.stopPolling();
-    _bookingService?.stopLocationTracking();
-    SharedPreferences.getInstance().then((prefs) async {
-      if (_activeBookingId != null) {
-        await LocalDatabaseService().deleteBookingDetails(_activeBookingId!);
-      }
-      await prefs.remove('activeBookingId');
-      await prefs.remove('pickup');
-      await prefs.remove('dropoff');
-    });
-    mapScreenKey.currentState?.clearAll();
-    setState(() {
-      isBookingConfirmed = false;
-      isDriverAssigned = false;
-      _activeBookingId = null;
-      selectedPickUpLocation = null;
-      selectedDropOffLocation = null;
-      selectedRoute = null; // Also clear the route selection
-    });
-    _bookingAnimationController.reverse();
-    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
-  }
+  // MOVED TO BookingManager: void _handleBookingCancellation() { ... }
 
   void measureContainers() {
     final RenderBox? locationBox = locationInputContainerKey.currentContext
@@ -597,33 +342,164 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   Future<void> _showSeatingPreferenceDialog() async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final selectedColor =
+        isDarkMode ? const Color(0xFF00CC58) : Colors.green.shade600;
+    final unselectedColor =
+        isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
+    final selectedTextColor =
+        isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212);
+    final unselectedTextColor = isDarkMode
+        ? const Color.fromARGB(255, 153, 153, 153)
+        : const Color(0xFF757575);
+
     await showDialog(
       context: context,
-      builder: (context) => ResponsiveDialog(
-        title: 'Seating Preferences',
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Pili ka, nakaupo ba o nakatayo?',
-                style:
-                    TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-              onPressed: () {
-                _seatingPreference.value = 'sitting';
-                Navigator.pop(context);
+      builder: (context) {
+        final tempSeatingPreference =
+            ValueNotifier<String>(seatingPreference.value);
+
+        return ValueListenableBuilder<String>(
+          valueListenable: tempSeatingPreference,
+          builder: (context, currentSelection, child) {
+            // Animation states for each button, stored in a map
+            final Map<String, bool> pressStates = {
+              'Sitting': false,
+              'Standing': false,
+              'Any': false,
+            };
+
+            return StatefulBuilder(
+              builder: (BuildContext sctx, StateSetter stateSetter) {
+                // sctx to avoid name collision
+                return ResponsiveDialog(
+                  title: 'Seating Preferences',
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Pili ka, nakaupo ba, nakatayo, o kahit ano?',
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212))),
+                      const SizedBox(height: 20),
+                      AnimatedScale(
+                        scale: pressStates['Sitting']! ? 0.92 : 1.0,
+                        duration: const Duration(milliseconds: 150),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: currentSelection == 'Sitting'
+                                ? selectedColor
+                                : unselectedColor,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () async {
+                            tempSeatingPreference.value = 'Sitting';
+                            stateSetter(() => pressStates['Sitting'] = true);
+                            await Future.delayed(
+                                const Duration(milliseconds: 150));
+                            stateSetter(() => pressStates['Sitting'] = false);
+                          },
+                          child: Text('Sitting',
+                              style: TextStyle(
+                                  color: currentSelection == 'Sitting'
+                                      ? selectedTextColor
+                                      : unselectedTextColor,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AnimatedScale(
+                        scale: pressStates['Standing']! ? 0.92 : 1.0,
+                        duration: const Duration(milliseconds: 150),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: currentSelection == 'Standing'
+                                ? selectedColor
+                                : unselectedColor,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () async {
+                            tempSeatingPreference.value = 'Standing';
+                            stateSetter(() => pressStates['Standing'] = true);
+                            await Future.delayed(
+                                const Duration(milliseconds: 150));
+                            stateSetter(() => pressStates['Standing'] = false);
+                          },
+                          child: Text('Standing',
+                              style: TextStyle(
+                                  color: currentSelection == 'Standing'
+                                      ? selectedTextColor
+                                      : unselectedTextColor,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      AnimatedScale(
+                        scale: pressStates['Any']! ? 0.92 : 1.0,
+                        duration: const Duration(milliseconds: 150),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: currentSelection == 'Any'
+                                ? selectedColor
+                                : unselectedColor,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () async {
+                            tempSeatingPreference.value = 'Any';
+                            stateSetter(() => pressStates['Any'] = true);
+                            await Future.delayed(
+                                const Duration(milliseconds: 150));
+                            stateSetter(() => pressStates['Any'] = false);
+                          },
+                          child: Text('Any',
+                              style: TextStyle(
+                                  color: currentSelection == 'Any'
+                                      ? selectedTextColor
+                                      : unselectedTextColor,
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(sctx), // Use sctx here
+                      child: Text('Cancel',
+                          style: TextStyle(
+                              color: isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black54)),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: selectedColor,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () {
+                        seatingPreference.value = tempSeatingPreference.value;
+                        Navigator.pop(sctx); // Use sctx here
+                      },
+                      child: Text('Confirm',
+                          style: TextStyle(
+                              color: selectedTextColor,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                );
               },
-              child: const Text('Sitting')),
-          ElevatedButton(
-              onPressed: () {
-                _seatingPreference.value = 'standing';
-                Navigator.pop(context);
-              },
-              child: const Text('Standing')),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -803,12 +679,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   left: responsivePadding,
                   right: responsivePadding,
                   child: AnimatedBuilder(
-                    animation: _bookingAnimationController,
+                    animation: bookingAnimationController,
                     builder: (context, child) {
                       return Transform.translate(
                         offset: Offset(0, -_downwardAnimation.value),
                         child: Opacity(
-                          opacity: 1 - _bookingAnimationController.value,
+                          opacity: 1 - bookingAnimationController.value,
                           child: _buildRouteSelectionContainer(),
                         ),
                       );
@@ -820,7 +696,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       mapScreenKey as GlobalKey<State<StatefulWidget>>,
                   downwardAnimation: _downwardAnimation,
                   bookingAnimationControllerValue:
-                      _bookingAnimationController, // Pass the controller directly
+                      bookingAnimationController, // Pass the controller directly
                   responsivePadding: responsivePadding,
                   fabVerticalSpacing: fabVerticalSpacing,
                   iconSize: fabIconSize,
@@ -845,12 +721,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     left: responsivePadding,
                     right: responsivePadding,
                     child: AnimatedBuilder(
-                      animation: _bookingAnimationController,
+                      animation: bookingAnimationController,
                       builder: (context, child) {
                         return Transform.translate(
                           offset: Offset(0, _downwardAnimation.value),
                           child: Opacity(
-                            opacity: 1 - _bookingAnimationController.value,
+                            opacity: 1 - bookingAnimationController.value,
                             child: Column(
                               key: locationInputContainerKey, // Assign key here
                               mainAxisSize: MainAxisSize.min,
@@ -873,13 +749,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                     currentFare: currentFare,
                                     selectedPaymentMethod:
                                         selectedPaymentMethod,
-                                    seatingPreference: _seatingPreference,
+                                    seatingPreference: seatingPreference,
                                     onNavigateToLocationSearch:
                                         _navigateToLocationSearch,
                                     onShowSeatingPreferenceDialog:
                                         _showSeatingPreferenceDialog,
-                                    onConfirmBooking:
-                                        _handleBookingConfirmation,
+                                    onConfirmBooking: _bookingManager
+                                        .handleBookingConfirmation,
                                     onPaymentMethodSelected: (method) {
                                       setState(
                                           () => selectedPaymentMethod = method);
@@ -900,12 +776,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     left: responsivePadding,
                     right: responsivePadding,
                     child: AnimatedBuilder(
-                      animation: _bookingAnimationController,
+                      animation: bookingAnimationController,
                       builder: (context, child) {
                         return Transform.translate(
                           offset: Offset(0, -_upwardAnimation.value),
                           child: Opacity(
-                            opacity: _bookingAnimationController.value,
+                            opacity: bookingAnimationController.value,
                             child: Container(
                               // Wrap BookingStatusManager with a container and key
                               key: bookingStatusContainerKey,
@@ -915,7 +791,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                 ETA: etaText,
                                 paymentMethod: selectedPaymentMethod ?? 'Cash',
                                 fare: currentFare,
-                                onCancelBooking: _handleBookingCancellation,
+                                onCancelBooking:
+                                    _bookingManager.handleBookingCancellation,
                                 driverName: driverName,
                                 plateNumber: plateNumber,
                                 vehicleModel: vehicleModel,
@@ -1061,130 +938,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
   }
 
-  void _updateDriverDetails(Map<String, dynamic> driverData) {
-    if (!mounted) return;
-    var driver = driverData['driver'];
-    if (driver == null) return;
-    if (driver is List && driver.isNotEmpty) driver = driver[0];
-    setState(() {
-      driverName = _extractField(driver, ['full_name', 'name', 'driver_name']);
-      plateNumber = _extractField(
-          driver, ['plate_number', 'plateNumber', 'vehicle_plate', 'plate']);
-      phoneNumber = _extractField(driver, [
-        'driver_number',
-        'phone_number',
-        'phoneNumber',
-        'contact_number',
-        'phone'
-      ]);
-      isDriverAssigned = true;
-      bookingStatus = 'accepted';
-    });
-  }
+  // MOVED TO BookingManager: void _updateDriverDetails(Map<String, dynamic> driverData) { ... }
 
-  String _extractField(dynamic data, List<String> keys) {
-    if (data is! Map) return '';
-    for (var key in keys) {
-      if (data.containsKey(key) && data[key] != null) {
-        return data[key].toString();
-      }
-    }
-    return '';
-  }
+  // MOVED TO BookingManager: String _extractField(dynamic data, List<String> keys) { ... }
 
-  Future<void> _fetchAndUpdateBookingDetails(int bookingId) async {
-    _bookingService ??= BookingService();
-    final details = await _bookingService!.getBookingDetails(bookingId);
-    if (details != null && mounted) {
-      setState(() {
-        bookingStatus = details['ride_status'] ?? 'requested';
-        if (details['fare'] != null) {
-          currentFare =
-              double.tryParse(details['fare'].toString()) ?? currentFare;
-        }
-        if (details['payment_method'] != null) {
-          selectedPaymentMethod = details['payment_method'];
-        }
-      });
-      if (details['driver_id'] != null) {
-        _fetchDriverDetails(details['driver_id'].toString());
-      }
-    }
-  }
+  // MOVED TO BookingManager: Future<void> _fetchAndUpdateBookingDetails(int bookingId) async { ... }
 
-  Future<void> _fetchDriverDetails(String driverId) async {
-    final service = DriverService();
-    final details = await service.getDriverDetails(driverId);
-    if (details != null && mounted) _updateDriverDetails({'driver': details});
-  }
+  // MOVED TO BookingManager: Future<void> _fetchDriverDetails(String driverId) async { ... }
 
-  void _loadBookingAfterDriverAssignment(int bookingId) {
-    _driverAssignmentService
-        ?.fetchBookingDetails(bookingId)
-        .then((bookingData) {
-      if (bookingData != null) {
-        final driverId = bookingData['driver_id'];
-        if (driverId != null) {
-          DriverService()
-              .getDriverDetailsByBooking(bookingId)
-              .then((driverDetails) {
-            if (driverDetails != null) {
-              _updateDriverDetails(driverDetails);
-            } else {
-              DriverService()
-                  .getDriverDetails(driverId.toString())
-                  .then((directDetails) {
-                if (directDetails != null) {
-                  _updateDriverDetails(directDetails);
-                } else {
-                  _fetchDriverDetailsDirectlyFromDB(bookingId);
-                }
-              });
-            }
-          });
-        } else {
-          _fetchDriverDetailsDirectlyFromDB(bookingId);
-        }
-      } else {
-        _fetchDriverDetailsDirectlyFromDB(bookingId);
-      }
-    });
-  }
+  // MOVED TO BookingManager: void _loadBookingAfterDriverAssignment(int bookingId) { ... }
 
-  Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async {
-    try {
-      final booking = await supabase
-          .from('bookings')
-          .select('driver_id')
-          .eq('booking_id', bookingId)
-          .single();
-      if (!booking.containsKey('driver_id')) return;
-      final driverId = booking['driver_id'];
-      final driver = await supabase
-          .from('driverTable')
-          .select('driver_id, full_name, driver_number, vehicle_id')
-          .eq('driver_id', driverId)
-          .single();
-      String plate = 'Unknown';
-      if (driver.containsKey('vehicle_id') && driver['vehicle_id'] != null) {
-        final vehicle = await supabase
-            .from('vehicleTable')
-            .select('plate_number')
-            .eq('vehicle_id', driver['vehicle_id'])
-            .single();
-        if (vehicle.containsKey('plate_number')) {
-          plate = vehicle['plate_number'];
-        }
-      }
-      setState(() {
-        driverName = driver['full_name'] ?? 'Driver';
-        phoneNumber = driver['driver_number'] ?? '';
-        plateNumber = plate;
-        isDriverAssigned = true;
-        bookingStatus = 'accepted';
-      });
-    } catch (e) {
-      debugPrint('DB Query Error: $e');
-    }
-  }
+  // MOVED TO BookingManager: Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async { ... }
 }
