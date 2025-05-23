@@ -2,6 +2,8 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -9,9 +11,11 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:intl/intl.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -20,6 +24,9 @@ class MapScreen extends StatefulWidget {
   final LatLng? dropOffLocation;
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
+  final Function(double)? onFareUpdated;
+  final Map<String, dynamic>? selectedRoute;
+  final List<LatLng>? routePolyline;
 
   const MapScreen({
     super.key,
@@ -27,6 +34,9 @@ class MapScreen extends StatefulWidget {
     this.dropOffLocation,
     this.bottomPadding = 0.07,
     this.onEtaUpdated,
+    this.onFareUpdated,
+    this.selectedRoute,
+    this.routePolyline,
   });
 
   @override
@@ -71,8 +81,14 @@ class MapScreenState extends State<MapScreen>
   bool isLocationInitialized = false;
   bool errorDialogVisible = false;
 
-  // Add this field to store the current controller
   GoogleMapController? _mapController;
+
+  bool showRouteEndIndicator = false;
+  String routeEndName = '';
+
+  Map<MarkerId, Marker> markers = {};
+
+  double fareAmount = 0.0;
 
   // Override methods
   /// state of the app
@@ -123,7 +139,7 @@ class MapScreenState extends State<MapScreen>
   void calculateRoute() {
     //  make sure there's a null check before placing polylines
     if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
-      showDebugToast('Select both locations first.');
+      showError('Select both locations first.');
       return;
     }
     // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
@@ -141,8 +157,23 @@ class MapScreenState extends State<MapScreen>
       }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
-      generatePolylineBetween(widget.pickUpLocation!, widget.dropOffLocation!);
-      showDebugToast('Generating route');
+      debugPrint('MapScreen - Both pickup and dropoff locations are set');
+      // Use the selected route's polyline segment if available
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        debugPrint('MapScreen - Using route polyline');
+        generatePolylineAlongRoute(
+          widget.pickUpLocation!,
+          widget.dropOffLocation!,
+          widget.routePolyline!,
+        );
+      } else {
+        // Fallback to direct route if no official polyline
+        debugPrint('MapScreen - Using direct route');
+        generatePolylineBetween(
+            widget.pickUpLocation!, widget.dropOffLocation!);
+      }
+    } else {
+      debugPrint('MapScreen - Missing pickup or dropoff location');
     }
   }
 
@@ -157,6 +188,70 @@ class MapScreenState extends State<MapScreen>
         setState(() => isAnimatingLocation = false);
       }
     });
+  }
+
+  Future<bool> checkPickupDistance(LatLng pickupLocation) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (currentLocation == null) return true;
+
+    final selectedLoc = SelectedLocation("", pickupLocation);
+    final distance = selectedLoc.distanceFrom(currentLocation!);
+
+    if (distance > 1.0) {
+      final bool? proceed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) => ResponsiveDialog(
+          title: 'Distance warning',
+          content: Text(
+            'The selected pick-up location is quite far from your current location. Do you want to continue?',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 14,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF067837),
+              ),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      return proceed ?? false;
+    }
+
+    return true;
+  }
+
+  Future<void> handleSearchLocationSelection(
+      SelectedLocation location, bool isPickup) async {
+    if (isPickup) {
+      final shouldProceed = await checkPickupDistance(location.coordinates);
+      if (!shouldProceed) return;
+    }
+    if (isPickup) {
+      setState(() {
+        selectedPickupLatLng = location.coordinates;
+        // Update any other necessary pickup-related state
+      });
+    } else {
+      setState(() {
+        selectedDropOffLatLng = location.coordinates;
+        // Update any other necessary dropoff-related state
+      });
+    }
   }
 
   // replace ko yung initLocation ko ng ganito
@@ -249,15 +344,26 @@ class MapScreenState extends State<MapScreen>
   }
 
   // ito yung method para sa pick-up and drop-off location
-  void updateLocations({LatLng? pickup, LatLng? dropoff}) {
-    if (pickup != null) selectedPickupLatLng = pickup;
+  Future<void> updateLocations({LatLng? pickup, LatLng? dropoff}) async {
+    if (pickup != null) {
+      final shouldProceed = await checkPickupDistance(pickup);
+      if (!shouldProceed) return;
+      selectedPickupLatLng = pickup;
+    }
 
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
-      generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      // Check if we have route polyline data from the route selection
+      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
+        // Generate a polyline that follows the official route
+        generatePolylineAlongRoute(selectedPickupLatLng!,
+            selectedDropOffLatLng!, widget.routePolyline!);
+      } else {
+        // Fallback to direct route if no official route polyline is available
+        generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+      }
     }
-    // if naset na parehas yung pick-up and yung drop-off, maggegenerate na sila ng polyline
   }
 
   Future<bool> checkNetworkConnection() async {
@@ -269,6 +375,207 @@ class MapScreenState extends State<MapScreen>
     return true;
   }
 
+  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
+      {LatLng? originCoordinates,
+      LatLng? destinationCoordinates,
+      String? destinationName}) async {
+    try {
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey.isEmpty) {
+        if (kDebugMode) {
+          print('API key not found');
+        }
+        return;
+      }
+
+      final polylinePoints = PolylinePoints();
+
+      // Convert intermediate coordinates to waypoints format
+      List<Map<String, dynamic>> intermediates = [];
+      if (intermediateCoordinates.isNotEmpty) {
+        for (var point in intermediateCoordinates) {
+          if (point is Map &&
+              point.containsKey('lat') &&
+              point.containsKey('lng')) {
+            intermediates.add({
+              'location': {
+                'latLng': {
+                  'latitude': double.parse(point['lat'].toString()),
+                  'longitude': double.parse(point['lng'].toString())
+                }
+              }
+            });
+          }
+        }
+      }
+
+      // Routes API request
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask':
+            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+      };
+
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': originCoordinates?.latitude,
+              'longitude': originCoordinates?.longitude,
+            },
+          },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': destinationCoordinates?.latitude,
+              'longitude': destinationCoordinates?.longitude,
+            },
+          },
+        },
+        'intermediates': intermediates,
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+
+      debugPrint('Request Body: $body');
+
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        showError('Please try again.');
+        if (kDebugMode) {
+          print('No response from the server');
+        }
+        return;
+      }
+
+      final data = json.decode(response);
+
+      // Add response validation
+      if (data['routes'] == null || data['routes'].isEmpty) {
+        if (kDebugMode) {
+          print('No routes found');
+        }
+        return;
+      }
+
+      // Null checking for nested properties
+      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
+      if (polyline == null) {
+        if (kDebugMode) {
+          print('No polyline found in the response');
+        }
+        return;
+      }
+
+      // Decode the polyline
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(polyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      // Update UI with the polyline
+      if (mounted) {
+        setState(() {
+          polylines.clear();
+          polylines[const PolylineId('route_path')] = Polyline(
+            polylineId: const PolylineId('route_path'),
+            points: polylineCoordinates,
+            color: const Color(0xFFFFCE21),
+            width: 8,
+          );
+
+          // Add destination marker if provided
+          if (destinationCoordinates != null) {
+            // Create a custom marker for the destination
+            final BitmapDescriptor customIcon =
+                BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueRed,
+            );
+
+            // Add the destination marker
+            final markerId = MarkerId('route_destination');
+            markers[markerId] = Marker(
+              markerId: markerId,
+              position: destinationCoordinates,
+              icon: customIcon,
+              infoWindow: InfoWindow(
+                title: 'End of Route',
+                snippet: destinationName ?? 'Final destination',
+              ),
+            );
+
+            // Show the info window immediately
+            Future.delayed(Duration(milliseconds: 500), () async {
+              if (mounted) {
+                final GoogleMapController controller =
+                    await mapController.future;
+                controller.showMarkerInfoWindow(markerId);
+              }
+            });
+
+            // Enable the route end indicator
+            showRouteEndIndicator = true;
+            routeEndName = destinationName ?? 'End of Route';
+          }
+        });
+
+        // Calculate bounds for camera
+        double southLat = polylineCoordinates.first.latitude;
+        double northLat = polylineCoordinates.first.latitude;
+        double westLng = polylineCoordinates.first.longitude;
+        double eastLng = polylineCoordinates.first.longitude;
+
+        for (LatLng point in polylineCoordinates) {
+          southLat = math.min(southLat, point.latitude);
+          northLat = math.max(northLat, point.latitude);
+          westLng = math.min(westLng, point.longitude);
+          eastLng = math.max(eastLng, point.longitude);
+        }
+
+        // Add padding to the bounds
+        final double padding = 0.01;
+        southLat -= padding;
+        northLat += padding;
+        westLng -= padding;
+        eastLng += padding;
+
+        final GoogleMapController controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(southLat, westLng),
+              northeast: LatLng(northLat, eastLng),
+            ),
+            20,
+          ),
+        );
+
+        // Debug the points to verify they're in the correct order
+        debugPrint(
+            'Route points in order (${polylineCoordinates.length} points):');
+        for (int i = 0; i < polylineCoordinates.length; i++) {
+          debugPrint(
+              'Point $i: ${polylineCoordinates[i].latitude}, ${polylineCoordinates[i].longitude}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error generating route polyline: $e');
+      showError('Error: ${e.toString()}');
+    }
+  }
+
   Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
     try {
       final hasConnection = await checkNetworkConnection();
@@ -276,7 +583,6 @@ class MapScreenState extends State<MapScreen>
 
       final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
       if (apiKey.isEmpty) {
-        showDebugToast('API key not found');
         if (kDebugMode) {
           print('API key not found');
         }
@@ -324,106 +630,196 @@ class MapScreenState extends State<MapScreen>
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
 
       if (response == null) {
-        showDebugToast('No response from the server');
-        if (kDebugMode) {
-          print('No response from the server');
-        }
+        // No response, skip polyline generation
+        debugPrint('generatePolylineBetween: no response from server');
         return;
       }
 
       final data = json.decode(response);
 
-      // add ng response validation
-      if (data['routes'] == null || data['routes'].isEmpty) {
-        showDebugToast('No routes found');
+      // Handle routes which may be a List or a single Map
+      final dynamic routesObj = data['routes'];
+      List<dynamic> routesList;
+      if (routesObj is List) {
+        routesList = routesObj;
+      } else if (routesObj is Map) {
+        routesList = [routesObj];
+      } else {
         if (kDebugMode) {
-          print('No routes found');
+          print('Unexpected routes format: ${routesObj.runtimeType}');
         }
         return;
       }
+      if (routesList.isEmpty) {
+        if (kDebugMode) print('No routes found');
+        return;
+      }
+      final Map<String, dynamic> firstRoute =
+          Map<String, dynamic>.from(routesList.first);
+      final dynamic polylineObj = firstRoute['polyline'];
+      String? encodedPolyline;
 
-      // null checking for nested properties
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) {
-        showDebugToast('No polyline found in the response');
-        if (kDebugMode) {
-          print('No polyline found in the response');
-        }
+      if (polylineObj is Map && polylineObj['encodedPolyline'] is String) {
+        encodedPolyline = polylineObj['encodedPolyline'] as String;
+      }
+
+      if (encodedPolyline == null) {
+        if (kDebugMode) print('No polyline found in the response');
         return;
       }
 
-      debugPrint('API Response: $data');
-      debugPrint('Routes; ${data['routes']}');
-      if (data['routes']?.isNotEmpty ?? false) {
-        final polyline = data['routes'][0]['polyline']['encodedPolyline'];
-        List<PointLatLng> decodedPolyline =
-            polylinePoints.decodePolyline(polyline);
-        List<LatLng> polylineCoordinates = decodedPolyline
-            .map((point) => LatLng(point.latitude, point.longitude))
-            .toList();
-        if (mounted) {
-          setState(() {
-            polylines = {
-              const PolylineId('route'): Polyline(
-                polylineId: const PolylineId('route'),
-                points: polylineCoordinates,
-                color: Color(0xFF067837),
-                width: 8,
-              )
-            };
-          });
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(encodedPolyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      if (mounted) {
+        final double routeDistance = getRouteDistance(polylineCoordinates);
+        final double fare = calculateFare(routeDistance);
+
+        debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
+        debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
+
+        setState(() {
+          polylines = {
+            const PolylineId('route'): Polyline(
+              polylineId: const PolylineId('route'),
+              points: polylineCoordinates,
+              color: Color(0xFF067837),
+              width: 8,
+            )
+          };
+
+          fareAmount = fare;
+        });
+
+        if (widget.onFareUpdated != null) {
+          debugPrint(
+              'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
+          widget.onFareUpdated!(fare);
+        } else {
+          debugPrint('onFareUpdated callback is null');
         }
 
-        showDebugToast('Route generated successfully');
-
-        final legs = data['routes'][0]['legs'];
-        if (legs is! List || legs.isEmpty) {
-          debugPrint('Legs data is invalid: $legs');
-          setState(() => etaText = 'N/A');
-          return;
+        // Add ETA update similar to generatePolylineAlongRoute
+        final legs = routesList[0]['legs'];
+        if (legs is List && legs.isNotEmpty) {
+          final firstLeg = legs[0];
+          final duration = firstLeg['duration'];
+          if (duration != null && duration['seconds'] != null) {
+            final durationSeconds = duration['seconds'];
+            final etaTextValue = formatDuration(durationSeconds);
+            debugPrint('MapScreen - ETA calculated: $etaTextValue');
+            setState(() {
+              etaText = etaTextValue;
+            });
+            if (widget.onEtaUpdated != null) {
+              debugPrint(
+                  'MapScreen - Calling onEtaUpdated with: $etaTextValue');
+              widget.onEtaUpdated!(etaTextValue);
+            } else {
+              debugPrint('MapScreen - onEtaUpdated is null');
+            }
+          } else {
+            debugPrint('MapScreen - duration or seconds is null');
+          }
+        } else {
+          debugPrint('MapScreen - legs is empty or not a list');
         }
 
-        final firstLeg = legs[0];
-        final duration = firstLeg['duration'];
-        if (duration is! String || !duration.endsWith('s')) {
-          debugPrint('Invalid duration format: $duration');
-          setState(() => etaText = 'N/A');
-          return;
+        // calculate bounds that include start, destination and all polyline points
+        double southLat = start.latitude;
+        double northLat = start.latitude;
+        double westLng = start.longitude;
+        double eastLng = start.longitude;
+
+        // include the destination point
+        southLat = min(southLat, destination.latitude);
+        northLat = max(northLat, destination.latitude);
+        westLng = min(westLng, destination.longitude);
+        eastLng = max(eastLng, destination.longitude);
+
+        // include all polyline points
+        for (LatLng point in polylineCoordinates) {
+          southLat = min(southLat, point.latitude);
+          northLat = max(northLat, point.latitude);
+          westLng = min(westLng, point.longitude);
+          eastLng = max(eastLng, point.longitude);
         }
 
-        final secondsString = duration.replaceAll(RegExp(r'[^0-9]'), '');
-        final durationSeconds = int.tryParse(secondsString) ?? 0;
-        final durationText = formatDuration(durationSeconds);
+        // add padding to the bounds
+        final double padding = 0.01;
+        southLat -= padding;
+        northLat += padding;
+        westLng -= padding;
+        eastLng += padding;
 
-        setState(() => etaText = durationText);
-        if (widget.onEtaUpdated != null) {
-          widget.onEtaUpdated!(durationText);
-        }
-
-        // debug testing
-        debugPrint('API Response: ${json.encode(data)}'); // Full response
-        debugPrint('Legs Type: ${legs.runtimeType}'); // Verify list type
-        debugPrint('Duration Type: ${duration.runtimeType}'); // Verify map type
-        return;
+        // create a new camera position centered within the bounds
+        final GoogleMapController controller = await mapController.future;
+        controller.animateCamera(
+          CameraUpdate.newLatLngBounds(
+            LatLngBounds(
+              southwest: LatLng(southLat, westLng),
+              northeast: LatLng(northLat, eastLng),
+            ),
+            20,
+          ),
+          duration: const Duration(milliseconds: 1000),
+        );
       }
-      showDebugToast('Failed to generate route');
+
       if (kDebugMode) {
         print('Failed to generate route: $response');
       }
     } catch (e) {
-      showDebugToast('Error: ${e.toString()}');
+      // Suppress map errors on polyline generate during restore
+      debugPrint('generatePolylineBetween error: $e');
     }
   }
 
-  String formatDuration(int totalSeconds) {
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
+  double calculateFare(double distanceInKm) {
+    const double baseFare = 15.0;
+    const double ratePerKm = 2.2;
 
-    return hours > 0
-        ? '${hours}h ${minutes}m'
-        : minutes > 0
-            ? '$minutes mins'
-            : '<1 min';
+    double calculatedFare = 0.0;
+    if (distanceInKm <= 4.0) {
+      calculatedFare = baseFare;
+    } else {
+      calculatedFare = baseFare + (distanceInKm - 4.0) * ratePerKm;
+    }
+
+    // Add debug print to verify calculation
+    debugPrint(
+        'Distance: ${distanceInKm.toStringAsFixed(2)} km, Calculated fare: ₱${calculatedFare.toStringAsFixed(2)}');
+
+    return calculatedFare;
+  }
+
+  double getRouteDistance(List<LatLng> polylineCoordinates) {
+    double totalDistance = 0.0;
+
+    for (int i = 0; i < polylineCoordinates.length - 1; i++) {
+      final SelectedLocation start = SelectedLocation(
+        '',
+        polylineCoordinates[i],
+      );
+      final SelectedLocation end = SelectedLocation(
+        '',
+        polylineCoordinates[i + 1],
+      );
+      totalDistance += start.distanceFrom(end.coordinates);
+      debugPrint(
+          'Distance between points: ${start.distanceFrom(end.coordinates)}');
+    }
+    return totalDistance;
+  }
+
+  String formatDuration(int totalSeconds) {
+    // Calculate arrival time based on current time and duration
+    final now = DateTime.now();
+    final arrivalTime = now.add(Duration(seconds: totalSeconds));
+    return DateFormat('h:mm a').format(arrivalTime);
   }
 
   void showDebugToast(String message) {
@@ -454,8 +850,8 @@ class MapScreenState extends State<MapScreen>
   void showAlertDialog(String title, String content) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
+      builder: (context) => ResponsiveDialog(
+        title: title,
         content: Text(content),
         actions: [
           TextButton(
@@ -474,8 +870,8 @@ class MapScreenState extends State<MapScreen>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Error'),
+      builder: (context) => ResponsiveDialog(
+        title: 'Location Error',
         content: const Text('Enable location services to continue.'),
         actions: [
           TextButton(
@@ -487,9 +883,6 @@ class MapScreenState extends State<MapScreen>
           ),
           TextButton(
             onPressed: () async {
-              // Navigator.of(context).pop();
-              // await initLocation();
-              // if (mounted) getLocationUpdates();
               errorDialogVisible = false;
               Navigator.pop(context);
               await initializeLocation();
@@ -507,27 +900,169 @@ class MapScreenState extends State<MapScreen>
   }
 
   Set<Marker> buildMarkers() {
-    final markers = <Marker>{};
+    final markerSet = <Marker>{};
 
-    // Pickup marker
+    // Add pickup marker
     if (widget.pickUpLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('pickup'),
+      final pickupMarkerId = MarkerId('pickup');
+      markers[pickupMarkerId] = Marker(
+        markerId: pickupMarkerId,
         position: widget.pickUpLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      ));
+      );
     }
 
-    // Dropoff marker
+    // Add dropoff marker
     if (widget.dropOffLocation != null) {
-      markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
+      final dropoffMarkerId = MarkerId('dropoff');
+      markers[dropoffMarkerId] = Marker(
+        markerId: dropoffMarkerId,
         position: widget.dropOffLocation!,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ));
+      );
     }
 
-    return markers;
+    // Convert map to set
+    markerSet.addAll(markers.values);
+
+    return markerSet;
+  }
+
+  // Add this method to find the nearest point on the route polyline
+  LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
+    if (routePolyline.isEmpty) return point;
+
+    double minDistance = double.infinity;
+    LatLng nearestPoint = routePolyline.first;
+
+    for (int i = 0; i < routePolyline.length - 1; i++) {
+      final LatLng start = routePolyline[i];
+      final LatLng end = routePolyline[i + 1];
+
+      // Find the nearest point on this segment
+      final LatLng nearestOnSegment =
+          findNearestPointOnSegment(point, start, end);
+      final double distance = calculateDistance(point, nearestOnSegment);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestPoint = nearestOnSegment;
+      }
+    }
+
+    return nearestPoint;
+  }
+
+  // Helper method to find nearest point on a line segment
+  LatLng findNearestPointOnSegment(LatLng point, LatLng start, LatLng end) {
+    final double x = point.latitude;
+    final double y = point.longitude;
+    final double x1 = start.latitude;
+    final double y1 = start.longitude;
+    final double x2 = end.latitude;
+    final double y2 = end.longitude;
+
+    // Calculate squared length of segment
+    final double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+    if (l2 == 0) return start; // If segment is a point, return that point
+
+    // Calculate projection of point onto line
+    final double t =
+        max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
+
+    // Calculate nearest point on line segment
+    final double projX = x1 + t * (x2 - x1);
+    final double projY = y1 + t * (y2 - y1);
+
+    return LatLng(projX, projY);
+  }
+
+  // Helper method to calculate distance between two points
+  double calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371; // in kilometers
+
+    // Convert latitude and longitude from degrees to radians
+    final double lat1 = point1.latitude * (pi / 180);
+    final double lon1 = point1.longitude * (pi / 180);
+    final double lat2 = point2.latitude * (pi / 180);
+    final double lon2 = point2.longitude * (pi / 180);
+
+    // Haversine formula
+    final double dLat = lat2 - lat1;
+    final double dLon = lon2 - lon1;
+    final double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c; // Distance in kilometers
+  }
+
+  Future<void> generatePolylineAlongRoute(
+      LatLng start, LatLng end, List<LatLng> routePolyline) async {
+    debugPrint(
+        'MapScreen - generatePolylineAlongRoute called with start: $start, end: $end');
+
+    // Find the nearest points on the route to our start and end points
+    LatLng startOnRoute = findNearestPointOnRoute(start, routePolyline);
+    LatLng endOnRoute = findNearestPointOnRoute(end, routePolyline);
+
+    // Find indices of these points in the route
+    int startIdx = 0;
+    int endIdx = routePolyline.length - 1;
+    double minStartDist = double.infinity;
+    double minEndDist = double.infinity;
+
+    for (int i = 0; i < routePolyline.length; i++) {
+      final double startDist =
+          calculateDistance(startOnRoute, routePolyline[i]);
+      final double endDist = calculateDistance(endOnRoute, routePolyline[i]);
+
+      if (startDist < minStartDist) {
+        minStartDist = startDist;
+        startIdx = i;
+      }
+
+      if (endDist < minEndDist) {
+        minEndDist = endDist;
+        endIdx = i;
+      }
+    }
+
+    // Ensure start comes before end on the route
+    if (startIdx > endIdx) {
+      final temp = startIdx;
+      startIdx = endIdx;
+      endIdx = temp;
+    }
+
+    // Extract the portion of the route between start and end
+    final List<LatLng> routeSegment = [];
+    routeSegment.add(start); // Add actual start point
+
+    // Add all points along the route between start and end indices
+    routeSegment.addAll(routePolyline.sublist(startIdx + 1, endIdx));
+
+    routeSegment.add(end); // Add actual end point
+
+    // Update the polyline
+    setState(() {
+      polylines.clear();
+      polylines[const PolylineId('route_path')] = Polyline(
+        polylineId: const PolylineId('route_path'),
+        points: routeSegment,
+        color: const Color(0xFF067837),
+        width: 8,
+      );
+
+      // Calculate fare based on this segment
+      final double routeDistance = getRouteDistance(routeSegment);
+      final double fare = calculateFare(routeDistance);
+      fareAmount = fare;
+
+      if (widget.onFareUpdated != null) {
+        widget.onFareUpdated!(fare);
+      }
+    });
   }
 
   @override
@@ -535,6 +1070,7 @@ class MapScreenState extends State<MapScreen>
     super.build(context);
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!isLocationInitialized) {
@@ -551,63 +1087,79 @@ class MapScreenState extends State<MapScreen>
                   color: Color(0xFF067837),
                 ),
               )
-            : GoogleMap(
-                onMapCreated: (controller) {
-                  _mapController = controller;
-                  mapController.complete(controller);
-                },
-                style: Theme.of(context).brightness == Brightness.dark
-                    ? '''[
-                        {
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#746855"}]
-                        },
-                        {
-                          "elementType": "labels.text.stroke",
-                          "stylers": [{"color": "#242f3e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry",
-                          "stylers": [{"color": "#38414e"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "geometry.stroke",
-                          "stylers": [{"color": "#212a37"}]
-                        },
-                        {
-                          "featureType": "road",
-                          "elementType": "labels.text.fill",
-                          "stylers": [{"color": "#9ca5b3"}]
-                        }
-                      ]'''
-                    : '',
-                initialCameraPosition: CameraPosition(
-                  target: currentLocation!,
-                  zoom: 15.0,
-                ),
-                markers: buildMarkers(),
-                polylines: Set<Polyline>.of(polylines.values),
-                padding: EdgeInsets.only(
-                  bottom: screenHeight * widget.bottomPadding,
-                  left: screenWidth * 0.04,
-                ),
-                mapType: MapType.normal,
-                buildingsEnabled: false,
-                myLocationButtonEnabled: false,
-                indoorViewEnabled: false,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: true,
-                trafficEnabled: false,
-                rotateGesturesEnabled: true,
-                myLocationEnabled: true,
+            : Stack(
+                children: [
+                  GoogleMap(
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      mapController.complete(controller);
+                    },
+                    style: isDarkMode
+                        ? '''[
+                            {
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#746855"}]
+                            },
+                            {
+                              "elementType": "labels.text.stroke",
+                              "stylers": [{"color": "#242f3e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry",
+                              "stylers": [{"color": "#38414e"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "geometry.stroke",
+                              "stylers": [{"color": "#212a37"}]
+                            },
+                            {
+                              "featureType": "road",
+                              "elementType": "labels.text.fill",
+                              "stylers": [{"color": "#9ca5b3"}]
+                            }
+                          ]'''
+                        : '',
+                    initialCameraPosition: CameraPosition(
+                      target: currentLocation!,
+                      zoom: 15.0,
+                    ),
+                    markers: buildMarkers(),
+                    polylines: Set<Polyline>.of(polylines.values),
+                    padding: EdgeInsets.only(
+                      bottom: screenHeight * widget.bottomPadding,
+                      left: screenWidth * 0.04,
+                    ),
+                    mapType: MapType.normal,
+                    buildingsEnabled: false,
+                    myLocationButtonEnabled: false,
+                    indoorViewEnabled: false,
+                    zoomControlsEnabled: false,
+                    mapToolbarEnabled: true,
+                    trafficEnabled: false,
+                    rotateGesturesEnabled: true,
+                    myLocationEnabled: true,
+                  ),
+                ],
               ),
       ),
     );
+  }
+
+  // Clears all map overlays and selected locations
+  void clearAll() {
+    setState(() {
+      selectedPickupLatLng = null;
+      selectedDropOffLatLng = null;
+      polylines.clear();
+      markers.clear();
+      fareAmount = 0.0;
+      etaText = null;
+    });
   }
 }

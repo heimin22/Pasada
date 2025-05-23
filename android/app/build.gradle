@@ -1,9 +1,12 @@
 plugins {
     id "com.android.application"
     id "kotlin-android"
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
+
+// Apply the Google Services plugin after the other plugins
+apply plugin: 'com.google.gms.google-services'
 
 def getLocalProperties = {
     Properties properties = new Properties()
@@ -25,6 +28,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        // Enable desugaring
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -60,4 +65,11 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // ... existing dependencies
+
+    // Add the desugaring dependency
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }

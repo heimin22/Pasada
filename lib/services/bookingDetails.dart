@@ -42,30 +42,51 @@ class BookingDetails {
       'route_id': routeId,
       'ride_status': rideStatus,
       'pickup_address': pickupAddress,
-      'pickup_lat': pickupCoordinates.latitude.toString(),
-      'pickup_lng': pickupCoordinates.longitude.toString(),
+      'pickup_lat': pickupCoordinates.latitude,
+      'pickup_lng': pickupCoordinates.longitude,
       'dropoff_address': dropoffAddress,
-      'dropoff_lat': dropoffCoordinates.latitude.toString(),
-      'dropoff_lng': dropoffCoordinates.longitude.toString(),
+      'dropoff_lat': dropoffCoordinates.latitude,
+      'dropoff_lng': dropoffCoordinates.longitude,
       'start_time': '${startTime.hour}:${startTime.minute}',
       'created_at': createdAt.toIso8601String(),
       'fare': fare,
       'assigned_at': assignedAt.toIso8601String(),
-      'end_time': '${startTime.hour}:${startTime.minute}',
+      'end_time': '${endTime.hour}:${endTime.minute}',
     };
   }
 
   factory BookingDetails.fromMap(Map<String, dynamic> map) {
-    // coordinate parsing para sa error handling
+    // helper to parse numbers from any type
+    double parseDouble(dynamic val) {
+      if (val is num) return val.toDouble();
+      if (val is String) return double.tryParse(val) ?? 0.0;
+      return 0.0;
+    }
+
+    // parse coordinates safely
     LatLng parseCoordinates(String latKey, String lngKey) {
       try {
         return LatLng(
-          double.parse(map[latKey] as String),
-          double.parse(map[lngKey] as String),
+          parseDouble(map[latKey]),
+          parseDouble(map[lngKey]),
         );
       } catch (e) {
         debugPrint("Error parsing coordinates: $e");
         return const LatLng(0, 0);
+      }
+    }
+
+    // parse time in 'HH:mm' format
+    TimeOfDay parseTime(dynamic timeVal) {
+      try {
+        final timeStr = timeVal.toString();
+        final parts = timeStr.split(':');
+        final hour = int.parse(parts[0]);
+        final minute = parts.length > 1 ? int.parse(parts[1]) : 0;
+        return TimeOfDay(hour: hour, minute: minute);
+      } catch (e) {
+        debugPrint("Error parsing time: $e");
+        return const TimeOfDay(hour: 0, minute: 0);
       }
     }
 
@@ -79,11 +100,11 @@ class BookingDetails {
       pickupCoordinates: parseCoordinates('pickup_lat', 'pickup_lng'),
       dropoffAddress: map['dropoff_address'] as String,
       dropoffCoordinates: parseCoordinates('dropoff_lat', 'dropoff_lng'),
-      startTime: TimeOfDay.fromDateTime(DateTime.parse(map['start_time'])),
+      startTime: parseTime(map['start_time']),
       createdAt: DateTime.parse(map['created_at'] as String),
       fare: (map['fare'] as num).toDouble(),
       assignedAt: DateTime.parse(map['assigned_at'] as String),
-      endTime: TimeOfDay.fromDateTime(DateTime.parse(map['end_time'])),
+      endTime: parseTime(map['end_time']),
     );
   }
 }

@@ -113,6 +113,22 @@ class selectionState extends State<selectionScreen> {
     setState(() {
       previousIndex = currentIndex;
       currentIndex = newIndex;
+
+      // If we're navigating away from the home screen, reset its initialization state
+      // This will ensure resources are reinitialized when returning to home
+      if (previousIndex == 0 && currentIndex != 0) {
+        final homeScreenState =
+            (pages[0] as PersistentHomeScreen).key as PageStorageKey<String>?;
+
+        if (homeScreenState != null) {
+          // This is a hint to reinitialize when returning to home
+          PageStorage.of(context).writeState(
+            context,
+            false,
+            identifier: const ValueKey('homeInitialized'),
+          );
+        }
+      }
     });
   }
 
