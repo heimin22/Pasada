@@ -30,20 +30,29 @@ class DriverService {
           await _api.get<Map<String, dynamic>>('drivers/$driverId');
 
       if (response != null) {
-        debugPrint('Retrieved driver details from API: $response');
+        debugPrint(
+            'DriverService: Retrieved driver details from API for $driverId: $response');
 
-        // Ensure we're returning the driver data in the expected format
         if (response.containsKey('driver')) {
-          // If the API response already includes a 'driver' object, return as is
+          debugPrint(
+              'DriverService: API response for $driverId already contains "driver" key. Returning as is.');
           return response;
-        } else {
-          // If the API returns just the driver data directly, wrap it
+        } else if (response.entries.isNotEmpty) {
+          debugPrint(
+              'DriverService: API response for $driverId is a flat map (keys: ${response.keys}), wrapping it with "driver" key.');
           return {'driver': response};
+        } else {
+          debugPrint(
+              'DriverService: API response for $driverId is null, empty, or not a map with entries. Raw: $response. Returning null.');
+          return null;
         }
       }
+      debugPrint(
+          'DriverService: API response for $driverId was null (after _api.get). Returning null.');
       return null;
     } catch (e) {
-      debugPrint('Error fetching driver details from API: $e');
+      debugPrint(
+          'DriverService: Error fetching driver details for $driverId from API: $e');
       return null;
     }
   }

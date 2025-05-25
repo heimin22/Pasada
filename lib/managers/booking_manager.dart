@@ -55,14 +55,14 @@ class BookingManager {
         });
 
         if (apiBooking['driver_id'] != null) {
-          await _fetchDriverDetails(apiBooking['driver_id'].toString());
+          await _loadBookingAfterDriverAssignment(bookingId);
         }
 
         _state.bookingAnimationController.forward();
         _state.driverAssignmentService = DriverAssignmentService();
         _state.driverAssignmentService!.pollForDriverAssignment(
           bookingId,
-          (driverData) => _updateDriverDetails(driverData),
+          (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
           onStatusChange: (newStatus) {
             _state.setState(() => _state.bookingStatus = newStatus);
@@ -148,7 +148,7 @@ class BookingManager {
         _state.driverAssignmentService = DriverAssignmentService();
         _state.driverAssignmentService!.pollForDriverAssignment(
           bookingId,
-          (driverData) => _updateDriverDetails(driverData),
+          (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
         );
       }
@@ -166,13 +166,18 @@ class BookingManager {
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
       final stopsService = StopsService();
       final pickupStop = await stopsService.findClosestStop(
-          _state.selectedPickUpLocation!.coordinates, routeId);
+        _state.selectedPickUpLocation!.coordinates,
+        routeId,
+      );
       final dropoffStop = await stopsService.findClosestStop(
-          _state.selectedDropOffLocation!.coordinates, routeId);
+        _state.selectedDropOffLocation!.coordinates,
+        routeId,
+      );
       if (pickupStop != null && dropoffStop != null) {
         if (dropoffStop.order <= pickupStop.order) {
           Fluttertoast.showToast(
-              msg: 'Invalid route: drop-off must be after pick-up.');
+            msg: 'Invalid route: drop-off must be after pick-up.',
+          );
           return;
         }
       }
@@ -190,7 +195,7 @@ class BookingManager {
 
       _state.bookingService = BookingService();
       final bookingService = _state.bookingService!;
-      int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
+      final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
       final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
@@ -221,8 +226,9 @@ class BookingManager {
                   const Text('Booking cancelled due to no available drivers.'),
               actions: [
                 ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK'))
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('OK'),
+                )
               ],
             ),
           ).then((_) => handleBookingCancellation());
@@ -230,17 +236,59 @@ class BookingManager {
       );
 
       if (bookingResult.success) {
-        final details = bookingResult.booking!;
+        final details = bookingResult.booking!; // bookingId, rideStatus, etc.
+
+        // Persist active booking
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('activeBookingId', details.bookingId);
         _state.activeBookingId = details.bookingId;
         _state.setState(() => _state.bookingStatus = details.rideStatus);
+        await _fetchAndUpdateBookingDetails(details.bookingId);
+
+        // Start location-tracking for the passenger
         bookingService.startLocationTracking(user.id);
+
+        // Reset driver-assigned flag
         _state.setState(() => _state.isDriverAssigned = false);
+
+        // 4) **Now** start polling for driver assignment
         _state.driverAssignmentService = DriverAssignmentService();
+        _state.driverAssignmentService!.pollForDriverAssignment(
+          details.bookingId,
+          // onDriverAssigned
+          (driverData) {
+            _loadBookingAfterDriverAssignment(details.bookingId);
+          },
+          onError: () {
+            // optional error callback
+          },
+          onStatusChange: (newStatus) {
+            _state.setState(() => _state.bookingStatus = newStatus);
+            _fetchAndUpdateBookingDetails(details.bookingId);
+          },
+          onTimeout: () {
+            showDialog(
+              context: _state.context,
+              barrierDismissible: false,
+              builder: (ctx) => ResponsiveDialog(
+                title: 'No Drivers Available',
+                content: const Text(
+                    'Booking cancelled due to no available drivers.'),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK'),
+                  )
+                ],
+              ),
+            ).then((_) => handleBookingCancellation());
+          },
+        );
       } else {
+        // Booking creation failed
         Fluttertoast.showToast(
-            msg: bookingResult.errorMessage ?? 'Booking failed');
+          msg: bookingResult.errorMessage ?? 'Booking failed',
+        );
         handleBookingCancellation();
       }
     } else {
@@ -278,8 +326,39 @@ class BookingManager {
   void _updateDriverDetails(Map<String, dynamic> driverData) {
     if (!_state.mounted) return;
     var driver = driverData['driver'];
-    if (driver == null) return;
-    if (driver is List && driver.isNotEmpty) driver = driver[0];
+    if (driver == null) {
+      debugPrint(
+          "BookingManager: _updateDriverDetails received null for driverData['driver']");
+      _state.setState(() {
+        _state.isDriverAssigned = false;
+      });
+      return;
+    }
+    if (driver is List && driver.isNotEmpty) {
+      driver = driver[0];
+      debugPrint(
+          "BookingManager: _updateDriverDetails picked first driver from list.");
+    } else if (driver is List && driver.isEmpty) {
+      debugPrint(
+          "BookingManager: _updateDriverDetails received an empty list for driverData['driver']");
+      _state.setState(() {
+        _state.isDriverAssigned = false;
+      });
+      return;
+    }
+
+    if (driver is! Map<String, dynamic>) {
+      debugPrint(
+          "BookingManager: _updateDriverDetails - 'driver' variable is not a Map. Actual type: \${driver.runtimeType}, Value: \$driver");
+      _state.setState(() {
+        _state.isDriverAssigned = false;
+      });
+      return;
+    }
+
+    debugPrint(
+        "BookingManager: Processing driver map in _updateDriverDetails: \$driver");
+
     _state.setState(() {
       _state.driverName =
           _extractField(driver, ['full_name', 'name', 'driver_name']);
@@ -292,8 +371,13 @@ class BookingManager {
         'contact_number',
         'phone'
       ]);
-      _state.isDriverAssigned = true;
+      _state.isDriverAssigned = (_state.driverName.isNotEmpty &&
+          _state.driverName != 'Driver' &&
+          _state.driverName != 'Not Available');
       _state.bookingStatus = 'accepted';
+
+      debugPrint(
+          "BookingManager: _updateDriverDetails SET state - Driver Name: \${_state.driverName}, Plate: \${_state.plateNumber}, Phone: \${_state.phoneNumber}, Is Assigned: \${_state.isDriverAssigned}");
     });
   }
 
@@ -322,20 +406,12 @@ class BookingManager {
         }
       });
       if (details['driver_id'] != null) {
-        await _fetchDriverDetails(details['driver_id'].toString());
+        await _loadBookingAfterDriverAssignment(bookingId);
       }
     }
   }
 
-  Future<void> _fetchDriverDetails(String driverId) async {
-    final service = DriverService();
-    final details = await service.getDriverDetails(driverId);
-    if (details != null && _state.mounted) {
-      _updateDriverDetails({'driver': details});
-    }
-  }
-
-  void _loadBookingAfterDriverAssignment(int bookingId) {
+  Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
     _state.driverAssignmentService
         ?.fetchBookingDetails(bookingId)
         .then((bookingData) {

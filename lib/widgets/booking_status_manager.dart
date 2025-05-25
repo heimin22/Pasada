@@ -4,8 +4,9 @@ import 'payment_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import '../location/selectedLocation.dart';
+import 'dart:async';
 
-class BookingStatusManager extends StatelessWidget {
+class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
   final SelectedLocation? dropoffLocation;
   final String ETA;
@@ -32,8 +33,42 @@ class BookingStatusManager extends StatelessWidget {
     required this.vehicleModel,
     required this.phoneNumber,
     required this.isDriverAssigned,
-    this.bookingStatus = 'requested',
+    this.bookingStatus = 'accepted',
   });
+
+  @override
+  State<BookingStatusManager> createState() => _BookingStatusManagerState();
+}
+
+class _BookingStatusManagerState extends State<BookingStatusManager> {
+  bool _showLoading = false;
+  Timer? _debounceTimer;
+  final Duration _debounceDuration = const Duration(seconds: 1);
+
+  @override
+  void didUpdateWidget(covariant BookingStatusManager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final shouldShowLoading = widget.bookingStatus == 'accepted' ||
+        (widget.isDriverAssigned &&
+            (widget.driverName.isEmpty ||
+                widget.driverName == 'Driver' ||
+                widget.driverName == 'Not Available'));
+    if (shouldShowLoading && !_showLoading) {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(_debounceDuration, () {
+        if (mounted) setState(() => _showLoading = true);
+      });
+    } else if (!shouldShowLoading) {
+      _debounceTimer?.cancel();
+      if (_showLoading) setState(() => _showLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,25 +76,25 @@ class BookingStatusManager extends StatelessWidget {
 
     // Log the current status and driver details for debugging
     debugPrint(
-        'BookingStatusManager - Status: $bookingStatus, Driver assigned: $isDriverAssigned');
-    if (bookingStatus == 'accepted' || isDriverAssigned) {
+        'BookingStatusManager - Status: ${widget.bookingStatus}, Driver assigned: ${widget.isDriverAssigned}');
+    if (widget.bookingStatus == 'accepted' || widget.isDriverAssigned) {
       debugPrint(
-          'Driver details - Name: $driverName, Plate: $plateNumber, Phone: $phoneNumber');
+          'Driver details - Name: ${widget.driverName}, Plate: ${widget.plateNumber}, Phone: ${widget.phoneNumber}');
     }
 
     return Scrollbar(
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (bookingStatus == 'accepted' || isDriverAssigned)
+            if (widget.bookingStatus == 'ongoing')
               DriverDetailsContainer(
-                driverName: driverName,
-                plateNumber: plateNumber,
-                phoneNumber: phoneNumber,
+                driverName: widget.driverName,
+                plateNumber: widget.plateNumber,
+                phoneNumber: widget.phoneNumber,
               )
-            else if (bookingStatus == 'requested')
+            else if (_showLoading)
               const DriverLoadingContainer()
-            else if (bookingStatus == 'cancelled')
+            else if (widget.bookingStatus == 'cancelled')
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -105,15 +140,15 @@ class BookingStatusManager extends StatelessWidget {
                 ),
               ),
             BookingDetailsContainer(
-              pickupLocation: pickupLocation,
-              dropoffLocation: dropoffLocation,
-              etaText: ETA,
+              pickupLocation: widget.pickupLocation,
+              dropoffLocation: widget.dropoffLocation,
+              etaText: widget.ETA,
             ),
             PaymentDetailsContainer(
-              paymentMethod: paymentMethod,
-              onCancelBooking: onCancelBooking,
-              fare: fare,
-              showCancelButton: bookingStatus == 'requested',
+              paymentMethod: widget.paymentMethod,
+              onCancelBooking: widget.onCancelBooking,
+              fare: widget.fare,
+              showCancelButton: widget.bookingStatus == 'requested',
             )
           ],
         ),
