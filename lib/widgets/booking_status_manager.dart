@@ -33,7 +33,7 @@ class BookingStatusManager extends StatefulWidget {
     required this.vehicleModel,
     required this.phoneNumber,
     required this.isDriverAssigned,
-    this.bookingStatus = 'accepted',
+    this.bookingStatus = 'requested',
   });
 
   @override
@@ -48,7 +48,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final shouldShowLoading = widget.bookingStatus == 'accepted' ||
+    final shouldShowLoading = widget.bookingStatus == 'requested' ||
         (widget.isDriverAssigned &&
             (widget.driverName.isEmpty ||
                 widget.driverName == 'Driver' ||
@@ -86,7 +86,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (widget.bookingStatus == 'ongoing')
+            if (widget.bookingStatus == 'accepted')
               DriverDetailsContainer(
                 driverName: widget.driverName,
                 plateNumber: widget.plateNumber,

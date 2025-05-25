@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 
 class BookingManager {
   final HomeScreenPageState _state;
@@ -395,6 +396,18 @@ class BookingManager {
     _state.bookingService ??= BookingService();
     final details = await _state.bookingService!.getBookingDetails(bookingId);
     if (details != null && _state.mounted) {
+      if (details['ride_status'] == 'completed') {
+        // Dispose booking UI containers before showing completion screen
+        handleBookingCancellation();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Navigator.of(_state.context).push(
+            MaterialPageRoute(
+              builder: (_) => CompletedRideScreen(arrivedTime: DateTime.now()),
+            ),
+          );
+        });
+        return;
+      }
       _state.setState(() {
         _state.bookingStatus = details['ride_status'] ?? 'requested';
         if (details['fare'] != null) {

@@ -80,8 +80,11 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          elevation: 0,
+          backgroundColor:
+              isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+          foregroundColor:
+              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          elevation: 1.0,
           leadingWidth: 60,
           leading: Padding(
             padding: const EdgeInsets.only(left: 16.0),
@@ -184,6 +187,29 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                       color: isDarkMode
                           ? const Color(0xFFF5F5F5)
                           : const Color(0xFF121212)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const selectionScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF5F5F5),
+                  foregroundColor: const Color(0xFF00CC58),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 3,
+                ),
+                child: const Text(
+                  'Back to Home',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
