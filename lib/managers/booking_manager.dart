@@ -13,9 +13,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
+import 'dart:async';
 
 class BookingManager {
   final HomeScreenPageState _state;
+  Timer? _completionTimer; // Polling for ride completion
 
   BookingManager(this._state);
 
@@ -298,6 +300,9 @@ class BookingManager {
   }
 
   void handleBookingCancellation() {
+    // Cancel completion polling if any
+    _completionTimer?.cancel();
+    _completionTimer = null;
     _state.driverAssignmentService?.stopPolling();
     _state.bookingService?.stopLocationTracking();
     SharedPreferences.getInstance().then((prefs) async {
@@ -379,6 +384,11 @@ class BookingManager {
       debugPrint(
           "BookingManager: _updateDriverDetails SET state - Driver Name: \${_state.driverName}, Plate: \${_state.plateNumber}, Phone: \${_state.phoneNumber}, Is Assigned: \${_state.isDriverAssigned}");
     });
+
+    // Start polling for completion after acceptance
+    if (_state.activeBookingId != null) {
+      _startCompletionPolling(_state.activeBookingId!);
+    }
   }
 
   String _extractField(dynamic data, List<String> keys) {
@@ -396,15 +406,24 @@ class BookingManager {
     final details = await _state.bookingService!.getBookingDetails(bookingId);
     if (details != null && _state.mounted) {
       if (details['ride_status'] == 'completed') {
-        // Dispose booking UI containers before showing completion screen
-        handleBookingCancellation();
+        // Store context before potential UI dismantling
+        final BuildContext currentContext = _state.context;
+
+        // Navigate first
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(_state.context).push(
-            MaterialPageRoute(
-              builder: (_) => CompletedRideScreen(arrivedTime: DateTime.now()),
-            ),
-          );
+          if (currentContext.mounted) {
+            // Ensure context is still valid
+            Navigator.of(currentContext).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) =>
+                    CompletedRideScreen(arrivedTime: DateTime.now()),
+              ),
+            );
+          }
         });
+
+        // Then handle cancellation/cleanup
+        handleBookingCancellation();
         return;
       }
       _state.setState(() {
@@ -491,5 +510,37 @@ class BookingManager {
     } catch (e) {
       debugPrint('DB Query Error: $e');
     }
+  }
+
+  /// Poll the booking status every 10 seconds until it's completed
+  void _startCompletionPolling(int bookingId) {
+    if (_completionTimer != null) return; // Already polling
+    _completionTimer =
+        Timer.periodic(const Duration(seconds: 10), (timer) async {
+      try {
+        final details =
+            await _state.bookingService?.getBookingDetails(bookingId);
+        if (details != null && details['ride_status'] == 'completed') {
+          timer.cancel();
+          _completionTimer = null;
+          // Navigate to completion screen
+          final BuildContext context = _state.context;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CompletedRideScreen(arrivedTime: DateTime.now()),
+                ),
+              );
+            }
+          });
+          // Cleanup UI and state
+          handleBookingCancellation();
+        }
+      } catch (e) {
+        debugPrint('Error polling for completion: $e');
+      }
+    });
   }
 }

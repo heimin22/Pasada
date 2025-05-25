@@ -308,7 +308,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  Future<void> showBookingConfirmationDialog() async {
+  Future<void> _showBookingConfirmationDialog() async {
     final confirmed = await showAppBookingConfirmationDialog(
       context: context,
     );
@@ -751,8 +751,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                         _navigateToLocationSearch,
                                     onShowSeatingPreferenceDialog:
                                         _showSeatingPreferenceDialog,
-                                    onConfirmBooking: _bookingManager
-                                        .handleBookingConfirmation,
+                                    onConfirmBooking:
+                                        _showBookingConfirmationDialog,
                                     onPaymentMethodSelected: (method) {
                                       setState(
                                           () => selectedPaymentMethod = method);
