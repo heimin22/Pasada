@@ -21,6 +21,7 @@ import 'package:pasada_passenger_app/widgets/location_input_container.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
+import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -307,9 +308,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  // MOVED TO BookingManager: Future<void> _handleBookingConfirmation() async { ... }
+  Future<void> showBookingConfirmationDialog() async {
+    final confirmed = await showAppBookingConfirmationDialog(
+      context: context,
+    );
 
-  // MOVED TO BookingManager: void _handleBookingCancellation() { ... }
+    if (confirmed == true) {
+      // User confirmed in the dialog
+      await _bookingManager.handleBookingConfirmation();
+    }
+  }
 
   void measureContainers() {
     final RenderBox? locationBox = locationInputContainerKey.currentContext

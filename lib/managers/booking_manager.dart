@@ -30,10 +30,9 @@ class BookingManager {
 
     if (apiBooking != null) {
       final status = apiBooking['ride_status'];
-      if (status == 'searching' ||
-          status == 'assigned' ||
-          status == 'ongoing' ||
-          status == 'requested') {
+      if (status == 'requested' ||
+          status == 'accepted' ||
+          status == 'ongoing') {
         _state.setState(() {
           _state.isBookingConfirmed = true;
           _state.bookingStatus = status;
@@ -84,7 +83,7 @@ class BookingManager {
     }
 
     final status = localBooking.rideStatus;
-    if (status == 'searching' || status == 'assigned' || status == 'ongoing') {
+    if (status == 'requested' || status == 'accepted' || status == 'ongoing') {
       _state.setState(() {
         _state.isBookingConfirmed = true;
         _state.selectedPickUpLocation = SelectedLocation(
