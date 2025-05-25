@@ -20,6 +20,7 @@ import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:pasada_passenger_app/widgets/location_input_container.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_container.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -771,23 +772,25 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                           child: Opacity(
                             opacity: bookingAnimationController.value,
                             child: Container(
-                              // Wrap BookingStatusManager with a container and key
                               key: bookingStatusContainerKey,
-                              child: BookingStatusManager(
-                                pickupLocation: selectedPickUpLocation,
-                                dropoffLocation: selectedDropOffLocation,
-                                ETA: etaText,
-                                paymentMethod: selectedPaymentMethod ?? 'Cash',
-                                fare: currentFare,
-                                onCancelBooking:
-                                    _bookingManager.handleBookingCancellation,
-                                driverName: driverName,
-                                plateNumber: plateNumber,
-                                vehicleModel: vehicleModel,
-                                phoneNumber: phoneNumber,
-                                isDriverAssigned: isDriverAssigned,
-                                bookingStatus: bookingStatus,
-                              ),
+                              child: bookingStatus == 'accepted'
+                                  ? BookingStatusManager(
+                                      pickupLocation: selectedPickUpLocation,
+                                      dropoffLocation: selectedDropOffLocation,
+                                      ETA: etaText,
+                                      paymentMethod:
+                                          selectedPaymentMethod ?? 'Cash',
+                                      fare: currentFare,
+                                      onCancelBooking: _bookingManager
+                                          .handleBookingCancellation,
+                                      driverName: driverName,
+                                      plateNumber: plateNumber,
+                                      vehicleModel: vehicleModel,
+                                      phoneNumber: phoneNumber,
+                                      isDriverAssigned: isDriverAssigned,
+                                      bookingStatus: bookingStatus,
+                                    )
+                                  : const BookingStatusContainer(),
                             ),
                           ),
                         );
