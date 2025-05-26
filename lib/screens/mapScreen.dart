@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:math' as math;
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:intl/intl.dart';
 
 import '../network/networkUtilities.dart';
+import '../utils/svg_to_bitmap.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -27,6 +29,8 @@ class MapScreen extends StatefulWidget {
   final Function(double)? onFareUpdated;
   final Map<String, dynamic>? selectedRoute;
   final List<LatLng>? routePolyline;
+  final LatLng? driverLocation; // Driver's current location
+  final String? bookingStatus; // Booking status to determine polyline mode
 
   const MapScreen({
     super.key,
@@ -37,6 +41,8 @@ class MapScreen extends StatefulWidget {
     this.onFareUpdated,
     this.selectedRoute,
     this.routePolyline,
+    this.driverLocation,
+    this.bookingStatus,
   });
 
   @override
@@ -90,6 +96,10 @@ class MapScreenState extends State<MapScreen>
 
   double fareAmount = 0.0;
 
+  // Driver tracking properties
+  BitmapDescriptor? _busIcon;
+  bool _isTrackingDriver = false;
+
   // Override methods
   /// state of the app
   @override
@@ -100,6 +110,7 @@ class MapScreenState extends State<MapScreen>
       if (mounted) {
         initializeLocation();
         handleLocationUpdates();
+        _loadBusIcon(); // Load custom bus icon
       }
     });
   }
@@ -131,7 +142,9 @@ class MapScreenState extends State<MapScreen>
     // then call the handleLocationUpdates
     super.didUpdateWidget(oldWidget);
     if (widget.pickUpLocation != oldWidget.pickUpLocation ||
-        widget.dropOffLocation != oldWidget.dropOffLocation) {
+        widget.dropOffLocation != oldWidget.dropOffLocation ||
+        widget.driverLocation != oldWidget.driverLocation ||
+        widget.bookingStatus != oldWidget.bookingStatus) {
       handleLocationUpdates();
     }
   }
@@ -156,6 +169,17 @@ class MapScreenState extends State<MapScreen>
             LatLng(newLocation.latitude!, newLocation.longitude!));
       }
     });
+
+    // Check if we should switch to driver tracking mode
+    if (widget.bookingStatus == 'accepted' ||
+        widget.bookingStatus == 'ongoing') {
+      if (widget.driverLocation != null && widget.dropOffLocation != null) {
+        debugPrint('MapScreen - Switching to driver tracking mode');
+        _switchToDriverTrackingMode();
+        return;
+      }
+    }
+
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       debugPrint('MapScreen - Both pickup and dropoff locations are set');
       // Use the selected route's polyline segment if available
@@ -902,24 +926,64 @@ class MapScreenState extends State<MapScreen>
   Set<Marker> buildMarkers() {
     final markerSet = <Marker>{};
 
-    // Add pickup marker
-    if (widget.pickUpLocation != null) {
-      final pickupMarkerId = MarkerId('pickup');
-      markers[pickupMarkerId] = Marker(
-        markerId: pickupMarkerId,
-        position: widget.pickUpLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+    // In driver tracking mode, show different markers
+    if (_isTrackingDriver && widget.driverLocation != null) {
+      // Add driver marker with custom bus icon
+      final driverMarkerId = MarkerId('driver');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: widget.driverLocation!,
+        icon: _busIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(
+          title: 'Driver',
+          snippet: 'Your assigned driver',
+        ),
       );
-    }
 
-    // Add dropoff marker
-    if (widget.dropOffLocation != null) {
-      final dropoffMarkerId = MarkerId('dropoff');
-      markers[dropoffMarkerId] = Marker(
-        markerId: dropoffMarkerId,
-        position: widget.dropOffLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      );
+      // Add dropoff marker in driver tracking mode
+      if (widget.dropOffLocation != null) {
+        final dropoffMarkerId = MarkerId('dropoff');
+        markers[dropoffMarkerId] = Marker(
+          markerId: dropoffMarkerId,
+          position: widget.dropOffLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(
+            title: 'Drop-off',
+            snippet: 'Your destination',
+          ),
+        );
+      }
+    } else {
+      // Normal passenger mode - show pickup and dropoff markers
+      // Add pickup marker
+      if (widget.pickUpLocation != null) {
+        final pickupMarkerId = MarkerId('pickup');
+        markers[pickupMarkerId] = Marker(
+          markerId: pickupMarkerId,
+          position: widget.pickUpLocation!,
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(
+            title: 'Pick-up',
+            snippet: 'Your pickup location',
+          ),
+        );
+      }
+
+      // Add dropoff marker
+      if (widget.dropOffLocation != null) {
+        final dropoffMarkerId = MarkerId('dropoff');
+        markers[dropoffMarkerId] = Marker(
+          markerId: dropoffMarkerId,
+          position: widget.dropOffLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(
+            title: 'Drop-off',
+            snippet: 'Your destination',
+          ),
+        );
+      }
     }
 
     // Convert map to set
@@ -1065,6 +1129,23 @@ class MapScreenState extends State<MapScreen>
     });
   }
 
+  /// Load custom bus icon from SVG
+  Future<void> _loadBusIcon() async {
+    try {
+      // Use our custom SVG to BitmapDescriptor utility
+      _busIcon = await SvgToBitmap.getCachedBusIcon(
+        size: const Size(50.0, 50.0),
+      );
+      debugPrint('MapScreen: Bus icon loaded successfully from SVG');
+    } catch (e) {
+      debugPrint('MapScreen: Error loading bus icon from SVG: $e');
+      // Fallback to green marker
+      _busIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
+      debugPrint('MapScreen: Using fallback green marker');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -1160,6 +1241,211 @@ class MapScreenState extends State<MapScreen>
       markers.clear();
       fareAmount = 0.0;
       etaText = null;
+      _isTrackingDriver = false;
     });
+  }
+
+  /// Switch to driver tracking mode - show driver location and driver-to-dropoff polyline
+  void _switchToDriverTrackingMode() {
+    if (widget.driverLocation == null || widget.dropOffLocation == null) {
+      debugPrint('MapScreen - Cannot switch to driver mode: missing locations');
+      return;
+    }
+
+    debugPrint('MapScreen - Switching to driver tracking mode');
+    _isTrackingDriver = true;
+
+    // Clear existing polylines
+    setState(() {
+      polylines.clear();
+    });
+
+    // Generate new polyline from driver to dropoff
+    generateDriverToDropoffPolyline(
+        widget.driverLocation!, widget.dropOffLocation!);
+  }
+
+  /// Generate polyline from driver location to dropoff location
+  Future<void> generateDriverToDropoffPolyline(
+      LatLng driverLocation, LatLng dropoffLocation) async {
+    try {
+      debugPrint('MapScreen - Generating driver to dropoff polyline');
+
+      final hasConnection = await checkNetworkConnection();
+      if (!hasConnection) return;
+
+      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+      if (apiKey.isEmpty) {
+        debugPrint('API key not found');
+        return;
+      }
+
+      final polylinePoints = PolylinePoints();
+
+      // Routes API request for driver to dropoff
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask':
+            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
+      };
+
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {
+              'latitude': driverLocation.latitude,
+              'longitude': driverLocation.longitude,
+            },
+          },
+        },
+        'destination': {
+          'location': {
+            'latLng': {
+              'latitude': dropoffLocation.latitude,
+              'longitude': dropoffLocation.longitude,
+            },
+          },
+        },
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+
+      if (response == null) {
+        debugPrint('generateDriverToDropoffPolyline: no response from server');
+        return;
+      }
+
+      final data = json.decode(response);
+      final dynamic routesObj = data['routes'];
+      List<dynamic> routesList;
+
+      if (routesObj is List) {
+        routesList = routesObj;
+      } else if (routesObj is Map) {
+        routesList = [routesObj];
+      } else {
+        debugPrint('Unexpected routes format: ${routesObj.runtimeType}');
+        return;
+      }
+
+      if (routesList.isEmpty) {
+        debugPrint('No routes found for driver to dropoff');
+        return;
+      }
+
+      final Map<String, dynamic> firstRoute =
+          Map<String, dynamic>.from(routesList.first);
+      final dynamic polylineObj = firstRoute['polyline'];
+      String? encodedPolyline;
+
+      if (polylineObj is Map && polylineObj['encodedPolyline'] is String) {
+        encodedPolyline = polylineObj['encodedPolyline'] as String;
+      }
+
+      if (encodedPolyline == null) {
+        debugPrint('No polyline found in driver to dropoff response');
+        return;
+      }
+
+      List<PointLatLng> decodedPolyline =
+          polylinePoints.decodePolyline(encodedPolyline);
+      List<LatLng> polylineCoordinates = decodedPolyline
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          polylines.clear();
+          polylines[const PolylineId('driver_to_dropoff')] = Polyline(
+            polylineId: const PolylineId('driver_to_dropoff'),
+            points: polylineCoordinates,
+            color: const Color(0xFF00CC58), // Green color for driver route
+            width: 8,
+          );
+        });
+
+        // Update ETA for driver to dropoff
+        final legs = routesList[0]['legs'];
+        if (legs is List && legs.isNotEmpty) {
+          final firstLeg = legs[0];
+          final duration = firstLeg['duration'];
+          if (duration != null && duration['seconds'] != null) {
+            final durationSeconds = duration['seconds'];
+            final etaTextValue = formatDuration(durationSeconds);
+            debugPrint('MapScreen - Driver ETA calculated: $etaTextValue');
+            setState(() {
+              etaText = etaTextValue;
+            });
+            if (widget.onEtaUpdated != null) {
+              widget.onEtaUpdated!(etaTextValue);
+            }
+          }
+        }
+
+        // Adjust camera to show driver and dropoff
+        _adjustCameraForDriverTracking(
+            driverLocation, dropoffLocation, polylineCoordinates);
+      }
+    } catch (e) {
+      debugPrint('Error generating driver to dropoff polyline: $e');
+    }
+  }
+
+  /// Adjust camera to show driver location and dropoff location
+  Future<void> _adjustCameraForDriverTracking(LatLng driverLocation,
+      LatLng dropoffLocation, List<LatLng> polylineCoordinates) async {
+    try {
+      double southLat = min(driverLocation.latitude, dropoffLocation.latitude);
+      double northLat = max(driverLocation.latitude, dropoffLocation.latitude);
+      double westLng = min(driverLocation.longitude, dropoffLocation.longitude);
+      double eastLng = max(driverLocation.longitude, dropoffLocation.longitude);
+
+      // Include all polyline points for better bounds
+      for (LatLng point in polylineCoordinates) {
+        southLat = min(southLat, point.latitude);
+        northLat = max(northLat, point.latitude);
+        westLng = min(westLng, point.longitude);
+        eastLng = max(eastLng, point.longitude);
+      }
+
+      // Add padding to the bounds
+      final double padding = 0.01;
+      southLat -= padding;
+      northLat += padding;
+      westLng -= padding;
+      eastLng += padding;
+
+      final GoogleMapController controller = await mapController.future;
+      controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(southLat, westLng),
+            northeast: LatLng(northLat, eastLng),
+          ),
+          20,
+        ),
+        duration: const Duration(milliseconds: 1000),
+      );
+    } catch (e) {
+      debugPrint('Error adjusting camera for driver tracking: $e');
+    }
+  }
+
+  /// Update driver location (to be called from external sources)
+  void updateDriverLocation(LatLng newDriverLocation) {
+    if (!_isTrackingDriver || widget.dropOffLocation == null) return;
+
+    debugPrint('MapScreen - Updating driver location: $newDriverLocation');
+
+    // Update the driver marker and regenerate polyline
+    generateDriverToDropoffPolyline(newDriverLocation, widget.dropOffLocation!);
   }
 }

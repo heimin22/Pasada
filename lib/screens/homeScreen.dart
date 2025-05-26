@@ -102,6 +102,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   String plateNumber = '';
   String vehicleModel = '';
   String phoneNumber = '';
+  LatLng? driverLocation; // Driver's current location
 
   // Add a state variable to track booking status
   String bookingStatus = 'requested';
@@ -670,6 +671,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   selectedRoute: selectedRoute,
                   routePolyline:
                       selectedRoute?['polyline_coordinates'] as List<LatLng>?,
+                  driverLocation: driverLocation,
+                  bookingStatus: bookingStatus,
                 ),
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 10,
@@ -797,6 +800,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                       phoneNumber: phoneNumber,
                                       isDriverAssigned: isDriverAssigned,
                                       bookingStatus: bookingStatus,
+                                      isDriverLocationTracked:
+                                          driverLocation != null,
                                     )
                                   : const BookingStatusContainer(),
                             ),

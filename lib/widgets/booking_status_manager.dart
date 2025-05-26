@@ -19,6 +19,7 @@ class BookingStatusManager extends StatefulWidget {
   final String phoneNumber;
   final bool isDriverAssigned;
   final String bookingStatus;
+  final bool isDriverLocationTracked; // New property
 
   const BookingStatusManager({
     super.key,
@@ -34,6 +35,7 @@ class BookingStatusManager extends StatefulWidget {
     required this.phoneNumber,
     required this.isDriverAssigned,
     this.bookingStatus = 'requested',
+    this.isDriverLocationTracked = false, // Default to false
   });
 
   @override
@@ -88,6 +90,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
         driverName: widget.driverName,
         plateNumber: widget.plateNumber,
         phoneNumber: widget.phoneNumber,
+        isDriverLocationTracked: widget.isDriverLocationTracked,
       );
     } else {
       // Show loading if booking is 'accepted' but driver details are not yet valid/available.

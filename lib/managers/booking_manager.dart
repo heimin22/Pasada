@@ -18,6 +18,8 @@ import 'dart:async';
 class BookingManager {
   final HomeScreenPageState _state;
   Timer? _completionTimer; // Polling for ride completion
+  bool _isCompletionHandled =
+      false; // Flag to prevent multiple completion triggers
 
   BookingManager(this._state);
 
@@ -303,6 +305,10 @@ class BookingManager {
     // Cancel completion polling if any
     _completionTimer?.cancel();
     _completionTimer = null;
+
+    // Reset completion flag
+    _isCompletionHandled = false;
+
     _state.driverAssignmentService?.stopPolling();
     _state.bookingService?.stopLocationTracking();
     SharedPreferences.getInstance().then((prefs) async {
@@ -326,6 +332,69 @@ class BookingManager {
     _state.bookingAnimationController.reverse();
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _state.measureContainers());
+  }
+
+  /// Centralized completion handler that properly manages cleanup and navigation
+  Future<void> _handleRideCompletion() async {
+    // Prevent multiple completion triggers
+    if (_isCompletionHandled) return;
+    _isCompletionHandled = true;
+
+    debugPrint(
+        'BookingManager: Handling ride completion - starting cleanup...');
+
+    // Step 1: Stop all timers and services immediately
+    _completionTimer?.cancel();
+    _completionTimer = null;
+    _state.driverAssignmentService?.stopPolling();
+    _state.bookingService?.stopLocationTracking();
+
+    // Step 2: Clear UI state and animations
+    _state.bookingAnimationController.reverse();
+
+    // Step 3: Clean up map and location data
+    _state.mapScreenKey.currentState?.clearAll();
+
+    // Step 4: Reset state variables
+    _state.setState(() {
+      _state.isBookingConfirmed = false;
+      _state.isDriverAssigned = false;
+      _state.bookingStatus = 'completed';
+    });
+
+    // Step 5: Clean up persistent data
+    final prefs = await SharedPreferences.getInstance();
+    if (_state.activeBookingId != null) {
+      await LocalDatabaseService()
+          .deleteBookingDetails(_state.activeBookingId!);
+    }
+    await prefs.remove('activeBookingId');
+    await prefs.remove('pickup');
+    await prefs.remove('dropoff');
+
+    // Step 6: Reset remaining state variables
+    _state.setState(() {
+      _state.activeBookingId = null;
+      _state.selectedPickUpLocation = null;
+      _state.selectedDropOffLocation = null;
+      _state.selectedRoute = null;
+    });
+
+    // Step 7: Measure containers after cleanup
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _state.measureContainers());
+
+    // Step 8: Navigate to completion screen (after all cleanup is done)
+    final BuildContext context = _state.context;
+    if (context.mounted) {
+      debugPrint(
+          'BookingManager: Navigating to CompletedRideScreen after cleanup');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => CompletedRideScreen(arrivedTime: DateTime.now()),
+        ),
+      );
+    }
   }
 
   void _updateDriverDetails(Map<String, dynamic> driverData) {
@@ -354,7 +423,7 @@ class BookingManager {
 
     if (driver is! Map<String, dynamic>) {
       debugPrint(
-          "BookingManager: _updateDriverDetails - 'driver' variable is not a Map. Actual type: \${driver.runtimeType}, Value: \$driver");
+          "BookingManager: _updateDriverDetails - 'driver' variable is not a Map. Actual type: ${driver.runtimeType}, Value: $driver");
       _state.setState(() {
         _state.isDriverAssigned = false;
       });
@@ -362,7 +431,7 @@ class BookingManager {
     }
 
     debugPrint(
-        "BookingManager: Processing driver map in _updateDriverDetails: \$driver");
+        "BookingManager: Processing driver map in _updateDriverDetails: $driver");
 
     _state.setState(() {
       _state.driverName =
@@ -376,18 +445,118 @@ class BookingManager {
         'contact_number',
         'phone'
       ]);
+
+      // Enhanced vehicle model information
+      final capacity = _extractField(driver, ['passenger_capacity']);
+      final sittingPassengers = _extractField(driver, ['sitting_passenger']);
+      final standingPassengers = _extractField(driver, ['standing_passenger']);
+
+      if (capacity.isNotEmpty) {
+        final sitting = sittingPassengers.isNotEmpty ? sittingPassengers : '0';
+        final standing =
+            standingPassengers.isNotEmpty ? standingPassengers : '0';
+        _state.vehicleModel =
+            '$capacity seats ($sitting sitting, $standing standing)';
+      } else {
+        _state.vehicleModel = _extractField(driver, ['vehicle_model', 'model']);
+      }
+
       _state.isDriverAssigned = (_state.driverName.isNotEmpty &&
           _state.driverName != 'Driver' &&
           _state.driverName != 'Not Available');
       _state.bookingStatus = 'accepted';
 
       debugPrint(
-          "BookingManager: _updateDriverDetails SET state - Driver Name: \${_state.driverName}, Plate: \${_state.plateNumber}, Phone: \${_state.phoneNumber}, Is Assigned: \${_state.isDriverAssigned}");
+          "BookingManager: _updateDriverDetails SET state - Driver Name: ${_state.driverName}, Plate: ${_state.plateNumber}, Phone: ${_state.phoneNumber}, Vehicle: ${_state.vehicleModel}, Is Assigned: ${_state.isDriverAssigned}");
+
+      // Log additional driver information
+      final drivingStatus = _extractField(driver, ['driving_status']);
+      final lastOnline = _extractField(driver, ['last_online']);
+      if (drivingStatus.isNotEmpty) {
+        debugPrint("BookingManager: Driver status: $drivingStatus");
+      }
+      if (lastOnline.isNotEmpty) {
+        debugPrint("BookingManager: Driver last online: $lastOnline");
+      }
     });
 
-    // Start polling for completion after acceptance
+    // Start tracking driver location
     if (_state.activeBookingId != null) {
+      _startDriverLocationTracking(_state.activeBookingId!);
       _startCompletionPolling(_state.activeBookingId!);
+    }
+  }
+
+  /// Start tracking driver location
+  void _startDriverLocationTracking(int bookingId) {
+    debugPrint(
+        'BookingManager: Starting driver location tracking for booking $bookingId');
+
+    // Poll for driver location every 10 seconds
+    Timer.periodic(const Duration(seconds: 10), (timer) async {
+      try {
+        if (_isCompletionHandled || !_state.mounted) {
+          timer.cancel();
+          return;
+        }
+
+        final driverLocation = await _fetchDriverLocation(bookingId);
+        if (driverLocation != null && _state.mounted) {
+          _state.setState(() {
+            _state.driverLocation = driverLocation;
+          });
+
+          // Update map with new driver location
+          _state.mapScreenKey.currentState
+              ?.updateDriverLocation(driverLocation);
+          debugPrint(
+              'BookingManager: Updated driver location: $driverLocation');
+        }
+      } catch (e) {
+        debugPrint('BookingManager: Error tracking driver location: $e');
+      }
+    });
+  }
+
+  /// Fetch driver's current location from the booking
+  Future<LatLng?> _fetchDriverLocation(int bookingId) async {
+    try {
+      final booking = await supabase
+          .from('bookings')
+          .select('driver_id')
+          .eq('booking_id', bookingId)
+          .single();
+
+      if (!booking.containsKey('driver_id') || booking['driver_id'] == null) {
+        return null;
+      }
+
+      final driverId = booking['driver_id'];
+
+      // Fetch driver's current location from driver_locations table
+      final locationData = await supabase
+          .from('driver_locations')
+          .select('latitude, longitude, updated_at')
+          .eq('driver_id', driverId)
+          .order('updated_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (locationData != null &&
+          locationData.containsKey('latitude') &&
+          locationData.containsKey('longitude')) {
+        final lat = double.tryParse(locationData['latitude'].toString());
+        final lng = double.tryParse(locationData['longitude'].toString());
+
+        if (lat != null && lng != null) {
+          return LatLng(lat, lng);
+        }
+      }
+
+      return null;
+    } catch (e) {
+      debugPrint('BookingManager: Error fetching driver location: $e');
+      return null;
     }
   }
 
@@ -406,24 +575,7 @@ class BookingManager {
     final details = await _state.bookingService!.getBookingDetails(bookingId);
     if (details != null && _state.mounted) {
       if (details['ride_status'] == 'completed') {
-        // Store context before potential UI dismantling
-        final BuildContext currentContext = _state.context;
-
-        // Navigate first
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (currentContext.mounted) {
-            // Ensure context is still valid
-            Navigator.of(currentContext).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) =>
-                    CompletedRideScreen(arrivedTime: DateTime.now()),
-              ),
-            );
-          }
-        });
-
-        // Then handle cancellation/cleanup
-        handleBookingCancellation();
+        await _handleRideCompletion();
         return;
       }
       _state.setState(() {
@@ -477,66 +629,91 @@ class BookingManager {
 
   Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async {
     try {
-      final booking = await supabase
-          .from('bookings')
-          .select('driver_id')
-          .eq('booking_id', bookingId)
-          .single();
-      if (!booking.containsKey('driver_id')) return;
-      final driverId = booking['driver_id'];
-      final driver = await supabase
-          .from('driverTable')
-          .select('driver_id, full_name, driver_number, vehicle_id')
-          .eq('driver_id', driverId)
-          .single();
-      String plate = 'Unknown';
-      if (driver.containsKey('vehicle_id') && driver['vehicle_id'] != null) {
-        final vehicle = await supabase
-            .from('vehicleTable')
-            .select('plate_number')
-            .eq('vehicle_id', driver['vehicle_id'])
-            .single();
-        if (vehicle.containsKey('plate_number')) {
-          plate = vehicle['plate_number'];
-        }
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        debugPrint('BookingManager: No authenticated user found');
+        return;
       }
+
+      // Use the optimized function to get comprehensive driver details
+      final response =
+          await supabase.rpc('get_driver_details_by_booking', params: {
+        'p_booking_id': bookingId,
+        'p_user_id': user.id,
+      });
+
+      if (response != null && response is List && response.isNotEmpty) {
+        final driverData = response[0];
+
+        debugPrint('BookingManager: Driver details from function: $driverData');
+
+        _state.setState(() {
+          _state.driverName = driverData['full_name'] ?? 'Driver';
+          _state.phoneNumber = driverData['driver_number'] ?? '';
+          _state.plateNumber = driverData['plate_number'] ?? 'Unknown';
+          _state.vehicleModel =
+              '${driverData['passenger_capacity'] ?? 'Unknown'} seats'; // Use capacity as model info
+          _state.isDriverAssigned = true;
+          _state.bookingStatus = 'accepted';
+        });
+
+        // Additional driver info that could be useful
+        debugPrint(
+            'BookingManager: Driver status: ${driverData['driving_status']}');
+        debugPrint(
+            'BookingManager: Vehicle capacity: ${driverData['passenger_capacity']}');
+        debugPrint(
+            'BookingManager: Current passengers - Sitting: ${driverData['sitting_passenger']}, Standing: ${driverData['standing_passenger']}');
+      } else {
+        debugPrint(
+            'BookingManager: No driver details found for booking $bookingId');
+        // Fallback to basic driver info
+        _state.setState(() {
+          _state.driverName = 'Driver';
+          _state.phoneNumber = '';
+          _state.plateNumber = 'Unknown';
+          _state.vehicleModel = '';
+          _state.isDriverAssigned = true;
+          _state.bookingStatus = 'accepted';
+        });
+      }
+    } catch (e) {
+      debugPrint('BookingManager: Error fetching driver details: $e');
+      // Fallback to basic driver info on error
       _state.setState(() {
-        _state.driverName = driver['full_name'] ?? 'Driver';
-        _state.phoneNumber = driver['driver_number'] ?? '';
-        _state.plateNumber = plate;
+        _state.driverName = 'Driver';
+        _state.phoneNumber = '';
+        _state.plateNumber = 'Unknown';
+        _state.vehicleModel = '';
         _state.isDriverAssigned = true;
         _state.bookingStatus = 'accepted';
       });
-    } catch (e) {
-      debugPrint('DB Query Error: $e');
     }
   }
 
   /// Poll the booking status every 10 seconds until it's completed
   void _startCompletionPolling(int bookingId) {
     if (_completionTimer != null) return; // Already polling
+
+    debugPrint(
+        'BookingManager: Starting completion polling for booking $bookingId');
     _completionTimer =
         Timer.periodic(const Duration(seconds: 10), (timer) async {
       try {
+        // Don't continue polling if completion is already being handled
+        if (_isCompletionHandled) {
+          timer.cancel();
+          _completionTimer = null;
+          return;
+        }
+
         final details =
             await _state.bookingService?.getBookingDetails(bookingId);
         if (details != null && details['ride_status'] == 'completed') {
+          debugPrint('BookingManager: Completion detected via polling');
           timer.cancel();
           _completionTimer = null;
-          // Navigate to completion screen
-          final BuildContext context = _state.context;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (context.mounted) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      CompletedRideScreen(arrivedTime: DateTime.now()),
-                ),
-              );
-            }
-          });
-          // Cleanup UI and state
-          handleBookingCancellation();
+          await _handleRideCompletion();
         }
       } catch (e) {
         debugPrint('Error polling for completion: $e');
