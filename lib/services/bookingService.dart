@@ -392,12 +392,24 @@ class BookingService {
       final apiService = ApiService();
       final response =
           await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
-
-      if (response != null && response.containsKey('trip')) {
-        debugPrint('Retrieved booking details from API: ${response['trip']}');
+      if (response == null) {
+        debugPrint('getBookingDetails: response null for booking $bookingId');
+        return null;
+      }
+      // If wrapped under 'trip', unwrap
+      if (response.containsKey('trip') &&
+          response['trip'] is Map<String, dynamic>) {
+        debugPrint('getBookingDetails: unwrapped trip for booking $bookingId');
         return response['trip'] as Map<String, dynamic>;
       }
-      return null;
+      // If response directly has ride_status, return it
+      if (response.containsKey('ride_status')) {
+        debugPrint('getBookingDetails: direct response for booking $bookingId');
+        return response;
+      }
+      // Fallback: return the entire response
+      debugPrint('getBookingDetails: fallback response for booking $bookingId');
+      return response;
     } catch (e) {
       debugPrint('Error fetching booking details from API: $e');
       return null;

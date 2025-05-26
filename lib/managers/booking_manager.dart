@@ -13,9 +13,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
+import 'dart:async';
 
 class BookingManager {
   final HomeScreenPageState _state;
+  Timer? _completionTimer; // Polling for ride completion
 
   BookingManager(this._state);
 
@@ -30,10 +32,9 @@ class BookingManager {
 
     if (apiBooking != null) {
       final status = apiBooking['ride_status'];
-      if (status == 'searching' ||
-          status == 'assigned' ||
-          status == 'ongoing' ||
-          status == 'requested') {
+      if (status == 'requested' ||
+          status == 'accepted' ||
+          status == 'ongoing') {
         _state.setState(() {
           _state.isBookingConfirmed = true;
           _state.bookingStatus = status;
@@ -66,8 +67,25 @@ class BookingManager {
           (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
           onStatusChange: (newStatus) {
-            _state.setState(() => _state.bookingStatus = newStatus);
-            _fetchAndUpdateBookingDetails(bookingId);
+            debugPrint(
+                "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Received newStatus '$newStatus' for booking $bookingId. Current _state.bookingStatus is '${_state.bookingStatus}'. Mounted: ${_state.mounted}");
+            if (_state.mounted) {
+              _state.setState(() => _state.bookingStatus = newStatus);
+              debugPrint(
+                  "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange->setState: _state.bookingStatus is now '${_state.bookingStatus}' for booking $bookingId.");
+              // Call _fetchAndUpdateBookingDetails for relevant status changes
+              if (newStatus == 'accepted' ||
+                  newStatus == 'ongoing' ||
+                  newStatus == 'completed' ||
+                  newStatus == 'requested') {
+                debugPrint(
+                    "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for $bookingId.");
+                _fetchAndUpdateBookingDetails(bookingId);
+              } else {
+                debugPrint(
+                    "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status '$newStatus' does not trigger _fetchAndUpdateBookingDetails.");
+              }
+            }
           },
         );
         WidgetsBinding.instance
@@ -84,7 +102,7 @@ class BookingManager {
     }
 
     final status = localBooking.rideStatus;
-    if (status == 'searching' || status == 'assigned' || status == 'ongoing') {
+    if (status == 'requested' || status == 'accepted' || status == 'ongoing') {
       _state.setState(() {
         _state.isBookingConfirmed = true;
         _state.selectedPickUpLocation = SelectedLocation(
@@ -211,29 +229,6 @@ class BookingManager {
         seatingPreference: _state.seatingPreference.value,
         onDriverAssigned: (details) =>
             _loadBookingAfterDriverAssignment(details.bookingId),
-        onStatusChange: (status) {
-          _state.setState(() {
-            _state.bookingStatus = status;
-            if (status == 'cancelled') handleBookingCancellation();
-          });
-        },
-        onTimeout: () {
-          showDialog(
-            context: _state.context,
-            barrierDismissible: false,
-            builder: (ctx) => ResponsiveDialog(
-              title: 'No Drivers Available',
-              content:
-                  const Text('Booking cancelled due to no available drivers.'),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK'),
-                )
-              ],
-            ),
-          ).then((_) => handleBookingCancellation());
-        },
       );
 
       if (bookingResult.success) {
@@ -264,8 +259,25 @@ class BookingManager {
             // optional error callback
           },
           onStatusChange: (newStatus) {
-            _state.setState(() => _state.bookingStatus = newStatus);
-            _fetchAndUpdateBookingDetails(details.bookingId);
+            debugPrint(
+                "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Received newStatus '$newStatus' for booking ${details.bookingId}. Current _state.bookingStatus is '${_state.bookingStatus}'. Mounted: ${_state.mounted}");
+            if (_state.mounted) {
+              _state.setState(() => _state.bookingStatus = newStatus);
+              debugPrint(
+                  "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange->setState: _state.bookingStatus is now '${_state.bookingStatus}' for booking ${details.bookingId}.");
+              // Call _fetchAndUpdateBookingDetails for relevant status changes
+              if (newStatus == 'accepted' ||
+                  newStatus == 'ongoing' ||
+                  newStatus == 'completed' ||
+                  newStatus == 'requested') {
+                debugPrint(
+                    "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for ${details.bookingId}.");
+                _fetchAndUpdateBookingDetails(details.bookingId);
+              } else {
+                debugPrint(
+                    "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Status '$newStatus' does not trigger _fetchAndUpdateBookingDetails.");
+              }
+            }
           },
           onTimeout: () {
             showDialog(
@@ -299,33 +311,48 @@ class BookingManager {
   }
 
   void handleBookingCancellation() {
+    _completionTimer?.cancel();
+    _completionTimer = null;
     _state.driverAssignmentService?.stopPolling();
     _state.bookingService?.stopLocationTracking();
+
+    final currentBookingId = _state.activeBookingId;
+
     SharedPreferences.getInstance().then((prefs) async {
-      if (_state.activeBookingId != null) {
-        await LocalDatabaseService()
-            .deleteBookingDetails(_state.activeBookingId!);
+      if (currentBookingId != null) {
+        await LocalDatabaseService().deleteBookingDetails(currentBookingId);
       }
       await prefs.remove('activeBookingId');
       await prefs.remove('pickup');
       await prefs.remove('dropoff');
     });
-    _state.mapScreenKey.currentState?.clearAll();
-    _state.setState(() {
-      _state.isBookingConfirmed = false;
-      _state.isDriverAssigned = false;
-      _state.activeBookingId = null;
-      _state.selectedPickUpLocation = null;
-      _state.selectedDropOffLocation = null;
-      _state.selectedRoute = null;
-    });
-    _state.bookingAnimationController.reverse();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _state.measureContainers());
+
+    if (_state.mounted) {
+      _state.mapScreenKey.currentState?.clearAll();
+      _state.setState(() {
+        _state.isBookingConfirmed = false;
+        _state.isDriverAssigned = false;
+        _state.activeBookingId = null;
+        _state.selectedPickUpLocation = null;
+        _state.selectedDropOffLocation = null;
+        _state.selectedRoute = null;
+        _state.bookingStatus = ''; // Reset booking status
+      });
+      _state.bookingAnimationController.reverse();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_state.mounted) {
+          _state.measureContainers();
+        }
+      });
+    }
   }
 
   void _updateDriverDetails(Map<String, dynamic> driverData) {
-    if (!_state.mounted) return;
+    if (!_state.mounted) {
+      debugPrint(
+          "[BookingManager] _updateDriverDetails: Entered but state not mounted. Bailing out.");
+      return;
+    }
     var driver = driverData['driver'];
     if (driver == null) {
       debugPrint(
@@ -378,8 +405,18 @@ class BookingManager {
       _state.bookingStatus = 'accepted';
 
       debugPrint(
-          "BookingManager: _updateDriverDetails SET state - Driver Name: \${_state.driverName}, Plate: \${_state.plateNumber}, Phone: \${_state.phoneNumber}, Is Assigned: \${_state.isDriverAssigned}");
+          "[BookingManager] Inside _updateDriverDetails->setState: bookingStatus set to ${_state.bookingStatus}, isDriverAssigned set to ${_state.isDriverAssigned}, Driver: ${_state.driverName} for activeBookingId ${_state.activeBookingId}");
     });
+
+    // Start polling for completion after acceptance
+    if (_state.activeBookingId != null) {
+      debugPrint(
+          "[BookingManager] _updateDriverDetails: Condition met to start polling. ActiveBookingID: ${_state.activeBookingId}, IsDriverAssigned: ${_state.isDriverAssigned}. Calling _startCompletionPolling.");
+      _startCompletionPolling(_state.activeBookingId!);
+    } else {
+      debugPrint(
+          "[BookingManager] _updateDriverDetails: Condition NOT MET to start polling. activeBookingId is null. IsDriverAssigned: ${_state.isDriverAssigned}.");
+    }
   }
 
   String _extractField(dynamic data, List<String> keys) {
@@ -394,18 +431,30 @@ class BookingManager {
 
   Future<void> _fetchAndUpdateBookingDetails(int bookingId) async {
     _state.bookingService ??= BookingService();
+
+    if (!_state.mounted) {
+      debugPrint(
+          "[BookingManager] _fetchAndUpdateBookingDetails: State not mounted for booking ID $bookingId at entry. Bailing out.");
+      return;
+    }
+    debugPrint(
+        "[BookingManager] _fetchAndUpdateBookingDetails: Fetching for booking ID $bookingId. Mounted: ${_state.mounted}");
+
     final details = await _state.bookingService!.getBookingDetails(bookingId);
-    if (details != null && _state.mounted) {
+    if (!_state.mounted) {
+      // Check again after await
+      debugPrint(
+          "[BookingManager] _fetchAndUpdateBookingDetails: State not mounted for booking ID $bookingId after getBookingDetails. Bailing out.");
+      return;
+    }
+
+    if (details != null) {
+      debugPrint(
+          "[BookingManager] _fetchAndUpdateBookingDetails: Details for booking ID $bookingId: $details");
       if (details['ride_status'] == 'completed') {
-        // Dispose booking UI containers before showing completion screen
-        handleBookingCancellation();
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(_state.context).push(
-            MaterialPageRoute(
-              builder: (_) => CompletedRideScreen(arrivedTime: DateTime.now()),
-            ),
-          );
-        });
+        debugPrint(
+            "[BookingManager] _fetchAndUpdateBookingDetails: Ride COMPLETED for booking ID $bookingId. Navigating.");
+        await _handleRideCompletionNavigationAndCleanup();
         return;
       }
       _state.setState(() {
@@ -419,39 +468,62 @@ class BookingManager {
         }
       });
       if (details['driver_id'] != null) {
+        debugPrint(
+            "[BookingManager] _fetchAndUpdateBookingDetails: driver_id ${details['driver_id']} found for booking $bookingId. Calling _loadBookingAfterDriverAssignment.");
         await _loadBookingAfterDriverAssignment(bookingId);
+      } else {
+        debugPrint(
+            "[BookingManager] _fetchAndUpdateBookingDetails: No driver_id found for booking $bookingId.");
       }
     }
   }
 
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
+    debugPrint(
+        "[BookingManager] _loadBookingAfterDriverAssignment: Entered for booking ID $bookingId");
     _state.driverAssignmentService
         ?.fetchBookingDetails(bookingId)
         .then((bookingData) {
       if (bookingData != null) {
+        debugPrint(
+            "[BookingManager] _loadBookingAfterDriverAssignment: Fetched bookingData for $bookingId: $bookingData");
         final driverId = bookingData['driver_id'];
         if (driverId != null) {
+          debugPrint(
+              "[BookingManager] _loadBookingAfterDriverAssignment: driver_id $driverId found. Fetching driver details via getDriverDetailsByBooking.");
           DriverService()
               .getDriverDetailsByBooking(bookingId)
               .then((driverDetails) {
             if (driverDetails != null) {
+              debugPrint(
+                  "[BookingManager] _loadBookingAfterDriverAssignment: Got driverDetails via getDriverDetailsByBooking for $bookingId: $driverDetails. Calling _updateDriverDetails.");
               _updateDriverDetails(driverDetails);
             } else {
+              debugPrint(
+                  "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetailsByBooking returned null for $bookingId. Trying getDriverDetails with driverId $driverId.");
               DriverService()
                   .getDriverDetails(driverId.toString())
                   .then((directDetails) {
                 if (directDetails != null) {
+                  debugPrint(
+                      "[BookingManager] _loadBookingAfterDriverAssignment: Got directDetails for driver $driverId: $directDetails. Calling _updateDriverDetails.");
                   _updateDriverDetails(directDetails);
                 } else {
+                  debugPrint(
+                      "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetails also returned null for driver $driverId. Fetching directly from DB for booking $bookingId.");
                   _fetchDriverDetailsDirectlyFromDB(bookingId);
                 }
               });
             }
           });
         } else {
+          debugPrint(
+              "[BookingManager] _loadBookingAfterDriverAssignment: No driver_id in bookingData for $bookingId. Fetching directly from DB.");
           _fetchDriverDetailsDirectlyFromDB(bookingId);
         }
       } else {
+        debugPrint(
+            "[BookingManager] _loadBookingAfterDriverAssignment: fetchBookingDetails returned null for $bookingId. Fetching directly from DB.");
         _fetchDriverDetailsDirectlyFromDB(bookingId);
       }
     });
@@ -489,8 +561,91 @@ class BookingManager {
         _state.isDriverAssigned = true;
         _state.bookingStatus = 'accepted';
       });
+      // Start polling for completion when using direct DB fetch as well
+      if (_state.activeBookingId != null) {
+        debugPrint(
+            "[BookingManager] _fetchDriverDetailsDirectlyFromDB: Driver details restored. Starting completion polling for booking ID $bookingId.");
+        _startCompletionPolling(bookingId);
+      }
     } catch (e) {
       debugPrint('DB Query Error: $e');
     }
+  }
+
+  /// Poll the booking status every 10 seconds until it's completed
+  void _startCompletionPolling(int bookingId) {
+    if (_completionTimer != null) return; // Already polling
+    debugPrint(
+        "[BookingManager] _startCompletionPolling: Starting for booking ID $bookingId");
+    _completionTimer =
+        Timer.periodic(const Duration(seconds: 10), (timer) async {
+      debugPrint(
+          "[BookingManager] Polling for completion for booking ID $bookingId...");
+      try {
+        final details =
+            await _state.bookingService?.getBookingDetails(bookingId);
+        if (details != null) {
+          debugPrint(
+              "[BookingManager] Polled details for booking ID $bookingId: $details");
+          if (details['ride_status'] == 'completed') {
+            debugPrint(
+                "[BookingManager] Ride COMPLETED for booking ID $bookingId. Status: ${details['ride_status']}");
+            timer.cancel(); // Stop this specific timer instance.
+            await _handleRideCompletionNavigationAndCleanup();
+          } else {
+            debugPrint(
+                "[BookingManager] Ride NOT YET COMPLETED for booking ID $bookingId. Status: ${details['ride_status']}");
+          }
+        } else {
+          debugPrint(
+              "[BookingManager] Polling for booking ID $bookingId returned null details.");
+        }
+      } catch (e) {
+        debugPrint(
+            '[BookingManager] Error polling for completion for booking ID $bookingId: $e');
+      }
+    });
+  }
+
+  Future<void> _handleRideCompletionNavigationAndCleanup() async {
+    if (!_state.mounted) return;
+
+    debugPrint(
+        "[BookingManager] _handleRideCompletionNavigationAndCleanup: Entered for booking ID ${_state.activeBookingId}");
+
+    final BuildContext safeContext = _state.context;
+    final int? completedBookingId = _state.activeBookingId;
+
+    _completionTimer?.cancel();
+    _completionTimer = null;
+    _state.driverAssignmentService?.stopPolling();
+    _state.bookingService?.stopLocationTracking();
+
+    if (_state.mounted) {
+      _state.setState(() {
+        _state.activeBookingId = null;
+        _state.isBookingConfirmed = false;
+        _state.isDriverAssigned = false;
+      });
+    }
+
+    if (completedBookingId != null) {
+      await LocalDatabaseService().deleteBookingDetails(completedBookingId);
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('activeBookingId');
+    await prefs.remove('pickup');
+    await prefs.remove('dropoff');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (safeContext.mounted) {
+        Navigator.of(safeContext).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => CompletedRideScreen(
+                arrivedTime: DateTime.now(), bookingId: completedBookingId!),
+          ),
+        );
+      }
+    });
   }
 }

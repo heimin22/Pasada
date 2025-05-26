@@ -7,7 +7,9 @@ import 'package:pasada_passenger_app/widgets/circle_painter.dart';
 
 class CompletedRideScreen extends StatefulWidget {
   final DateTime arrivedTime;
-  const CompletedRideScreen({super.key, required this.arrivedTime});
+  final int bookingId;
+  const CompletedRideScreen(
+      {super.key, required this.arrivedTime, required this.bookingId});
 
   @override
   State<CompletedRideScreen> createState() => _CompletedRideScreenState();
@@ -174,7 +176,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const ViewRideDetailsScreen()),
+                        builder: (_) =>
+                            ViewRideDetailsScreen(bookingId: widget.bookingId)),
                   );
                 },
                 child: Text(
