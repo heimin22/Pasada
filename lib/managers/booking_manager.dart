@@ -641,7 +641,8 @@ class BookingManager {
       if (safeContext.mounted) {
         Navigator.of(safeContext).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => CompletedRideScreen(arrivedTime: DateTime.now()),
+            builder: (_) => CompletedRideScreen(
+                arrivedTime: DateTime.now(), bookingId: completedBookingId!),
           ),
         );
       }

@@ -33,6 +33,9 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   Map<PolylineId, Polyline> polylines = {};
   bool isMapReady = false;
   List<LatLng>? routePolyline;
+  // Rating and review controller
+  int _rating = 0;
+  final TextEditingController _reviewController = TextEditingController();
 
   @override
   void initState() {
@@ -81,7 +84,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       if (bookingDetails['driver_id'] != null) {
         try {
           final driverResponse = await supabase
-              .from('driver') // Adjust table name if needed
+              .from('driverTable')
               .select('full_name, driver_number, vehicle_id')
               .eq('driver_id', bookingDetails['driver_id'])
               .single();
@@ -94,7 +97,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           // If we have vehicle_id, fetch vehicle details
           if (driverResponse['vehicle_id'] != null) {
             final vehicleResponse = await supabase
-                .from('vehicle')
+                .from('vehicleTable')
                 .select('plate_number')
                 .eq('vehicle_id', driverResponse['vehicle_id'])
                 .single();
@@ -665,6 +668,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   @override
   void dispose() {
     mapController?.dispose();
+    _reviewController.dispose();
     super.dispose();
   }
 
@@ -1270,6 +1274,107 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               ),
                             ],
                           ),
+
+                          const SizedBox(height: 20),
+
+                          // Rating & Review Section
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? const Color(0xFF1E1E1E)
+                                  : const Color(0xFFF5F5F5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? Colors.grey[700]!
+                                    : Colors.grey[300]!,
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rate Your Ride',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(5, (index) {
+                                    return IconButton(
+                                      onPressed: () {
+                                        setState(() => _rating = index + 1);
+                                      },
+                                      icon: Icon(
+                                        index < _rating
+                                            ? Icons.star
+                                            : Icons.star_border,
+                                        color: Colors.amber,
+                                      ),
+                                    );
+                                  }),
+                                ),
+                                const SizedBox(height: 16),
+                                TextField(
+                                  controller: _reviewController,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    fontFamily: 'Inter',
+                                  ),
+                                  decoration: InputDecoration(
+                                    focusColor: Color(0xFF00CC58),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Color(0xFF00CC58),
+                                      ),
+                                    ),
+                                    labelText: 'Leave a review',
+                                    labelStyle: TextStyle(
+                                      color: isDarkMode
+                                          ? Colors.grey[300]
+                                          : Colors.grey[700],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      fontFamily: 'Inter',
+                                    ),
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  maxLines: 3,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: _submitReview,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF00CC58),
+                                    foregroundColor: const Color(0xFFF5F5F5),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    minimumSize: const Size.fromHeight(48),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Submit Review',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1334,6 +1439,25 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           color: Color(0xFF00CC58),
           size: 24,
         );
+    }
+  }
+
+  Future<void> _submitReview() async {
+    final int bid = bookingDetails['booking_id'] ?? widget.bookingId;
+    try {
+      await supabase.from('bookings').update({
+        'rating': _rating,
+        'review': _reviewController.text,
+      }).eq('booking_id', bid);
+      Fluttertoast.showToast(
+          msg: 'Review submitted!', toastLength: Toast.LENGTH_SHORT);
+      setState(() {
+        _rating = 0;
+        _reviewController.clear();
+      });
+    } catch (e) {
+      Fluttertoast.showToast(
+          msg: 'Error submitting review: $e', toastLength: Toast.LENGTH_LONG);
     }
   }
 }
