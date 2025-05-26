@@ -36,6 +36,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   // Rating and review controller
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
+  bool _canReview = true;
 
   @override
   void initState() {
@@ -44,23 +45,20 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     // Inspect database schema to understand relationships
     _inspectDatabaseSchema();
 
-    if (widget.booking != null) {
-      bookingDetails = widget.booking!;
-      // Even if we have booking data, fetch additional details
-      _fetchAdditionalDetails().then((_) {
-        if (mounted) {
-          _fetchRouteAndGeneratePolyline();
-        }
-      });
-    } else if (widget.bookingId != null) {
-      // Fetch booking details by ID
-      fetchBookingDetails(widget.bookingId!).then((_) {
+    // Determine booking ID from either provided bookingId or booking map
+    final int? bid = widget.bookingId ??
+        (widget.booking?['booking_id'] is num
+            ? (widget.booking!['booking_id'] as num).toInt()
+            : int.tryParse(widget.booking?['booking_id']?.toString() ?? ''));
+    if (bid != null) {
+      // Fetch full booking details (including rating/review)
+      fetchBookingDetails(bid).then((_) {
         if (mounted) {
           _fetchRouteAndGeneratePolyline();
         }
       });
     } else {
-      // No booking data or ID provided
+      // No valid booking ID: stop loading
       setState(() => isLoading = false);
     }
   }
@@ -79,6 +77,25 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         isLoading = false;
       });
       debugPrint('Fetched booking details: $bookingDetails');
+
+      // Initialize rating/review state
+      final ratingVal = response['rating'];
+      final reviewVal = response['review'];
+      bool passed12h = false;
+      if (response['created_at'] != null) {
+        try {
+          passed12h = DateTime.now()
+                  .difference(DateTime.parse(response['created_at'].toString()))
+                  .inHours >
+              12;
+        } catch (_) {}
+      }
+      final canReview = ratingVal == null && !passed12h;
+      setState(() {
+        if (ratingVal != null) _rating = (ratingVal as num).toInt();
+        _reviewController.text = reviewVal?.toString() ?? '';
+        _canReview = canReview;
+      });
 
       // Then fetch related data separately
       if (bookingDetails['driver_id'] != null) {
@@ -132,73 +149,6 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching booking details: $e');
-      setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> _fetchAdditionalDetails() async {
-    try {
-      // If we already have booking data but need additional details
-      if (bookingDetails['booking_id'] == null &&
-          bookingDetails['id'] != null) {
-        bookingDetails['booking_id'] = bookingDetails['id'];
-      }
-
-      if (bookingDetails['booking_id'] != null) {
-        // Fetch driver details directly if we have driver_id
-        if (bookingDetails['driver_id'] != null) {
-          try {
-            final driverResponse = await supabase
-                .from('driverTable')
-                .select('full_name, driver_number, vehicle_id')
-                .eq('driver_id', bookingDetails['driver_id'])
-                .single();
-
-            setState(() {
-              bookingDetails['driver_name'] = driverResponse['full_name'];
-              bookingDetails['driver_number'] = driverResponse['driver_number'];
-            });
-
-            // If we have vehicle_id, fetch vehicle details
-            if (driverResponse['vehicle_id'] != null) {
-              final vehicleResponse = await supabase
-                  .from('vehicleTable')
-                  .select('plate_number')
-                  .eq('vehicle_id', driverResponse['vehicle_id'])
-                  .single();
-
-              setState(() {
-                bookingDetails['plate_number'] =
-                    vehicleResponse['plate_number'];
-              });
-            }
-          } catch (e) {
-            debugPrint('Error fetching driver details: $e');
-          }
-        }
-
-        // Fetch passenger details if not already included
-        if (bookingDetails['id'] != null &&
-            bookingDetails['passenger_name'] == null) {
-          try {
-            final passengerResponse = await supabase
-                .from('passenger')
-                .select('display_name')
-                .eq('id', bookingDetails['id'])
-                .single();
-
-            setState(() {
-              bookingDetails['passenger_name'] =
-                  passengerResponse['display_name'];
-            });
-          } catch (e) {
-            debugPrint('Error fetching passenger details: $e');
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching additional details: $e');
-    } finally {
       setState(() => isLoading = false);
     }
   }
@@ -1310,16 +1260,24 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: List.generate(5, (index) {
-                                    return IconButton(
-                                      onPressed: () {
-                                        setState(() => _rating = index + 1);
-                                      },
-                                      icon: Icon(
-                                        index < _rating
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                        color: Colors.amber,
-                                      ),
+                                    if (_canReview) {
+                                      return IconButton(
+                                        onPressed: () {
+                                          setState(() => _rating = index + 1);
+                                        },
+                                        icon: Icon(
+                                          index < _rating
+                                              ? Icons.star
+                                              : Icons.star_border,
+                                          color: Colors.amber,
+                                        ),
+                                      );
+                                    }
+                                    return Icon(
+                                      index < _rating
+                                          ? Icons.star
+                                          : Icons.star_border,
+                                      color: Colors.amber,
                                     );
                                   }),
                                 ),
@@ -1331,6 +1289,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     fontWeight: FontWeight.w400,
                                     fontFamily: 'Inter',
                                   ),
+                                  enabled: _canReview,
                                   decoration: InputDecoration(
                                     focusColor: Color(0xFF00CC58),
                                     focusedBorder: OutlineInputBorder(
@@ -1352,26 +1311,27 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                   maxLines: 3,
                                 ),
                                 const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: _submitReview,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00CC58),
-                                    foregroundColor: const Color(0xFFF5F5F5),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    minimumSize: const Size.fromHeight(48),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                if (_canReview)
+                                  ElevatedButton(
+                                    onPressed: _submitReview,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF00CC58),
+                                      foregroundColor: const Color(0xFFF5F5F5),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      minimumSize: const Size.fromHeight(48),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Submit Review',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Submit Review',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),
@@ -1452,8 +1412,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       Fluttertoast.showToast(
           msg: 'Review submitted!', toastLength: Toast.LENGTH_SHORT);
       setState(() {
-        _rating = 0;
-        _reviewController.clear();
+        // lock out further reviews after successful submission
+        _canReview = false;
       });
     } catch (e) {
       Fluttertoast.showToast(
