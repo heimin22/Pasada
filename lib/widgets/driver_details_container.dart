@@ -4,14 +4,12 @@ class DriverDetailsContainer extends StatelessWidget {
   final String driverName;
   final String plateNumber;
   final String phoneNumber;
-  final bool isDriverLocationTracked;
 
   const DriverDetailsContainer({
     super.key,
     required this.driverName,
     required this.plateNumber,
     required this.phoneNumber,
-    this.isDriverLocationTracked = false,
   });
 
   @override
@@ -57,36 +55,8 @@ class DriverDetailsContainer extends StatelessWidget {
                       : const Color(0xFF121212),
                 ),
               ),
-              // Show tracking indicator or debug indicator
-              if (isDriverLocationTracked)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00CC58),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 12,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Tracking',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-              else if (!hasDriverData)
+              // Show debug indicator if driver data is missing
+              if (!hasDriverData)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
