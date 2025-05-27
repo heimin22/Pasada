@@ -63,7 +63,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedPickUpLocation; // variable for the selected pick up location
   SelectedLocation?
       selectedDropOffLocation; // variable for the selected drop off location
-  String etaText = '--'; // eta text variable placeholder yung "--"
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
   // keep state alive
@@ -661,9 +660,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   bottomPadding:
                       calculateMapPadding() / // Use new method for map
                           MediaQuery.of(context).size.height,
-                  onEtaUpdated: (eta) {
-                    if (mounted) setState(() => etaText = eta);
-                  },
                   onFareUpdated: (fare) {
                     if (mounted) setState(() => currentFare = fare);
                   },
@@ -742,7 +738,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                         selectedPickUpLocation,
                                     selectedDropOffLocation:
                                         selectedDropOffLocation,
-                                    etaText: etaText,
                                     currentFare: currentFare,
                                     selectedPaymentMethod:
                                         selectedPaymentMethod,
@@ -781,24 +776,21 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             opacity: bookingAnimationController.value,
                             child: Container(
                               key: bookingStatusContainerKey,
-                              child: bookingStatus == 'accepted'
-                                  ? BookingStatusManager(
-                                      pickupLocation: selectedPickUpLocation,
-                                      dropoffLocation: selectedDropOffLocation,
-                                      ETA: etaText,
-                                      paymentMethod:
-                                          selectedPaymentMethod ?? 'Cash',
-                                      fare: currentFare,
-                                      onCancelBooking: _bookingManager
-                                          .handleBookingCancellation,
-                                      driverName: driverName,
-                                      plateNumber: plateNumber,
-                                      vehicleModel: vehicleModel,
-                                      phoneNumber: phoneNumber,
-                                      isDriverAssigned: isDriverAssigned,
-                                      bookingStatus: bookingStatus,
-                                    )
-                                  : const BookingStatusContainer(),
+                              child: BookingStatusManager(
+                                key: ValueKey<String>(bookingStatus),
+                                pickupLocation: selectedPickUpLocation,
+                                dropoffLocation: selectedDropOffLocation,
+                                paymentMethod: selectedPaymentMethod ?? 'Cash',
+                                fare: currentFare,
+                                onCancelBooking:
+                                    _bookingManager.handleBookingCancellation,
+                                driverName: driverName,
+                                plateNumber: plateNumber,
+                                vehicleModel: vehicleModel,
+                                phoneNumber: phoneNumber,
+                                isDriverAssigned: isDriverAssigned,
+                                bookingStatus: bookingStatus,
+                              ),
                             ),
                           ),
                         );

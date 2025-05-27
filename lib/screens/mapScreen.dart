@@ -90,11 +90,21 @@ class MapScreenState extends State<MapScreen>
 
   double fareAmount = 0.0;
 
+  // Field to store driver location and bus icon
+  LatLng? driverLocation;
+  late BitmapDescriptor busIcon;
+
+  // PolylineId for the driver's live route
+  static const PolylineId driverRoutePolylineId =
+      PolylineId('driver_route_live');
+
   // Override methods
   /// state of the app
   @override
   void initState() {
     super.initState();
+    // Load custom bus icon for driver marker
+    _loadBusIcon();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -899,6 +909,38 @@ class MapScreenState extends State<MapScreen>
     showAlertDialog('Error', message);
   }
 
+  // Load the bus.svg asset as a BitmapDescriptor
+  Future<void> _loadBusIcon() async {
+    busIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/bus.png',
+    );
+  }
+
+  // Update driver marker and draw road-following polyline to pickup/dropoff
+  Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
+    if (!mounted) return;
+    setState(() {
+      driverLocation = location;
+      // Update driver marker
+      final markerId = MarkerId('driver');
+      markers[markerId] = Marker(
+        markerId: markerId,
+        position: driverLocation!,
+        icon: busIcon,
+      );
+      // Clear all existing polylines immediately
+      polylines.clear();
+    });
+
+    // Use routing API to draw polyline along roads
+    if (rideStatus == 'accepted' && widget.pickUpLocation != null) {
+      await generatePolylineBetween(location, widget.pickUpLocation!);
+    } else if (rideStatus == 'ongoing' && widget.dropOffLocation != null) {
+      await generatePolylineBetween(location, widget.dropOffLocation!);
+    }
+  }
+
   Set<Marker> buildMarkers() {
     final markerSet = <Marker>{};
 
@@ -922,9 +964,18 @@ class MapScreenState extends State<MapScreen>
       );
     }
 
+    // Add driver marker
+    if (driverLocation != null) {
+      final driverMarkerId = MarkerId('driver');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: driverLocation!,
+        icon: busIcon,
+      );
+    }
+
     // Convert map to set
     markerSet.addAll(markers.values);
-
     return markerSet;
   }
 

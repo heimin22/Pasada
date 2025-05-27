@@ -80,8 +80,7 @@ class DriverAssignmentService {
 
         // When booking status is accepted, fetch driver details via RPC
         if (response['ride_status'] == 'accepted') {
-          // Stop polling and cancel timeout once we have a driver
-          stopPolling();
+          // Polling continues to allow updates (do not stopPolling here)
 
           // Fetch driver details
           final driverDetails =
