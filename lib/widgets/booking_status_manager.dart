@@ -138,7 +138,6 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
     if (widget.bookingStatus == 'requested') {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -148,14 +147,26 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 backgroundColor: Colors.redAccent,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 textStyle:
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: widget.onCancelBooking,
-              child: const Text('Cancel Booking'),
+              child: const Text(
+                'Cancel Booking',
+                style: TextStyle(
+                  color: Color(0xFFF5F5F5),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],

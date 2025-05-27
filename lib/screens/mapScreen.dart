@@ -93,6 +93,8 @@ class MapScreenState extends State<MapScreen>
   // Field to store driver location and bus icon
   LatLng? driverLocation;
   late BitmapDescriptor busIcon;
+  late BitmapDescriptor pickupIcon;
+  late BitmapDescriptor dropoffIcon;
 
   // PolylineId for the driver's live route
   static const PolylineId driverRoutePolylineId =
@@ -915,6 +917,14 @@ class MapScreenState extends State<MapScreen>
       ImageConfiguration(size: Size(48, 48)),
       'assets/png/bus.png',
     );
+    pickupIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_pickup.png',
+    );
+    dropoffIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_dropoff.png',
+    );
   }
 
   // Update driver marker and draw road-following polyline to pickup/dropoff
@@ -950,7 +960,7 @@ class MapScreenState extends State<MapScreen>
       markers[pickupMarkerId] = Marker(
         markerId: pickupMarkerId,
         position: widget.pickUpLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: pickupIcon,
       );
     }
 
@@ -960,7 +970,7 @@ class MapScreenState extends State<MapScreen>
       markers[dropoffMarkerId] = Marker(
         markerId: dropoffMarkerId,
         position: widget.dropOffLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: dropoffIcon,
       );
     }
 
