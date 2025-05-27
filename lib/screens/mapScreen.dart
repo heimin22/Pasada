@@ -16,6 +16,7 @@ import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:intl/intl.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -497,6 +498,11 @@ class MapScreenState extends State<MapScreen>
           .map((point) => LatLng(point.latitude, point.longitude))
           .toList();
 
+      // Cache the computed polyline for future use
+      final cacheKey =
+          'polyline_${originCoordinates?.latitude}_${originCoordinates?.longitude}_${destinationCoordinates?.latitude}_${destinationCoordinates?.longitude}';
+      MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
+
       // Update UI with the polyline
       if (mounted) {
         setState(() {
@@ -591,6 +597,32 @@ class MapScreenState extends State<MapScreen>
   Future<void> generatePolylineBetween(LatLng start, LatLng destination,
       {bool updateFare = true}) async {
     try {
+      // Try to load cached polyline for these coordinates
+      final cacheKey =
+          'polyline_${start.latitude}_${start.longitude}_${destination.latitude}_${destination.longitude}';
+      final cachedPolyline = MemoryManager.instance.getFromCache(cacheKey);
+      if (cachedPolyline is List<LatLng>) {
+        if (mounted) {
+          final double routeDistance = getRouteDistance(cachedPolyline);
+          final double fare = calculateFare(routeDistance);
+          setState(() {
+            polylines = {
+              const PolylineId('route'): Polyline(
+                polylineId: const PolylineId('route'),
+                points: cachedPolyline,
+                color: Color.fromARGB(255, 4, 197, 88),
+                width: 8,
+              )
+            };
+            if (updateFare) fareAmount = fare;
+          });
+          if (updateFare && widget.onFareUpdated != null) {
+            widget.onFareUpdated!(fare);
+          }
+        }
+        // Cached polyline used, skip network call
+        return;
+      }
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
 
@@ -687,6 +719,10 @@ class MapScreenState extends State<MapScreen>
           .map((point) => LatLng(point.latitude, point.longitude))
           .toList();
 
+      // Cache the computed polyline for future use
+      MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
+
+      // Update UI with the polyline
       if (mounted) {
         final double routeDistance = getRouteDistance(polylineCoordinates);
         final double fare = calculateFare(routeDistance);

@@ -65,22 +65,12 @@ class DriverService {
       return null;
     }
     try {
-      final data =
-          await _api.supabase.rpc('get_driver_details_by_booking', params: {
+      final driverData = await _api.supabase
+          .rpc<Map<String, dynamic>>('get_driver_details_by_booking', params: {
         'p_booking_id': bookingId,
         'p_user_id': userId,
       }).single();
-
-      // The RPC returns a list with a single object (the driver details)
-      if (data is List && data.isNotEmpty) {
-        return {'driver': Map<String, dynamic>.from(data[0])};
-      } else if (data is Map) {
-        // Fallback if RPC directly returns the object (less common for table returns)
-        return {'driver': Map<String, dynamic>.from(data)};
-      }
-      debugPrint(
-          'DriverService: get_driver_details_by_booking RPC returned unexpected data format: $data');
-      return null;
+      return {'driver': driverData};
     } catch (e) {
       debugPrint(
           'DriverService: Error calling get_driver_details_by_booking RPC: $e');
@@ -95,54 +85,4 @@ class DriverService {
   }
 
   // Helper method to process driver response
-  Map<String, dynamic> _processDriverResponse(Map<String, dynamic> response) {
-    debugPrint('Processing driver response: $response');
-
-    // Try to find the driver data in the response
-    dynamic driverData;
-
-    // Check common response structures
-    if (response.containsKey('driver')) {
-      driverData = response['driver'];
-    } else if (response.containsKey('data')) {
-      driverData = response['data'];
-    } else {
-      // Look for specific fields that would indicate this is the driver data itself
-      List<String> driverFields = [
-        'full_name',
-        'driver_number',
-        'plate_number',
-        'driver_id'
-      ];
-      bool looksLikeDriverData =
-          driverFields.any((field) => response.containsKey(field));
-
-      if (looksLikeDriverData) {
-        driverData = response;
-      }
-    }
-
-    // Handle case where driver data is null
-    if (driverData == null) {
-      debugPrint('Could not locate driver data in response');
-      // If we couldn't find driver data, just wrap the whole response
-      return {'driver': response};
-    }
-
-    // Handle case where driver data is an array (from RPC)
-    if (driverData is List) {
-      debugPrint('Driver data is a List with ${driverData.length} items');
-
-      if (driverData.isEmpty) {
-        debugPrint('Driver data list is empty');
-        return {'driver': []};
-      }
-
-      // Return the first item from the list directly - this is key for RPC functions
-      return {'driver': driverData};
-    }
-
-    // Return the processed driver data
-    return {'driver': driverData};
-  }
 }

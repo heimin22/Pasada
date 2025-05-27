@@ -236,7 +236,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
                     _buildPage(
                       title: _getTimeBasedGreeting(),
                       subtitle: 'Welcome sa Pasada!',
-                      content: 'Swipe to learn more about our app',
+                      content: 'Salamat sa pagdownload, Ma\'am/Sir!',
                       icon: _getTimeBasedIcon(),
                     ),
                     _buildPage(
@@ -260,6 +260,60 @@ class PasadaHomePageState extends State<PasadaHomePage>
                 padding: const EdgeInsets.only(bottom: 30),
                 child: Column(
                   children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0, 0.3),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child:
+                              FadeTransition(opacity: animation, child: child),
+                        );
+                      },
+                      child: _currentPage == 0
+                          ? Material(
+                              key: const ValueKey('swipe_text'),
+                              color: Colors.transparent,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                side: BorderSide(
+                                  color: Color(0xFFF5F5F5),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Text(
+                                      'Swipe to learn more about the app',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Inter',
+                                        color: Color(0xFFF5F5F5),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 14,
+                                      color: Color(0xFFF5F5F5),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 35),
                     // Dot indicators
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -302,7 +356,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
                                 ? IconButton(
                                     key: const ValueKey('next_button'),
                                     icon: const Icon(Icons.arrow_forward_ios,
-                                        color: Colors.white),
+                                        color: Color(0xFFF5F5F5)),
                                     onPressed: () {
                                       _pageController.nextPage(
                                         duration:
