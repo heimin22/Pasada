@@ -15,6 +15,8 @@ class NotificationService {
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
 
+  static const int rideProgressNotificationId = 1;
+
   static Future<void> initialize() async {
     await _requestPermissions();
 
@@ -285,5 +287,41 @@ class NotificationService {
     } catch (e) {
       debugPrint('Error in saveTokenToDatabase: $e');
     }
+  }
+
+  /// Shows an ongoing ride progress notification with a progress bar.
+  static Future<void> showRideProgressNotification({
+    required int progress,
+    required int maxProgress,
+  }) async {
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'ride_progress_channel',
+      'Ride Progress',
+      channelDescription: 'Shows driver progress to drop-off',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      onlyAlertOnce: true,
+      showProgress: true,
+      maxProgress: maxProgress,
+      progress: progress,
+      icon: 'bus',
+      largeIcon: DrawableResourceAndroidBitmap('pin_dropoff'),
+    );
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+    await _flutterLocalNotificationsPlugin.show(
+      rideProgressNotificationId,
+      'Ride in Progress',
+      '\$progress% to drop-off',
+      platformDetails,
+    );
+  }
+
+  /// Cancels the ride progress notification.
+  static Future<void> cancelRideProgressNotification() async {
+    await _flutterLocalNotificationsPlugin.cancel(rideProgressNotificationId);
   }
 }

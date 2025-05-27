@@ -972,7 +972,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               ),
                               Text(
                                 bookingDetails['seat_type']?.toString() ??
-                                    'Standard',
+                                    'Any',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: isDarkMode

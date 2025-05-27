@@ -14,6 +14,7 @@ class BookingDetails {
   final TimeOfDay startTime;
   final DateTime createdAt;
   final double fare;
+  final String seatType;
   final DateTime assignedAt;
   final TimeOfDay endTime;
 
@@ -30,6 +31,7 @@ class BookingDetails {
     required this.startTime,
     required this.createdAt,
     required this.fare,
+    required this.seatType,
     required this.assignedAt,
     required this.endTime,
   });
@@ -50,6 +52,7 @@ class BookingDetails {
       'start_time': '${startTime.hour}:${startTime.minute}',
       'created_at': createdAt.toIso8601String(),
       'fare': fare,
+      'seat_type': seatType,
       'assigned_at': assignedAt.toIso8601String(),
       'end_time': '${endTime.hour}:${endTime.minute}',
     };
@@ -103,6 +106,7 @@ class BookingDetails {
       startTime: parseTime(map['start_time']),
       createdAt: DateTime.parse(map['created_at'] as String),
       fare: (map['fare'] as num).toDouble(),
+      seatType: map['seat_type'] as String,
       assignedAt: DateTime.parse(map['assigned_at'] as String),
       endTime: parseTime(map['end_time']),
     );

@@ -106,35 +106,4 @@ class BookingDetailsContainer extends StatelessWidget {
       ],
     );
   }
-
-  Widget _buildInfoRow(BuildContext context, String title, String value,
-      IconData icon, bool isDarkMode) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 24,
-          color: const Color(0xFF00CC58),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          '$title: ',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color:
-                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF00CC58),
-          ),
-        ),
-      ],
-    );
-  }
 }

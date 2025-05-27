@@ -14,12 +14,28 @@ import 'dart:convert';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'dart:async';
+import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'dart:math';
 
 class BookingManager {
   final HomeScreenPageState _state;
+  double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
 
   BookingManager(this._state);
+
+  /// Calculates the distance in meters between two latitude/longitude points.
+  double _calculateDistance(LatLng p1, LatLng p2) {
+    const R = 6371000; // Earth's radius in meters
+    final lat1 = p1.latitude * pi / 180;
+    final lat2 = p2.latitude * pi / 180;
+    final dLat = (p2.latitude - p1.latitude) * pi / 180;
+    final dLon = (p2.longitude - p1.longitude) * pi / 180;
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
 
   Future<void> loadActiveBooking() async {
     final prefs = await SharedPreferences.getInstance();
@@ -55,6 +71,9 @@ class BookingManager {
           _state.currentFare = double.parse(apiBooking['fare'].toString());
           _state.selectedPaymentMethod = apiBooking['payment_method'] ?? 'Cash';
           _state.activeBookingId = bookingId;
+          if (apiBooking['seat_type'] != null) {
+            _state.seatingPreference.value = apiBooking['seat_type'].toString();
+          }
         });
 
         if (apiBooking['driver_id'] != null) {
@@ -81,6 +100,13 @@ class BookingManager {
                   newStatus == 'requested') {
                 debugPrint(
                     "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for $bookingId.");
+                if (newStatus == 'accepted') {
+                  NotificationService.showNotification(
+                    title: 'Driver Assigned',
+                    body:
+                        'Your driver has accepted your ride and is on the way!',
+                  );
+                }
                 _fetchAndUpdateBookingDetails(bookingId);
               } else {
                 debugPrint(
@@ -217,15 +243,15 @@ class BookingManager {
       _state.bookingService = BookingService();
       final bookingService = _state.bookingService!;
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
+      debugPrint(
+          'BookingManager: sending seat_type: ${_state.seatingPreference.value}');
       final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
-        pickupAddress: _state.selectedPickUpLocation?.address ?? 'Unknown',
-        pickupCoordinates:
-            _state.selectedPickUpLocation?.coordinates ?? const LatLng(0, 0),
-        dropoffAddress: _state.selectedDropOffLocation?.address ?? 'Unknown',
-        dropoffCoordinates:
-            _state.selectedDropOffLocation?.coordinates ?? const LatLng(0, 0),
+        pickupAddress: _state.selectedPickUpLocation!.address,
+        pickupCoordinates: _state.selectedPickUpLocation!.coordinates,
+        dropoffAddress: _state.selectedDropOffLocation!.address,
+        dropoffCoordinates: _state.selectedDropOffLocation!.coordinates,
         paymentMethod: _state.selectedPaymentMethod ?? 'Cash',
         fare: _state.currentFare,
         seatingPreference: _state.seatingPreference.value,
@@ -274,6 +300,13 @@ class BookingManager {
                   newStatus == 'requested') {
                 debugPrint(
                     "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for ${details.bookingId}.");
+                if (newStatus == 'accepted') {
+                  NotificationService.showNotification(
+                    title: 'Driver Assigned',
+                    body:
+                        'Your driver has accepted your ride and is on the way!',
+                  );
+                }
                 _fetchAndUpdateBookingDetails(details.bookingId);
               } else {
                 debugPrint(
@@ -313,6 +346,8 @@ class BookingManager {
   }
 
   void handleBookingCancellation() {
+    // Remove any ongoing ride progress notification
+    NotificationService.cancelRideProgressNotification();
     _completionTimer?.cancel();
     _completionTimer = null;
     _state.driverAssignmentService?.stopPolling();
@@ -346,25 +381,6 @@ class BookingManager {
           _state.measureContainers();
         }
       });
-    }
-  }
-
-  Future<LatLng?> _fetchDriverLatLng(int bookingId) async {
-    try {
-      // Call the RPC and get the GeoJSON string
-      final raw = await supabase.rpc('get_driver_geojson_by_booking',
-          params: {'p_booking_id': bookingId}).single() as String?;
-      if (raw == null) {
-        debugPrint('Driver location RPC returned null');
-        return null;
-      }
-      // Parse the GeoJSON response
-      final Map<String, dynamic> geo = jsonDecode(raw) as Map<String, dynamic>;
-      final coords = geo['coordinates'] as List<dynamic>;
-      return LatLng(coords[1] as double, coords[0] as double);
-    } catch (e) {
-      debugPrint('Error fetching driver location via RPC: $e');
-      return null;
     }
   }
 
@@ -452,6 +468,21 @@ class BookingManager {
     if (driverLatLng != null) {
       _state.mapScreenKey.currentState
           ?.updateDriverLocation(driverLatLng, _state.bookingStatus);
+      // Update ride progress notification
+      final dropoff = _state.selectedDropOffLocation?.coordinates;
+      if (dropoff != null) {
+        _initialDistanceToDropoff ??= _calculateDistance(driverLatLng, dropoff);
+        final currentDistance = _calculateDistance(driverLatLng, dropoff);
+        final progress = (((_initialDistanceToDropoff! - currentDistance) /
+                    _initialDistanceToDropoff!) *
+                100)
+            .clamp(0, 100)
+            .round();
+        NotificationService.showRideProgressNotification(
+          progress: progress,
+          maxProgress: 100,
+        );
+      }
     }
 
     // Start polling for completion after acceptance
@@ -511,6 +542,10 @@ class BookingManager {
         }
         if (details['payment_method'] != null) {
           _state.selectedPaymentMethod = details['payment_method'];
+        }
+        // Update seating preference if provided
+        if (details['seat_type'] != null) {
+          _state.seatingPreference.value = details['seat_type'].toString();
         }
       });
       if (details['driver_id'] != null) {
@@ -684,6 +719,8 @@ class BookingManager {
   }
 
   Future<void> _handleRideCompletionNavigationAndCleanup() async {
+    // Cancel the ride progress notification upon completion
+    NotificationService.cancelRideProgressNotification();
     if (!_state.mounted) return;
 
     debugPrint(

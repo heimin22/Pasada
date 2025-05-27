@@ -94,22 +94,23 @@ class BookingService {
     try {
       final apiService = ApiService();
 
-      // Call the backend endpoint that maps to requestTrip
-      // This endpoint will create the booking and attempt to assign a driver.
+      // Build and log the request body to ensure seat_type is included
+      final requestBody = {
+        'route_trip': routeId,
+        'origin_latitude': pickupCoordinates.latitude,
+        'origin_longitude': pickupCoordinates.longitude,
+        'pickup_address': pickupAddress,
+        'destination_latitude': dropoffCoordinates.latitude,
+        'destination_longitude': dropoffCoordinates.longitude,
+        'dropoff_address': dropoffAddress,
+        'fare': fare,
+        'payment_method': paymentMethod,
+        'seat_type': seatingPreference,
+      };
+      debugPrint('BookingService.createBooking request body: $requestBody');
       final response = await apiService.post<Map<String, dynamic>>(
-        'bookings/assign-driver', // Assuming this is the endpoint for requestTrip
-        body: {
-          // Parameters expected by requestTrip backend function
-          'route_trip': routeId,
-          'origin_latitude': pickupCoordinates.latitude,
-          'origin_longitude': pickupCoordinates.longitude,
-          'pickup_address': pickupAddress,
-          'destination_latitude': dropoffCoordinates.latitude,
-          'destination_longitude': dropoffCoordinates.longitude,
-          'dropoff_address': dropoffAddress,
-          'fare': fare,
-          'payment_method': paymentMethod,
-        },
+        'bookings/assign-driver',
+        body: requestBody,
       );
 
       if (response != null && response.containsKey('booking')) {
@@ -131,6 +132,7 @@ class BookingService {
         final backendDropoffLng =
             (bookingData['dropoff_lng'] as num).toDouble();
         final backendFare = (bookingData['fare'] as num).toDouble();
+        final backendSeatType = (bookingData['seat_type'] as String?) ?? 'Any';
         final createdAtString = bookingData['created_at'] as String;
         final assignedAtString = bookingData['assigned_at'] as String?;
 
@@ -150,6 +152,7 @@ class BookingService {
           pickupCoordinates: LatLng(backendPickupLat, backendPickupLng),
           dropoffAddress: backendDropoffAddress,
           dropoffCoordinates: LatLng(backendDropoffLat, backendDropoffLng),
+          seatType: backendSeatType,
           startTime: TimeOfDay.fromDateTime(
               createdAtDateTime), // Using createdAt for startTime
           createdAt: createdAtDateTime,
@@ -185,6 +188,7 @@ class BookingService {
                   startTime: bookingDetails.startTime,
                   createdAt: bookingDetails.createdAt,
                   fare: bookingDetails.fare,
+                  seatType: bookingDetails.seatType,
                   assignedAt: DateTime.now(),
                   endTime: bookingDetails.endTime,
                 );
@@ -337,6 +341,7 @@ class BookingService {
           startTime: TimeOfDay.now(),
           createdAt: DateTime.now(),
           fare: (apiBooking['fare'] as num? ?? 0.0).toDouble(),
+          seatType: apiBooking['seat_type'] ?? 'Any',
           assignedAt: DateTime.now(),
           endTime: TimeOfDay.now(),
         );
