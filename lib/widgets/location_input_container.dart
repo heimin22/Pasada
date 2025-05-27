@@ -12,7 +12,6 @@ class LocationInputContainer extends StatelessWidget {
   final bool isRouteSelected;
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
-  final String etaText;
   final double currentFare;
   final String? selectedPaymentMethod;
   final ValueNotifier<String> seatingPreference;
@@ -31,7 +30,6 @@ class LocationInputContainer extends StatelessWidget {
     required this.isRouteSelected,
     this.selectedPickUpLocation,
     this.selectedDropOffLocation,
-    required this.etaText,
     required this.currentFare,
     this.selectedPaymentMethod,
     required this.seatingPreference,
@@ -96,39 +94,7 @@ class LocationInputContainer extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: screenWidth * 0.02),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "ETA: ",
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: enabled
-                        ? (isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212))
-                        : Colors.grey,
-                  ),
-                ),
-                Text(
-                  etaText != '--' ? etaText : 'Calculating...',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: enabled
-                        ? (isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF515151))
-                        : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: screenWidth * 0.08)
+            SizedBox(height: screenWidth * 0.08),
           ],
           Row(
             children: [

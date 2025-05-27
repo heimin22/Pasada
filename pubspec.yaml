@@ -46,7 +46,7 @@ dependencies:
   flutter_local_notifications: ^19.1.0
   flutter_markdown: ^0.7.7
   flutter_polyline_points: ^2.1.0
-  flutter_svg: ^2.0.16
+  flutter_svg: ^2.1.0
   flutter_typeahead: ^5.2.0
   fluttertoast: ^8.2.10
   font_awesome_flutter: ^10.8.0
@@ -70,6 +70,7 @@ dependencies:
   supabase_flutter: ^2.8.2
   url_launcher: ^6.3.1
   uuid: ^4.5.1
+  vector_graphics: ^1.1.18
   webview_flutter: ^4.10.0
 
 dev_dependencies:
@@ -137,6 +138,9 @@ flutter:
     - assets/svg/paymongo_logo.svg
     - assets/svg/default_user_profile.svg
     - assets/png/default_user_profile.png
+    - assets/png/bus.png
+    - assets/png/pin_pickup.png
+    - assets/png/pin_dropoff.png
     - assets/md/privacy_policy.md
     - .env
 

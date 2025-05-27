@@ -59,73 +59,31 @@ class DriverService {
 
   // Fetch driver details by booking ID using get_driver_details_by_booking function
   Future<Map<String, dynamic>?> getDriverDetailsByBooking(int bookingId) async {
+    final userId = await _getUserId();
+    if (userId == null) {
+      debugPrint('Cannot get driver details: user ID is null');
+      return null;
+    }
     try {
-      debugPrint('Fetching driver details for booking ID: $bookingId');
+      final data =
+          await _api.supabase.rpc('get_driver_details_by_booking', params: {
+        'p_booking_id': bookingId,
+        'p_user_id': userId,
+      }).single();
 
-      // The database function you shared is get_driver_details_by_booking
-      // Let's try endpoints that might map to this function
-
-      // Try direct call to a dedicated endpoint for driver details by booking
-      try {
-        final response =
-            await _api.get<Map<String, dynamic>>('bookings/$bookingId/driver');
-
-        if (response != null) {
-          debugPrint('Response from bookings/$bookingId/driver: SUCCESS');
-          return _processDriverResponse(response);
-        }
-      } catch (e) {
-        debugPrint('Error calling bookings/$bookingId/driver: $e');
+      // The RPC returns a list with a single object (the driver details)
+      if (data is List && data.isNotEmpty) {
+        return {'driver': Map<String, dynamic>.from(data[0])};
+      } else if (data is Map) {
+        // Fallback if RPC directly returns the object (less common for table returns)
+        return {'driver': Map<String, dynamic>.from(data)};
       }
-
-      // Try a general booking endpoint that might include driver details
-      try {
-        final response =
-            await _api.get<Map<String, dynamic>>('bookings/$bookingId');
-
-        if (response != null) {
-          debugPrint('Response from bookings/$bookingId: SUCCESS');
-
-          // Check if we can find driver details in the response
-          if (response.containsKey('driver')) {
-            return _processDriverResponse({'driver': response['driver']});
-          }
-
-          // Try using driver_id to fetch driver details
-          if (response.containsKey('driver_id') &&
-              response['driver_id'] != null) {
-            final driverId = response['driver_id'];
-            debugPrint('Found driver_id in booking: $driverId');
-
-            // Fetch driver details with driver ID
-            final driverResponse = await getDriverDetails(driverId.toString());
-            if (driverResponse != null) {
-              return driverResponse;
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Error fetching booking details: $e');
-      }
-
-      // Try a direct RPC call (may not work depending on your backend setup)
-      try {
-        final response = await _api.post<Map<String, dynamic>>(
-            'rpc/get_driver_details_by_booking',
-            body: {'p_booking_id': bookingId, 'p_user_id': await _getUserId()});
-
-        if (response != null) {
-          debugPrint('Response from RPC call: SUCCESS');
-          return _processDriverResponse({'driver': response});
-        }
-      } catch (e) {
-        debugPrint('Error calling RPC directly: $e');
-      }
-
-      debugPrint('All attempts to fetch driver details failed');
+      debugPrint(
+          'DriverService: get_driver_details_by_booking RPC returned unexpected data format: $data');
       return null;
     } catch (e) {
-      debugPrint('Error in getDriverDetailsByBooking: $e');
+      debugPrint(
+          'DriverService: Error calling get_driver_details_by_booking RPC: $e');
       return null;
     }
   }

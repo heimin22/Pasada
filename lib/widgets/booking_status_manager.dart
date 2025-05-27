@@ -9,7 +9,6 @@ import 'dart:async';
 class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
   final SelectedLocation? dropoffLocation;
-  final String ETA;
   final String paymentMethod;
   final double fare;
   final VoidCallback onCancelBooking;
@@ -24,7 +23,6 @@ class BookingStatusManager extends StatefulWidget {
     super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
-    required this.ETA,
     required this.paymentMethod,
     required this.fare,
     required this.onCancelBooking,
@@ -48,9 +46,6 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // This condition is true if:
-    // 1. Status is 'requested' (we want loading screen)
-    // 2. Status is 'accepted' (isDriverAssigned should be true) BUT driver details are not yet valid (we want loading screen)
     final bool currentlyNeedsLoadingIndicator =
         widget.bookingStatus == 'requested' ||
             (widget.bookingStatus == 'accepted' &&
@@ -143,11 +138,6 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Log the current status and driver details for debugging
-    debugPrint(
-        'BookingStatusManager Build - Status: ${widget.bookingStatus}, Driver assigned: ${widget.isDriverAssigned}, DriverName: ${widget.driverName}, ShowLoading flag: $_showLoading');
-
     if (widget.bookingStatus == 'requested') {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -157,14 +147,26 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 backgroundColor: Colors.redAccent,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                 textStyle:
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                minimumSize: const Size(double.infinity, 50),
               ),
               onPressed: widget.onCancelBooking,
-              child: const Text('Cancel Booking'),
+              child: const Text(
+                'Cancel Booking',
+                style: TextStyle(
+                  color: Color(0xFFF5F5F5),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ],
@@ -175,24 +177,22 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (widget.bookingStatus == 'accepted')
-              _buildAcceptedStatusContent()
-            else if (widget.bookingStatus == 'cancelled')
+            if (widget.bookingStatus == 'accepted' ||
+                widget.bookingStatus == 'ongoing') ...[
+              _buildAcceptedStatusContent(),
+              BookingDetailsContainer(
+                pickupLocation: widget.pickupLocation,
+                dropoffLocation: widget.dropoffLocation,
+              ),
+              PaymentDetailsContainer(
+                paymentMethod: widget.paymentMethod,
+                onCancelBooking: widget.onCancelBooking,
+                fare: widget.fare,
+                showCancelButton:
+                    false, // Cancel button likely not needed for 'ongoing'
+              ),
+            ] else if (widget.bookingStatus == 'cancelled')
               _buildCancelledStatusContent(isDarkMode),
-            // No explicit DriverLoadingContainer here, as it's handled by 'requested' state
-            // or within _buildAcceptedStatusContent if details are pending.
-
-            BookingDetailsContainer(
-              pickupLocation: widget.pickupLocation,
-              dropoffLocation: widget.dropoffLocation,
-              etaText: widget.ETA,
-            ),
-            PaymentDetailsContainer(
-              paymentMethod: widget.paymentMethod,
-              onCancelBooking: widget.onCancelBooking,
-              fare: widget.fare,
-              showCancelButton: widget.bookingStatus == 'requested',
-            )
           ],
         ),
       ),

@@ -16,10 +16,6 @@ class DriverDetailsContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Debug output to see what values are being passed to this widget
-    debugPrint(
-        'DriverDetailsContainer - driverName: "$driverName", plateNumber: "$plateNumber", phoneNumber: "$phoneNumber"');
-
     // Check if we have meaningful driver data
     final bool hasDriverData = driverName != 'Driver' && driverName.isNotEmpty;
 

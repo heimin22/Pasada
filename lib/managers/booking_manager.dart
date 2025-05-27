@@ -54,6 +54,7 @@ class BookingManager {
           );
           _state.currentFare = double.parse(apiBooking['fare'].toString());
           _state.selectedPaymentMethod = apiBooking['payment_method'] ?? 'Cash';
+          _state.activeBookingId = bookingId;
         });
 
         if (apiBooking['driver_id'] != null) {
@@ -114,6 +115,7 @@ class BookingManager {
           localBooking.dropoffCoordinates,
         );
         _state.currentFare = localBooking.fare;
+        _state.activeBookingId = bookingId;
       });
       _state.bookingAnimationController.forward();
       final savedMethod = prefs.getString('selectedPaymentMethod');
@@ -347,7 +349,26 @@ class BookingManager {
     }
   }
 
-  void _updateDriverDetails(Map<String, dynamic> driverData) {
+  Future<LatLng?> _fetchDriverLatLng(int bookingId) async {
+    try {
+      // Call the RPC and get the GeoJSON string
+      final raw = await supabase.rpc('get_driver_geojson_by_booking',
+          params: {'p_booking_id': bookingId}).single() as String?;
+      if (raw == null) {
+        debugPrint('Driver location RPC returned null');
+        return null;
+      }
+      // Parse the GeoJSON response
+      final Map<String, dynamic> geo = jsonDecode(raw) as Map<String, dynamic>;
+      final coords = geo['coordinates'] as List<dynamic>;
+      return LatLng(coords[1] as double, coords[0] as double);
+    } catch (e) {
+      debugPrint('Error fetching driver location via RPC: $e');
+      return null;
+    }
+  }
+
+  void _updateDriverDetails(Map<String, dynamic> driverData) async {
     if (!_state.mounted) {
       debugPrint(
           "[BookingManager] _updateDriverDetails: Entered but state not mounted. Bailing out.");
@@ -385,7 +406,8 @@ class BookingManager {
     }
 
     debugPrint(
-        "BookingManager: Processing driver map in _updateDriverDetails: \$driver");
+        "BookingManager: Processing driver map in _updateDriverDetails: \\$driver");
+    debugPrint("BookingManager: driver keys: \\${driver.keys}");
 
     _state.setState(() {
       _state.driverName =
@@ -402,20 +424,44 @@ class BookingManager {
       _state.isDriverAssigned = (_state.driverName.isNotEmpty &&
           _state.driverName != 'Driver' &&
           _state.driverName != 'Not Available');
-      _state.bookingStatus = 'accepted';
 
       debugPrint(
           "[BookingManager] Inside _updateDriverDetails->setState: bookingStatus set to ${_state.bookingStatus}, isDriverAssigned set to ${_state.isDriverAssigned}, Driver: ${_state.driverName} for activeBookingId ${_state.activeBookingId}");
     });
 
+    // Extract driver's current_location from driver details RPC
+    dynamic currentLoc = driver['current_location'];
+    LatLng? driverLatLng;
+    if (currentLoc != null) {
+      // GeoJSON format: { type: 'Point', coordinates: [lon, lat] }
+      if (currentLoc is Map && currentLoc['coordinates'] is List) {
+        final coords = List.from(currentLoc['coordinates']);
+        driverLatLng = LatLng(coords[1] as double, coords[0] as double);
+      }
+      // WKT format: 'POINT(lon lat)'
+      else if (currentLoc is String) {
+        final match =
+            RegExp(r"POINT\(([-\d\.]+) ([-\d\.]+)\)").firstMatch(currentLoc);
+        if (match != null) {
+          final lon = double.parse(match.group(1)!);
+          final lat = double.parse(match.group(2)!);
+          driverLatLng = LatLng(lat, lon);
+        }
+      }
+    }
+    if (driverLatLng != null) {
+      _state.mapScreenKey.currentState
+          ?.updateDriverLocation(driverLatLng, _state.bookingStatus);
+    }
+
     // Start polling for completion after acceptance
     if (_state.activeBookingId != null) {
       debugPrint(
-          "[BookingManager] _updateDriverDetails: Condition met to start polling. ActiveBookingID: ${_state.activeBookingId}, IsDriverAssigned: ${_state.isDriverAssigned}. Calling _startCompletionPolling.");
+          "[BookingManager] _updateDriverDetails: Condition met to start polling. ActiveBookingID: \\${_state.activeBookingId}, IsDriverAssigned: \\${_state.isDriverAssigned}. Calling _startCompletionPolling.");
       _startCompletionPolling(_state.activeBookingId!);
     } else {
       debugPrint(
-          "[BookingManager] _updateDriverDetails: Condition NOT MET to start polling. activeBookingId is null. IsDriverAssigned: ${_state.isDriverAssigned}.");
+          "[BookingManager] _updateDriverDetails: Condition NOT MET to start polling. activeBookingId is null. IsDriverAssigned: \\${_state.isDriverAssigned}.");
     }
   }
 
@@ -481,6 +527,25 @@ class BookingManager {
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
     debugPrint(
         "[BookingManager] _loadBookingAfterDriverAssignment: Entered for booking ID $bookingId");
+    // Try fetching full driver details (including current_location) via RPC
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      try {
+        final result =
+            await supabase.rpc('get_driver_details_by_booking', params: {
+          'p_booking_id': bookingId,
+          'p_user_id': user.id,
+        }).single() as Map<String, dynamic>?;
+        if (result != null) {
+          _updateDriverDetails({'driver': result});
+          return;
+        }
+      } catch (e) {
+        debugPrint(
+            "[BookingManager] Error fetching driver details via RPC: $e");
+      }
+    }
+    // Fallback to existing fetchBookingDetails logic
     _state.driverAssignmentService
         ?.fetchBookingDetails(bookingId)
         .then((bookingData) {
@@ -559,7 +624,6 @@ class BookingManager {
         _state.phoneNumber = driver['driver_number'] ?? '';
         _state.plateNumber = plate;
         _state.isDriverAssigned = true;
-        _state.bookingStatus = 'accepted';
       });
       // Start polling for completion when using direct DB fetch as well
       if (_state.activeBookingId != null) {
@@ -587,14 +651,26 @@ class BookingManager {
         if (details != null) {
           debugPrint(
               "[BookingManager] Polled details for booking ID $bookingId: $details");
-          if (details['ride_status'] == 'completed') {
+          final status = details['ride_status'];
+          // If ride ongoing, update driver location & polyline
+          if (status == 'ongoing') {
+            debugPrint(
+                "[BookingManager] Ride ongoing: refreshing driver location for booking ID $bookingId");
+            final driverDetails =
+                await DriverService().getDriverDetailsByBooking(bookingId);
+            if (driverDetails != null) {
+              _updateDriverDetails(driverDetails);
+            }
+          }
+          // When completed, navigate and cleanup
+          if (status == 'completed') {
             debugPrint(
                 "[BookingManager] Ride COMPLETED for booking ID $bookingId. Status: ${details['ride_status']}");
             timer.cancel(); // Stop this specific timer instance.
             await _handleRideCompletionNavigationAndCleanup();
           } else {
             debugPrint(
-                "[BookingManager] Ride NOT YET COMPLETED for booking ID $bookingId. Status: ${details['ride_status']}");
+                "[BookingManager] Ride NOT YET COMPLETED for booking ID $bookingId. Status: $status");
           }
         } else {
           debugPrint(

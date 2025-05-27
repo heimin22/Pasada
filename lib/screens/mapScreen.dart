@@ -90,11 +90,23 @@ class MapScreenState extends State<MapScreen>
 
   double fareAmount = 0.0;
 
+  // Field to store driver location and bus icon
+  LatLng? driverLocation;
+  late BitmapDescriptor busIcon;
+  late BitmapDescriptor pickupIcon;
+  late BitmapDescriptor dropoffIcon;
+
+  // PolylineId for the driver's live route
+  static const PolylineId driverRoutePolylineId =
+      PolylineId('driver_route_live');
+
   // Override methods
   /// state of the app
   @override
   void initState() {
     super.initState();
+    // Load custom bus icon for driver marker
+    _loadBusIcon();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -576,7 +588,8 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination,
+      {bool updateFare = true}) async {
     try {
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
@@ -690,16 +703,19 @@ class MapScreenState extends State<MapScreen>
               width: 8,
             )
           };
-
-          fareAmount = fare;
+          if (updateFare) {
+            fareAmount = fare;
+          }
         });
 
-        if (widget.onFareUpdated != null) {
-          debugPrint(
-              'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
-          widget.onFareUpdated!(fare);
-        } else {
-          debugPrint('onFareUpdated callback is null');
+        if (updateFare) {
+          if (widget.onFareUpdated != null) {
+            debugPrint(
+                'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
+            widget.onFareUpdated!(fare);
+          } else {
+            debugPrint('onFareUpdated callback is null');
+          }
         }
 
         // Add ETA update similar to generatePolylineAlongRoute
@@ -899,6 +915,48 @@ class MapScreenState extends State<MapScreen>
     showAlertDialog('Error', message);
   }
 
+  // Load the bus.svg asset as a BitmapDescriptor
+  Future<void> _loadBusIcon() async {
+    busIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/bus.png',
+    );
+    pickupIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_pickup.png',
+    );
+    dropoffIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_dropoff.png',
+    );
+  }
+
+  // Update driver marker and draw road-following polyline to pickup/dropoff
+  Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
+    if (!mounted) return;
+    setState(() {
+      driverLocation = location;
+      // Update driver marker
+      final markerId = MarkerId('driver');
+      markers[markerId] = Marker(
+        markerId: markerId,
+        position: driverLocation!,
+        icon: busIcon,
+      );
+      // Clear all existing polylines immediately
+      polylines.clear();
+    });
+
+    // Use routing API to draw polyline along roads
+    if (rideStatus == 'accepted' && widget.pickUpLocation != null) {
+      await generatePolylineBetween(location, widget.pickUpLocation!,
+          updateFare: false);
+    } else if (rideStatus == 'ongoing' && widget.dropOffLocation != null) {
+      await generatePolylineBetween(location, widget.dropOffLocation!,
+          updateFare: false);
+    }
+  }
+
   Set<Marker> buildMarkers() {
     final markerSet = <Marker>{};
 
@@ -908,7 +966,7 @@ class MapScreenState extends State<MapScreen>
       markers[pickupMarkerId] = Marker(
         markerId: pickupMarkerId,
         position: widget.pickUpLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: pickupIcon,
       );
     }
 
@@ -918,13 +976,22 @@ class MapScreenState extends State<MapScreen>
       markers[dropoffMarkerId] = Marker(
         markerId: dropoffMarkerId,
         position: widget.dropOffLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: dropoffIcon,
+      );
+    }
+
+    // Add driver marker
+    if (driverLocation != null) {
+      final driverMarkerId = MarkerId('driver');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: driverLocation!,
+        icon: busIcon,
       );
     }
 
     // Convert map to set
     markerSet.addAll(markers.values);
-
     return markerSet;
   }
 
