@@ -17,10 +17,10 @@ class SettingsProfileHeader extends StatefulWidget {
   });
 
   @override
-  _SettingsProfileHeaderState createState() => _SettingsProfileHeaderState();
+  SettingsProfileHeaderState createState() => SettingsProfileHeaderState();
 }
 
-class _SettingsProfileHeaderState extends State<SettingsProfileHeader> {
+class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
   late Future<Map<String, dynamic>?> _userFuture;
 
   @override
