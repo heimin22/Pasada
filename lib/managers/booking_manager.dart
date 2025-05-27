@@ -19,6 +19,8 @@ import 'dart:math';
 
 class BookingManager {
   final HomeScreenPageState _state;
+  bool _acceptedNotified = false;
+  bool _progressNotificationStarted = false;
   double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
 
@@ -90,6 +92,20 @@ class BookingManager {
             debugPrint(
                 "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Received newStatus '$newStatus' for booking $bookingId. Current _state.bookingStatus is '${_state.bookingStatus}'. Mounted: ${_state.mounted}");
             if (_state.mounted) {
+              if (newStatus == 'accepted' && !_acceptedNotified) {
+                _acceptedNotified = true;
+                NotificationService.showNotification(
+                  title: 'Driver Assigned',
+                  body: 'Your driver has accepted your ride and is on the way!',
+                );
+              }
+              if (newStatus == 'ongoing' && !_progressNotificationStarted) {
+                _progressNotificationStarted = true;
+                NotificationService.showRideProgressNotification(
+                  progress: 0,
+                  maxProgress: 100,
+                );
+              }
               _state.setState(() => _state.bookingStatus = newStatus);
               debugPrint(
                   "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange->setState: _state.bookingStatus is now '${_state.bookingStatus}' for booking $bookingId.");
@@ -100,13 +116,6 @@ class BookingManager {
                   newStatus == 'requested') {
                 debugPrint(
                     "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for $bookingId.");
-                if (newStatus == 'accepted') {
-                  NotificationService.showNotification(
-                    title: 'Driver Assigned',
-                    body:
-                        'Your driver has accepted your ride and is on the way!',
-                  );
-                }
                 _fetchAndUpdateBookingDetails(bookingId);
               } else {
                 debugPrint(
@@ -279,38 +288,32 @@ class BookingManager {
         _state.driverAssignmentService = DriverAssignmentService();
         _state.driverAssignmentService!.pollForDriverAssignment(
           details.bookingId,
-          // onDriverAssigned
           (driverData) {
             _loadBookingAfterDriverAssignment(details.bookingId);
           },
-          onError: () {
-            // optional error callback
-          },
+          onError: () {},
           onStatusChange: (newStatus) {
-            debugPrint(
-                "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Received newStatus '$newStatus' for booking ${details.bookingId}. Current _state.bookingStatus is '${_state.bookingStatus}'. Mounted: ${_state.mounted}");
             if (_state.mounted) {
+              if (newStatus == 'accepted' && !_acceptedNotified) {
+                _acceptedNotified = true;
+                NotificationService.showNotification(
+                  title: 'Driver Assigned',
+                  body: 'Your driver has accepted your ride and is on the way!',
+                );
+              }
+              if (newStatus == 'ongoing' && !_progressNotificationStarted) {
+                _progressNotificationStarted = true;
+                NotificationService.showRideProgressNotification(
+                  progress: 0,
+                  maxProgress: 100,
+                );
+              }
               _state.setState(() => _state.bookingStatus = newStatus);
-              debugPrint(
-                  "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange->setState: _state.bookingStatus is now '${_state.bookingStatus}' for booking ${details.bookingId}.");
-              // Call _fetchAndUpdateBookingDetails for relevant status changes
               if (newStatus == 'accepted' ||
                   newStatus == 'ongoing' ||
                   newStatus == 'completed' ||
                   newStatus == 'requested') {
-                debugPrint(
-                    "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for ${details.bookingId}.");
-                if (newStatus == 'accepted') {
-                  NotificationService.showNotification(
-                    title: 'Driver Assigned',
-                    body:
-                        'Your driver has accepted your ride and is on the way!',
-                  );
-                }
                 _fetchAndUpdateBookingDetails(details.bookingId);
-              } else {
-                debugPrint(
-                    "[BookingManager] handleBookingConfirmation->pollForDriverAssignment->onStatusChange: Status '$newStatus' does not trigger _fetchAndUpdateBookingDetails.");
               }
             }
           },
@@ -346,7 +349,8 @@ class BookingManager {
   }
 
   void handleBookingCancellation() {
-    // Remove any ongoing ride progress notification
+    _acceptedNotified = false;
+    _progressNotificationStarted = false;
     NotificationService.cancelRideProgressNotification();
     _completionTimer?.cancel();
     _completionTimer = null;
@@ -719,7 +723,8 @@ class BookingManager {
   }
 
   Future<void> _handleRideCompletionNavigationAndCleanup() async {
-    // Cancel the ride progress notification upon completion
+    _acceptedNotified = false;
+    _progressNotificationStarted = false;
     NotificationService.cancelRideProgressNotification();
     if (!_state.mounted) return;
 

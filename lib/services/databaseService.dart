@@ -1,17 +1,4 @@
-// import 'package:postgres/postgres.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:pasada_passenger_app/screens/main.dart';
-// import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
-// import 'package:pasada_passenger_app/screens/activityScreen.dart';
-// import 'package:pasada_passenger_app/authentication/createAccount.dart';
-// import 'package:pasada_passenger_app/screens/homeScreen.dart';
-// import 'package:pasada_passenger_app/authentication/loginAccount.dart';
-// import 'package:pasada_passenger_app/screens/notificationScreen.dart';
-// import 'package:pasada_passenger_app/screens/profileSettingsScreen.dart';
-// import 'package:pasada_passenger_app/screens/settingsScreen.dart';
-// import 'package:postgres/postgres.dart';
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DatabaseService {
@@ -35,8 +22,7 @@ class DatabaseService {
       // if response is successful, return true
       if (kDebugMode) print('Database connection successful');
       return true;
-    }
-    catch (e) {
+    } catch (e) {
       if (kDebugMode) print('Error connecting to the database: $e');
       return false;
     }
@@ -44,13 +30,10 @@ class DatabaseService {
 
   Future<List<Map<String, dynamic>>> fetchData() async {
     try {
-      final response = await supabase
-          .from('sampleAccount')
-          .select();
+      final response = await supabase.from('sampleAccount').select();
 
       return response;
-    }
-    catch (e) {
+    } catch (e) {
       if (kDebugMode) print('Error inserting data: $e');
       throw Exception('Failed to insert data');
     }

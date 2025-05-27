@@ -45,6 +45,23 @@ class NotificationService {
       },
     );
 
+    // Create Android notification channel for ride progress updates
+    if (Platform.isAndroid) {
+      final androidImpl = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl != null) {
+        const AndroidNotificationChannel rideProgressChannel =
+            AndroidNotificationChannel(
+          'ride_progress_channel',
+          'Ride Progress',
+          description: 'Shows driver progress towards drop-off',
+          importance: Importance.defaultImportance,
+        );
+        await androidImpl.createNotificationChannel(rideProgressChannel);
+      }
+    }
+
     // Set up FCM handlers
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
     FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
@@ -298,16 +315,16 @@ class NotificationService {
         AndroidNotificationDetails(
       'ride_progress_channel',
       'Ride Progress',
-      channelDescription: 'Shows driver progress to drop-off',
-      importance: Importance.low,
-      priority: Priority.low,
+      channelDescription: 'Shows driver progress towards drop-off',
+      importance: Importance.high,
+      priority: Priority.high,
       ongoing: true,
+      autoCancel: false,
       onlyAlertOnce: true,
       showProgress: true,
       maxProgress: maxProgress,
       progress: progress,
-      icon: 'bus',
-      largeIcon: DrawableResourceAndroidBitmap('pin_dropoff'),
+      icon: '@mipmap/ic_launcher',
     );
     final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
@@ -315,7 +332,7 @@ class NotificationService {
     await _flutterLocalNotificationsPlugin.show(
       rideProgressNotificationId,
       'Ride in Progress',
-      '\$progress% to drop-off',
+      '$progress% to drop-off',
       platformDetails,
     );
   }
