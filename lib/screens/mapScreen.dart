@@ -588,7 +588,8 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
+  Future<void> generatePolylineBetween(LatLng start, LatLng destination,
+      {bool updateFare = true}) async {
     try {
       final hasConnection = await checkNetworkConnection();
       if (!hasConnection) return;
@@ -702,16 +703,19 @@ class MapScreenState extends State<MapScreen>
               width: 8,
             )
           };
-
-          fareAmount = fare;
+          if (updateFare) {
+            fareAmount = fare;
+          }
         });
 
-        if (widget.onFareUpdated != null) {
-          debugPrint(
-              'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
-          widget.onFareUpdated!(fare);
-        } else {
-          debugPrint('onFareUpdated callback is null');
+        if (updateFare) {
+          if (widget.onFareUpdated != null) {
+            debugPrint(
+                'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
+            widget.onFareUpdated!(fare);
+          } else {
+            debugPrint('onFareUpdated callback is null');
+          }
         }
 
         // Add ETA update similar to generatePolylineAlongRoute
@@ -945,9 +949,11 @@ class MapScreenState extends State<MapScreen>
 
     // Use routing API to draw polyline along roads
     if (rideStatus == 'accepted' && widget.pickUpLocation != null) {
-      await generatePolylineBetween(location, widget.pickUpLocation!);
+      await generatePolylineBetween(location, widget.pickUpLocation!,
+          updateFare: false);
     } else if (rideStatus == 'ongoing' && widget.dropOffLocation != null) {
-      await generatePolylineBetween(location, widget.dropOffLocation!);
+      await generatePolylineBetween(location, widget.dropOffLocation!,
+          updateFare: false);
     }
   }
 
