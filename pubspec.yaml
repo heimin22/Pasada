@@ -45,6 +45,7 @@ dependencies:
   flutter_google_maps_webservices: ^1.1.1
   flutter_local_notifications: ^19.1.0
   flutter_markdown: ^0.7.7
+  flutter_native_splash: ^2.4.6
   flutter_polyline_points: ^2.1.0
   flutter_svg: ^2.1.0
   flutter_typeahead: ^5.2.0
@@ -87,6 +88,12 @@ dev_dependencies:
   logger: ^2.5.0
   mockito: ^5.4.5
   test: ^1.25.8
+
+flutter_native_splash:
+  image: "assets/png/pasadaAppIcon.png"
+  android: true
+  ios: true
+  web: false
 
 flutter_launcher_icons:
   android: true
