@@ -91,7 +91,6 @@ dev_dependencies:
 
 flutter_native_splash:
   image: "assets/png/pasadaAppIcon.png"
-  color: "#F5F5F5"
   android: true
   ios: true
   web: false
