@@ -4,6 +4,7 @@ import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
+import 'package:pasada_passenger_app/widgets/check_painter.dart';
 
 class CompletedRideScreen extends StatefulWidget {
   final DateTime arrivedTime;
@@ -132,19 +133,32 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                 height: 120,
                 child: AnimatedBuilder(
                   animation: _controller,
-                  builder: (_, child) {
-                    return CustomPaint(
-                      painter: CirclePainter(progress: _circleAnimation.value),
-                      child: Center(
-                        child: Opacity(
+                  builder: (_, __) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          painter:
+                              CirclePainter(progress: _circleAnimation.value),
+                          size: const Size(120, 120),
+                        ),
+                        CustomPaint(
+                          painter:
+                              CheckPainter(progress: _checkAnimation.value),
+                          size: const Size(120, 120),
+                        ),
+                        Opacity(
                           opacity: _checkAnimation.value,
                           child: Transform.scale(
                             scale: _checkAnimation.value,
-                            child: const Icon(Icons.check,
-                                size: 60, color: Colors.green),
+                            child: const Icon(
+                              Icons.check,
+                              size: 60,
+                              color: Color(0xFF00CC58),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),
