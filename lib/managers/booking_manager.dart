@@ -15,6 +15,7 @@ import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'dart:async';
 import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/services/eta_service.dart';
 import 'dart:math';
 
 class BookingManager {
@@ -297,7 +298,7 @@ class BookingManager {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showNotification(
-                  title: 'Driver Assigned',
+                  title: 'Yun, may driver ka na boss!',
                   body: 'Your driver has accepted your ride and is on the way!',
                 );
               }
@@ -323,8 +324,8 @@ class BookingManager {
               barrierDismissible: false,
               builder: (ctx) => ResponsiveDialog(
                 title: 'No Drivers Available',
-                content: const Text(
-                    'Booking cancelled due to no available drivers.'),
+                content:
+                    const Text('Yun nga lang, walang driver. Hehe sorry boss.'),
                 actions: [
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx),
@@ -477,15 +478,40 @@ class BookingManager {
       if (dropoff != null) {
         _initialDistanceToDropoff ??= _calculateDistance(driverLatLng, dropoff);
         final currentDistance = _calculateDistance(driverLatLng, dropoff);
-        final progress = (((_initialDistanceToDropoff! - currentDistance) /
+        final int progress = (((_initialDistanceToDropoff! - currentDistance) /
                     _initialDistanceToDropoff!) *
                 100)
             .clamp(0, 100)
             .round();
-        NotificationService.showRideProgressNotification(
-          progress: progress,
-          maxProgress: 100,
-        );
+        // Compute ETA using external service
+        try {
+          final etaService = ETAService();
+          final etaResp = await etaService.getETAWithGemini({
+            'origin': {
+              'lat': driverLatLng.latitude,
+              'lng': driverLatLng.longitude,
+            },
+            'destination': {
+              'lat': dropoff.latitude,
+              'lng': dropoff.longitude,
+            },
+          });
+          final int etaSec = (etaResp['eta_seconds'] as int?) ?? 0;
+          final int etaMin = (etaSec / 60).ceil();
+          final String etaTitle =
+              etaMin > 0 ? 'Arriving at $etaMin min' : 'Arriving';
+          await NotificationService.showRideProgressNotification(
+            progress: progress,
+            maxProgress: 100,
+            title: etaTitle,
+          );
+        } catch (e) {
+          await NotificationService.showRideProgressNotification(
+            progress: progress,
+            maxProgress: 100,
+            title: 'Arriving',
+          );
+        }
       }
     }
 
