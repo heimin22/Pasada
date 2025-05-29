@@ -47,15 +47,25 @@ class _SeatingPreferenceSheetContentState
     required Color unselectedTextColor,
   }) {
     final bool isSelected = tempSelection == value;
+
+    Color effectiveCardColor;
+    if (isSelected) {
+      effectiveCardColor = isDarkMode
+          // Original selectedColor (0xFF00D65C) with 25% opacity for dark mode
+          ? const Color(0x4000D65C)
+          // Original Colors.green.shade600 (0xFF388E3C) with 15% opacity for light mode
+          : const Color(0x26388E3C);
+    } else {
+      effectiveCardColor = isDarkMode ? Colors.grey[800]! : Colors.white;
+    }
+
     return GestureDetector(
       onTap: () => setState(() => tempSelection = value),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? selectedColor.withOpacity(isDarkMode ? 0.25 : 0.15)
-              : (isDarkMode ? Colors.grey[800] : Colors.white),
+          color: effectiveCardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? selectedColor : unselectedBorderColor,
@@ -64,7 +74,9 @@ class _SeatingPreferenceSheetContentState
           boxShadow: isSelected && !isDarkMode
               ? [
                   BoxShadow(
-                    color: selectedColor.withOpacity(0.2),
+                    color: isDarkMode
+                        ? const Color(0x4000D65C).withAlpha(50)
+                        : const Color(0x26388E3C).withAlpha(50),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   )
