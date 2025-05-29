@@ -94,22 +94,23 @@ class BookingService {
     try {
       final apiService = ApiService();
 
-      // Call the backend endpoint that maps to requestTrip
-      // This endpoint will create the booking and attempt to assign a driver.
+      // Build and log the request body to ensure seat_type is included
+      final requestBody = {
+        'route_trip': routeId,
+        'origin_latitude': pickupCoordinates.latitude,
+        'origin_longitude': pickupCoordinates.longitude,
+        'pickup_address': pickupAddress,
+        'destination_latitude': dropoffCoordinates.latitude,
+        'destination_longitude': dropoffCoordinates.longitude,
+        'dropoff_address': dropoffAddress,
+        'fare': fare,
+        'payment_method': paymentMethod,
+        'seat_type': seatingPreference,
+      };
+      debugPrint('BookingService.createBooking request body: $requestBody');
       final response = await apiService.post<Map<String, dynamic>>(
-        'bookings/assign-driver', // Assuming this is the endpoint for requestTrip
-        body: {
-          // Parameters expected by requestTrip backend function
-          'route_trip': routeId,
-          'origin_latitude': pickupCoordinates.latitude,
-          'origin_longitude': pickupCoordinates.longitude,
-          'pickup_address': pickupAddress,
-          'destination_latitude': dropoffCoordinates.latitude,
-          'destination_longitude': dropoffCoordinates.longitude,
-          'dropoff_address': dropoffAddress,
-          'fare': fare,
-          'payment_method': paymentMethod,
-        },
+        'bookings/assign-driver',
+        body: requestBody,
       );
 
       if (response != null && response.containsKey('booking')) {
@@ -131,6 +132,7 @@ class BookingService {
         final backendDropoffLng =
             (bookingData['dropoff_lng'] as num).toDouble();
         final backendFare = (bookingData['fare'] as num).toDouble();
+        final backendSeatType = (bookingData['seat_type'] as String?) ?? 'Any';
         final createdAtString = bookingData['created_at'] as String;
         final assignedAtString = bookingData['assigned_at'] as String?;
 
@@ -150,6 +152,7 @@ class BookingService {
           pickupCoordinates: LatLng(backendPickupLat, backendPickupLng),
           dropoffAddress: backendDropoffAddress,
           dropoffCoordinates: LatLng(backendDropoffLat, backendDropoffLng),
+          seatType: backendSeatType,
           startTime: TimeOfDay.fromDateTime(
               createdAtDateTime), // Using createdAt for startTime
           createdAt: createdAtDateTime,
@@ -185,6 +188,7 @@ class BookingService {
                   startTime: bookingDetails.startTime,
                   createdAt: bookingDetails.createdAt,
                   fare: bookingDetails.fare,
+                  seatType: bookingDetails.seatType,
                   assignedAt: DateTime.now(),
                   endTime: bookingDetails.endTime,
                 );
@@ -245,42 +249,42 @@ class BookingService {
   }
 
   // Save booking to local SQLite database
-  Future<void> _saveBookingLocally({
-    required int bookingId,
-    required String passengerId,
-    required int routeId,
-    required String pickupAddress,
-    required LatLng pickupCoordinates,
-    required String dropoffAddress,
-    required LatLng dropoffCoordinates,
-    required double fare,
-  }) async {
-    final now = DateTime.now();
+  // Future<void> _saveBookingLocally({
+  //   required int bookingId,
+  //   required String passengerId,
+  //   required int routeId,
+  //   required String pickupAddress,
+  //   required LatLng pickupCoordinates,
+  //   required String dropoffAddress,
+  //   required LatLng dropoffCoordinates,
+  //   required double fare,
+  // }) async {
+  //   final now = DateTime.now();
 
-    final bookingDetails = BookingDetails(
-      bookingId: bookingId,
-      passengerId: passengerId,
-      driverId: 0, // Will be updated when a driver is assigned
-      routeId: routeId,
-      rideStatus: 'requested', // initial status for new bookings
-      pickupAddress: pickupAddress,
-      pickupCoordinates: pickupCoordinates,
-      dropoffAddress: dropoffAddress,
-      dropoffCoordinates: dropoffCoordinates,
-      startTime: TimeOfDay.now(),
-      createdAt: now,
-      fare: fare,
-      assignedAt: now,
-      endTime: TimeOfDay.now(),
-    );
+  //   final bookingDetails = BookingDetails(
+  //     bookingId: bookingId,
+  //     passengerId: passengerId,
+  //     driverId: 0, // Will be updated when a driver is assigned
+  //     routeId: routeId,
+  //     rideStatus: 'requested', // initial status for new bookings
+  //     pickupAddress: pickupAddress,
+  //     pickupCoordinates: pickupCoordinates,
+  //     dropoffAddress: dropoffAddress,
+  //     dropoffCoordinates: dropoffCoordinates,
+  //     startTime: TimeOfDay.now(),
+  //     createdAt: now,
+  //     fare: fare,
+  //     assignedAt: now,
+  //     endTime: TimeOfDay.now(),
+  //   );
 
-    try {
-      await _localDbService.saveBookingDetails(bookingDetails);
-      debugPrint('Successfully saved booking $bookingId to local database');
-    } catch (e) {
-      debugPrint('Error saving booking to local database: $e');
-    }
-  }
+  //   try {
+  //     await _localDbService.saveBookingDetails(bookingDetails);
+  //     debugPrint('Successfully saved booking $bookingId to local database');
+  //   } catch (e) {
+  //     debugPrint('Error saving booking to local database: $e');
+  //   }
+  // }
 
   // Update booking status both in Supabase and locally
   Future<void> updateBookingStatus(int bookingId, String newStatus) async {
@@ -337,6 +341,7 @@ class BookingService {
           startTime: TimeOfDay.now(),
           createdAt: DateTime.now(),
           fare: (apiBooking['fare'] as num? ?? 0.0).toDouble(),
+          seatType: apiBooking['seat_type'] ?? 'Any',
           assignedAt: DateTime.now(),
           endTime: TimeOfDay.now(),
         );
@@ -392,12 +397,24 @@ class BookingService {
       final apiService = ApiService();
       final response =
           await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
-
-      if (response != null && response.containsKey('trip')) {
-        debugPrint('Retrieved booking details from API: ${response['trip']}');
+      if (response == null) {
+        debugPrint('getBookingDetails: response null for booking $bookingId');
+        return null;
+      }
+      // If wrapped under 'trip', unwrap
+      if (response.containsKey('trip') &&
+          response['trip'] is Map<String, dynamic>) {
+        debugPrint('getBookingDetails: unwrapped trip for booking $bookingId');
         return response['trip'] as Map<String, dynamic>;
       }
-      return null;
+      // If response directly has ride_status, return it
+      if (response.containsKey('ride_status')) {
+        debugPrint('getBookingDetails: direct response for booking $bookingId');
+        return response;
+      }
+      // Fallback: return the entire response
+      debugPrint('getBookingDetails: fallback response for booking $bookingId');
+      return response;
     } catch (e) {
       debugPrint('Error fetching booking details from API: $e');
       return null;

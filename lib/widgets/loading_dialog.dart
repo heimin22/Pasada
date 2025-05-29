@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
+import 'dart:async';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class LoadingDialog extends StatelessWidget {
   final String message;
@@ -66,6 +68,7 @@ class InitializationService {
         _preloadUserPreferences(),
         _initializeLocalDatabase(),
         _configureNotifications(),
+        _preloadGoogleMap(context),
       ]);
 
       // Load user profile data if authenticated
@@ -136,5 +139,32 @@ class InitializationService {
     } catch (e) {
       debugPrint('Error loading user profile: $e');
     }
+  }
+
+  // Preload a hidden GoogleMap to warm up the map rendering engine
+  static Future<void> _preloadGoogleMap(BuildContext context) async {
+    final completer = Completer<GoogleMapController>();
+    final overlay = Overlay.of(context);
+    final entry = OverlayEntry(
+        builder: (_) => SizedBox(
+              width: 0,
+              height: 0,
+              child: GoogleMap(
+                initialCameraPosition: const CameraPosition(
+                  target: LatLng(0, 0),
+                  zoom: 1,
+                ),
+                onMapCreated: (controller) {
+                  completer.complete(controller);
+                },
+              ),
+            ));
+    overlay.insert(entry);
+    try {
+      await completer.future.timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // ignore timeout or errors
+    }
+    entry.remove();
   }
 }

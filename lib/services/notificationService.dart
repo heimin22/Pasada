@@ -15,6 +15,8 @@ class NotificationService {
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
 
+  static const int rideProgressNotificationId = 1;
+
   static Future<void> initialize() async {
     await _requestPermissions();
 
@@ -42,6 +44,23 @@ class NotificationService {
         _handleNotificationTap();
       },
     );
+
+    // Create Android notification channel for ride progress updates
+    if (Platform.isAndroid) {
+      final androidImpl = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl != null) {
+        const AndroidNotificationChannel rideProgressChannel =
+            AndroidNotificationChannel(
+          'ride_progress_channel',
+          'Ride Progress',
+          description: 'Shows driver progress towards drop-off',
+          importance: Importance.defaultImportance,
+        );
+        await androidImpl.createNotificationChannel(rideProgressChannel);
+      }
+    }
 
     // Set up FCM handlers
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -285,5 +304,46 @@ class NotificationService {
     } catch (e) {
       debugPrint('Error in saveTokenToDatabase: $e');
     }
+  }
+
+  /// Shows an ongoing ride progress notification with a progress bar.
+  static Future<void> showRideProgressNotification({
+    required int progress,
+    required int maxProgress,
+    String title = 'Arriving',
+  }) async {
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'ride_progress_channel',
+      'Ride Progress',
+      channelDescription: 'Shows driver progress towards drop-off',
+      importance: Importance.high,
+      priority: Priority.high,
+      ongoing: true,
+      autoCancel: false,
+      onlyAlertOnce: true,
+      showProgress: true,
+      maxProgress: maxProgress,
+      progress: progress,
+      icon: '@mipmap/ic_launcher',
+      styleInformation: BigTextStyleInformation(
+        '$progress% to drop-off',
+        contentTitle: title,
+      ),
+    );
+    final NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+    await _flutterLocalNotificationsPlugin.show(
+      rideProgressNotificationId,
+      title,
+      '$progress% to drop-off',
+      platformDetails,
+    );
+  }
+
+  /// Cancels the ride progress notification.
+  static Future<void> cancelRideProgressNotification() async {
+    await _flutterLocalNotificationsPlugin.cancel(rideProgressNotificationId);
   }
 }

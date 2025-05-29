@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:math';
 
-class SettingsProfileHeader extends StatelessWidget {
+class SettingsProfileHeader extends StatefulWidget {
   final AuthService authService;
   final double screenHeight;
   final double screenWidth;
@@ -16,6 +17,23 @@ class SettingsProfileHeader extends StatelessWidget {
   });
 
   @override
+  SettingsProfileHeaderState createState() => SettingsProfileHeaderState();
+}
+
+class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
+  late Future<Map<String, dynamic>?> _userFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    _userFuture = widget.authService.getCurrentUserData();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -26,7 +44,7 @@ class SettingsProfileHeader extends StatelessWidget {
     }
 
     return FutureBuilder<Map<String, dynamic>?>(
-      future: authService.getCurrentUserData(),
+      future: _userFuture,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           debugPrint('Error: ${snapshot.error}');
@@ -42,31 +60,30 @@ class SettingsProfileHeader extends StatelessWidget {
         return Container(
           width: double.infinity,
           color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-          height: screenHeight * 0.13,
           padding: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.06,
-            vertical: screenHeight * 0.03,
+            horizontal: widget.screenWidth * 0.06,
+            vertical: widget.screenHeight * 0.06,
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               buildProfileAvatar(avatarUrl),
-              SizedBox(width: screenWidth * 0.06),
+              SizedBox(width: widget.screenWidth * 0.08),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: screenHeight * 0.008),
+                  SizedBox(height: widget.screenHeight * 0.008),
                   Text(
                     userName,
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: isDarkMode
                           ? const Color(0xFFF5F5F5)
                           : const Color(0xFF121212),
                     ),
                   ),
-                  SizedBox(height: screenHeight * 0.005),
+                  SizedBox(height: widget.screenHeight * 0.005),
                   buildEditProfile(context),
                 ],
               )
@@ -78,9 +95,13 @@ class SettingsProfileHeader extends StatelessWidget {
   }
 
   Widget buildProfileAvatar(String? avatarUrl) {
+    // calculate dynamic avatar size based on screen dimensions
+    final double avatarDiameter =
+        min(widget.screenWidth, widget.screenHeight) * 0.23;
+    final double avatarRadius = avatarDiameter / 2;
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return CircleAvatar(
-        radius: screenWidth * 0.07,
+        radius: avatarRadius,
         backgroundColor: Colors.transparent,
         child: ClipOval(
           child: CachedNetworkImage(
@@ -88,8 +109,8 @@ class SettingsProfileHeader extends StatelessWidget {
             placeholder: (context, url) => const CircularProgressIndicator(),
             errorWidget: (context, url, error) => buildDefaultAvatar(),
             fit: BoxFit.cover,
-            width: screenWidth * 0.14,
-            height: screenWidth * 0.14,
+            width: avatarDiameter,
+            height: avatarDiameter,
           ),
         ),
       );
@@ -98,12 +119,16 @@ class SettingsProfileHeader extends StatelessWidget {
   }
 
   Widget buildDefaultAvatar() {
+    // default avatar with same dynamic sizing
+    final double avatarDiameter =
+        min(widget.screenWidth, widget.screenHeight) * 0.23;
+    final double avatarRadius = avatarDiameter / 2;
     return CircleAvatar(
-      radius: screenWidth * 0.07,
+      radius: avatarRadius,
       backgroundColor: const Color(0xFF00CC58),
       child: Icon(
         Icons.person,
-        size: screenWidth * 0.1,
+        size: avatarDiameter * 0.5,
         color: const Color(0xFFF5F5F5),
       ),
     );
@@ -111,32 +136,39 @@ class SettingsProfileHeader extends StatelessWidget {
 
   Widget buildEditProfile(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(
+    return TextButton(
+      onPressed: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const EditProfileScreen(),
           ),
         );
+        setState(() {
+          _loadUserData();
+        });
       },
+      style: TextButton.styleFrom(
+        padding: EdgeInsets.zero,
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Edit profile',
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               color: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
             ),
           ),
-          SizedBox(width: screenWidth * 0.01),
+          SizedBox(width: widget.screenWidth * 0.01),
           Icon(
             Icons.arrow_forward,
-            size: 15,
+            size: 16,
             color:
                 isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),

@@ -4,11 +4,11 @@ import 'payment_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import '../location/selectedLocation.dart';
+import 'dart:async';
 
-class BookingStatusManager extends StatelessWidget {
+class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
   final SelectedLocation? dropoffLocation;
-  final String ETA;
   final String paymentMethod;
   final double fare;
   final VoidCallback onCancelBooking;
@@ -23,7 +23,6 @@ class BookingStatusManager extends StatelessWidget {
     super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
-    required this.ETA,
     required this.paymentMethod,
     required this.fare,
     required this.onCancelBooking,
@@ -36,85 +35,164 @@ class BookingStatusManager extends StatelessWidget {
   });
 
   @override
+  State<BookingStatusManager> createState() => _BookingStatusManagerState();
+}
+
+class _BookingStatusManagerState extends State<BookingStatusManager> {
+  bool _showLoading = false;
+  Timer? _debounceTimer;
+  final Duration _debounceDuration = const Duration(seconds: 1);
+
+  @override
+  void didUpdateWidget(covariant BookingStatusManager oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final bool currentlyNeedsLoadingIndicator =
+        widget.bookingStatus == 'requested' ||
+            (widget.bookingStatus == 'accepted' &&
+                widget.isDriverAssigned &&
+                (widget.driverName.isEmpty ||
+                    widget.driverName == 'Driver' ||
+                    widget.driverName == 'Not Available'));
+
+    if (currentlyNeedsLoadingIndicator && !_showLoading) {
+      _debounceTimer?.cancel();
+      _debounceTimer = Timer(_debounceDuration, () {
+        if (mounted) setState(() => _showLoading = true);
+      });
+    } else if (!currentlyNeedsLoadingIndicator && _showLoading) {
+      _debounceTimer?.cancel();
+      // If mounted check is good practice before setState
+      if (mounted) setState(() => _showLoading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  Widget _buildAcceptedStatusContent() {
+    final bool driverDetailsAreValid = widget.isDriverAssigned &&
+        widget.driverName.isNotEmpty &&
+        widget.driverName != 'Driver' &&
+        widget.driverName != 'Not Available';
+
+    if (driverDetailsAreValid) {
+      return DriverDetailsContainer(
+        driverName: widget.driverName,
+        plateNumber: widget.plateNumber,
+        phoneNumber: widget.phoneNumber,
+      );
+    } else {
+      // Show loading if booking is 'accepted' but driver details are not yet valid/available.
+      return const DriverLoadingContainer();
+    }
+  }
+
+  Widget _buildCancelledStatusContent(bool isDarkMode) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Colors.orange,
+                size: 24,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Your booking has been cancelled',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
-    // Log the current status and driver details for debugging
-    debugPrint(
-        'BookingStatusManager - Status: $bookingStatus, Driver assigned: $isDriverAssigned');
-    if (bookingStatus == 'accepted' || isDriverAssigned) {
-      debugPrint(
-          'Driver details - Name: $driverName, Plate: $plateNumber, Phone: $phoneNumber');
+    if (widget.bookingStatus == 'requested') {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const DriverLoadingContainer(),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                backgroundColor: Colors.redAccent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                textStyle:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              onPressed: widget.onCancelBooking,
+              child: const Text(
+                'Cancel Booking',
+                style: TextStyle(
+                  color: Color(0xFFF5F5F5),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
     }
 
     return Scrollbar(
       child: SingleChildScrollView(
         child: Column(
           children: [
-            if (bookingStatus == 'accepted' || isDriverAssigned)
-              DriverDetailsContainer(
-                driverName: driverName,
-                plateNumber: plateNumber,
-                phoneNumber: phoneNumber,
-              )
-            else if (bookingStatus == 'requested')
-              const DriverLoadingContainer()
-            else if (bookingStatus == 'cancelled')
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? const Color(0xFF1E1E1E)
-                      : const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      spreadRadius: 0,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          color: Colors.orange,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            'Your booking has been cancelled',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            if (widget.bookingStatus == 'accepted' ||
+                widget.bookingStatus == 'ongoing') ...[
+              _buildAcceptedStatusContent(),
+              BookingDetailsContainer(
+                pickupLocation: widget.pickupLocation,
+                dropoffLocation: widget.dropoffLocation,
               ),
-            BookingDetailsContainer(
-              pickupLocation: pickupLocation,
-              dropoffLocation: dropoffLocation,
-              etaText: ETA,
-            ),
-            PaymentDetailsContainer(
-              paymentMethod: paymentMethod,
-              onCancelBooking: onCancelBooking,
-              fare: fare,
-              showCancelButton: bookingStatus == 'requested',
-            )
+              PaymentDetailsContainer(
+                paymentMethod: widget.paymentMethod,
+                onCancelBooking: widget.onCancelBooking,
+                fare: widget.fare,
+                showCancelButton:
+                    false, // Cancel button likely not needed for 'ongoing'
+              ),
+            ] else if (widget.bookingStatus == 'cancelled')
+              _buildCancelledStatusContent(isDarkMode),
           ],
         ),
       ),
