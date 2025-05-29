@@ -3,7 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'dart:math' as math;
+// import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -505,24 +505,12 @@ class MapScreenState extends State<MapScreen>
 
       // Update UI with the polyline
       if (mounted) {
+        // Clear overlays and add end-of-route marker
         setState(() {
           polylines.clear();
-          polylines[const PolylineId('route_path')] = Polyline(
-            polylineId: const PolylineId('route_path'),
-            points: polylineCoordinates,
-            color: const Color(0xFFFFCE21),
-            width: 8,
-          );
-
-          // Add destination marker if provided
           if (destinationCoordinates != null) {
-            // Create a custom marker for the destination
             final BitmapDescriptor customIcon =
-                BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueRed,
-            );
-
-            // Add the destination marker
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
             final markerId = MarkerId('route_destination');
             markers[markerId] = Marker(
               markerId: markerId,
@@ -533,42 +521,40 @@ class MapScreenState extends State<MapScreen>
                 snippet: destinationName ?? 'Final destination',
               ),
             );
-
-            // Show the info window immediately
-            Future.delayed(Duration(milliseconds: 500), () async {
+            Future.delayed(const Duration(milliseconds: 500), () async {
               if (mounted) {
                 final GoogleMapController controller =
                     await mapController.future;
                 controller.showMarkerInfoWindow(markerId);
               }
             });
-
-            // Enable the route end indicator
             showRouteEndIndicator = true;
             routeEndName = destinationName ?? 'End of Route';
           }
         });
-
-        // Calculate bounds for camera
+        // Animate the route drawing for smooth transition
+        animateRouteDrawing(
+          const PolylineId('route_path'),
+          polylineCoordinates,
+          const Color(0xFFFFCE21),
+          8,
+        );
+        // Zoom camera to fit the route
         double southLat = polylineCoordinates.first.latitude;
         double northLat = polylineCoordinates.first.latitude;
         double westLng = polylineCoordinates.first.longitude;
         double eastLng = polylineCoordinates.first.longitude;
-
-        for (LatLng point in polylineCoordinates) {
-          southLat = math.min(southLat, point.latitude);
-          northLat = math.max(northLat, point.latitude);
-          westLng = math.min(westLng, point.longitude);
-          eastLng = math.max(eastLng, point.longitude);
+        for (var point in polylineCoordinates) {
+          southLat = min(southLat, point.latitude);
+          northLat = max(northLat, point.latitude);
+          westLng = min(westLng, point.longitude);
+          eastLng = max(eastLng, point.longitude);
         }
-
-        // Add padding to the bounds
-        final double padding = 0.01;
+        const double padding = 0.01;
         southLat -= padding;
         northLat += padding;
         westLng -= padding;
         eastLng += padding;
-
         final GoogleMapController controller = await mapController.future;
         controller.animateCamera(
           CameraUpdate.newLatLngBounds(
@@ -579,14 +565,6 @@ class MapScreenState extends State<MapScreen>
             20,
           ),
         );
-
-        // Debug the points to verify they're in the correct order
-        debugPrint(
-            'Route points in order (${polylineCoordinates.length} points):');
-        for (int i = 0; i < polylineCoordinates.length; i++) {
-          debugPrint(
-              'Point $i: ${polylineCoordinates[i].latitude}, ${polylineCoordinates[i].longitude}');
-        }
       }
     } catch (e) {
       debugPrint('Error generating route polyline: $e');
@@ -603,22 +581,20 @@ class MapScreenState extends State<MapScreen>
       final cachedPolyline = MemoryManager.instance.getFromCache(cacheKey);
       if (cachedPolyline is List<LatLng>) {
         if (mounted) {
+          // calculate fare immediately
           final double routeDistance = getRouteDistance(cachedPolyline);
           final double fare = calculateFare(routeDistance);
-          setState(() {
-            polylines = {
-              const PolylineId('route'): Polyline(
-                polylineId: const PolylineId('route'),
-                points: cachedPolyline,
-                color: Color.fromARGB(255, 4, 197, 88),
-                width: 8,
-              )
-            };
-            if (updateFare) fareAmount = fare;
-          });
-          if (updateFare && widget.onFareUpdated != null) {
-            widget.onFareUpdated!(fare);
+          if (updateFare) {
+            fareAmount = fare;
+            if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
           }
+          // animate the cached route drawing
+          animateRouteDrawing(
+            const PolylineId('route'),
+            cachedPolyline,
+            const Color.fromARGB(255, 4, 197, 88),
+            8,
+          );
         }
         // Cached polyline used, skip network call
         return;
@@ -730,19 +706,17 @@ class MapScreenState extends State<MapScreen>
         debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
         debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
 
-        setState(() {
-          polylines = {
-            const PolylineId('route'): Polyline(
-              polylineId: const PolylineId('route'),
-              points: polylineCoordinates,
-              color: Color.fromARGB(255, 4, 197, 88),
-              width: 8,
-            )
-          };
-          if (updateFare) {
-            fareAmount = fare;
-          }
-        });
+        // update fare immediately
+        if (updateFare) {
+          fareAmount = fare;
+        }
+        // animate the route drawing
+        animateRouteDrawing(
+          const PolylineId('route'),
+          polylineCoordinates,
+          const Color.fromARGB(255, 4, 197, 88),
+          8,
+        );
 
         if (updateFare) {
           if (widget.onFareUpdated != null) {
@@ -1061,6 +1035,9 @@ class MapScreenState extends State<MapScreen>
           points: polylineCoordinates!,
           color: const Color.fromARGB(255, 10, 179, 83),
           width: 8,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
         );
       });
     }
@@ -1220,24 +1197,46 @@ class MapScreenState extends State<MapScreen>
 
     routeSegment.add(end); // Add actual end point
 
-    // Update the polyline
-    setState(() {
-      polylines.clear();
-      polylines[const PolylineId('route_path')] = Polyline(
-        polylineId: const PolylineId('route_path'),
-        points: routeSegment,
-        color: Color.fromARGB(255, 4, 197, 88),
-        width: 8,
-      );
+    // calculate and update fare immediately
+    final double routeDistance = getRouteDistance(routeSegment);
+    final double fare = calculateFare(routeDistance);
+    fareAmount = fare;
+    if (widget.onFareUpdated != null) {
+      widget.onFareUpdated!(fare);
+    }
+    // animate the route segment drawing
+    animateRouteDrawing(
+      const PolylineId('route_path'),
+      routeSegment,
+      const Color.fromARGB(255, 4, 197, 88),
+      8,
+    );
+  }
 
-      // Calculate fare based on this segment
-      final double routeDistance = getRouteDistance(routeSegment);
-      final double fare = calculateFare(routeDistance);
-      fareAmount = fare;
-
-      if (widget.onFareUpdated != null) {
-        widget.onFareUpdated!(fare);
+  // Helper to animate drawing a polyline point-by-point
+  void animateRouteDrawing(
+      PolylineId id, List<LatLng> fullRoute, Color color, int width) {
+    // Cancel any existing polyline with this id
+    polylines.remove(id);
+    int count = 0;
+    final total = fullRoute.length;
+    Timer.periodic(const Duration(milliseconds: 26), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
       }
+      count += 2;
+      final int currentCount = count.clamp(0, total);
+      final segment = fullRoute.sublist(0, currentCount);
+      setState(() {
+        polylines[id] = Polyline(
+          polylineId: id,
+          points: segment,
+          color: color,
+          width: width,
+        );
+      });
+      if (count >= total) timer.cancel();
     });
   }
 
