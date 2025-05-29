@@ -1234,6 +1234,9 @@ class MapScreenState extends State<MapScreen>
           points: segment,
           color: color,
           width: width,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+          jointType: JointType.round,
         );
       });
       if (count >= total) timer.cancel();
