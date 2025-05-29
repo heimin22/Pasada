@@ -687,198 +687,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               ),
             ),
           ),
-          if (widget.isPickup) ...[
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final Location locationService = Location();
-                  try {
-                    final LocationData locationData =
-                        await locationService.getLocation();
-                    final LatLng currentLatLng =
-                        LatLng(locationData.latitude!, locationData.longitude!);
-
-                    // Check if current location is near the route
-                    bool isNearRoute = true;
-                    if (widget.routePolyline != null &&
-                        widget.routePolyline!.isNotEmpty) {
-                      isNearRoute = isPointNearPolyline(currentLatLng, 100);
-                    }
-
-                    if (!isNearRoute) {
-                      // Show warning dialog
-                      final bool? proceed = await showDialog<bool>(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext context) {
-                          final isDarkMode =
-                              Theme.of(context).brightness == Brightness.dark;
-                          return AlertDialog(
-                            contentPadding: const EdgeInsets.all(24),
-                            title: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Location Warning',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'Inter',
-                                    fontSize: 24,
-                                    color: isDarkMode
-                                        ? const Color(0xFFF5F5F5)
-                                        : const Color(0xFF121212),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Container(
-                                  height: 1,
-                                  color: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212),
-                                  width: double.infinity,
-                                ),
-                              ],
-                            ),
-                            content: Text(
-                              'Your current location is not within the selected route.',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212),
-                              ),
-                            ),
-                            actions: [
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00CC58),
-                                    foregroundColor: const Color(0xFFF5F5F5),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10.0),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12),
-                                  ),
-                                  child: Text(
-                                    'OK',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      color: const Color(0xFFF5F5F5),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-
-                      if (proceed != true) return;
-                    }
-
-                    // Check if current location is near final stop for pick-up
-                    if (widget.isPickup && widget.routeID != null) {
-                      final isNearFinalStop =
-                          await isLocationNearFinalStop(currentLatLng);
-                      if (isNearFinalStop) {
-                        final isDarkMode =
-                            Theme.of(context).brightness == Brightness.dark;
-                        await showDialog(
-                          context: context,
-                          builder: (context) => ResponsiveDialog(
-                            title: 'Invalid Pick-up Location',
-                            contentPadding: const EdgeInsets.all(24),
-                            content: Text(
-                              'Your current location is too close to the final stop of the route. Please select a different pick-up location.',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212),
-                              ),
-                            ),
-                            actions: [
-                              ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  backgroundColor: const Color(0xFF00CC58),
-                                  foregroundColor: const Color(0xFFF5F5F5),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 12),
-                                ),
-                                child: const Text(
-                                  'OK',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Inter',
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                        return;
-                      }
-                    }
-
-                    final SelectedLocation? currentLocation =
-                        await reverseGeocode(currentLatLng);
-                    if (currentLocation != null && mounted) {
-                      Navigator.pop(
-                        context,
-                        SelectedLocation(currentLocation.address,
-                            currentLocation.coordinates),
-                      );
-                    }
-                  } catch (e) {
-                    debugPrint("Error getting location: $e");
-                  }
-                },
-                icon: SvgPicture.asset(
-                  'assets/svg/navigation.svg',
-                  height: 16,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF121212),
-                    BlendMode.srcIn,
-                  ),
-                ),
-                label: const Text(
-                  'Use My Current Location',
-                  style: TextStyle(
-                    color: Color(0xFF121212),
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFCE21),
-                  foregroundColor: const Color(0xFF121212),
-                  elevation: 0,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 85),
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(10)),
-                  ),
-                ),
-              ),
-            ),
-          ],
           Divider(
             height: 0,
             thickness: 2,
@@ -1040,67 +848,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               ),
             ),
           ],
-          // Pin location button at the bottom
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PinLocationStateful(
-                      locationType: widget.isPickup ? 'pickup' : 'dropoff',
-                      routePolyline: widget.routePolyline,
-                      onLocationSelected: (SelectedLocation selectedLocation) {
-                        Navigator.pop(context, selectedLocation);
-                      }, // Pass the polyline
-                    ),
-                  ),
-                ).then((result) {
-                  if (result != null && result is SelectedLocation) {
-                    Navigator.pop(context, result);
-                  }
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isDarkMode
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF5F5F5),
-                foregroundColor: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(0),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.map,
-                    size: 20,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "Pin on Maps",
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -1133,67 +880,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       debugPrint("Error in reverseGeocode: $e");
     }
     return null;
-  }
-
-  Widget pinFromTheMaps() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFFD2D2D2),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PinLocationStateful(
-                locationType: widget.isPickup ? 'pickup' : 'dropoff',
-                routePolyline: widget.routePolyline,
-                onLocationSelected: (SelectedLocation selectedLocation) {
-                  Navigator.pop(context, selectedLocation);
-                }, // Pass the polyline
-              ),
-            ),
-          ).then((result) {
-            if (result != null && result is SelectedLocation) {
-              Navigator.pop(context, result);
-            }
-          });
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFFF5F5F5),
-          foregroundColor: const Color(0xFF121212),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.map, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              "Pin on Maps",
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-                color: Color(0xFF121212),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   // Add this method to check if a point is close to the polyline
@@ -1297,5 +983,67 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       debugPrint('Error checking distance to final stop: $e');
       return false;
     }
+  }
+
+  // Reinsert the pinFromTheMaps helper method
+  Widget pinFromTheMaps() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFFD2D2D2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PinLocationStateful(
+                locationType: widget.isPickup ? 'pickup' : 'dropoff',
+                routePolyline: widget.routePolyline,
+                onLocationSelected: (SelectedLocation selectedLocation) {
+                  Navigator.pop(context, selectedLocation);
+                }, // Pass the polyline
+              ),
+            ),
+          ).then((result) {
+            if (result != null && result is SelectedLocation) {
+              Navigator.pop(context, result);
+            }
+          });
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Color(0xFFF5F5F5),
+          foregroundColor: const Color(0xFF121212),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.map, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              "Pin on Maps",
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Color(0xFF121212),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

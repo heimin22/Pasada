@@ -973,23 +973,96 @@ class MapScreenState extends State<MapScreen>
     setState(() {
       driverLocation = location;
       // Update driver marker
-      final markerId = MarkerId('driver');
-      markers[markerId] = Marker(
-        markerId: markerId,
+      final driverMarkerId = MarkerId('driver');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
         position: driverLocation!,
         icon: busIcon,
       );
-      // Clear all existing polylines immediately
-      polylines.clear();
+      // Remove any existing pickup->dropoff polylines
+      polylines.remove(const PolylineId('route'));
+      polylines.remove(const PolylineId('route_path'));
+      // When accepted, remove end-of-route pin and indicator
+      if (rideStatus == 'accepted') {
+        markers.remove(const MarkerId('route_destination'));
+        showRouteEndIndicator = false;
+      }
     });
 
     // Use routing API to draw polyline along roads
     if (rideStatus == 'accepted' && widget.pickUpLocation != null) {
-      await generatePolylineBetween(location, widget.pickUpLocation!,
-          updateFare: false);
+      await generateDriverRoutePolyline(location, widget.pickUpLocation!);
     } else if (rideStatus == 'ongoing' && widget.dropOffLocation != null) {
-      await generatePolylineBetween(location, widget.dropOffLocation!,
-          updateFare: false);
+      await generateDriverRoutePolyline(location, widget.dropOffLocation!);
+    }
+  }
+
+  // Helper to generate and update polyline for driver route without clearing other polylines
+  Future<void> generateDriverRoutePolyline(LatLng start, LatLng end) async {
+    final cacheKey =
+        'driver_route_${start.latitude}_${start.longitude}_${end.latitude}_${end.longitude}';
+    List<LatLng>? polylineCoordinates;
+    // Attempt to use cached route
+    final cached = MemoryManager.instance.getFromCache(cacheKey);
+    if (cached is List<LatLng>) {
+      polylineCoordinates = cached;
+    } else {
+      // Fetch new route from Directions API
+      final polylinePoints = PolylinePoints();
+      final uri = Uri.parse(
+          'https://routes.googleapis.com/directions/v2:computeRoutes');
+      final headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+      };
+      final body = jsonEncode({
+        'origin': {
+          'location': {
+            'latLng': {'latitude': start.latitude, 'longitude': start.longitude}
+          }
+        },
+        'destination': {
+          'location': {
+            'latLng': {'latitude': end.latitude, 'longitude': end.longitude}
+          }
+        },
+        'travelMode': 'DRIVE',
+        'polylineEncoding': 'ENCODED_POLYLINE',
+        'computeAlternativeRoutes': false,
+        'routingPreference': 'TRAFFIC_AWARE',
+      });
+      final response =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+      if (response != null) {
+        final data = json.decode(response);
+        final routesObj = data['routes'];
+        List<dynamic> routesList = [];
+        if (routesObj is List) {
+          routesList = routesObj;
+        } else if (routesObj is Map) {
+          routesList = [routesObj];
+        }
+        if (routesList.isNotEmpty) {
+          final encoded = routesList[0]['polyline']?['encodedPolyline'];
+          if (encoded is String) {
+            final decoded = polylinePoints.decodePolyline(encoded);
+            polylineCoordinates =
+                decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
+            MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
+          }
+        }
+      }
+    }
+    if (polylineCoordinates != null && mounted) {
+      setState(() {
+        polylines[driverRoutePolylineId] = Polyline(
+          polylineId: driverRoutePolylineId,
+          points: polylineCoordinates!,
+          color: const Color.fromARGB(255, 10, 179, 83),
+          width: 8,
+        );
+      });
     }
   }
 
@@ -1153,7 +1226,7 @@ class MapScreenState extends State<MapScreen>
       polylines[const PolylineId('route_path')] = Polyline(
         polylineId: const PolylineId('route_path'),
         points: routeSegment,
-        color: const Color(0xFF067837),
+        color: Color.fromARGB(255, 4, 197, 88),
         width: 8,
       );
 
