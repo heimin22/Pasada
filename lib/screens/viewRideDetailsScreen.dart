@@ -33,6 +33,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   Map<PolylineId, Polyline> polylines = {};
   bool isMapReady = false;
   List<LatLng>? routePolyline;
+  late BitmapDescriptor pickupIcon;
+  late BitmapDescriptor dropoffIcon;
   // Rating and review controller
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
@@ -41,7 +43,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   @override
   void initState() {
     super.initState();
-
+    _loadMarkerIcons();
     // Inspect database schema to understand relationships
     _inspectDatabaseSchema();
 
@@ -238,7 +240,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       markers.add(Marker(
         markerId: const MarkerId('pickup'),
         position: pickupLatLng,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        icon: pickupIcon,
         infoWindow: InfoWindow(
             title: 'Pickup', snippet: bookingDetails['pickup_address']),
       ));
@@ -246,7 +248,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       markers.add(Marker(
         markerId: const MarkerId('dropoff'),
         position: dropoffLatLng,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        icon: dropoffIcon,
         infoWindow: InfoWindow(
             title: 'Dropoff', snippet: bookingDetails['dropoff_address']),
       ));
@@ -402,7 +404,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           polylines[const PolylineId('route_path')] = Polyline(
             polylineId: const PolylineId('route_path'),
             points: polylineCoordinates,
-            color: const Color(0xFF067837),
+            color: const Color.fromARGB(255, 10, 179, 83),
             width: 5,
           );
         });
@@ -613,6 +615,18 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     } catch (e) {
       debugPrint('Error inspecting database schema: $e');
     }
+  }
+
+  // Load custom marker icons for pickup & dropoff
+  Future<void> _loadMarkerIcons() async {
+    pickupIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_pickup.png',
+    );
+    dropoffIcon = await BitmapDescriptor.asset(
+      ImageConfiguration(size: Size(48, 48)),
+      'assets/png/pin_dropoff.png',
+    );
   }
 
   @override

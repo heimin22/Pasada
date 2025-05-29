@@ -16,11 +16,11 @@ import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import '../location/locationSearchScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:pasada_passenger_app/widgets/location_input_container.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -335,167 +335,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  Future<void> _showSeatingPreferenceDialog() async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final selectedColor =
-        isDarkMode ? const Color(0xFF00CC58) : Colors.green.shade600;
-    final unselectedColor =
-        isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
-    final selectedTextColor =
-        isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212);
-    final unselectedTextColor = isDarkMode
-        ? const Color.fromARGB(255, 153, 153, 153)
-        : const Color(0xFF757575);
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        final tempSeatingPreference =
-            ValueNotifier<String>(seatingPreference.value);
-
-        return ValueListenableBuilder<String>(
-          valueListenable: tempSeatingPreference,
-          builder: (context, currentSelection, child) {
-            // Animation states for each button, stored in a map
-            final Map<String, bool> pressStates = {
-              'Sitting': false,
-              'Standing': false,
-              'Any': false,
-            };
-
-            return StatefulBuilder(
-              builder: (BuildContext sctx, StateSetter stateSetter) {
-                // sctx to avoid name collision
-                return ResponsiveDialog(
-                  title: 'Seating Preferences',
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('Pili ka, nakaupo ba, nakatayo, o kahit ano?',
-                          textAlign: TextAlign.start,
-                          style: TextStyle(
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212))),
-                      const SizedBox(height: 20),
-                      AnimatedScale(
-                        scale: pressStates['Sitting']! ? 0.92 : 1.0,
-                        duration: const Duration(milliseconds: 150),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: currentSelection == 'Sitting'
-                                ? selectedColor
-                                : unselectedColor,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () async {
-                            tempSeatingPreference.value = 'Sitting';
-                            stateSetter(() => pressStates['Sitting'] = true);
-                            await Future.delayed(
-                                const Duration(milliseconds: 150));
-                            stateSetter(() => pressStates['Sitting'] = false);
-                          },
-                          child: Text('Sitting',
-                              style: TextStyle(
-                                  color: currentSelection == 'Sitting'
-                                      ? selectedTextColor
-                                      : unselectedTextColor,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      AnimatedScale(
-                        scale: pressStates['Standing']! ? 0.92 : 1.0,
-                        duration: const Duration(milliseconds: 150),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: currentSelection == 'Standing'
-                                ? selectedColor
-                                : unselectedColor,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () async {
-                            tempSeatingPreference.value = 'Standing';
-                            stateSetter(() => pressStates['Standing'] = true);
-                            await Future.delayed(
-                                const Duration(milliseconds: 150));
-                            stateSetter(() => pressStates['Standing'] = false);
-                          },
-                          child: Text('Standing',
-                              style: TextStyle(
-                                  color: currentSelection == 'Standing'
-                                      ? selectedTextColor
-                                      : unselectedTextColor,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      AnimatedScale(
-                        scale: pressStates['Any']! ? 0.92 : 1.0,
-                        duration: const Duration(milliseconds: 150),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: currentSelection == 'Any'
-                                ? selectedColor
-                                : unselectedColor,
-                            padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () async {
-                            tempSeatingPreference.value = 'Any';
-                            stateSetter(() => pressStates['Any'] = true);
-                            await Future.delayed(
-                                const Duration(milliseconds: 150));
-                            stateSetter(() => pressStates['Any'] = false);
-                          },
-                          child: Text('Any',
-                              style: TextStyle(
-                                  color: currentSelection == 'Any'
-                                      ? selectedTextColor
-                                      : unselectedTextColor,
-                                  fontWeight: FontWeight.w600)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(sctx), // Use sctx here
-                      child: Text('Cancel',
-                          style: TextStyle(
-                              color: isDarkMode
-                                  ? Colors.white70
-                                  : Colors.black54)),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () {
-                        seatingPreference.value = tempSeatingPreference.value;
-                        Navigator.pop(sctx); // Use sctx here
-                      },
-                      child: Text('Confirm',
-                          style: TextStyle(
-                              color: selectedTextColor,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
+  // Add new bottom sheet method for seating preference
+  Future<void> _showSeatingPreferenceSheet() async {
+    final result = await showSeatingPreferenceBottomSheet(
+        context, seatingPreference.value);
+    if (result != null && mounted) {
+      setState(() {
+        seatingPreference.value = result;
+      });
+    }
   }
 
   Future<void> _navigateToLocationSearch(bool isPickup) async {
@@ -744,7 +592,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                     onNavigateToLocationSearch:
                                         _navigateToLocationSearch,
                                     onShowSeatingPreferenceDialog:
-                                        _showSeatingPreferenceDialog,
+                                        _showSeatingPreferenceSheet,
                                     onConfirmBooking:
                                         _showBookingConfirmationDialog,
                                     onPaymentMethodSelected: (method) {
