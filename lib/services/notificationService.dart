@@ -310,6 +310,7 @@ class NotificationService {
   static Future<void> showRideProgressNotification({
     required int progress,
     required int maxProgress,
+    String title = 'Arriving',
   }) async {
     final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -325,13 +326,17 @@ class NotificationService {
       maxProgress: maxProgress,
       progress: progress,
       icon: '@mipmap/ic_launcher',
+      styleInformation: BigTextStyleInformation(
+        '$progress% to drop-off',
+        contentTitle: title,
+      ),
     );
     final NotificationDetails platformDetails = NotificationDetails(
       android: androidDetails,
     );
     await _flutterLocalNotificationsPlugin.show(
       rideProgressNotificationId,
-      'Ride in Progress',
+      title,
       '$progress% to drop-off',
       platformDetails,
     );
