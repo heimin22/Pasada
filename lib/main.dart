@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -13,7 +12,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/authentication/authGate.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
-import 'package:pasada_passenger_app/services/backendConnectionTest.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,79 +26,72 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
+/// Bootstraps core services in parallel and caches env vars
+Future<void> _bootstrapServices() async {
+  final memoryManager = MemoryManager();
+
+  // Kick off Firebase, env loading, and Notification Service concurrently
+  await Future.wait([
+    Firebase.initializeApp(),
+    dotenv.load(fileName: '.env').then((_) {
+      // Cache supabase config
+      memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
+      memoryManager.addToCache(
+          'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
+    }),
+    NotificationService.initialize(),
+  ]);
+
+  // Initialize Supabase if config is present
+  final url = memoryManager.getFromCache('SUPABASE_URL');
+  final key = memoryManager.getFromCache('SUPABASE_ANON_KEY');
+  if (url != null && key != null) {
+    await Supabase.initialize(
+      url: url,
+      anonKey: key,
+      authOptions:
+          const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
+      realtimeClientOptions:
+          const RealtimeClientOptions(logLevel: RealtimeLogLevel.info),
+      storageOptions: const StorageClientOptions(retryAttempts: 3),
+    );
+  }
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
-
-  // Set up Firebase Messaging background handler
+  // Attach background handler before Firebase init
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Initialize notification service
-  await NotificationService.initialize();
+  // Start core bootstrapping but don't await to let UI render
+  final initFuture = _bootstrapServices();
 
-  // Initialize MemoryManager singleton
-  final memoryManager = MemoryManager();
+  // Show splash / loader while services boot
+  runApp(AppInitializer(initFuture));
+}
 
-  // Add error handling for env file
-  try {
-    await dotenv.load(fileName: ".env");
-    // Cache env variables for faster access
-    memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
-    memoryManager.addToCache(
-        'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
-  } catch (e) {
-    debugPrint("Failed to load environment variables: $e");
-    return;
-  }
+/// Shows a loading indicator until bootstrap completes, then launches the real app
+class AppInitializer extends StatelessWidget {
+  final Future<void> initFuture;
+  const AppInitializer(this.initFuture, {super.key});
 
-  // Use cached values
-  final supabaseUrl = memoryManager.getFromCache('SUPABASE_URL');
-  final supabaseKey = memoryManager.getFromCache('SUPABASE_ANON_KEY');
-
-  if (supabaseUrl == null || supabaseKey == null) {
-    debugPrint("Missing required Supabase configuration");
-    return;
-  }
-
-  try {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-      realtimeClientOptions: const RealtimeClientOptions(
-        logLevel: RealtimeLogLevel.info,
-      ),
-      storageOptions: const StorageClientOptions(
-        retryAttempts: 3, // Reduced from 10 for security
-      ),
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: initFuture,
+      builder: (ctx, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+        return const PasadaPassenger();
+      },
     );
-
-    // Now that Supabase is initialized, save the FCM token
-    await NotificationService.saveTokenAfterInit();
-  } catch (e) {
-    debugPrint("Failed to initialize Supabase: $e");
-    return;
   }
-
-  // Test backend connection
-  if (kDebugMode) {
-    final tester = BackendConnectionTest();
-    await tester.runAllTests();
-  }
-
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark, // For Android (dark icons)
-    statusBarBrightness: Brightness.light, // For iOS light mode
-  ));
-
-  runApp(const PasadaPassenger());
 }
 
 final supabase = Supabase.instance.client;
@@ -236,7 +227,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
                     _buildPage(
                       title: _getTimeBasedGreeting(),
                       subtitle: 'Welcome sa Pasada!',
-                      content: 'Swipe to learn more about our app',
+                      content: 'Salamat sa pagdownload, Ma\'am/Sir!',
                       icon: _getTimeBasedIcon(),
                     ),
                     _buildPage(
@@ -260,6 +251,60 @@ class PasadaHomePageState extends State<PasadaHomePage>
                 padding: const EdgeInsets.only(bottom: 30),
                 child: Column(
                   children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                        final offsetAnimation = Tween<Offset>(
+                          begin: const Offset(0, 0.3),
+                          end: Offset.zero,
+                        ).animate(animation);
+                        return SlideTransition(
+                          position: offsetAnimation,
+                          child:
+                              FadeTransition(opacity: animation, child: child),
+                        );
+                      },
+                      child: _currentPage == 0
+                          ? Material(
+                              key: const ValueKey('swipe_text'),
+                              color: Colors.transparent,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                side: BorderSide(
+                                  color: Color(0xFFF5F5F5),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Text(
+                                      'Swipe to learn more about the app',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        fontFamily: 'Inter',
+                                        color: Color(0xFFF5F5F5),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 14,
+                                      color: Color(0xFFF5F5F5),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 35),
                     // Dot indicators
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -302,7 +347,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
                                 ? IconButton(
                                     key: const ValueKey('next_button'),
                                     icon: const Icon(Icons.arrow_forward_ios,
-                                        color: Colors.white),
+                                        color: Color(0xFFF5F5F5)),
                                     onPressed: () {
                                       _pageController.nextPage(
                                         duration:

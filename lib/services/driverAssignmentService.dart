@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
+import 'package:pasada_passenger_app/services/driverService.dart';
 
 class DriverAssignmentService {
   final ApiService _apiService = ApiService();
@@ -53,38 +54,41 @@ class DriverAssignmentService {
     // Poll every 5 seconds using the bookings endpoint
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
       try {
-        final response =
+        // Fetch booking details and unwrap if wrapped under 'trip'
+        final raw =
             await _apiService.get<Map<String, dynamic>>('bookings/$bookingId');
-
-        if (response == null) {
-          debugPrint('No response from API for booking $bookingId');
+        if (raw == null) {
+          debugPrint('No response from API (raw) for booking $bookingId');
           if (onError != null) onError();
           return;
         }
-
-        debugPrint('Booking status update from bookings endpoint: $response');
+        // Unwrap 'trip' key if present
+        Map<String, dynamic> response;
+        if (raw.containsKey('trip') && raw['trip'] is Map<String, dynamic>) {
+          response = raw['trip'] as Map<String, dynamic>;
+          debugPrint(
+              'Unwrapped booking response from raw[\'trip\']: $response');
+        } else {
+          response = raw;
+          debugPrint('Booking status update from bookings endpoint: $response');
+        }
 
         // Notify about status changes if callback provided
         if (response['ride_status'] != null && onStatusChange != null) {
-          onStatusChange(response['ride_status']);
+          onStatusChange(response['ride_status'] as String);
         }
 
-        // Check if a driver has been assigned
-        if (response['ride_status'] == 'accepted' &&
-            response['driver_id'] != null) {
-          // Stop polling and cancel timeout once we have a driver
-          stopPolling();
+        // When booking status is accepted, fetch driver details via RPC
+        if (response['ride_status'] == 'accepted') {
+          // Polling continues to allow updates (do not stopPolling here)
 
           // Fetch driver details
           final driverDetails =
-              await _fetchDriverDetails(response['driver_id']);
+              await DriverService().getDriverDetailsByBooking(bookingId);
 
           if (driverDetails != null) {
             // Call the callback with driver data
-            onDriverAssigned({
-              'booking': response,
-              'driver': driverDetails,
-            });
+            onDriverAssigned({'booking': response, 'driver': driverDetails});
           }
         }
       } catch (e) {
@@ -96,15 +100,15 @@ class DriverAssignmentService {
     });
   }
 
-  Future<Map<String, dynamic>?> _fetchDriverDetails(String driverId) async {
-    try {
-      // Use the new endpoint
-      return await _apiService.get<Map<String, dynamic>>('drivers/$driverId');
-    } catch (e) {
-      debugPrint('Error fetching driver details: $e');
-      return null;
-    }
-  }
+  // Future<Map<String, dynamic>?> _fetchDriverDetails(int driverId) async {
+  //   try {
+  //     // Use the new endpoint
+  //     return await _apiService.get<Map<String, dynamic>>('drivers/$driverId');
+  //   } catch (e) {
+  //     debugPrint('Error fetching driver details: $e');
+  //     return null;
+  //   }
+  // }
 
   // Add a new method to fetch booking details
   Future<Map<String, dynamic>?> fetchBookingDetails(int bookingId) async {

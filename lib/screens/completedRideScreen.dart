@@ -4,10 +4,13 @@ import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
+import 'package:pasada_passenger_app/widgets/check_painter.dart';
 
 class CompletedRideScreen extends StatefulWidget {
   final DateTime arrivedTime;
-  const CompletedRideScreen({super.key, required this.arrivedTime});
+  final int bookingId;
+  const CompletedRideScreen(
+      {super.key, required this.arrivedTime, required this.bookingId});
 
   @override
   State<CompletedRideScreen> createState() => _CompletedRideScreenState();
@@ -80,8 +83,11 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          elevation: 0,
+          backgroundColor:
+              isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+          foregroundColor:
+              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          elevation: 1.0,
           leadingWidth: 60,
           leading: Padding(
             padding: const EdgeInsets.only(left: 16.0),
@@ -127,19 +133,32 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                 height: 120,
                 child: AnimatedBuilder(
                   animation: _controller,
-                  builder: (_, child) {
-                    return CustomPaint(
-                      painter: CirclePainter(progress: _circleAnimation.value),
-                      child: Center(
-                        child: Opacity(
+                  builder: (_, __) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          painter:
+                              CirclePainter(progress: _circleAnimation.value),
+                          size: const Size(120, 120),
+                        ),
+                        CustomPaint(
+                          painter:
+                              CheckPainter(progress: _checkAnimation.value),
+                          size: const Size(120, 120),
+                        ),
+                        Opacity(
                           opacity: _checkAnimation.value,
                           child: Transform.scale(
                             scale: _checkAnimation.value,
-                            child: const Icon(Icons.check,
-                                size: 60, color: Colors.green),
+                            child: const Icon(
+                              Icons.check,
+                              size: 60,
+                              color: Color(0xFF00CC58),
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -171,7 +190,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const ViewRideDetailsScreen()),
+                        builder: (_) =>
+                            ViewRideDetailsScreen(bookingId: widget.bookingId)),
                   );
                 },
                 child: Text(
@@ -184,6 +204,29 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                       color: isDarkMode
                           ? const Color(0xFFF5F5F5)
                           : const Color(0xFF121212)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const selectionScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF5F5F5),
+                  foregroundColor: const Color(0xFF00CC58),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  elevation: 3,
+                ),
+                child: const Text(
+                  'Back to Home',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],

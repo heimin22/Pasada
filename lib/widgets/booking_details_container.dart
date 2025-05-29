@@ -5,34 +5,16 @@ import '../location/selectedLocation.dart';
 class BookingDetailsContainer extends StatelessWidget {
   final SelectedLocation? pickupLocation;
   final SelectedLocation? dropoffLocation;
-  final String etaText; // Using etaText from MapScreen
 
   const BookingDetailsContainer({
     super.key,
     required this.pickupLocation,
     required this.dropoffLocation,
-    required this.etaText,
   });
-
-  String formatETA() {
-    debugPrint('BookingDetailsContainer - Received etaText: "$etaText"');
-
-    // If etaText is empty or not provided, return a default value
-    if (etaText.isEmpty || etaText == '--') {
-      debugPrint('BookingDetailsContainer - Returning "Calculating..."');
-      return 'Calculating...';
-    }
-
-    // Since etaText is now already formatted as a time (e.g., "3:45 PM"),
-    // we can just return it directly
-    debugPrint('BookingDetailsContainer - Returning etaText: "$etaText"');
-    return etaText;
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final formattedETA = formatETA();
 
     return Container(
       width: double.infinity,
@@ -78,14 +60,6 @@ class BookingDetailsContainer extends StatelessWidget {
             Icons.location_on,
             isDarkMode,
           ),
-          const SizedBox(height: 8),
-          _buildInfoRow(
-            context,
-            'ETA',
-            formattedETA,
-            Icons.access_time,
-            isDarkMode,
-          ),
         ],
       ),
     );
@@ -127,37 +101,6 @@ class BookingDetailsContainer extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(BuildContext context, String title, String value,
-      IconData icon, bool isDarkMode) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          size: 24,
-          color: const Color(0xFF00CC58),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          '$title: ',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color:
-                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF00CC58),
           ),
         ),
       ],

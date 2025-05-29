@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+// import 'package:flutter_svg/flutter_svg.dart';
 // import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 
@@ -202,19 +202,19 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                   leadingIcon:
                       const Icon(Icons.money_rounded, color: Color(0xFF00CC58)),
                 ),
-                buildSectionHeader('Online Payment'),
-                buildPaymentOption(
-                  title: 'GCash',
-                  value: 'GCash',
-                  leadingIcon: SvgPicture.asset(
-                    'assets/svg/gcash_logo.svg',
-                    width: 24,
-                    height: 24,
-                    placeholderBuilder: (context) =>
-                        const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
-                  ),
-                  enabled: true,
-                ),
+                // buildSectionHeader('Online Payment'),
+                // buildPaymentOption(
+                //   title: 'GCash',
+                //   value: 'GCash',
+                //   leadingIcon: SvgPicture.asset(
+                //     'assets/svg/gcash_logo.svg',
+                //     width: 24,
+                //     height: 24,
+                //     placeholderBuilder: (context) =>
+                //         const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
+                //   ),
+                //   enabled: true,
+                // ),
               ],
             ),
           ),
