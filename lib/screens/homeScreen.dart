@@ -338,11 +338,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Add new bottom sheet method for seating preference
   Future<void> _showSeatingPreferenceSheet() async {
     final result = await showSeatingPreferenceBottomSheet(
-        context, seatingPreference.value);
+      context,
+      seatingPreference.value,
+    );
     if (result != null && mounted) {
-      setState(() {
-        seatingPreference.value = result;
-      });
+      seatingPreference.value = result;
     }
   }
 
