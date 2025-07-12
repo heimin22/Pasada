@@ -21,6 +21,7 @@ import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
+import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -95,6 +96,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isDriverAssigned = false;
   // Add a flag to ensure onboarding is requested only once
   bool _hasOnboardingBeenCalled = false;
+  // Flag to ensure we only show rush hour dialog once
+  bool _isRushHourDialogShown = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -277,6 +280,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       measureContainers();
 
       await showOnboardingDialog(context);
+      await _showRushHourDialog();
       NotificationService.showAvailabilityNotification();
     });
   }
@@ -776,15 +780,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
   }
 
-  // MOVED TO BookingManager: void _updateDriverDetails(Map<String, dynamic> driverData) { ... }
-
-  // MOVED TO BookingManager: String _extractField(dynamic data, List<String> keys) { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchAndUpdateBookingDetails(int bookingId) async { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchDriverDetails(String driverId) async { ... }
-
-  // MOVED TO BookingManager: void _loadBookingAfterDriverAssignment(int bookingId) { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async { ... }
+  /// Shows the rush hour dialog if current Philippine time is within morning or evening rush hours
+  Future<void> _showRushHourDialog() async {
+    if (_isRushHourDialogShown) return;
+    _isRushHourDialogShown = true;
+    final nowUtc = DateTime.now().toUtc();
+    final nowPH = nowUtc.add(const Duration(hours: 8));
+    final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
+    const morningStart = 6 * 60; // 6:00 AM
+    const morningEnd = 7 * 60 + 30; // 7:30 AM
+    const eveningStart = 16 * 60 + 30; // 4:30 PM
+    const eveningEnd = 19 * 60 + 30; // 7:30 PM
+    if ((minutesSinceMidnight >= morningStart &&
+            minutesSinceMidnight <= morningEnd) ||
+        (minutesSinceMidnight >= eveningStart &&
+            minutesSinceMidnight <= eveningEnd)) {
+      if (mounted) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const RushHourDialog(),
+        );
+      }
+    }
+  }
 }
