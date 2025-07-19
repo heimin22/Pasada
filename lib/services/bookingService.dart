@@ -132,7 +132,8 @@ class BookingService {
         final backendDropoffLng =
             (bookingData['dropoff_lng'] as num).toDouble();
         final backendFare = (bookingData['fare'] as num).toDouble();
-        final backendSeatType = (bookingData['seat_type'] as String?) ?? 'Any';
+        final backendSeatType =
+            (bookingData['seat_type'] as String?) ?? seatingPreference;
         final createdAtString = bookingData['created_at'] as String;
         final assignedAtString = bookingData['assigned_at'] as String?;
 

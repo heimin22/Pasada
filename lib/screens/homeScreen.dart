@@ -2,18 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/screens/routeSelection.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
-import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
-import 'package:pasada_passenger_app/widgets/loading_dialog.dart';
-import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import '../location/locationSearchScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/widgets/location_input_container.dart';
@@ -21,6 +16,11 @@ import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
+import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
+import 'package:pasada_passenger_app/widgets/notification_container.dart';
+import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
+import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
+import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -95,6 +95,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isDriverAssigned = false;
   // Add a flag to ensure onboarding is requested only once
   bool _hasOnboardingBeenCalled = false;
+  // Flag to ensure we only show rush hour dialog once
+  bool _isRushHourDialogShown = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -108,16 +110,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late BookingManager _bookingManager;
 
   Future<void> _showRouteSelection() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RouteSelection(),
-      ),
-    );
+    final result = await navigateToRouteSelection(context);
+
     if (result != null && mounted) {
       setState(() => selectedRoute = result);
 
-      debugPrint('Selected route: ${result!['route_name']}');
+      debugPrint('Selected route: ${result['route_name']}');
       debugPrint('Route details: $result');
 
       // Make sure we have the route ID
@@ -168,18 +166,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         }
       }
     }
-  }
-
-  // method para sa pagsplit ng location names from landmark to address
-  List<String> splitLocation(String location) {
-    final List<String> parts = location.split(','); // split by comma
-    if (parts.length < 2) {
-      return [location, '']; // kapag exact address si location then leave as is
-    }
-    return [
-      parts[0],
-      parts.sublist(1).join(', ')
-    ]; // sa unahan o ibabaw yung landmark which is yung parts[0] the rest is sa baba which is yung parts.sublist(1). tapos join(',')  na lang
   }
 
   /// Update yung proper location base duon sa search type
@@ -235,49 +221,21 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final shouldReinitialize = PageStorage.of(context).readState(
-            context,
-            identifier: const ValueKey('homeInitialized'),
-          ) ==
-          false;
-
-      if (!_isInitialized || shouldReinitialize) {
-        LoadingDialog.show(context, message: 'Initializing resources...');
-        try {
-          await InitializationService.initialize(context);
-          _isInitialized = true;
-          PageStorage.of(context).writeState(
-            context,
-            true,
-            identifier: const ValueKey('homeInitialized'),
-          );
-        } catch (e) {
-          debugPrint('Initialization error: $e');
-        } finally {
-          if (mounted) {
-            LoadingDialog.hide(context);
-          }
-        }
-      }
-
-      if (_hasOnboardingBeenCalled) return;
-      _hasOnboardingBeenCalled = true;
-
-      // await loadActiveBooking();
-      await _bookingManager.loadActiveBooking(); // Use BookingManager
-      if (isBookingConfirmed) {
-        WidgetsBinding.instance
-            .addPostFrameCallback((_) => measureContainers());
-        return;
-      }
-
-      loadLocation();
-      loadPaymentMethod();
-      measureContainers();
-
-      await showOnboardingDialog(context);
-      NotificationService.showAvailabilityNotification();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      HomeScreenInitService.runInitialization(
+        context: context,
+        getIsInitialized: () => _isInitialized,
+        setIsInitialized: () => _isInitialized = true,
+        getHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled,
+        setHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled = true,
+        getIsRushHourDialogShown: () => _isRushHourDialogShown,
+        setRushHourDialogShown: () => _isRushHourDialogShown = true,
+        bookingManager: _bookingManager,
+        getIsBookingConfirmed: () => isBookingConfirmed,
+        measureContainers: measureContainers,
+        loadLocation: loadLocation,
+        loadPaymentMethod: loadPaymentMethod,
+      );
     });
   }
 
@@ -338,11 +296,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Add new bottom sheet method for seating preference
   Future<void> _showSeatingPreferenceSheet() async {
     final result = await showSeatingPreferenceBottomSheet(
-        context, seatingPreference.value);
+      context,
+      seatingPreference.value,
+    );
     if (result != null && mounted) {
-      setState(() {
-        seatingPreference.value = result;
-      });
+      seatingPreference.value = result;
     }
   }
 
@@ -382,19 +340,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       pickupOrder = pickupStop?.order;
     }
 
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => SearchLocationScreen(
-          isPickup: isPickup,
-          routeID: routeId,
-          routeDetails: selectedRoute,
-          routePolyline: routePolyline,
-          pickupOrder: pickupOrder,
-        ),
-      ),
+    final result = await navigateToLocationSearch(
+      context,
+      isPickup: isPickup,
+      routeID: routeId,
+      routeDetails: selectedRoute,
+      routePolyline: routePolyline,
+      pickupOrder: pickupOrder,
     );
 
-    if (result != null && result is SelectedLocation) {
+    if (result != null) {
       setState(() {
         if (isPickup) {
           selectedPickUpLocation = result;
@@ -440,35 +395,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
-  double calculateBottomPadding() {
-    double currentMainContainerHeight = 0.0;
-    // Determine the height of the primary container at the bottom
-    if (isBookingConfirmed) {
-      currentMainContainerHeight = bookingStatusContainerHeight;
-    } else {
-      currentMainContainerHeight = locationInputContainerHeight;
-      if (isNotificationVisible && locationInputContainerHeight == 0) {
-        currentMainContainerHeight += notificationHeight + 10;
-      }
-    }
-    return currentMainContainerHeight + 20.0; // Base padding for FAB/Map logo
-  }
-
-  double calculateMapPadding() {
-    double totalOffset = 0.0;
-    if (isBookingConfirmed) {
-      totalOffset = bookingStatusContainerHeight;
-    } else {
-      totalOffset = locationInputContainerHeight;
-      // Only add notification height if the location input container itself hasn't accounted for it
-      // (i.e., if locationInputContainerHeight is 0, meaning it's not the measured bottom element yet)
-      if (isNotificationVisible && locationInputContainerHeight == 0) {
-        totalOffset += notificationHeight + 10; // 10 for SizedBox
-      }
-    }
-    return totalOffset + 20.0; // Base padding
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -504,9 +430,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
                   dropOffLocation: selectedDropOffLocation?.coordinates,
-                  bottomPadding:
-                      calculateMapPadding() / // Use new method for map
-                          MediaQuery.of(context).size.height,
+                  bottomPadding: calculateMapPadding(
+                        isBookingConfirmed: isBookingConfirmed,
+                        bookingStatusContainerHeight:
+                            bookingStatusContainerHeight,
+                        locationInputContainerHeight:
+                            locationInputContainerHeight,
+                        isNotificationVisible: isNotificationVisible,
+                        notificationHeight: notificationHeight,
+                      ) /
+                      MediaQuery.of(context).size.height,
                   onFareUpdated: (fare) {
                     if (mounted) setState(() => currentFare = fare);
                   },
@@ -525,7 +458,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         offset: Offset(0, -_downwardAnimation.value),
                         child: Opacity(
                           opacity: 1 - bookingAnimationController.value,
-                          child: _buildRouteSelectionContainer(),
+                          child: RouteSelectionWidget(
+                            routeName:
+                                selectedRoute?['route_name'] ?? 'Select Route',
+                            onTap: _showRouteSelection,
+                          ),
                         ),
                       );
                     },
@@ -552,8 +489,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       mapState.pulseCurrentLocationMarker();
                     }
                   },
-                  bottomOffset:
-                      calculateBottomPadding(), // FAB uses the main calculation
+                  bottomOffset: calculateBottomPadding(
+                    isBookingConfirmed: isBookingConfirmed,
+                    bookingStatusContainerHeight: bookingStatusContainerHeight,
+                    locationInputContainerHeight: locationInputContainerHeight,
+                    isNotificationVisible: isNotificationVisible,
+                    notificationHeight: notificationHeight,
+                  ), // FAB uses the main calculation
                 ),
                 if (!isBookingConfirmed)
                   Positioned(
@@ -572,7 +514,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isNotificationVisible)
-                                  _buildNotificationContainer(),
+                                  NotificationContainer(
+                                    downwardAnimation: _downwardAnimation,
+                                    notificationHeight: notificationHeight,
+                                    onClose: () {
+                                      setState(() {
+                                        isNotificationVisible = false;
+                                      });
+                                      measureContainers();
+                                    },
+                                  ),
                                 SizedBox(height: 10),
                                 LocationInputContainer(
                                     parentContext: context,
@@ -652,139 +603,5 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
   }
 
-  Widget _buildRouteSelectionContainer() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: _showRouteSelection,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black12,
-                blurRadius: MediaQuery.of(context).size.width * 0.03)
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.route, color: Color(0xFF00CC58)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                selectedRoute?['route_name'] ?? 'Select Route',
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDarkMode ? Colors.white : Colors.black54),
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios,
-                size: 16, color: isDarkMode ? Colors.white : Colors.black)
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationContainer() {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    return AnimatedBuilder(
-      animation: _downwardAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _downwardAnimation.value * notificationHeight),
-          child: GestureDetector(
-            onVerticalDragUpdate: (details) {
-              setState(() {
-                notificationDragOffset += details.delta.dy;
-                if (notificationDragOffset > notificationHeight) {
-                  isNotificationVisible = false;
-                  notificationDragOffset = 0;
-                  measureContainers();
-                }
-              });
-            },
-            onVerticalDragEnd: (details) {
-              if (notificationDragOffset < notificationHeight / 2) {
-                setState(() => notificationDragOffset = 0);
-              }
-            },
-            child: Container(
-              height: notificationHeight - notificationDragOffset,
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: MediaQuery.of(context).size.width * 0.03)
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0, vertical: 12.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.notifications_outlined,
-                            color: const Color(0xFF00CC58), size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Please select a route before choosing locations',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 40),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Center(
-                        child: IconButton(
-                            icon: Icon(Icons.close,
-                                color: const Color(0xFF00CC58)),
-                            onPressed: () {
-                              setState(() {
-                                isNotificationVisible = false;
-                                measureContainers();
-                              });
-                            })),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // MOVED TO BookingManager: void _updateDriverDetails(Map<String, dynamic> driverData) { ... }
-
-  // MOVED TO BookingManager: String _extractField(dynamic data, List<String> keys) { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchAndUpdateBookingDetails(int bookingId) async { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchDriverDetails(String driverId) async { ... }
-
-  // MOVED TO BookingManager: void _loadBookingAfterDriverAssignment(int bookingId) { ... }
-
-  // MOVED TO BookingManager: Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async { ... }
+  // Rush-hour dialog logic moved to HomeScreenInitService
 }
