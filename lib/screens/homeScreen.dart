@@ -21,6 +21,9 @@ import 'package:pasada_passenger_app/widgets/notification_container.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
+import 'package:provider/provider.dart';
+import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -29,7 +32,10 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const HomeScreenStateful();
+    return ChangeNotifierProvider<WeatherProvider>(
+      create: (_) => WeatherProvider(),
+      child: const HomeScreenStateful(),
+    );
   }
 }
 
@@ -97,6 +103,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool _hasOnboardingBeenCalled = false;
   // Flag to ensure we only show rush hour dialog once
   bool _isRushHourDialogShown = false;
+  bool _isRainDialogShown = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -184,6 +191,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Method to restore any active booking from local database on app start
   // MOVED TO BookingManager: Future<void> loadActiveBooking() async { ... }
 
+  // Show weather alert dialog
+  void _showWeatherAlertDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => const WeatherAlertDialog(),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -236,6 +251,27 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         loadLocation: loadLocation,
         loadPaymentMethod: loadPaymentMethod,
       );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final weatherProv = context.read<WeatherProvider>();
+      final mapState = mapScreenKey.currentState;
+      if (mapState?.currentLocation != null) {
+        final loc = mapState!.currentLocation!;
+        weatherProv.fetchWeather(loc.latitude, loc.longitude);
+      } else {
+        mapState?.initializeLocation().then((_) {
+          final loc2 = mapState.currentLocation;
+          if (loc2 != null) {
+            weatherProv.fetchWeather(loc2.latitude, loc2.longitude);
+          }
+        });
+      }
+      weatherProv.addListener(() {
+        if (weatherProv.isRaining && !_isRainDialogShown) {
+          _isRainDialogShown = true;
+          _showWeatherAlertDialog();
+        }
+      });
     });
   }
 
@@ -423,6 +459,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             final fabIconSize = screenWidth * 0.06;
             final bottomNavBarHeight = 20.0;
             final fabVerticalSpacing = 10.0;
+            final weatherIconSize = screenWidth * 0.08;
 
             return Stack(
               children: [
@@ -440,6 +477,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         notificationHeight: notificationHeight,
                       ) /
                       MediaQuery.of(context).size.height,
+                  onLocationUpdated: (loc) => context
+                      .read<WeatherProvider>()
+                      .fetchWeather(loc.latitude, loc.longitude),
                   onFareUpdated: (fare) {
                     if (mounted) setState(() => currentFare = fare);
                   },
@@ -451,21 +491,49 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   top: MediaQuery.of(context).padding.top + 10,
                   left: responsivePadding,
                   right: responsivePadding,
-                  child: AnimatedBuilder(
-                    animation: bookingAnimationController,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(0, -_downwardAnimation.value),
-                        child: Opacity(
-                          opacity: 1 - bookingAnimationController.value,
-                          child: RouteSelectionWidget(
-                            routeName:
-                                selectedRoute?['route_name'] ?? 'Select Route',
-                            onTap: _showRouteSelection,
-                          ),
-                        ),
-                      );
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedBuilder(
+                        animation: bookingAnimationController,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(0, -_downwardAnimation.value),
+                            child: Opacity(
+                              opacity: 1 - bookingAnimationController.value,
+                              child: RouteSelectionWidget(
+                                routeName: selectedRoute?['route_name'] ??
+                                    'Select Route',
+                                onTap: _showRouteSelection,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Consumer<WeatherProvider>(
+                        builder: (context, weatherProv, _) {
+                          if (weatherProv.isLoading) {
+                            return SizedBox(
+                              width: weatherIconSize,
+                              height: weatherIconSize,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            );
+                          } else if (weatherProv.weather != null) {
+                            return Image.network(
+                              weatherProv.weather!.iconUrl,
+                              width: weatherIconSize,
+                              height: weatherIconSize,
+                            );
+                          } else {
+                            return SizedBox(
+                                width: weatherIconSize,
+                                height: weatherIconSize);
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 HomeScreenFAB(
