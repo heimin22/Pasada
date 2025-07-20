@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class RushHourDialog extends StatelessWidget {
-  const RushHourDialog({super.key});
+class WeatherAlertDialog extends StatelessWidget {
+  const WeatherAlertDialog({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,13 +17,13 @@ class RushHourDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.access_time,
+              Icons.water_drop,
               size: 80,
               color: const Color(0xFF00CC58),
             ),
             const SizedBox(height: 24),
             Text(
-              'Rush Hour Alert',
+              'Heavy Rain Alert',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 24,
@@ -36,7 +36,7 @@ class RushHourDialog extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Rush hour na po ngayon, pakihabaan po ang pasensiya!',
+              'Malakas ang ulan ha, mahirap magcommute ngayon.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 16,

@@ -26,6 +26,7 @@ class MapScreen extends StatefulWidget {
   final double bottomPadding;
   final Function(String)? onEtaUpdated;
   final Function(double)? onFareUpdated;
+  final Function(LatLng)? onLocationUpdated;
   final Map<String, dynamic>? selectedRoute;
   final List<LatLng>? routePolyline;
 
@@ -36,6 +37,7 @@ class MapScreen extends StatefulWidget {
     this.bottomPadding = 0.07,
     this.onEtaUpdated,
     this.onFareUpdated,
+    this.onLocationUpdated,
     this.selectedRoute,
     this.routePolyline,
   });
@@ -167,6 +169,7 @@ class MapScreenState extends State<MapScreen>
       if (mounted && isScreenActive) {
         setState(() => currentLocation =
             LatLng(newLocation.latitude!, newLocation.longitude!));
+        widget.onLocationUpdated?.call(currentLocation!);
       }
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
@@ -339,6 +342,7 @@ class MapScreenState extends State<MapScreen>
 
       setState(() => currentLocation =
           LatLng(locationData.latitude!, locationData.longitude!));
+      widget.onLocationUpdated?.call(currentLocation!);
 
       final controller = await mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
