@@ -15,11 +15,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:intl/intl.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/networkUtilities.dart';
+import 'package:pasada_passenger_app/utils/map_utils.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -608,7 +609,7 @@ class MapScreenState extends State<MapScreen>
         if (mounted) {
           // calculate fare immediately
           final double routeDistance = getRouteDistance(cachedPolyline);
-          final double fare = calculateFare(routeDistance);
+          final double fare = FareService.calculateFare(routeDistance);
           if (updateFare) {
             fareAmount = fare;
             if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
@@ -726,7 +727,7 @@ class MapScreenState extends State<MapScreen>
       // Update UI with the polyline
       if (mounted) {
         final double routeDistance = getRouteDistance(polylineCoordinates);
-        final double fare = calculateFare(routeDistance);
+        final double fare = FareService.calculateFare(routeDistance);
 
         debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
         debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
@@ -829,23 +830,7 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  double calculateFare(double distanceInKm) {
-    const double baseFare = 15.0;
-    const double ratePerKm = 2.2;
-
-    double calculatedFare = 0.0;
-    if (distanceInKm <= 4.0) {
-      calculatedFare = baseFare;
-    } else {
-      calculatedFare = baseFare + (distanceInKm - 4.0) * ratePerKm;
-    }
-
-    // Add debug print to verify calculation
-    debugPrint(
-        'Distance: ${distanceInKm.toStringAsFixed(2)} km, Calculated fare: ₱${calculatedFare.toStringAsFixed(2)}');
-
-    return calculatedFare;
-  }
+  // Fare calculation is handled by FareService.calculateFare
 
   double getRouteDistance(List<LatLng> polylineCoordinates) {
     double totalDistance = 0.0;
@@ -864,13 +849,6 @@ class MapScreenState extends State<MapScreen>
           'Distance between points: ${start.distanceFrom(end.coordinates)}');
     }
     return totalDistance;
-  }
-
-  String formatDuration(int totalSeconds) {
-    // Calculate arrival time based on current time and duration
-    final now = DateTime.now();
-    final arrivalTime = now.add(Duration(seconds: totalSeconds));
-    return DateFormat('h:mm a').format(arrivalTime);
   }
 
   void showDebugToast(String message) {
@@ -1157,22 +1135,7 @@ class MapScreenState extends State<MapScreen>
 
   // Helper method to calculate distance between two points
   double calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371; // in kilometers
-
-    // Convert latitude and longitude from degrees to radians
-    final double lat1 = point1.latitude * (pi / 180);
-    final double lon1 = point1.longitude * (pi / 180);
-    final double lat2 = point2.latitude * (pi / 180);
-    final double lon2 = point2.longitude * (pi / 180);
-
-    // Haversine formula
-    final double dLat = lat2 - lat1;
-    final double dLon = lon2 - lon1;
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return earthRadius * c; // Distance in kilometers
+    return calculateDistanceKm(point1, point2);
   }
 
   Future<void> generatePolylineAlongRoute(
@@ -1224,7 +1187,7 @@ class MapScreenState extends State<MapScreen>
 
     // calculate and update fare immediately
     final double routeDistance = getRouteDistance(routeSegment);
-    final double fare = calculateFare(routeDistance);
+    final double fare = FareService.calculateFare(routeDistance);
     fareAmount = fare;
     if (widget.onFareUpdated != null) {
       widget.onFareUpdated!(fare);

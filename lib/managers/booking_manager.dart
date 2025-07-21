@@ -9,6 +9,7 @@ import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/services/map_location_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'dart:convert';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
@@ -186,7 +187,10 @@ class BookingManager {
       } catch (e) {
         debugPrint('Error restoring route: $e');
       }
-      _state.mapScreenKey.currentState?.initializeLocation();
+      MapLocationService().initialize((pos) {
+        _state.mapScreenKey.currentState
+            ?.updateDriverLocation(pos, _state.bookingStatus);
+      });
       if (_state.selectedRoute != null) {
         _state.mapScreenKey.currentState?.generateRoutePolyline(
           _state.selectedRoute!['intermediate_coordinates'] as List<dynamic>,
