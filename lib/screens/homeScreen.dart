@@ -28,7 +28,6 @@ import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
-import 'package:pasada_passenger_app/services/fare_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -165,9 +164,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           8,
         );
         mapScreenKey.currentState?.zoomToBounds(coords);
-        // Calculate fare for precomputed route
-        final fare = FareService.calculateFareForPolyline(coords);
-        setState(() => currentFare = fare);
       } else if (originCoordinates != null && destinationCoordinates != null) {
         // Fallback to computing the route directly
         final coords = await PolylineService()
@@ -179,9 +175,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           8,
         );
         mapScreenKey.currentState?.zoomToBounds(coords);
-        // Calculate fare for fallback route
-        final fare = FareService.calculateFareForPolyline(coords);
-        setState(() => currentFare = fare);
       }
     }
   }

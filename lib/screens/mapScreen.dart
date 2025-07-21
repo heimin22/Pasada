@@ -214,6 +214,13 @@ class MapScreenState extends State<MapScreen>
           const Color(0xFFFFCE21),
           8,
         );
+        // Calculate fare based on the segment
+        final fare = FareService.calculateFareForPolyline(segment);
+        fareAmount = fare;
+        if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
+        // Zoom camera to the segment bounds
+        _moveCameraToRoute(
+            segment, widget.pickUpLocation!, widget.dropOffLocation!);
       } else {
         debugPrint('MapScreen - Rendering direct route');
         await renderRouteBetween(
