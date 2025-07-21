@@ -21,6 +21,7 @@ import 'package:pasada_passenger_app/widgets/notification_container.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
+import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
@@ -252,19 +253,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       loadLocation: loadLocation,
       loadPaymentMethod: loadPaymentMethod,
     );
-    // Now fetch weather and prepare alerts
-    final weatherProv = context.read<WeatherProvider>();
-    final mapState = mapScreenKey.currentState;
-    LatLng? loc;
-    if (mapState?.currentLocation != null) {
-      loc = mapState!.currentLocation;
-    } else {
-      await mapState?.initializeLocation();
-      loc = mapState?.currentLocation;
-    }
-    if (loc != null) {
-      await weatherProv.fetchWeather(loc.latitude, loc.longitude);
-    }
+    // Fetch and subscribe to weather updates based on device location
+    await LocationWeatherService.fetchAndSubscribe(
+      context.read<WeatherProvider>(),
+    );
 
     // Assemble alert pages
     final List<Widget> alertPages = [];
@@ -283,7 +275,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       alertPages.add(const RushHourDialogContent());
     }
     // Rain condition
-    if (weatherProv.isRaining) {
+    if (context.read<WeatherProvider>().isRaining) {
       alertPages.add(const WeatherAlertDialogContent());
     }
     // Show alerts in one unified dialog

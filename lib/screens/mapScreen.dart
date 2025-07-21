@@ -17,6 +17,7 @@ import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:intl/intl.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/networkUtilities.dart';
 
@@ -113,8 +114,19 @@ class MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        initializeLocation();
-        handleLocationUpdates();
+        // Load last known location from cache for faster initial display
+        SharedPreferences.getInstance().then((prefs) {
+          final lat = prefs.getDouble('last_latitude');
+          final lng = prefs.getDouble('last_longitude');
+          if (lat != null && lng != null && mounted) {
+            setState(() {
+              currentLocation = LatLng(lat, lng);
+            });
+          }
+          // Now fetch fresh location updates
+          initializeLocation();
+          handleLocationUpdates();
+        });
       }
     });
   }
@@ -163,6 +175,9 @@ class MapScreenState extends State<MapScreen>
 
   // handle yung location updates for the previous widget to generate polylines
   void handleLocationUpdates() {
+    // Cancel previous subscription to avoid duplicate callbacks
+    locationSubscription?.cancel();
+    // Subscribe to location updates for map and routing
     locationSubscription = location.onLocationChanged
         .where((data) => data.latitude != null && data.longitude != null)
         .listen((newLocation) {
@@ -339,6 +354,10 @@ class MapScreenState extends State<MapScreen>
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
+      // Cache this location for next app start
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('last_latitude', locationData.latitude!);
+      await prefs.setDouble('last_longitude', locationData.longitude!);
 
       setState(() => currentLocation =
           LatLng(locationData.latitude!, locationData.longitude!));
@@ -347,6 +366,8 @@ class MapScreenState extends State<MapScreen>
       final controller = await mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
 
+      // Cancel previous subscription to avoid duplicate callbacks
+      locationSubscription?.cancel();
       locationSubscription = location.onLocationChanged
           .where((data) => data.latitude != null && data.longitude != null)
           .listen((newLocation) {
@@ -1262,73 +1283,76 @@ class MapScreenState extends State<MapScreen>
 
     return Scaffold(
       body: RepaintBoundary(
-        child: currentLocation == null
-            ? const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF067837),
-                ),
-              )
-            : Stack(
-                children: [
-                  GoogleMap(
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      mapController.complete(controller);
-                    },
-                    style: isDarkMode
-                        ? '''[
-                            {
-                              "elementType": "geometry",
-                              "stylers": [{"color": "#242f3e"}]
-                            },
-                            {
-                              "elementType": "labels.text.fill",
-                              "stylers": [{"color": "#746855"}]
-                            },
-                            {
-                              "elementType": "labels.text.stroke",
-                              "stylers": [{"color": "#242f3e"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "geometry",
-                              "stylers": [{"color": "#38414e"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "geometry.stroke",
-                              "stylers": [{"color": "#212a37"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "labels.text.fill",
-                              "stylers": [{"color": "#9ca5b3"}]
-                            }
-                          ]'''
-                        : '',
-                    initialCameraPosition: CameraPosition(
-                      target: currentLocation!,
-                      zoom: 15.0,
-                    ),
-                    markers: buildMarkers(),
-                    polylines: Set<Polyline>.of(polylines.values),
-                    padding: EdgeInsets.only(
-                      bottom: screenHeight * widget.bottomPadding,
-                      left: screenWidth * 0.04,
-                    ),
-                    mapType: MapType.normal,
-                    buildingsEnabled: false,
-                    myLocationButtonEnabled: false,
-                    indoorViewEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: true,
-                    trafficEnabled: false,
-                    rotateGesturesEnabled: true,
-                    myLocationEnabled: true,
-                  ),
-                ],
+        child: Stack(
+          children: [
+            GoogleMap(
+              onMapCreated: (controller) {
+                _mapController = controller;
+                mapController.complete(controller);
+              },
+              style: isDarkMode
+                  ? '''[
+                      {
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#242f3e"}]
+                      },
+                      {
+                        "elementType": "labels.text.fill",
+                        "stylers": [{"color": "#746855"}]
+                      },
+                      {
+                        "elementType": "labels.text.stroke",
+                        "stylers": [{"color": "#242f3e"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#38414e"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "geometry.stroke",
+                        "stylers": [{"color": "#212a37"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "labels.text.fill",
+                        "stylers": [{"color": "#9ca5b3"}]
+                      }
+                    ]'''
+                  : '',
+              initialCameraPosition: CameraPosition(
+                target: currentLocation ?? const LatLng(14.5995, 120.9842),
+                zoom: currentLocation != null ? 15.0 : 10.0,
               ),
+              markers: buildMarkers(),
+              polylines: Set<Polyline>.of(polylines.values),
+              padding: EdgeInsets.only(
+                bottom: screenHeight * widget.bottomPadding,
+                left: screenWidth * 0.04,
+              ),
+              mapType: MapType.normal,
+              buildingsEnabled: false,
+              myLocationButtonEnabled: false,
+              indoorViewEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: true,
+              trafficEnabled: false,
+              rotateGesturesEnabled: true,
+              myLocationEnabled: currentLocation != null,
+            ),
+            // Overlay loading indicator until we have a real location
+            if (currentLocation == null)
+              const Positioned.fill(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF067837),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
