@@ -21,11 +21,13 @@ import 'package:pasada_passenger_app/widgets/notification_container.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
+import 'package:pasada_passenger_app/services/location_weather_service.dart';
+import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
+import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
+import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
-import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
-
-// stateless tong widget na to so meaning yung mga properties niya ay di na mababago
+import 'package:pasada_passenger_app/services/polyline_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -101,9 +103,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isDriverAssigned = false;
   // Add a flag to ensure onboarding is requested only once
   bool _hasOnboardingBeenCalled = false;
-  // Flag to ensure we only show rush hour dialog once
   bool _isRushHourDialogShown = false;
-  bool _isRainDialogShown = false;
+  // Add a flag to ensure startup alerts are shown only once
+  bool _hasShownStartupAlerts = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -120,9 +122,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final result = await navigateToRouteSelection(context);
 
     if (result != null && mounted) {
-      setState(() => selectedRoute = result);
+      setState(() {
+        selectedRoute = result;
+        selectedPickUpLocation = null;
+        selectedDropOffLocation = null;
+      });
 
-      debugPrint('Selected route: ${result['route_name']}');
+      debugPrint('Selected route:  ${result['route_name']}');
       debugPrint('Route details: $result');
 
       // Make sure we have the route ID
@@ -148,29 +154,29 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Get origin and destination coordinates
       LatLng? originCoordinates = result['origin_coordinates'];
       LatLng? destinationCoordinates = result['destination_coordinates'];
-      String? destinationName = result['destination_name']?.toString();
 
-      if (result['intermediate_coordinates'] != null) {
-        debugPrint(
-            'Route has intermediate coordinates: ${result['intermediate_coordinates']}');
-
-        // Use the new method for route polylines with origin and destination
-        mapScreenKey.currentState?.generateRoutePolyline(
-          result['intermediate_coordinates'],
-          originCoordinates: originCoordinates,
-          destinationCoordinates: destinationCoordinates,
-          destinationName: destinationName,
+      // Draw the precomputed route polyline if available
+      if (result['polyline_coordinates'] != null &&
+          result['polyline_coordinates'] is List<LatLng>) {
+        final coords = result['polyline_coordinates'] as List<LatLng>;
+        mapScreenKey.currentState?.animateRouteDrawing(
+          const PolylineId('route'),
+          coords,
+          const Color(0xFFFFCE21),
+          8,
         );
-      } else {
-        debugPrint('Route does not have intermediate coordinates');
-
-        // Fallback to the original method if no intermediate coordinates
-        if (originCoordinates != null && destinationCoordinates != null) {
-          mapScreenKey.currentState?.generatePolylineBetween(
-            originCoordinates,
-            destinationCoordinates,
-          );
-        }
+        mapScreenKey.currentState?.zoomToBounds(coords);
+      } else if (originCoordinates != null && destinationCoordinates != null) {
+        // Fallback to computing the route directly
+        final coords = await PolylineService()
+            .generateBetween(originCoordinates, destinationCoordinates);
+        mapScreenKey.currentState?.animateRouteDrawing(
+          const PolylineId('route'),
+          coords,
+          const Color(0xFFFFCE21),
+          8,
+        );
+        mapScreenKey.currentState?.zoomToBounds(coords);
       }
     }
   }
@@ -191,17 +197,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Method to restore any active booking from local database on app start
   // MOVED TO BookingManager: Future<void> loadActiveBooking() async { ... }
 
-  // Show weather alert dialog
-  void _showWeatherAlertDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => const WeatherAlertDialog(),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
+    // Observe lifecycle to re-show alerts on resume
+    WidgetsBinding.instance.addObserver(this);
     _bookingManager = BookingManager(this); // Initialize BookingManager
 
     bookingAnimationController = AnimationController(
@@ -237,42 +237,63 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      HomeScreenInitService.runInitialization(
-        context: context,
-        getIsInitialized: () => _isInitialized,
-        setIsInitialized: () => _isInitialized = true,
-        getHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled,
-        setHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled = true,
-        getIsRushHourDialogShown: () => _isRushHourDialogShown,
-        setRushHourDialogShown: () => _isRushHourDialogShown = true,
-        bookingManager: _bookingManager,
-        getIsBookingConfirmed: () => isBookingConfirmed,
-        measureContainers: measureContainers,
-        loadLocation: loadLocation,
-        loadPaymentMethod: loadPaymentMethod,
-      );
+      _initializeHomeScreen();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final weatherProv = context.read<WeatherProvider>();
-      final mapState = mapScreenKey.currentState;
-      if (mapState?.currentLocation != null) {
-        final loc = mapState!.currentLocation!;
-        weatherProv.fetchWeather(loc.latitude, loc.longitude);
-      } else {
-        mapState?.initializeLocation().then((_) {
-          final loc2 = mapState.currentLocation;
-          if (loc2 != null) {
-            weatherProv.fetchWeather(loc2.latitude, loc2.longitude);
-          }
-        });
+  }
+
+  /// Initialize core resources, then fetch weather and display dialogs after loading
+  Future<void> _initializeHomeScreen() async {
+    // Boot and load core resources first
+    await HomeScreenInitService.runInitialization(
+      context: context,
+      getIsInitialized: () => _isInitialized,
+      setIsInitialized: () => _isInitialized = true,
+      getHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled,
+      setHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled = true,
+      getIsRushHourDialogShown: () => _isRushHourDialogShown,
+      setRushHourDialogShown: () => _isRushHourDialogShown = true,
+      bookingManager: _bookingManager,
+      getIsBookingConfirmed: () => isBookingConfirmed,
+      measureContainers: measureContainers,
+      loadLocation: loadLocation,
+      loadPaymentMethod: loadPaymentMethod,
+    );
+    // Fetch and subscribe to weather updates based on device location
+    await LocationWeatherService.fetchAndSubscribe(
+      context.read<WeatherProvider>(),
+    );
+
+    // Show startup alerts only once
+    if (!_hasShownStartupAlerts) {
+      final List<Widget> alertPages = [];
+      // Rush hour condition
+      final nowUtc = DateTime.now().toUtc();
+      final nowPH = nowUtc.add(const Duration(hours: 8));
+      final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
+      const morningStart = 6 * 60;
+      const morningEnd = 7 * 60 + 30;
+      const eveningStart = 16 * 60 + 30;
+      const eveningEnd = 19 * 60 + 30;
+      if ((minutesSinceMidnight >= morningStart &&
+              minutesSinceMidnight <= morningEnd) ||
+          (minutesSinceMidnight >= eveningStart &&
+              minutesSinceMidnight <= eveningEnd)) {
+        alertPages.add(const RushHourDialogContent());
       }
-      weatherProv.addListener(() {
-        if (weatherProv.isRaining && !_isRainDialogShown) {
-          _isRainDialogShown = true;
-          _showWeatherAlertDialog();
-        }
-      });
-    });
+      // Rain condition
+      if (context.read<WeatherProvider>().isRaining) {
+        alertPages.add(const WeatherAlertDialogContent());
+      }
+      // Show alerts in one unified dialog
+      if (alertPages.isNotEmpty) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertSequenceDialog(pages: alertPages),
+        );
+      }
+      _hasShownStartupAlerts = true;
+    }
   }
 
   void loadPaymentMethod() async {
@@ -297,6 +318,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (state == AppLifecycleState.resumed) {
       loadLocation();
       mapScreenKey.currentState?.initializeLocation();
+      // Re-run initialization and alerts when app resumes
+      _initializeHomeScreen();
+      super.didChangeAppLifecycleState(state);
     }
   }
 

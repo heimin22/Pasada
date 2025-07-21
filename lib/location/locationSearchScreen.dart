@@ -98,6 +98,13 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             stops = stops.where((stop) => stop.order != highestOrder).toList();
           }
         }
+        // For drop-off locations, exclude stops at or before the pick-up stop order
+        else if (!widget.isPickup && widget.pickupOrder != null) {
+          debugPrint(
+              'Filtering drop-off stops: excluding order <= ${widget.pickupOrder}');
+          stops =
+              stops.where((stop) => stop.order > widget.pickupOrder!).toList();
+        }
       } else {
         stops = await _stopsService.getAllActiveStops();
         debugPrint('Loaded ${stops.length} active stops across all routes');
@@ -139,24 +146,44 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           }
 
           if (lastStop != null) {
-            final LatLng lastStopCoordinates = lastStop.coordinates;
             // Define a radius to consider a recent search as "the last stop"
-            // 100 meters, can be adjusted based on typical stop precision
+            // 100 meters
             const double exclusionRadiusMeters = 100.0;
 
             searches = searches.where((recent) {
               final distance =
-                  calculateDistance(recent.coordinates, lastStopCoordinates);
-              // Keep the search if it's further than the exclusion radius from the last stop
+                  calculateDistance(recent.coordinates, lastStop!.coordinates);
               return distance > exclusionRadiusMeters;
             }).toList();
             debugPrint(
-                'Filtered recent searches for pick-up. Last stop: ${lastStop.name}. Original count: ${recentSearches.length}, Filtered count: ${searches.length}');
+                'Filtered recent searches for pick-up. Last stop: ${lastStop.name}. Filtered count: ${searches.length}');
           }
         }
       } catch (e) {
         debugPrint('Error filtering recent searches against last stop: $e');
-        // Proceed with unfiltered searches in case of error during stop fetching/filtering
+      }
+    }
+    // For drop-off locations, exclude recent searches at or before the pick-up stop order
+    if (!widget.isPickup &&
+        widget.routeID != null &&
+        widget.pickupOrder != null &&
+        mounted) {
+      try {
+        final int routeId = widget.routeID!;
+        final int pickupOrder = widget.pickupOrder!;
+        final List<RecentSearch> filtered = [];
+        for (var recent in searches) {
+          final Stop? closestStop =
+              await _stopsService.findClosestStop(recent.coordinates, routeId);
+          if (closestStop != null && closestStop.order > pickupOrder) {
+            filtered.add(recent);
+          }
+        }
+        searches = filtered;
+        debugPrint(
+            'Filtered recent searches for drop-off. Pickup order: $pickupOrder. Remaining: ${searches.length}');
+      } catch (e) {
+        debugPrint('Error filtering recent searches for drop-off: $e');
       }
     }
 

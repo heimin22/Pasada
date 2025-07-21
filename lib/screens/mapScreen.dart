@@ -1,24 +1,24 @@
 // ignore_for_file: file_names
 
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math';
 // import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:intl/intl.dart';
-import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../network/networkUtilities.dart';
+import 'package:pasada_passenger_app/utils/map_utils.dart';
+import 'package:pasada_passenger_app/services/map_location_service.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
+import 'package:pasada_passenger_app/services/ride_service.dart';
+import 'package:pasada_passenger_app/services/polyline_service.dart';
+import 'package:pasada_passenger_app/utils/map_camera_utils.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -103,6 +103,9 @@ class MapScreenState extends State<MapScreen>
   static const PolylineId driverRoutePolylineId =
       PolylineId('driver_route_live');
 
+  late final MapLocationService _locationService;
+  late final RideService _rideService;
+
   // Override methods
   /// state of the app
   @override
@@ -113,8 +116,28 @@ class MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        initializeLocation();
-        handleLocationUpdates();
+        // Load last known location from cache for faster initial display
+        SharedPreferences.getInstance().then((prefs) {
+          final lat = prefs.getDouble('last_latitude');
+          final lng = prefs.getDouble('last_longitude');
+          if (lat != null && lng != null && mounted) {
+            setState(() {
+              currentLocation = LatLng(lat, lng);
+            });
+          }
+          // Now fetch fresh location updates
+          initializeLocation();
+          handleLocationUpdates();
+        });
+        // Initialize ride service
+        _rideService = RideService();
+        // Initialize and subscribe to device location
+        _locationService.initialize((loc) {
+          if (mounted) {
+            setState(() => currentLocation = loc);
+            widget.onLocationUpdated?.call(loc);
+          }
+        });
       }
     });
   }
@@ -158,11 +181,14 @@ class MapScreenState extends State<MapScreen>
       return;
     }
     // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
-    generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+    renderRouteBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
   // handle yung location updates for the previous widget to generate polylines
-  void handleLocationUpdates() {
+  Future<void> handleLocationUpdates() async {
+    // Cancel previous subscription to avoid duplicate callbacks
+    locationSubscription?.cancel();
+    // Subscribe to location updates for map and routing
     locationSubscription = location.onLocationChanged
         .where((data) => data.latitude != null && data.longitude != null)
         .listen((newLocation) {
@@ -174,19 +200,33 @@ class MapScreenState extends State<MapScreen>
     });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       debugPrint('MapScreen - Both pickup and dropoff locations are set');
-      // Use the selected route's polyline segment if available
-      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
-        debugPrint('MapScreen - Using route polyline');
-        generatePolylineAlongRoute(
+      final polyService = PolylineService();
+      if (widget.routePolyline?.isNotEmpty == true) {
+        debugPrint('MapScreen - Rendering official route segment');
+        final segment = polyService.generateAlongRoute(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
           widget.routePolyline!,
         );
+        animateRouteDrawing(
+          const PolylineId('route'),
+          segment,
+          const Color(0xFFFFCE21),
+          8,
+        );
+        // Calculate fare based on the segment
+        final fare = FareService.calculateFareForPolyline(segment);
+        fareAmount = fare;
+        if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
+        // Zoom camera to the segment bounds
+        _moveCameraToRoute(
+            segment, widget.pickUpLocation!, widget.dropOffLocation!);
       } else {
-        // Fallback to direct route if no official polyline
-        debugPrint('MapScreen - Using direct route');
-        generatePolylineBetween(
-            widget.pickUpLocation!, widget.dropOffLocation!);
+        debugPrint('MapScreen - Rendering direct route');
+        await renderRouteBetween(
+          widget.pickUpLocation!,
+          widget.dropOffLocation!,
+        );
       }
     } else {
       debugPrint('MapScreen - Missing pickup or dropoff location');
@@ -339,6 +379,10 @@ class MapScreenState extends State<MapScreen>
       // kuha ng current location
       LocationData locationData = await location.getLocation();
       if (!mounted) return;
+      // Cache this location for next app start
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('last_latitude', locationData.latitude!);
+      await prefs.setDouble('last_longitude', locationData.longitude!);
 
       setState(() => currentLocation =
           LatLng(locationData.latitude!, locationData.longitude!));
@@ -347,6 +391,8 @@ class MapScreenState extends State<MapScreen>
       final controller = await mapController.future;
       controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
 
+      // Cancel previous subscription to avoid duplicate callbacks
+      locationSubscription?.cancel();
       locationSubscription = location.onLocationChanged
           .where((data) => data.latitude != null && data.longitude != null)
           .listen((newLocation) {
@@ -371,14 +417,26 @@ class MapScreenState extends State<MapScreen>
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
-      // Check if we have route polyline data from the route selection
-      if (widget.routePolyline != null && widget.routePolyline!.isNotEmpty) {
-        // Generate a polyline that follows the official route
-        generatePolylineAlongRoute(selectedPickupLatLng!,
-            selectedDropOffLatLng!, widget.routePolyline!);
+      // Generate and draw route using PolylineService
+      final polyService = PolylineService();
+      if (widget.routePolyline?.isNotEmpty == true) {
+        final segment = polyService.generateAlongRoute(
+          selectedPickupLatLng!,
+          selectedDropOffLatLng!,
+          widget.routePolyline!,
+        );
+        animateRouteDrawing(
+          const PolylineId('route'),
+          segment,
+          const Color(0xFFFFCE21),
+          8,
+        );
       } else {
-        // Fallback to direct route if no official route polyline is available
-        generatePolylineBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+        // Direct route fallback
+        await renderRouteBetween(
+          selectedPickupLatLng!,
+          selectedDropOffLatLng!,
+        );
       }
     }
   }
@@ -392,473 +450,42 @@ class MapScreenState extends State<MapScreen>
     return true;
   }
 
-  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
-      {LatLng? originCoordinates,
-      LatLng? destinationCoordinates,
-      String? destinationName}) async {
-    try {
-      final hasConnection = await checkNetworkConnection();
-      if (!hasConnection) return;
-
-      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey.isEmpty) {
-        if (kDebugMode) {
-          print('API key not found');
-        }
-        return;
-      }
-
-      final polylinePoints = PolylinePoints();
-
-      // Convert intermediate coordinates to waypoints format
-      List<Map<String, dynamic>> intermediates = [];
-      if (intermediateCoordinates.isNotEmpty) {
-        for (var point in intermediateCoordinates) {
-          if (point is Map &&
-              point.containsKey('lat') &&
-              point.containsKey('lng')) {
-            intermediates.add({
-              'location': {
-                'latLng': {
-                  'latitude': double.parse(point['lat'].toString()),
-                  'longitude': double.parse(point['lng'].toString())
-                }
-              }
-            });
-          }
-        }
-      }
-
-      // Routes API request
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask':
-            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
-      };
-
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': originCoordinates?.latitude,
-              'longitude': originCoordinates?.longitude,
-            },
-          },
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destinationCoordinates?.latitude,
-              'longitude': destinationCoordinates?.longitude,
-            },
-          },
-        },
-        'intermediates': intermediates,
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-        'computeAlternativeRoutes': false,
-        'routingPreference': 'TRAFFIC_AWARE',
-      });
-
-      debugPrint('Request Body: $body');
-
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-
-      if (response == null) {
-        showError('Please try again.');
-        if (kDebugMode) {
-          print('No response from the server');
-        }
-        return;
-      }
-
-      final data = json.decode(response);
-
-      // Add response validation
-      if (data['routes'] == null || data['routes'].isEmpty) {
-        if (kDebugMode) {
-          print('No routes found');
-        }
-        return;
-      }
-
-      // Null checking for nested properties
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) {
-        if (kDebugMode) {
-          print('No polyline found in the response');
-        }
-        return;
-      }
-
-      // Decode the polyline
-      List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(polyline);
-      List<LatLng> polylineCoordinates = decodedPolyline
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-
-      // Cache the computed polyline for future use
-      final cacheKey =
-          'polyline_${originCoordinates?.latitude}_${originCoordinates?.longitude}_${destinationCoordinates?.latitude}_${destinationCoordinates?.longitude}';
-      MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
-
-      // Update UI with the polyline
-      if (mounted) {
-        // Clear overlays and add end-of-route marker
-        setState(() {
-          polylines.clear();
-          if (destinationCoordinates != null) {
-            final BitmapDescriptor customIcon =
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-            final markerId = MarkerId('route_destination');
-            markers[markerId] = Marker(
-              markerId: markerId,
-              position: destinationCoordinates,
-              icon: customIcon,
-              infoWindow: InfoWindow(
-                title: 'End of Route',
-                snippet: destinationName ?? 'Final destination',
-              ),
-            );
-            Future.delayed(const Duration(milliseconds: 500), () async {
-              if (mounted) {
-                final GoogleMapController controller =
-                    await mapController.future;
-                controller.showMarkerInfoWindow(markerId);
-              }
-            });
-            showRouteEndIndicator = true;
-            routeEndName = destinationName ?? 'End of Route';
-          }
-        });
-        // Animate the route drawing for smooth transition
-        animateRouteDrawing(
-          const PolylineId('route_path'),
-          polylineCoordinates,
-          const Color(0xFFFFCE21),
-          8,
-        );
-        // Zoom camera to fit the route
-        double southLat = polylineCoordinates.first.latitude;
-        double northLat = polylineCoordinates.first.latitude;
-        double westLng = polylineCoordinates.first.longitude;
-        double eastLng = polylineCoordinates.first.longitude;
-        for (var point in polylineCoordinates) {
-          southLat = min(southLat, point.latitude);
-          northLat = max(northLat, point.latitude);
-          westLng = min(westLng, point.longitude);
-          eastLng = max(eastLng, point.longitude);
-        }
-        const double padding = 0.01;
-        southLat -= padding;
-        northLat += padding;
-        westLng -= padding;
-        eastLng += padding;
-        final GoogleMapController controller = await mapController.future;
-        controller.animateCamera(
-          CameraUpdate.newLatLngBounds(
-            LatLngBounds(
-              southwest: LatLng(southLat, westLng),
-              northeast: LatLng(northLat, eastLng),
-            ),
-            20,
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Error generating route polyline: $e');
-      showError('Error: ${e.toString()}');
-    }
-  }
-
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination,
+  // Replaced inline routing logic with service-based implementations
+  Future<void> renderRouteBetween(LatLng start, LatLng destination,
       {bool updateFare = true}) async {
-    try {
-      // Try to load cached polyline for these coordinates
-      final cacheKey =
-          'polyline_${start.latitude}_${start.longitude}_${destination.latitude}_${destination.longitude}';
-      final cachedPolyline = MemoryManager.instance.getFromCache(cacheKey);
-      if (cachedPolyline is List<LatLng>) {
-        if (mounted) {
-          // calculate fare immediately
-          final double routeDistance = getRouteDistance(cachedPolyline);
-          final double fare = calculateFare(routeDistance);
-          if (updateFare) {
-            fareAmount = fare;
-            if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
-          }
-          // animate the cached route drawing
-          animateRouteDrawing(
-            const PolylineId('route'),
-            cachedPolyline,
-            const Color.fromARGB(255, 4, 197, 88),
-            8,
-          );
-        }
-        // Cached polyline used, skip network call
-        return;
-      }
-      final hasConnection = await checkNetworkConnection();
-      if (!hasConnection) return;
-
-      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey.isEmpty) {
-        if (kDebugMode) {
-          print('API key not found');
-        }
-        return;
-      }
-
-      final polylinePoints = PolylinePoints();
-
-      // routes API request
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask':
-            'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
-      };
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': start.latitude,
-              'longitude': start.longitude,
-            },
-          },
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destination.latitude,
-              'longitude': destination.longitude,
-            },
-          },
-        },
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-        'computeAlternativeRoutes': false,
-        'routingPreference': 'TRAFFIC_AWARE',
-      });
-
-      debugPrint('Request Body: $body');
-
-      // ito naman na yung gagamitin yung NetworkUtility
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-
-      if (response == null) {
-        // No response, skip polyline generation
-        debugPrint('generatePolylineBetween: no response from server');
-        return;
-      }
-
-      final data = json.decode(response);
-
-      // Handle routes which may be a List or a single Map
-      final dynamic routesObj = data['routes'];
-      List<dynamic> routesList;
-      if (routesObj is List) {
-        routesList = routesObj;
-      } else if (routesObj is Map) {
-        routesList = [routesObj];
-      } else {
-        if (kDebugMode) {
-          print('Unexpected routes format: ${routesObj.runtimeType}');
-        }
-        return;
-      }
-      if (routesList.isEmpty) {
-        if (kDebugMode) print('No routes found');
-        return;
-      }
-      final Map<String, dynamic> firstRoute =
-          Map<String, dynamic>.from(routesList.first);
-      final dynamic polylineObj = firstRoute['polyline'];
-      String? encodedPolyline;
-
-      if (polylineObj is Map && polylineObj['encodedPolyline'] is String) {
-        encodedPolyline = polylineObj['encodedPolyline'] as String;
-      }
-
-      if (encodedPolyline == null) {
-        if (kDebugMode) print('No polyline found in the response');
-        return;
-      }
-
-      List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(encodedPolyline);
-      List<LatLng> polylineCoordinates = decodedPolyline
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-
-      // Cache the computed polyline for future use
-      MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
-
-      // Update UI with the polyline
-      if (mounted) {
-        final double routeDistance = getRouteDistance(polylineCoordinates);
-        final double fare = calculateFare(routeDistance);
-
-        debugPrint('Route distance: ${routeDistance.toStringAsFixed(2)} km');
-        debugPrint('Calculated fare: ₱${fare.toStringAsFixed(2)}');
-
-        // update fare immediately
-        if (updateFare) {
-          fareAmount = fare;
-        }
-        // animate the route drawing
-        animateRouteDrawing(
-          const PolylineId('route'),
-          polylineCoordinates,
-          const Color.fromARGB(255, 4, 197, 88),
-          8,
-        );
-
-        if (updateFare) {
-          if (widget.onFareUpdated != null) {
-            debugPrint(
-                'Calling onFareUpdated with fare: ₱${fare.toStringAsFixed(2)}');
-            widget.onFareUpdated!(fare);
-          } else {
-            debugPrint('onFareUpdated callback is null');
-          }
-        }
-
-        // Add ETA update similar to generatePolylineAlongRoute
-        final legs = routesList[0]['legs'];
-        if (legs is List && legs.isNotEmpty) {
-          final firstLeg = legs[0];
-          final duration = firstLeg['duration'];
-          if (duration != null && duration['seconds'] != null) {
-            final durationSeconds = duration['seconds'];
-            final etaTextValue = formatDuration(durationSeconds);
-            debugPrint('MapScreen - ETA calculated: $etaTextValue');
-            setState(() {
-              etaText = etaTextValue;
-            });
-            if (widget.onEtaUpdated != null) {
-              debugPrint(
-                  'MapScreen - Calling onEtaUpdated with: $etaTextValue');
-              widget.onEtaUpdated!(etaTextValue);
-            } else {
-              debugPrint('MapScreen - onEtaUpdated is null');
-            }
-          } else {
-            debugPrint('MapScreen - duration or seconds is null');
-          }
-        } else {
-          debugPrint('MapScreen - legs is empty or not a list');
-        }
-
-        // calculate bounds that include start, destination and all polyline points
-        double southLat = start.latitude;
-        double northLat = start.latitude;
-        double westLng = start.longitude;
-        double eastLng = start.longitude;
-
-        // include the destination point
-        southLat = min(southLat, destination.latitude);
-        northLat = max(northLat, destination.latitude);
-        westLng = min(westLng, destination.longitude);
-        eastLng = max(eastLng, destination.longitude);
-
-        // include all polyline points
-        for (LatLng point in polylineCoordinates) {
-          southLat = min(southLat, point.latitude);
-          northLat = max(northLat, point.latitude);
-          westLng = min(westLng, point.longitude);
-          eastLng = max(eastLng, point.longitude);
-        }
-
-        // add padding to the bounds
-        final double padding = 0.01;
-        southLat -= padding;
-        northLat += padding;
-        westLng -= padding;
-        eastLng += padding;
-
-        // create a new camera position centered within the bounds
-        final GoogleMapController controller = await mapController.future;
-        controller.animateCamera(
-          CameraUpdate.newLatLngBounds(
-            LatLngBounds(
-              southwest: LatLng(southLat, westLng),
-              northeast: LatLng(northLat, eastLng),
-            ),
-            20,
-          ),
-          duration: const Duration(milliseconds: 1000),
-        );
-      }
-
-      if (kDebugMode) {
-        print('Failed to generate route: $response');
-      }
-    } catch (e) {
-      // Suppress map errors on polyline generate during restore
-      debugPrint('generatePolylineBetween error: $e');
+    final polyService = PolylineService();
+    final List<LatLng> polylineCoordinates =
+        await polyService.generateBetween(start, destination);
+    if (!mounted || polylineCoordinates.isEmpty) return;
+    final double routeDistance =
+        await polyService.calculateRouteDistanceKm(start, destination);
+    final double fare = FareService.calculateFare(routeDistance);
+    if (updateFare) {
+      fareAmount = fare;
+      widget.onFareUpdated?.call(fare);
     }
-  }
-
-  double calculateFare(double distanceInKm) {
-    const double baseFare = 15.0;
-    const double ratePerKm = 2.2;
-
-    double calculatedFare = 0.0;
-    if (distanceInKm <= 4.0) {
-      calculatedFare = baseFare;
-    } else {
-      calculatedFare = baseFare + (distanceInKm - 4.0) * ratePerKm;
-    }
-
-    // Add debug print to verify calculation
-    debugPrint(
-        'Distance: ${distanceInKm.toStringAsFixed(2)} km, Calculated fare: ₱${calculatedFare.toStringAsFixed(2)}');
-
-    return calculatedFare;
-  }
-
-  double getRouteDistance(List<LatLng> polylineCoordinates) {
-    double totalDistance = 0.0;
-
-    for (int i = 0; i < polylineCoordinates.length - 1; i++) {
-      final SelectedLocation start = SelectedLocation(
-        '',
-        polylineCoordinates[i],
-      );
-      final SelectedLocation end = SelectedLocation(
-        '',
-        polylineCoordinates[i + 1],
-      );
-      totalDistance += start.distanceFrom(end.coordinates);
-      debugPrint(
-          'Distance between points: ${start.distanceFrom(end.coordinates)}');
-    }
-    return totalDistance;
-  }
-
-  String formatDuration(int totalSeconds) {
-    // Calculate arrival time based on current time and duration
-    final now = DateTime.now();
-    final arrivalTime = now.add(Duration(seconds: totalSeconds));
-    return DateFormat('h:mm a').format(arrivalTime);
-  }
-
-  void showDebugToast(String message) {
-    Fluttertoast.showToast(
-      msg: message,
-      toastLength: Toast.LENGTH_LONG,
-      backgroundColor: Colors.black87,
-      textColor: Colors.white,
+    animateRouteDrawing(
+      const PolylineId('route'),
+      polylineCoordinates,
+      const Color.fromARGB(255, 4, 197, 88),
+      8,
     );
+    _moveCameraToRoute(polylineCoordinates, start, destination);
+  }
+
+  Future<void> _moveCameraToRoute(List<LatLng> polylineCoordinates,
+      LatLng start, LatLng destination) async {
+    final controller = await mapController.future;
+    await moveCameraToBounds(controller, polylineCoordinates,
+        padding: 0.01, boundPadding: 20);
+  }
+
+  // Expose camera bounds zoom for external callers
+  Future<void> zoomToBounds(List<LatLng> polylineCoordinates) async {
+    if (polylineCoordinates.isEmpty) return;
+    final LatLng start = polylineCoordinates.first;
+    final LatLng end = polylineCoordinates.last;
+    await _moveCameraToRoute(polylineCoordinates, start, end);
   }
 
   void onMapCreated(GoogleMapController controller) {
@@ -967,85 +594,25 @@ class MapScreenState extends State<MapScreen>
       }
     });
 
-    // Use routing API to draw polyline along roads
-    if (rideStatus == 'accepted' && widget.pickUpLocation != null) {
-      await generateDriverRoutePolyline(location, widget.pickUpLocation!);
-    } else if (rideStatus == 'ongoing' && widget.dropOffLocation != null) {
-      await generateDriverRoutePolyline(location, widget.dropOffLocation!);
+    // Generate and draw driver route polyline for accepted or ongoing rides
+    List<LatLng> route = [];
+    if (rideStatus == 'accepted') {
+      route = await _rideService.getRoute(location, widget.pickUpLocation);
+    } else if (rideStatus == 'ongoing') {
+      route = await _rideService.getRoute(location, widget.dropOffLocation);
+    }
+    if (route.isNotEmpty) {
+      animateRouteDrawing(
+        const PolylineId('driver_route_live'),
+        route,
+        const Color.fromARGB(255, 10, 179, 83),
+        8,
+      );
     }
   }
 
   // Helper to generate and update polyline for driver route without clearing other polylines
-  Future<void> generateDriverRoutePolyline(LatLng start, LatLng end) async {
-    final cacheKey =
-        'driver_route_${start.latitude}_${start.longitude}_${end.latitude}_${end.longitude}';
-    List<LatLng>? polylineCoordinates;
-    // Attempt to use cached route
-    final cached = MemoryManager.instance.getFromCache(cacheKey);
-    if (cached is List<LatLng>) {
-      polylineCoordinates = cached;
-    } else {
-      // Fetch new route from Directions API
-      final polylinePoints = PolylinePoints();
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-      };
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {'latitude': start.latitude, 'longitude': start.longitude}
-          }
-        },
-        'destination': {
-          'location': {
-            'latLng': {'latitude': end.latitude, 'longitude': end.longitude}
-          }
-        },
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-        'computeAlternativeRoutes': false,
-        'routingPreference': 'TRAFFIC_AWARE',
-      });
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-      if (response != null) {
-        final data = json.decode(response);
-        final routesObj = data['routes'];
-        List<dynamic> routesList = [];
-        if (routesObj is List) {
-          routesList = routesObj;
-        } else if (routesObj is Map) {
-          routesList = [routesObj];
-        }
-        if (routesList.isNotEmpty) {
-          final encoded = routesList[0]['polyline']?['encodedPolyline'];
-          if (encoded is String) {
-            final decoded = polylinePoints.decodePolyline(encoded);
-            polylineCoordinates =
-                decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
-            MemoryManager.instance.addToCache(cacheKey, polylineCoordinates);
-          }
-        }
-      }
-    }
-    if (polylineCoordinates != null && mounted) {
-      setState(() {
-        polylines[driverRoutePolylineId] = Polyline(
-          polylineId: driverRoutePolylineId,
-          points: polylineCoordinates!,
-          color: const Color.fromARGB(255, 10, 179, 83),
-          width: 8,
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-        );
-      });
-    }
-  }
+  // Driver route generation is handled by RideService; remove inline implementation.
 
   Set<Marker> buildMarkers() {
     final markerSet = <Marker>{};
@@ -1136,85 +703,7 @@ class MapScreenState extends State<MapScreen>
 
   // Helper method to calculate distance between two points
   double calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371; // in kilometers
-
-    // Convert latitude and longitude from degrees to radians
-    final double lat1 = point1.latitude * (pi / 180);
-    final double lon1 = point1.longitude * (pi / 180);
-    final double lat2 = point2.latitude * (pi / 180);
-    final double lon2 = point2.longitude * (pi / 180);
-
-    // Haversine formula
-    final double dLat = lat2 - lat1;
-    final double dLon = lon2 - lon1;
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-
-    return earthRadius * c; // Distance in kilometers
-  }
-
-  Future<void> generatePolylineAlongRoute(
-      LatLng start, LatLng end, List<LatLng> routePolyline) async {
-    debugPrint(
-        'MapScreen - generatePolylineAlongRoute called with start: $start, end: $end');
-
-    // Find the nearest points on the route to our start and end points
-    LatLng startOnRoute = findNearestPointOnRoute(start, routePolyline);
-    LatLng endOnRoute = findNearestPointOnRoute(end, routePolyline);
-
-    // Find indices of these points in the route
-    int startIdx = 0;
-    int endIdx = routePolyline.length - 1;
-    double minStartDist = double.infinity;
-    double minEndDist = double.infinity;
-
-    for (int i = 0; i < routePolyline.length; i++) {
-      final double startDist =
-          calculateDistance(startOnRoute, routePolyline[i]);
-      final double endDist = calculateDistance(endOnRoute, routePolyline[i]);
-
-      if (startDist < minStartDist) {
-        minStartDist = startDist;
-        startIdx = i;
-      }
-
-      if (endDist < minEndDist) {
-        minEndDist = endDist;
-        endIdx = i;
-      }
-    }
-
-    // Ensure start comes before end on the route
-    if (startIdx > endIdx) {
-      final temp = startIdx;
-      startIdx = endIdx;
-      endIdx = temp;
-    }
-
-    // Extract the portion of the route between start and end
-    final List<LatLng> routeSegment = [];
-    routeSegment.add(start); // Add actual start point
-
-    // Add all points along the route between start and end indices
-    routeSegment.addAll(routePolyline.sublist(startIdx + 1, endIdx));
-
-    routeSegment.add(end); // Add actual end point
-
-    // calculate and update fare immediately
-    final double routeDistance = getRouteDistance(routeSegment);
-    final double fare = calculateFare(routeDistance);
-    fareAmount = fare;
-    if (widget.onFareUpdated != null) {
-      widget.onFareUpdated!(fare);
-    }
-    // animate the route segment drawing
-    animateRouteDrawing(
-      const PolylineId('route_path'),
-      routeSegment,
-      const Color.fromARGB(255, 4, 197, 88),
-      8,
-    );
+    return calculateDistanceKm(point1, point2);
   }
 
   // Helper to animate drawing a polyline point-by-point
@@ -1262,73 +751,76 @@ class MapScreenState extends State<MapScreen>
 
     return Scaffold(
       body: RepaintBoundary(
-        child: currentLocation == null
-            ? const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF067837),
-                ),
-              )
-            : Stack(
-                children: [
-                  GoogleMap(
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      mapController.complete(controller);
-                    },
-                    style: isDarkMode
-                        ? '''[
-                            {
-                              "elementType": "geometry",
-                              "stylers": [{"color": "#242f3e"}]
-                            },
-                            {
-                              "elementType": "labels.text.fill",
-                              "stylers": [{"color": "#746855"}]
-                            },
-                            {
-                              "elementType": "labels.text.stroke",
-                              "stylers": [{"color": "#242f3e"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "geometry",
-                              "stylers": [{"color": "#38414e"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "geometry.stroke",
-                              "stylers": [{"color": "#212a37"}]
-                            },
-                            {
-                              "featureType": "road",
-                              "elementType": "labels.text.fill",
-                              "stylers": [{"color": "#9ca5b3"}]
-                            }
-                          ]'''
-                        : '',
-                    initialCameraPosition: CameraPosition(
-                      target: currentLocation!,
-                      zoom: 15.0,
-                    ),
-                    markers: buildMarkers(),
-                    polylines: Set<Polyline>.of(polylines.values),
-                    padding: EdgeInsets.only(
-                      bottom: screenHeight * widget.bottomPadding,
-                      left: screenWidth * 0.04,
-                    ),
-                    mapType: MapType.normal,
-                    buildingsEnabled: false,
-                    myLocationButtonEnabled: false,
-                    indoorViewEnabled: false,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: true,
-                    trafficEnabled: false,
-                    rotateGesturesEnabled: true,
-                    myLocationEnabled: true,
-                  ),
-                ],
+        child: Stack(
+          children: [
+            GoogleMap(
+              onMapCreated: (controller) {
+                _mapController = controller;
+                mapController.complete(controller);
+              },
+              style: isDarkMode
+                  ? '''[
+                      {
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#242f3e"}]
+                      },
+                      {
+                        "elementType": "labels.text.fill",
+                        "stylers": [{"color": "#746855"}]
+                      },
+                      {
+                        "elementType": "labels.text.stroke",
+                        "stylers": [{"color": "#242f3e"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "geometry",
+                        "stylers": [{"color": "#38414e"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "geometry.stroke",
+                        "stylers": [{"color": "#212a37"}]
+                      },
+                      {
+                        "featureType": "road",
+                        "elementType": "labels.text.fill",
+                        "stylers": [{"color": "#9ca5b3"}]
+                      }
+                    ]'''
+                  : '',
+              initialCameraPosition: CameraPosition(
+                target: currentLocation ?? const LatLng(14.5995, 120.9842),
+                zoom: currentLocation != null ? 15.0 : 10.0,
               ),
+              markers: buildMarkers(),
+              polylines: Set<Polyline>.of(polylines.values),
+              padding: EdgeInsets.only(
+                bottom: screenHeight * widget.bottomPadding,
+                left: screenWidth * 0.04,
+              ),
+              mapType: MapType.normal,
+              buildingsEnabled: false,
+              myLocationButtonEnabled: false,
+              indoorViewEnabled: false,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: true,
+              trafficEnabled: false,
+              rotateGesturesEnabled: true,
+              myLocationEnabled: currentLocation != null,
+            ),
+            // Overlay loading indicator until we have a real location
+            if (currentLocation == null)
+              const Positioned.fill(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFF067837),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

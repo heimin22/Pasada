@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/widgets/loading_dialog.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
-import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 
 /// Service to handle HomeScreen initialization, onboarding, and rush-hour dialogs
@@ -61,33 +60,8 @@ class HomeScreenInitService {
     measureContainers();
 
     await showOnboardingDialog(context);
-
-    if (!getIsRushHourDialogShown()) {
-      setRushHourDialogShown();
-      await _showRushHourDialog(context);
-    }
-
     NotificationService.showAvailabilityNotification();
   }
 
-  static Future<void> _showRushHourDialog(BuildContext context) async {
-    final nowUtc = DateTime.now().toUtc();
-    final nowPH = nowUtc.add(const Duration(hours: 8));
-    final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
-    const morningStart = 6 * 60; // 6:00 AM
-    const morningEnd = 7 * 60 + 30; // 7:30 AM
-    const eveningStart = 16 * 60 + 30; // 4:30 PM
-    const eveningEnd = 19 * 60 + 30; // 7:30 PM
-
-    if ((minutesSinceMidnight >= morningStart &&
-            minutesSinceMidnight <= morningEnd) ||
-        (minutesSinceMidnight >= eveningStart &&
-            minutesSinceMidnight <= eveningEnd)) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const RushHourDialog(),
-      );
-    }
-  }
+  // Rush hour dialog logic moved to HomeScreenPageState._initializeHomeScreen
 }

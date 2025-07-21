@@ -145,10 +145,11 @@ class InitializationService {
   static Future<void> _preloadGoogleMap(BuildContext context) async {
     final completer = Completer<GoogleMapController>();
     final overlay = Overlay.of(context);
+    // Use 1x1 pixel to fully initialize the map engine
     final entry = OverlayEntry(
         builder: (_) => SizedBox(
-              width: 0,
-              height: 0,
+              width: 1,
+              height: 1,
               child: GoogleMap(
                 initialCameraPosition: const CameraPosition(
                   target: LatLng(0, 0),
