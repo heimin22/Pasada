@@ -104,6 +104,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Add a flag to ensure onboarding is requested only once
   bool _hasOnboardingBeenCalled = false;
   bool _isRushHourDialogShown = false;
+  // Add a flag to ensure startup alerts are shown only once
+  bool _hasShownStartupAlerts = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -261,33 +263,36 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       context.read<WeatherProvider>(),
     );
 
-    // Assemble alert pages
-    final List<Widget> alertPages = [];
-    // Rush hour condition
-    final nowUtc = DateTime.now().toUtc();
-    final nowPH = nowUtc.add(const Duration(hours: 8));
-    final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
-    const morningStart = 6 * 60;
-    const morningEnd = 7 * 60 + 30;
-    const eveningStart = 16 * 60 + 30;
-    const eveningEnd = 19 * 60 + 30;
-    if ((minutesSinceMidnight >= morningStart &&
-            minutesSinceMidnight <= morningEnd) ||
-        (minutesSinceMidnight >= eveningStart &&
-            minutesSinceMidnight <= eveningEnd)) {
-      alertPages.add(const RushHourDialogContent());
-    }
-    // Rain condition
-    if (context.read<WeatherProvider>().isRaining) {
-      alertPages.add(const WeatherAlertDialogContent());
-    }
-    // Show alerts in one unified dialog
-    if (alertPages.isNotEmpty) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertSequenceDialog(pages: alertPages),
-      );
+    // Show startup alerts only once
+    if (!_hasShownStartupAlerts) {
+      final List<Widget> alertPages = [];
+      // Rush hour condition
+      final nowUtc = DateTime.now().toUtc();
+      final nowPH = nowUtc.add(const Duration(hours: 8));
+      final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
+      const morningStart = 6 * 60;
+      const morningEnd = 7 * 60 + 30;
+      const eveningStart = 16 * 60 + 30;
+      const eveningEnd = 19 * 60 + 30;
+      if ((minutesSinceMidnight >= morningStart &&
+              minutesSinceMidnight <= morningEnd) ||
+          (minutesSinceMidnight >= eveningStart &&
+              minutesSinceMidnight <= eveningEnd)) {
+        alertPages.add(const RushHourDialogContent());
+      }
+      // Rain condition
+      if (context.read<WeatherProvider>().isRaining) {
+        alertPages.add(const WeatherAlertDialogContent());
+      }
+      // Show alerts in one unified dialog
+      if (alertPages.isNotEmpty) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertSequenceDialog(pages: alertPages),
+        );
+      }
+      _hasShownStartupAlerts = true;
     }
   }
 
