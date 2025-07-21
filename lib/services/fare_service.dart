@@ -19,4 +19,13 @@ class FareService {
     final distance = calculateDistanceKm(start, end);
     return calculateFare(distance);
   }
+
+  /// Calculates fare for a full polyline by summing segment distances
+  static double calculateFareForPolyline(List<LatLng> polyline) {
+    double totalDistance = 0.0;
+    for (int i = 0; i < polyline.length - 1; i++) {
+      totalDistance += calculateDistanceKm(polyline[i], polyline[i + 1]);
+    }
+    return calculateFare(totalDistance);
+  }
 }

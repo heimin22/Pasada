@@ -27,8 +27,8 @@ import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
-
-// stateless tong widget na to so meaning yung mga properties niya ay di na mababago
+import 'package:pasada_passenger_app/services/polyline_service.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -121,9 +121,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final result = await navigateToRouteSelection(context);
 
     if (result != null && mounted) {
-      setState(() => selectedRoute = result);
+      setState(() {
+        selectedRoute = result;
+        selectedPickUpLocation = null;
+        selectedDropOffLocation = null;
+      });
 
-      debugPrint('Selected route: ${result['route_name']}');
+      debugPrint('Selected route:  ${result['route_name']}');
       debugPrint('Route details: $result');
 
       // Make sure we have the route ID
@@ -149,29 +153,35 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Get origin and destination coordinates
       LatLng? originCoordinates = result['origin_coordinates'];
       LatLng? destinationCoordinates = result['destination_coordinates'];
-      String? destinationName = result['destination_name']?.toString();
 
-      if (result['intermediate_coordinates'] != null) {
-        debugPrint(
-            'Route has intermediate coordinates: ${result['intermediate_coordinates']}');
-
-        // Use the new method for route polylines with origin and destination
-        mapScreenKey.currentState?.generateRoutePolyline(
-          result['intermediate_coordinates'],
-          originCoordinates: originCoordinates,
-          destinationCoordinates: destinationCoordinates,
-          destinationName: destinationName,
+      // Draw the precomputed route polyline if available
+      if (result['polyline_coordinates'] != null &&
+          result['polyline_coordinates'] is List<LatLng>) {
+        final coords = result['polyline_coordinates'] as List<LatLng>;
+        mapScreenKey.currentState?.animateRouteDrawing(
+          const PolylineId('route'),
+          coords,
+          const Color(0xFFFFCE21),
+          8,
         );
-      } else {
-        debugPrint('Route does not have intermediate coordinates');
-
-        // Fallback to the original method if no intermediate coordinates
-        if (originCoordinates != null && destinationCoordinates != null) {
-          mapScreenKey.currentState?.generatePolylineBetween(
-            originCoordinates,
-            destinationCoordinates,
-          );
-        }
+        mapScreenKey.currentState?.zoomToBounds(coords);
+        // Calculate fare for precomputed route
+        final fare = FareService.calculateFareForPolyline(coords);
+        setState(() => currentFare = fare);
+      } else if (originCoordinates != null && destinationCoordinates != null) {
+        // Fallback to computing the route directly
+        final coords = await PolylineService()
+            .generateBetween(originCoordinates, destinationCoordinates);
+        mapScreenKey.currentState?.animateRouteDrawing(
+          const PolylineId('route'),
+          coords,
+          const Color(0xFFFFCE21),
+          8,
+        );
+        mapScreenKey.currentState?.zoomToBounds(coords);
+        // Calculate fare for fallback route
+        final fare = FareService.calculateFareForPolyline(coords);
+        setState(() => currentFare = fare);
       }
     }
   }

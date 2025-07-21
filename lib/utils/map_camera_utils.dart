@@ -6,7 +6,7 @@ Future<void> moveCameraToBounds(
   GoogleMapController controller,
   List<LatLng> coords, {
   double padding = 0.01,
-  int boundPadding = 20,
+  double boundPadding = 20.0,
 }) async {
   if (coords.isEmpty) return;
 

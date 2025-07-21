@@ -1,13 +1,14 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 
-/// Service to fetch route polyline for rides (driver to pickup/dropoff)
+/// Service to generate driver route polylines for pickups or dropoffs
 class RideService {
-  static Future<List<LatLng>> getDriverRoute(
-    LatLng start,
-    LatLng end,
-  ) async {
-    final service = PolylineService();
-    return await service.generateBetween(start, end);
+  final PolylineService _polylineService = PolylineService();
+
+  /// Returns a list of LatLng representing the route from [start] to [end].
+  /// If [end] is null, returns an empty list.
+  Future<List<LatLng>> getRoute(LatLng start, LatLng? end) async {
+    if (end == null) return [];
+    return _polylineService.generateBetween(start, end);
   }
 }

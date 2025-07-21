@@ -17,6 +17,7 @@ import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'dart:async';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
+import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'dart:math';
 
 class BookingManager {
@@ -192,14 +193,17 @@ class BookingManager {
             ?.updateDriverLocation(pos, _state.bookingStatus);
       });
       if (_state.selectedRoute != null) {
-        _state.mapScreenKey.currentState?.generateRoutePolyline(
-          _state.selectedRoute!['intermediate_coordinates'] as List<dynamic>,
-          originCoordinates:
-              _state.selectedRoute!['origin_coordinates'] as LatLng?,
-          destinationCoordinates:
-              _state.selectedRoute!['destination_coordinates'] as LatLng?,
-          destinationName:
-              _state.selectedRoute!['destination_name']?.toString(),
+        final polyService = PolylineService();
+        final coords = polyService.generateAlongRoute(
+          _state.selectedRoute!['origin_coordinates'] as LatLng,
+          _state.selectedRoute!['destination_coordinates'] as LatLng,
+          _state.selectedRoute!['intermediate_coordinates'] as List<LatLng>,
+        );
+        _state.mapScreenKey.currentState?.animateRouteDrawing(
+          const PolylineId('route'),
+          coords,
+          const Color(0xFFFFCE21),
+          8,
         );
       }
       final user = supabase.auth.currentUser;
