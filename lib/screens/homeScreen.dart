@@ -21,9 +21,11 @@ import 'package:pasada_passenger_app/widgets/notification_container.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
+import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
+import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
+import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
-import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 
 // stateless tong widget na to so meaning yung mga properties niya ay di na mababago
 
@@ -101,9 +103,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isDriverAssigned = false;
   // Add a flag to ensure onboarding is requested only once
   bool _hasOnboardingBeenCalled = false;
-  // Flag to ensure we only show rush hour dialog once
   bool _isRushHourDialogShown = false;
-  bool _isRainDialogShown = false;
 
   String driverName = '';
   String plateNumber = '';
@@ -191,17 +191,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   // Method to restore any active booking from local database on app start
   // MOVED TO BookingManager: Future<void> loadActiveBooking() async { ... }
 
-  // Show weather alert dialog
-  void _showWeatherAlertDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => const WeatherAlertDialog(),
-    );
-  }
-
   @override
   void initState() {
     super.initState();
+    // Observe lifecycle to re-show alerts on resume
+    WidgetsBinding.instance.addObserver(this);
     _bookingManager = BookingManager(this); // Initialize BookingManager
 
     bookingAnimationController = AnimationController(
@@ -237,42 +231,69 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      HomeScreenInitService.runInitialization(
+      _initializeHomeScreen();
+    });
+  }
+
+  /// Initialize core resources, then fetch weather and display dialogs after loading
+  Future<void> _initializeHomeScreen() async {
+    // Boot and load core resources first
+    await HomeScreenInitService.runInitialization(
+      context: context,
+      getIsInitialized: () => _isInitialized,
+      setIsInitialized: () => _isInitialized = true,
+      getHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled,
+      setHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled = true,
+      getIsRushHourDialogShown: () => _isRushHourDialogShown,
+      setRushHourDialogShown: () => _isRushHourDialogShown = true,
+      bookingManager: _bookingManager,
+      getIsBookingConfirmed: () => isBookingConfirmed,
+      measureContainers: measureContainers,
+      loadLocation: loadLocation,
+      loadPaymentMethod: loadPaymentMethod,
+    );
+    // Now fetch weather and prepare alerts
+    final weatherProv = context.read<WeatherProvider>();
+    final mapState = mapScreenKey.currentState;
+    LatLng? loc;
+    if (mapState?.currentLocation != null) {
+      loc = mapState!.currentLocation;
+    } else {
+      await mapState?.initializeLocation();
+      loc = mapState?.currentLocation;
+    }
+    if (loc != null) {
+      await weatherProv.fetchWeather(loc.latitude, loc.longitude);
+    }
+
+    // Assemble alert pages
+    final List<Widget> alertPages = [];
+    // Rush hour condition
+    final nowUtc = DateTime.now().toUtc();
+    final nowPH = nowUtc.add(const Duration(hours: 8));
+    final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
+    const morningStart = 6 * 60;
+    const morningEnd = 7 * 60 + 30;
+    const eveningStart = 16 * 60 + 30;
+    const eveningEnd = 19 * 60 + 30;
+    if ((minutesSinceMidnight >= morningStart &&
+            minutesSinceMidnight <= morningEnd) ||
+        (minutesSinceMidnight >= eveningStart &&
+            minutesSinceMidnight <= eveningEnd)) {
+      alertPages.add(const RushHourDialogContent());
+    }
+    // Rain condition
+    if (weatherProv.isRaining) {
+      alertPages.add(const WeatherAlertDialogContent());
+    }
+    // Show alerts in one unified dialog
+    if (alertPages.isNotEmpty) {
+      await showDialog(
         context: context,
-        getIsInitialized: () => _isInitialized,
-        setIsInitialized: () => _isInitialized = true,
-        getHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled,
-        setHasOnboardingBeenCalled: () => _hasOnboardingBeenCalled = true,
-        getIsRushHourDialogShown: () => _isRushHourDialogShown,
-        setRushHourDialogShown: () => _isRushHourDialogShown = true,
-        bookingManager: _bookingManager,
-        getIsBookingConfirmed: () => isBookingConfirmed,
-        measureContainers: measureContainers,
-        loadLocation: loadLocation,
-        loadPaymentMethod: loadPaymentMethod,
+        barrierDismissible: false,
+        builder: (_) => AlertSequenceDialog(pages: alertPages),
       );
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final weatherProv = context.read<WeatherProvider>();
-      final mapState = mapScreenKey.currentState;
-      if (mapState?.currentLocation != null) {
-        final loc = mapState!.currentLocation!;
-        weatherProv.fetchWeather(loc.latitude, loc.longitude);
-      } else {
-        mapState?.initializeLocation().then((_) {
-          final loc2 = mapState.currentLocation;
-          if (loc2 != null) {
-            weatherProv.fetchWeather(loc2.latitude, loc2.longitude);
-          }
-        });
-      }
-      weatherProv.addListener(() {
-        if (weatherProv.isRaining && !_isRainDialogShown) {
-          _isRainDialogShown = true;
-          _showWeatherAlertDialog();
-        }
-      });
-    });
+    }
   }
 
   void loadPaymentMethod() async {
@@ -297,6 +318,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (state == AppLifecycleState.resumed) {
       loadLocation();
       mapScreenKey.currentState?.initializeLocation();
+      // Re-run initialization and alerts when app resumes
+      _initializeHomeScreen();
+      super.didChangeAppLifecycleState(state);
     }
   }
 
