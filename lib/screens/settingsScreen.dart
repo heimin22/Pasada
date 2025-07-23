@@ -196,114 +196,119 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
     final rootNavigator = Navigator.of(context, rootNavigator: true);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    try {
-      final confirmLogout = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => ResponsiveDialog(
-          title: 'Log out?',
-          contentPadding: const EdgeInsets.all(24),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Are you sure you want to log out?',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Inter',
-                  color: isDarkMode
-                      ? const Color(0xFFDEDEDE)
-                      : const Color(0xFF1E1E1E),
-                ),
-              ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.spaceEvenly,
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: const Color(0xFF00CC58),
-                    width: 3,
-                  ),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 40),
-                backgroundColor: Colors.transparent,
-                foregroundColor: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 40),
-                backgroundColor: const Color(0xFFD7481D),
-                foregroundColor: const Color(0xFFF5F5F5),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Logout',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                ),
+    // Show confirmation dialog
+    final confirmLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => ResponsiveDialog(
+        title: 'Log out?',
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to log out?',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                color: isDarkMode
+                    ? const Color(0xFFDEDEDE)
+                    : const Color(0xFF1E1E1E),
               ),
             ),
           ],
         ),
-      );
-      if (confirmLogout ?? false) {
-        if (!context.mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (loadingDialogContext) => const PopScope(
-            canPop: false,
-            child: Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Color(0xFF067837),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: const Color(0xFF00CC58),
+                  width: 3,
+                ),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: Colors.transparent,
+              foregroundColor: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
               ),
             ),
           ),
-        );
-        await authService.logout();
-        if (!context.mounted) return;
-        rootNavigator.pop(); // Close loading dialog
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: const Color(0xFFD7481D),
+              foregroundColor: const Color(0xFFF5F5F5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Logout',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
 
-        // Navigate directly to IntroductionScreen instead of PasadaPassenger
-        rootNavigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const IntroductionScreen()),
-          (Route<dynamic> route) => false,
-        );
-      }
+    if (!(confirmLogout ?? false)) return;
+    if (!context.mounted) return;
+
+    // Show loading dialog using rootNavigator to ensure proper disposal
+    showDialog(
+      context: context,
+      useRootNavigator: true,
+      barrierDismissible: false,
+      builder: (loadingDialogContext) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Color(0xFF067837),
+          ),
+        ),
+      ),
+    );
+
+    // Perform logout and ensure the loading dialog is closed first
+    try {
+      await authService.logout();
+      // Close loading dialog
+      rootNavigator.pop();
+      if (!context.mounted) return;
+      // Navigate to IntroductionScreen
+      rootNavigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const IntroductionScreen()),
+        (Route<dynamic> route) => false,
+      );
     } catch (e) {
+      // Close loading dialog
+      rootNavigator.pop();
       if (context.mounted) {
-        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logout failed: ${e.toString()}')),
         );

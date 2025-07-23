@@ -542,7 +542,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             return SizedBox(
                               width: weatherIconSize,
                               height: weatherIconSize,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF00CC58),
+                              ),
                             );
                           } else if (weatherProv.weather != null) {
                             return Image.network(
