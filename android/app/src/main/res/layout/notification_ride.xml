@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:id="@+id/tv_eta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="16sp"
+            android:text="You will arrive at 00:00" />
+
+        <TextView
+            android:id="@+id/tv_dest"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#CCCCCC"
+            android:textSize="14sp"
+            android:text="Destination" />
+
+    </LinearLayout>
+
+    <ProgressBar
+        style="?android:attr/progressBarStyleHorizontal"
+        android:id="@+id/progress_bar"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="bottom"
+        android:max="100"
+        android:progress="0"
+        android:progressDrawable="@drawable/ride_progress_drawable" />
+
+    <ImageView
+        android:id="@+id/iv_car"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@drawable/bus_h.png"
+        android:layout_gravity="bottom|start"
+        android:translationY="-12dp" />
+
+    <ImageView
+        android:id="@+id/iv_alert"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:src="@drawable/pasadaAppIcon.png"
+        android:layout_gravity="bottom|end"
+        android:translationY="-2dp" />
+
+</FrameLayout> 

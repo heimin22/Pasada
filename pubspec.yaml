@@ -149,6 +149,7 @@ flutter:
     - assets/svg/default_user_profile.svg
     - assets/png/default_user_profile.png
     - assets/png/bus.png
+    - assets/png/bus_h.png
     - assets/png/pin_pickup.png
     - assets/png/pin_dropoff.png
     - assets/md/privacy_policy.md
