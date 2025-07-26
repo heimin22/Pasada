@@ -88,10 +88,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   final double notificationHeight = 60.0;
 
   double currentFare = 0.0;
+  // Controller and current extent for booking bottom sheet
+  final DraggableScrollableController _bookingSheetController =
+      DraggableScrollableController();
+  double _bookingSheetExtent = 0.4;
 
   late AnimationController bookingAnimationController; // Made public
   late Animation<double> _downwardAnimation;
-  late Animation<double> _upwardAnimation;
 
   final ValueNotifier<String> seatingPreference = // Made public
       ValueNotifier<String>('Sitting');
@@ -202,6 +205,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     super.initState();
     // Observe lifecycle to re-show alerts on resume
     WidgetsBinding.instance.addObserver(this);
+    // Listen to bottom sheet size changes to adjust map padding
+    _bookingSheetController.addListener(() {
+      setState(() {
+        _bookingSheetExtent = _bookingSheetController.size;
+      });
+    });
     _bookingManager = BookingManager(this); // Initialize BookingManager
 
     bookingAnimationController = AnimationController(
@@ -213,14 +222,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     _downwardAnimation = Tween<double>(
       begin: 0.0,
       end: 100.0,
-    ).animate(CurvedAnimation(
-      parent: bookingAnimationController, // Use public field
-      curve: Curves.easeOut,
-    ));
-
-    _upwardAnimation = Tween<double>(
-      begin: 100.0,
-      end: 0.0,
     ).animate(CurvedAnimation(
       parent: bookingAnimationController, // Use public field
       curve: Curves.easeOut,
@@ -491,16 +492,18 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
                   dropOffLocation: selectedDropOffLocation?.coordinates,
-                  bottomPadding: calculateMapPadding(
-                        isBookingConfirmed: isBookingConfirmed,
-                        bookingStatusContainerHeight:
-                            bookingStatusContainerHeight,
-                        locationInputContainerHeight:
-                            locationInputContainerHeight,
-                        isNotificationVisible: isNotificationVisible,
-                        notificationHeight: notificationHeight,
-                      ) /
-                      MediaQuery.of(context).size.height,
+                  bottomPadding: isBookingConfirmed
+                      ? _bookingSheetExtent
+                      : calculateMapPadding(
+                            isBookingConfirmed: isBookingConfirmed,
+                            bookingStatusContainerHeight:
+                                bookingStatusContainerHeight,
+                            locationInputContainerHeight:
+                                locationInputContainerHeight,
+                            isNotificationVisible: isNotificationVisible,
+                            notificationHeight: notificationHeight,
+                          ) /
+                          MediaQuery.of(context).size.height,
                   onLocationUpdated: (loc) => context
                       .read<WeatherProvider>()
                       .fetchWeather(loc.latitude, loc.longitude),
@@ -656,39 +659,60 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     ),
                   ),
                 if (isBookingConfirmed)
-                  Positioned(
-                    bottom: bottomNavBarHeight,
-                    left: responsivePadding,
-                    right: responsivePadding,
-                    child: AnimatedBuilder(
-                      animation: bookingAnimationController,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(0, -_upwardAnimation.value),
-                          child: Opacity(
-                            opacity: bookingAnimationController.value,
-                            child: Container(
-                              key: bookingStatusContainerKey,
-                              child: BookingStatusManager(
-                                key: ValueKey<String>(bookingStatus),
-                                pickupLocation: selectedPickUpLocation,
-                                dropoffLocation: selectedDropOffLocation,
-                                paymentMethod: selectedPaymentMethod ?? 'Cash',
-                                fare: currentFare,
-                                onCancelBooking:
-                                    _bookingManager.handleBookingCancellation,
-                                driverName: driverName,
-                                plateNumber: plateNumber,
-                                vehicleModel: vehicleModel,
-                                phoneNumber: phoneNumber,
-                                isDriverAssigned: isDriverAssigned,
-                                bookingStatus: bookingStatus,
+                  DraggableScrollableSheet(
+                    controller: _bookingSheetController,
+                    initialChildSize: 0.4,
+                    minChildSize: 0.2,
+                    maxChildSize: 0.75,
+                    builder: (context, scrollController) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16)),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black26, blurRadius: 10)
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).dividerColor,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: scrollController,
+                                child: BookingStatusManager(
+                                  key: ValueKey<String>(bookingStatus),
+                                  pickupLocation: selectedPickUpLocation,
+                                  dropoffLocation: selectedDropOffLocation,
+                                  paymentMethod:
+                                      selectedPaymentMethod ?? 'Cash',
+                                  fare: currentFare,
+                                  onCancelBooking:
+                                      _bookingManager.handleBookingCancellation,
+                                  driverName: driverName,
+                                  plateNumber: plateNumber,
+                                  vehicleModel: vehicleModel,
+                                  phoneNumber: phoneNumber,
+                                  isDriverAssigned: isDriverAssigned,
+                                  bookingStatus: bookingStatus,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
               ],
             );
@@ -697,6 +721,4 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ),
     );
   }
-
-  // Rush-hour dialog logic moved to HomeScreenInitService
 }

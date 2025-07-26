@@ -30,13 +30,17 @@ class _NotificationContainerState extends State<NotificationContainer> {
               0, widget.downwardAnimation.value * widget.notificationHeight),
           child: GestureDetector(
             onVerticalDragUpdate: (details) {
-              setState(() {
-                _dragOffset += details.delta.dy;
-                if (_dragOffset > widget.notificationHeight) {
-                  _dragOffset = 0.0;
-                  widget.onClose();
-                }
-              });
+              // Only allow downward drags (positive dy) and clamp offset
+              if (details.delta.dy > 0) {
+                setState(() {
+                  _dragOffset = (_dragOffset + details.delta.dy)
+                      .clamp(0.0, widget.notificationHeight);
+                  if (_dragOffset >= widget.notificationHeight) {
+                    _dragOffset = 0.0;
+                    widget.onClose();
+                  }
+                });
+              }
             },
             onVerticalDragEnd: (details) {
               if (_dragOffset < widget.notificationHeight / 2) {

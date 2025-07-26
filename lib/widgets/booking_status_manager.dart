@@ -3,6 +3,7 @@ import 'booking_details_container.dart';
 import 'payment_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
+import 'driver_plate_number_container.dart';
 import '../location/selectedLocation.dart';
 import 'dart:async';
 
@@ -144,7 +145,8 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
         children: [
           const DriverLoadingContainer(),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
@@ -179,6 +181,8 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
           children: [
             if (widget.bookingStatus == 'accepted' ||
                 widget.bookingStatus == 'ongoing') ...[
+              // Show plate number above driver details
+              DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
               BookingDetailsContainer(
                 pickupLocation: widget.pickupLocation,

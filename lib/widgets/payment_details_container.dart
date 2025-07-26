@@ -23,7 +23,7 @@ class PaymentDetailsContainer extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(8),
@@ -86,7 +86,8 @@ class PaymentDetailsContainer extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           if (showCancelButton)
-            SizedBox(
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: onCancelBooking,

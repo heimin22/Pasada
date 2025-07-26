@@ -6,6 +6,7 @@ import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -94,8 +95,23 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
               Navigator.push(context,
                   MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
-            buildSettingsListItem('Contact Support', screenWidth, () {
-              debugPrint('Contact support tapped');
+            buildSettingsListItem('Contact Support', screenWidth, () async {
+              final Uri emailLaunchUri = Uri(
+                scheme: 'mailto',
+                path: 'contact.pasada@gmail.com',
+              );
+              // Attempt to launch the email client externally
+              final bool launched = await launchUrl(
+                emailLaunchUri,
+                mode: LaunchMode.externalApplication,
+              );
+              if (!launched) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not launch email client.'),
+                  ),
+                );
+              }
             }),
             buildSettingsListItem(
               'Privacy Policy',

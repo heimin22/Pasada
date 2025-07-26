@@ -48,13 +48,13 @@ dependencies:
   flutter_local_notifications: ^19.1.0
   flutter_markdown: ^0.7.7
   flutter_native_splash: ^2.4.6
-  flutter_polyline_points: ^2.1.0
+  flutter_polyline_points: ^3.0.1
   flutter_svg: ^2.1.0
   flutter_typeahead: ^5.2.0
   fluttertoast: ^8.2.10
   font_awesome_flutter: ^10.8.0
-  geocoding: ^3.0.0
-  geolocator: ^13.0.2
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
   get: ^4.6.6
   google_maps_flutter: ^2.12.1
   google_maps_flutter_android: ^2.14.11
@@ -82,7 +82,7 @@ dev_dependencies:
   coverage: ^1.11.1
   flutter_gen_runner: ^5.8.0
   flutter_launcher_icons: ^0.14.2
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   integration_test:
@@ -93,7 +93,7 @@ dev_dependencies:
   test: ^1.25.8
 
 flutter_native_splash:
-  image: "assets/png/pasadaAppIcon.png"
+  image: "assets/png/pasada_main_app_icon.png"
   android: true
   ios: true
   web: false
@@ -102,7 +102,7 @@ flutter_launcher_icons:
   android: true
   remove_alpha_ios: true
   ios: true
-  image_path: "assets/png/pasadaAppIcon.png"
+  image_path: "assets/png/pasada_app_icon_text_colored.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -136,8 +136,6 @@ flutter:
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
     - assets/svg/pasadaLogoWithoutText.svg
-    - assets/png/pasadaAppIcon.png
-    - assets/svg/pasadaAppIcon.svg
     - assets/svg/paymongo_svg.svg
     - assets/svg/gcash_logo.svg
     - assets/svg/maya_logo.svg
@@ -149,9 +147,13 @@ flutter:
     - assets/svg/default_user_profile.svg
     - assets/png/default_user_profile.png
     - assets/png/bus.png
+    - assets/png/bus_h.png
     - assets/png/pin_pickup.png
     - assets/png/pin_dropoff.png
     - assets/md/privacy_policy.md
+    - assets/png/pasada_app_icon_text_colored.png
+    - assets/png/pasada_app_icon_text_white.png
+    - assets/png/pasada_main_app_icon.png
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

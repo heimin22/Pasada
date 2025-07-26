@@ -7,8 +7,7 @@ class ETAService {
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
 
   /// Compute ETA (duration) via Google Routes API for given origin/destination
-  Future<Map<String, dynamic>> getETAWithGemini(
-      Map<String, dynamic> features) async {
+  Future<Map<String, dynamic>> getETA(Map<String, dynamic> features) async {
     // features must contain 'origin' and 'destination' maps with 'lat' and 'lng'
     final origin = features['origin'] as Map<String, dynamic>;
     final destination = features['destination'] as Map<String, dynamic>;

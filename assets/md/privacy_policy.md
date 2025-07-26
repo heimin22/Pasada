@@ -1,84 +1,101 @@
-**Last Updated:** [04/22/2025]
+# Pasada Privacy Policy
 
-Thank you for using Pasada! This Privacy Policy describes how Pasada ("we," "us," or "our") collects, uses, and shares information about you when you use our mobile application (the "App").
+**Last Updated:** April 22, 2025
 
-**1. Information We Collect**
+Welcome to Pasada. This Privacy Policy explains how we (“Pasada,” “we,” “us,” or “our”) collect, use, disclose, and safeguard your personal information when you use our mobile application (the “App”). By using the App, you consent to the practices described herein.
 
-We collect information you provide directly to us, information collected automatically, and information from third parties.
+---
 
-*   **Information You Provide:**
-    *   **Account Information:** When you create an account, we collect your email address, display name, and contact number. If you sign up using Google, we receive your name, email address, and profile picture from Google.
-    *   **Profile Information:** You may choose to provide an avatar image, which we store.
-    *   **Booking Information:** We collect your selected pick-up and drop-off locations (addresses and geographic coordinates) when you book a ride.
-    *   **Payment Information:** [**Describe how payment is handled. What processor do you use? What payment info (e.g., partial card numbers, transaction IDs) do you store or have access to?**]
-    *   **Communications:** If you contact us directly (e.g., via email for support), we may receive additional information about you.
+## 1. Information We Collect
 
-*   **Information Collected Automatically:**
-    *   **Location Information:** With your permission, we collect your precise geographic location (including background location if enabled) using GPS, Wi-Fi, and cellular signals. This is necessary for finding your location, booking rides, tracking jeepneys, and calculating routes/ETAs.
-    *   **Usage Information:** We collect information about how you interact with the App, such as features used, ride history, and search queries.
-    *   **Device Information:** We may collect information about the mobile device you use to access the App, including hardware model, operating system and version, unique device identifiers, and mobile network information.
-    *   **Local Storage:** We store recent search history and selected locations locally on your device using SharedPreferences. We also store booking details locally using a SQLite database for offline access or caching.
+We collect information you provide directly, information automatically gathered, and information received from third parties.
 
-*   **Information from Third Parties:**
-    *   **Google:** If you sign in with Google, we receive information as described above. We also use Google Maps Platform services (Maps, Places API) which may collect location and usage data according to Google's Privacy Policy.
-    *   **Supabase:** We use Supabase for backend services including authentication, database storage (user profiles, booking data), and avatar image storage. Supabase may collect information according to their privacy policy. [**Link to Supabase Privacy Policy**]
-    *   **[External ETA Service/Gemini]:** [**Describe the data sent to your ETA prediction service (e.g., anonymized coordinates, time of day) and link to its privacy policy if applicable.**]
+### 1.1 Information You Provide Directly
+- **Account & Profile Data:** Name, email address, phone number, profile photo, and any other profile details you choose to submit.  
+- **Booking Details:** Your chosen pickup and drop-off locations (address and coordinates).  
+- **Payment Information:** We only accept cash payments in accordance with the rules and regulations set forth by the Land Transportation Franchising and Regulatory Board (LTFRB).
+- **Support Correspondence:** Any information you send when contacting customer support.
 
-**2. How We Use Your Information**
+### 1.2 Information Collected Automatically
+- **Location Data:** With your permission, we collect precise GPS, Wi-Fi, and cellular data to enable ride-booking, route calculation, and real-time tracking.  
+- **Usage Analytics:** Interaction metrics (features used, search history, ride history) to help us improve the App.  
+- **Device & Network Information:** Device model, operating system version, unique identifiers, and network carrier.  
+- **Local Storage:** Recent searches and selected locations saved via SharedPreferences; cached booking data stored locally (e.g., SQLite).
 
-We use the information we collect to:
+### 1.3 Information from Third Parties
+- **Authentication & Mapping Services:** Google (sign-in and Maps/Places APIs).  
+- **Backend & Storage Services:** Supabase (user authentication, database, file storage).  
+- **ETA Prediction Provider:** A third-party ETA service that receives anonymized coordinates and time-of-day data.  
+- **Other Integrations:** Any additional vendors we engage, each subject to their own privacy practices.
 
-*   Provide, maintain, and improve the App and its features (e.g., facilitate ride booking, display maps, calculate ETAs).
-*   Create and manage your user account and profile.
-*   Process payments for rides. [**Adjust based on your payment process**]
-*   Communicate with you, including sending service-related messages and responding to support requests.
-*   Personalize your experience (e.g., show recent searches).
-*   Ensure the security and integrity of our App.
-*   Analyze usage patterns to understand how the App is used and identify areas for improvement.
-*   Comply with legal obligations.
+---
 
-**3. How We Share Your Information**
+## 2. How We Use Your Information
 
-We may share your information in the following circumstances:
+We use your information to:
+- Operate, maintain, and enhance the App’s functionality (e.g., booking, routing, ETA calculations).  
+- Authenticate and manage your user account.  
+- Process payments and issue receipts.  
+- Send transactional messages and respond to support inquiries.  
+- Personalize your experience (e.g., recent searches).  
+- Ensure App security and prevent fraud.  
+- Conduct internal analytics to understand usage trends and improve our service.  
+- Comply with legal obligations.
 
-*   **With Service Providers:** We share information with third-party vendors and service providers who perform services on our behalf, such as:
-    *   Supabase (authentication, database, storage)
-    *   Google (authentication, mapping services)
-    *   [Payment Processor Name] (payment processing)
-    *   [External ETA Service Provider] (ETA calculations)
-    These providers only have access to the information necessary to perform their functions and are obligated to protect your information.
-*   **With Jeepney Drivers:** To facilitate your ride, we may share your pickup location, name, and potentially drop-off location with the assigned driver.
-*   **Legal Requirements:** We may disclose your information if required by law, subpoena, or other legal process, or if we believe in good faith that disclosure is necessary to protect our rights, protect your safety or the safety of others, investigate fraud, or respond to a government request.
-*   **Business Transfers:** In connection with any merger, sale of company assets, financing, or acquisition of all or a portion of our business by another company, user information may be transferred as part of the transaction.
+---
 
-We do not sell your personal information.
+## 3. Information Sharing and Disclosure
 
-**4. Data Security**
+We share information only as follows:
 
-We implement reasonable technical and organizational measures to protect your information from unauthorized access, use, alteration, or destruction. However, no internet transmission or electronic storage is 100% secure.
+- **Service Providers:** Third parties (e.g., PayMongo, Supabase, Google, ETA providers) who perform services on our behalf. They only receive the information necessary to provide their services and must protect it.  
+- **Drivers:** To fulfill ride requests, we provide the assigned driver with your name and pickup (and, if necessary, drop-off) location.  
+- **Legal & Safety:** Disclosure if required by law, to protect our rights, or to respond to legal process (e.g., subpoenas).  
+- **Business Transfers:** In the event of a merger, acquisition, or sale of assets, user data may be transferred, subject to confidentiality and notice requirements.  
 
-**5. Data Retention**
+We do **not** sell, rent, or trade your personal information for marketing purposes.
 
-We retain your personal information for as long as your account is active or as needed to provide you with the App's services. We may also retain information as required by law or for legitimate business purposes (like resolving disputes or enforcing agreements). Booking details stored locally may persist until the app's cache/data is cleared.
+---
 
-**6. Your Choices and Rights**
+## 4. Data Security
 
-*   **Account Information:** You can review and update your account information (display name, email, contact number, avatar) through your profile settings in the App.
-*   **Location Permissions:** You can control the App's access to your location information through your device's settings menu. Disabling location access will significantly limit the App's functionality.
-*   **Push Notifications:** You can opt-out of receiving push notifications through your device settings.
-*   **Google Account:** You can manage the connection between Pasada and your Google account through your Google account settings.
-*   **Data Access/Deletion:** Depending on your jurisdiction, you may have rights to access, correct, or delete your personal information. Please contact us at [Your Contact Email] to make such requests. Note that we may need to retain certain information for record-keeping purposes or to complete transactions.
-*   **Local Data:** You can clear recent searches within the app [**Verify if this feature exists/is planned**] or clear the app's cache/data through your device settings to remove locally stored information.
+We implement administrative, technical, and physical safeguards designed to protect your information against unauthorized access, alteration, disclosure, or destruction. However, no security measure is perfect or impenetrable.
 
-**7. Children's Privacy**
+---
 
-The App is not intended for use by children under the age of 13 [**Adjust age if required by local laws, e.g., 16 in some regions**]. We do not knowingly collect personal information from children under this age. If we learn we have collected personal information from a child under 13, we will take steps to delete it.
+## 5. Data Retention
 
-**8. Changes to This Privacy Policy**
+We retain personal data only for as long as required to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. Local data caches may remain on your device until you clear them or uninstall the App.
 
-We may update this Privacy Policy from time to time. If we make material changes, we will notify you through the App or by other means before the changes take effect. Your continued use of the App after the effective date constitutes your acceptance of the revised policy.
+---
 
-**9. Contact Us**
+## 6. Your Rights and Choices
 
-If you have any questions about this Privacy Policy, please contact: 
-contact.pasada@gmail.com
+- **Access & Correction:** Review and update your account details within the App’s profile settings.  
+- **Location Permissions:** Enable or disable location access via your device settings; disabling location will limit App functionality.  
+- **Notifications:** Opt out of push notifications via your device’s notification settings.  
+- **Account Deletion:** Request deletion of your account and personal data by contacting us at the address below.  
+- **Local Data Clearing:** Clear recent searches within the App or erase cached data via your device settings.  
+
+Depending on your jurisdiction, you may have additional rights (e.g., data portability, restriction of processing). To exercise any rights, please contact us.
+
+---
+
+## 7. Children’s Privacy
+
+Our App is not directed to children under 13 (or higher age where required by local law). We do not knowingly collect personal information from children below this age. If we learn that we have inadvertently collected such information, we will promptly delete it.
+
+---
+
+## 8. Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time. If we make material changes, we will notify you via the App or other communication methods before those changes take effect. Your continued use of the App constitutes acceptance of the revised policy.
+
+---
+
+## 9. Contact Us
+
+If you have questions or concerns about this Privacy Policy, please contact us at:  
+**Email:** contact.pasada@gmail.com  
+
+Thank you for trusting Pasada with your journey.

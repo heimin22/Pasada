@@ -192,9 +192,6 @@ class _RouteSelectionState extends State<RouteSelection> {
         debugPrint('API key not found');
         return [];
       }
-
-      final polylinePoints = PolylinePoints();
-
       // Convert intermediate coordinates to waypoints format
       List<Map<String, dynamic>> intermediates = [];
       if (intermediatePoints.isNotEmpty) {
@@ -257,7 +254,7 @@ class _RouteSelectionState extends State<RouteSelection> {
 
       // Decode the polyline
       List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(polyline);
+          PolylinePoints.decodePolyline(polyline);
       return decodedPolyline
           .map((point) => LatLng(point.latitude, point.longitude))
           .toList();
