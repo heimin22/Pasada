@@ -116,19 +116,24 @@ class MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Load last known location from cache for faster initial display
-        SharedPreferences.getInstance().then((prefs) {
+        // Load last known location from cache for faster initial display and center map
+        (() async {
+          final prefs = await SharedPreferences.getInstance();
           final lat = prefs.getDouble('last_latitude');
           final lng = prefs.getDouble('last_longitude');
           if (lat != null && lng != null && mounted) {
             setState(() {
               currentLocation = LatLng(lat, lng);
             });
+            final controller = await mapController.future;
+            await controller.animateCamera(
+                CameraUpdate.newLatLngZoom(currentLocation!, 17.0));
+            pulseCurrentLocationMarker();
           }
           // Now fetch fresh location updates
-          initializeLocation();
+          await initializeLocation();
           handleLocationUpdates();
-        });
+        })();
         // Initialize ride service
         _rideService = RideService();
         // Initialize and subscribe to device location
@@ -389,7 +394,9 @@ class MapScreenState extends State<MapScreen>
       widget.onLocationUpdated?.call(currentLocation!);
 
       final controller = await mapController.future;
-      controller.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+      await controller
+          .animateCamera(CameraUpdate.newLatLngZoom(currentLocation!, 17.0));
+      pulseCurrentLocationMarker();
 
       // Cancel previous subscription to avoid duplicate callbacks
       locationSubscription?.cancel();
@@ -864,16 +871,6 @@ class MapScreenState extends State<MapScreen>
               rotateGesturesEnabled: true,
               myLocationEnabled: currentLocation != null,
             ),
-            // Overlay loading indicator until we have a real location
-            if (currentLocation == null)
-              const Positioned.fill(
-                child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Color(0xFF067837),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

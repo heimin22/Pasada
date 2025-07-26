@@ -697,6 +697,4 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ),
     );
   }
-
-  // Rush-hour dialog logic moved to HomeScreenInitService
 }
