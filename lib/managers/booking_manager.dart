@@ -494,7 +494,7 @@ class BookingManager {
         // Compute ETA using external service
         try {
           final etaService = ETAService();
-          final etaResp = await etaService.getETAWithGemini({
+          final etaResp = await etaService.getETA({
             'origin': {
               'lat': driverLatLng.latitude,
               'lng': driverLatLng.longitude,

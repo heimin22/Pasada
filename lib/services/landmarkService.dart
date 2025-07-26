@@ -98,7 +98,8 @@ class LandmarkService {
     }
   }
 
-  static double calculateDistance(lat1, lon1, lat2, lon2) {
+  static double calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     // Haversine formula
     const p = 0.017453292519943295;
     final a = 0.5 -

@@ -310,8 +310,6 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         return;
       }
 
-      final polylinePoints = PolylinePoints();
-
       // Convert intermediate coordinates to waypoints format
       List<Map<String, dynamic>> intermediates = [];
       if (intermediateCoordinates.isNotEmpty) {
@@ -389,7 +387,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
       // Decode the polyline
       List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(polyline);
+          PolylinePoints.decodePolyline(polyline);
       List<LatLng> polylineCoordinates = decodedPolyline
           .map((point) => LatLng(point.latitude, point.longitude))
           .toList();
@@ -425,9 +423,6 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         debugPrint('API key not found');
         return;
       }
-
-      final polylinePoints = PolylinePoints();
-
       // Routes API request
       final uri = Uri.parse(
           'https://routes.googleapis.com/directions/v2:computeRoutes');
@@ -485,7 +480,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
       // Decode the polyline
       List<PointLatLng> decodedPolyline =
-          polylinePoints.decodePolyline(polyline);
+          PolylinePoints.decodePolyline(polyline);
       List<LatLng> polylineCoordinates = decodedPolyline
           .map((point) => LatLng(point.latitude, point.longitude))
           .toList();

@@ -7,7 +7,6 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 
 class PolylineService {
-  final _points = PolylinePoints();
   final _apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
 
   Future<List<LatLng>> generateBetween(LatLng start, LatLng end) async {
@@ -50,7 +49,7 @@ class PolylineService {
     final poly = data['routes']?[0]?['polyline']?['encodedPolyline'] as String?;
     if (poly == null) return <LatLng>[];
 
-    final decoded = _points.decodePolyline(poly);
+    final decoded = PolylinePoints.decodePolyline(poly);
     final coords = decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
     MemoryManager.instance.addToCache(key, coords);
     return coords;
