@@ -61,11 +61,13 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
         'subject': 'Trip Feedback',
       },
     );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
+    final bool launched = await launchUrl(
+      emailUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!launched) {
       Fluttertoast.showToast(
-        msg: 'Could not launch email',
+        msg: 'Could not launch email client.',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: const Color(0xFF121212),

@@ -41,7 +41,7 @@ class _DriverLoadingContainerState extends State<DriverLoadingContainer> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(8),

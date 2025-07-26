@@ -53,7 +53,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
           .order('created_at', ascending: false);
 
       setState(() {
-        bookings = List<Map<String, dynamic>>.from(response);
+        bookings = List<Map<String, dynamic>>.from(response).take(10).toList();
         isLoading = false;
       });
     } catch (e) {
