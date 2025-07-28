@@ -615,6 +615,10 @@ class MapScreenState extends State<MapScreen>
         const Color.fromARGB(255, 10, 179, 83),
         8,
       );
+      // Animate camera to include driver and target location
+      final controller = await mapController.future;
+      await moveCameraToBounds(controller, route,
+          padding: 0.01, boundPadding: 20.0);
     }
   }
 
