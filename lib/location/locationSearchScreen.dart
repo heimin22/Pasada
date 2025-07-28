@@ -74,9 +74,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       List<Stop> stops = [];
 
       if (widget.routeID != null) {
-        debugPrint('Loading stops for route ID: ${widget.routeID}');
         stops = await _stopsService.getStopsForRoute(widget.routeID!);
-        debugPrint('Loaded ${stops.length} stops for route ${widget.routeID}');
 
         // For pick-up locations, filter out the last stop (end of route)
         if (widget.isPickup && stops.isNotEmpty) {
@@ -93,21 +91,16 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
           if (lastStop != null) {
             // Remove the last stop from the list
-            debugPrint(
-                'Removing last stop (${lastStop.name}) with order $highestOrder from pick-up options');
             stops = stops.where((stop) => stop.order != highestOrder).toList();
           }
         }
         // For drop-off locations, exclude stops at or before the pick-up stop order
         else if (!widget.isPickup && widget.pickupOrder != null) {
-          debugPrint(
-              'Filtering drop-off stops: excluding order <= ${widget.pickupOrder}');
           stops =
               stops.where((stop) => stop.order > widget.pickupOrder!).toList();
         }
       } else {
         stops = await _stopsService.getAllActiveStops();
-        debugPrint('Loaded ${stops.length} active stops across all routes');
       }
 
       if (mounted) {
@@ -155,8 +148,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   calculateDistance(recent.coordinates, lastStop!.coordinates);
               return distance > exclusionRadiusMeters;
             }).toList();
-            debugPrint(
-                'Filtered recent searches for pick-up. Last stop: ${lastStop.name}. Filtered count: ${searches.length}');
           }
         }
       } catch (e) {
@@ -180,8 +171,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           }
         }
         searches = filtered;
-        debugPrint(
-            'Filtered recent searches for drop-off. Pickup order: $pickupOrder. Remaining: ${searches.length}');
       } catch (e) {
         debugPrint('Error filtering recent searches for drop-off: $e');
       }
@@ -893,7 +882,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
       final data = json.decode(response);
       if (data['status'] == 'REQUEST_DENIED') {
-        debugPrint("Request denied: ${data['error_message']}");
         return null;
       }
 
@@ -1003,7 +991,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
       // Check if the location is within X meters of the final stop (using 300m as threshold)
       final distance = calculateDistance(location, finalStop.coordinates);
-      debugPrint('Distance to final stop: ${distance.toStringAsFixed(2)}m');
 
       return distance < 300; // Return true if within 300 meters of final stop
     } catch (e) {

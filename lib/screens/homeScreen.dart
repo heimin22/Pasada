@@ -661,8 +661,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                 if (isBookingConfirmed)
                   DraggableScrollableSheet(
                     controller: _bookingSheetController,
-                    initialChildSize: 0.4,
-                    minChildSize: 0.2,
+                    // Shrink sheet to fit content when still in 'requested' status
+                    initialChildSize: bookingStatus == 'requested' ? 0.25 : 0.4,
+                    minChildSize: bookingStatus == 'requested' ? 0.25 : 0.2,
                     maxChildSize: 0.75,
                     builder: (context, scrollController) {
                       return Container(

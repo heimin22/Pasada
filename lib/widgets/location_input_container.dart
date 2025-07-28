@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationInputContainer extends StatelessWidget {
   final BuildContext parentContext;
@@ -40,11 +39,22 @@ class LocationInputContainer extends StatelessWidget {
   });
 
   List<String> _splitLocation(String location) {
-    final List<String> parts = location.split(',');
-    if (parts.length < 2) {
-      return [location, ''];
+    // Handle newline-based addresses (e.g., stop selections with "name\naddress")
+    if (location.contains('\n')) {
+      final lines = location.split('\n');
+      final primary = lines[0].trim();
+      final remainder = lines.length > 1 ? lines[1] : '';
+      final remainderParts = remainder.split(',');
+      final city = remainderParts.length >= 2
+          ? remainderParts[1].trim()
+          : remainderParts[0].trim();
+      return [primary, city];
     }
-    return [parts[0], parts.sublist(1).join(', ')];
+    // Fallback to comma-based splitting
+    final parts = location.split(',');
+    final primary = parts.isNotEmpty ? parts[0].trim() : location;
+    final city = parts.length >= 2 ? parts[1].trim() : '';
+    return [primary, city];
   }
 
   Widget _buildLocationRow(

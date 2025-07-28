@@ -249,44 +249,6 @@ class BookingService {
     }
   }
 
-  // Save booking to local SQLite database
-  // Future<void> _saveBookingLocally({
-  //   required int bookingId,
-  //   required String passengerId,
-  //   required int routeId,
-  //   required String pickupAddress,
-  //   required LatLng pickupCoordinates,
-  //   required String dropoffAddress,
-  //   required LatLng dropoffCoordinates,
-  //   required double fare,
-  // }) async {
-  //   final now = DateTime.now();
-
-  //   final bookingDetails = BookingDetails(
-  //     bookingId: bookingId,
-  //     passengerId: passengerId,
-  //     driverId: 0, // Will be updated when a driver is assigned
-  //     routeId: routeId,
-  //     rideStatus: 'requested', // initial status for new bookings
-  //     pickupAddress: pickupAddress,
-  //     pickupCoordinates: pickupCoordinates,
-  //     dropoffAddress: dropoffAddress,
-  //     dropoffCoordinates: dropoffCoordinates,
-  //     startTime: TimeOfDay.now(),
-  //     createdAt: now,
-  //     fare: fare,
-  //     assignedAt: now,
-  //     endTime: TimeOfDay.now(),
-  //   );
-
-  //   try {
-  //     await _localDbService.saveBookingDetails(bookingDetails);
-  //     debugPrint('Successfully saved booking $bookingId to local database');
-  //   } catch (e) {
-  //     debugPrint('Error saving booking to local database: $e');
-  //   }
-  // }
-
   // Update booking status both in Supabase and locally
   Future<void> updateBookingStatus(int bookingId, String newStatus) async {
     try {
