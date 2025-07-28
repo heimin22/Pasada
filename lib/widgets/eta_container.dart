@@ -95,46 +95,64 @@ class _EtaContainerState extends State<EtaContainer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const SizedBox(
-        height: 24,
-        width: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Color(0xFF00CC58),
-        ),
-      );
-    }
-    if (_etaText == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Text(
-          'N/A',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      );
-    }
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 0),
+        ],
       ),
-      child: Text(
-        _etaText!,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).textTheme.bodyMedium?.color,
-        ),
-      ),
+      child: _isLoading
+          ? const Center(
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF00CC58),
+                ),
+              ),
+            )
+          : Row(
+              children: [
+                const Icon(
+                  Icons.access_time,
+                  size: 24,
+                  color: Color(0xFF00CC58),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ETA',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode
+                            ? const Color(0xFFBBBBBB)
+                            : const Color(0xFF515151),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _etaText ?? 'N/A',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
     );
   }
 }

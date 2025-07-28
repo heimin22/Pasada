@@ -57,9 +57,16 @@ class ETAService {
     int seconds;
     if (raw is String) {
       seconds = int.parse(raw.replaceAll('s', ''));
-    } else if (raw is Map && raw['seconds'] != null) {
-      final v = raw['seconds'];
-      seconds = v is int ? v : int.parse(v.toString());
+    } else if (raw is Map) {
+      if (raw['seconds'] != null) {
+        final v = raw['seconds'];
+        seconds = v is int ? v : int.parse(v.toString());
+      } else if (raw['value'] != null) {
+        final v = raw['value'];
+        seconds = v is int ? v : int.parse(v.toString());
+      } else {
+        throw Exception('Unrecognized duration format: $raw');
+      }
     } else {
       throw Exception('Unrecognized duration format: $raw');
     }
