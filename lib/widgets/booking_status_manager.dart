@@ -4,8 +4,11 @@ import 'payment_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
+// import 'eta_container.dart';
 import '../location/selectedLocation.dart';
 import 'dart:async';
+import 'eta_container.dart';
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
@@ -184,6 +187,11 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               // Show plate number above driver details
               DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
+              // Show ETA based on device location to drop-off
+              if (widget.dropoffLocation != null)
+                EtaContainer(
+                  destination: widget.dropoffLocation!.coordinates,
+                ),
               BookingDetailsContainer(
                 pickupLocation: widget.pickupLocation,
                 dropoffLocation: widget.dropoffLocation,

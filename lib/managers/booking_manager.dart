@@ -92,8 +92,6 @@ class BookingManager {
           (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
           onStatusChange: (newStatus) {
-            debugPrint(
-                "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Received newStatus '$newStatus' for booking $bookingId. Current _state.bookingStatus is '${_state.bookingStatus}'. Mounted: ${_state.mounted}");
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
@@ -110,20 +108,13 @@ class BookingManager {
                 );
               }
               _state.setState(() => _state.bookingStatus = newStatus);
-              debugPrint(
-                  "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange->setState: _state.bookingStatus is now '${_state.bookingStatus}' for booking $bookingId.");
               // Call _fetchAndUpdateBookingDetails for relevant status changes
               if (newStatus == 'accepted' ||
                   newStatus == 'ongoing' ||
                   newStatus == 'completed' ||
                   newStatus == 'requested') {
-                debugPrint(
-                    "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status is relevant ('$newStatus'), calling _fetchAndUpdateBookingDetails for $bookingId.");
                 _fetchAndUpdateBookingDetails(bookingId);
-              } else {
-                debugPrint(
-                    "[BookingManager] loadActiveBooking->pollForDriverAssignment->onStatusChange: Status '$newStatus' does not trigger _fetchAndUpdateBookingDetails.");
-              }
+              } else {}
             }
           },
         );
@@ -261,8 +252,6 @@ class BookingManager {
       _state.bookingService = BookingService();
       final bookingService = _state.bookingService!;
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
-      debugPrint(
-          'BookingManager: sending seat_type: ${_state.seatingPreference.value}');
       final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
@@ -399,14 +388,10 @@ class BookingManager {
 
   void _updateDriverDetails(Map<String, dynamic> driverData) async {
     if (!_state.mounted) {
-      debugPrint(
-          "[BookingManager] _updateDriverDetails: Entered but state not mounted. Bailing out.");
       return;
     }
     var driver = driverData['driver'];
     if (driver == null) {
-      debugPrint(
-          "BookingManager: _updateDriverDetails received null for driverData['driver']");
       _state.setState(() {
         _state.isDriverAssigned = false;
       });
@@ -414,8 +399,6 @@ class BookingManager {
     }
     if (driver is List && driver.isNotEmpty) {
       driver = driver[0];
-      debugPrint(
-          "BookingManager: _updateDriverDetails picked first driver from list.");
     } else if (driver is List && driver.isEmpty) {
       debugPrint(
           "BookingManager: _updateDriverDetails received an empty list for driverData['driver']");
@@ -453,9 +436,6 @@ class BookingManager {
       _state.isDriverAssigned = (_state.driverName.isNotEmpty &&
           _state.driverName != 'Driver' &&
           _state.driverName != 'Not Available');
-
-      debugPrint(
-          "[BookingManager] Inside _updateDriverDetails->setState: bookingStatus set to ${_state.bookingStatus}, isDriverAssigned set to ${_state.isDriverAssigned}, Driver: ${_state.driverName} for activeBookingId ${_state.activeBookingId}");
     });
 
     // Extract driver's current_location from driver details RPC
@@ -525,12 +505,7 @@ class BookingManager {
 
     // Start polling for completion after acceptance
     if (_state.activeBookingId != null) {
-      debugPrint(
-          "[BookingManager] _updateDriverDetails: Condition met to start polling. ActiveBookingID: \\${_state.activeBookingId}, IsDriverAssigned: \\${_state.isDriverAssigned}. Calling _startCompletionPolling.");
       _startCompletionPolling(_state.activeBookingId!);
-    } else {
-      debugPrint(
-          "[BookingManager] _updateDriverDetails: Condition NOT MET to start polling. activeBookingId is null. IsDriverAssigned: \\${_state.isDriverAssigned}.");
     }
   }
 
@@ -727,8 +702,6 @@ class BookingManager {
           final status = details['ride_status'];
           // If ride ongoing, update driver location & polyline
           if (status == 'ongoing') {
-            debugPrint(
-                "[BookingManager] Ride ongoing: refreshing driver location for booking ID $bookingId");
             final driverDetails =
                 await DriverService().getDriverDetailsByBooking(bookingId);
             if (driverDetails != null) {
@@ -737,13 +710,8 @@ class BookingManager {
           }
           // When completed, navigate and cleanup
           if (status == 'completed') {
-            debugPrint(
-                "[BookingManager] Ride COMPLETED for booking ID $bookingId. Status: ${details['ride_status']}");
             timer.cancel(); // Stop this specific timer instance.
             await _handleRideCompletionNavigationAndCleanup();
-          } else {
-            debugPrint(
-                "[BookingManager] Ride NOT YET COMPLETED for booking ID $bookingId. Status: $status");
           }
         } else {
           debugPrint(
