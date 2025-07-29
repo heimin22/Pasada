@@ -20,7 +20,7 @@ class LocalDatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -31,6 +31,9 @@ class LocalDatabaseService {
     if (oldVersion < 2) {
       await db.execute('DROP TABLE IF EXISTS $tableName');
       await onCreate(db, newVersion);
+    } else if (oldVersion < 3) {
+      await db.execute(
+          "ALTER TABLE $tableName ADD COLUMN seat_type TEXT NOT NULL DEFAULT 'Any'");
     }
   }
 
@@ -51,6 +54,7 @@ class LocalDatabaseService {
         start_time TEXT NOT NULL,
         created_at TEXT NOT NULL,
         fare REAL NOT NULL,
+        seat_type TEXT NOT NULL,
         assigned_at TEXT NOT NULL,
         end_time TEXT NOT NULL,
         passenger_id TEXT NOT NULL
