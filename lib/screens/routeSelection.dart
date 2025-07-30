@@ -6,6 +6,9 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/services/traffic_service.dart';
+import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
+import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 
 class RouteSelection extends StatefulWidget {
   const RouteSelection({super.key});
@@ -42,31 +45,12 @@ class _RouteSelectionState extends State<RouteSelection> {
     try {
       setState(() => _isLoading = true);
 
-      final session = Supabase.instance.client.auth.currentSession;
-      debugPrint('Current session: ${session != null ? "Active" : "None"}');
-      if (session != null) {
-        debugPrint('User ID: ${session.user.id}');
-      }
-
-      debugPrint('Attempting to query official_routes table...');
-
-      final countResponse = await Supabase.instance.client
-          .from('official_routes')
-          .select('*')
-          .count(CountOption.exact);
-
-      debugPrint('Count Response: $countResponse');
-
       final response = await Supabase.instance.client
           .from('official_routes')
           .select(
               'route_name, description, origin_lat, origin_lng, destination_lat, destination_lng, intermediate_coordinates, origin_name, destination_name, status')
           .eq('status', 'active')
           .order('route_name');
-
-      debugPrint('Raw Response: $response');
-      debugPrint('Response type: ${response.runtimeType}');
-      debugPrint('Supabase Response: $response');
 
       if (response.isNotEmpty) {
         final statuses = response.map((route) => route['status']).toSet();
@@ -115,9 +99,6 @@ class _RouteSelectionState extends State<RouteSelection> {
   }
 
   void _selectRoute(Map<String, dynamic> route) async {
-    // Debug the route data before returning
-    debugPrint('Selected route data: $route');
-
     // Make sure the route has an ID field
     if (route['officialroute_id'] == null) {
       // Try to get the ID from the database
@@ -130,7 +111,6 @@ class _RouteSelectionState extends State<RouteSelection> {
 
         if (routeDetails.isNotEmpty) {
           route['officialroute_id'] = routeDetails['officialroute_id'];
-          debugPrint('Retrieved route ID: ${route['officialroute_id']}');
         }
       } catch (e) {
         debugPrint('Error retrieving route ID: $e');
@@ -178,6 +158,24 @@ class _RouteSelectionState extends State<RouteSelection> {
         } catch (e) {
           debugPrint('Error getting polyline: $e');
         }
+      }
+    }
+
+    // Show heavy traffic alert if density is high
+    if (route.containsKey('origin_coordinates') &&
+        route.containsKey('destination_coordinates')) {
+      final origin = route['origin_coordinates'] as LatLng;
+      final destination = route['destination_coordinates'] as LatLng;
+      final isHeavyTraffic =
+          await TrafficService().isRouteUnderHeavyTraffic(origin, destination);
+      if (isHeavyTraffic) {
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertSequenceDialog(
+            pages: const [RushHourDialogContent()],
+          ),
+        );
       }
     }
 

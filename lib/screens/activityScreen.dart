@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
+import 'dart:async';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -25,13 +26,21 @@ class ActivityScreenStateful extends StatefulWidget {
 }
 
 class ActivityScreenPageState extends State<ActivityScreenStateful> {
+  Timer? _debounceTimer;
   List<Map<String, dynamic>> bookings = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchBookings();
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(seconds: 2), fetchBookings);
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchBookings() async {
@@ -53,7 +62,15 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
           .order('created_at', ascending: false);
 
       setState(() {
-        bookings = List<Map<String, dynamic>>.from(response).take(10).toList();
+        final allBookings = List<Map<String, dynamic>>.from(response);
+        final filteredBookings = allBookings.where((booking) {
+          final status = booking['ride_status'] as String?;
+          return status != null &&
+              (status == 'completed' ||
+                  status == 'accepted' ||
+                  status == 'ongoing');
+        }).toList();
+        bookings = filteredBookings.take(10).toList();
         isLoading = false;
       });
     } catch (e) {

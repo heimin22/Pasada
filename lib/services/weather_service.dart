@@ -13,8 +13,7 @@ class Weather {
     required this.precipitation,
   });
 
-  bool get isRaining =>
-      condition.toLowerCase().contains('rain') || precipitation > 0;
+  bool get isRaining => condition.toLowerCase().contains('heavy rain');
 
   factory Weather.fromJson(Map<String, dynamic> json) {
     final current = json['current'] as Map<String, dynamic>;

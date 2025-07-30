@@ -19,7 +19,7 @@ class RushHourDialogContent extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Rush Hour Alert',
+            'Heavy Traffic Alert',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 24,
@@ -32,7 +32,7 @@ class RushHourDialogContent extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Rush hour na po ngayon, pakihabaan po ang pasensiya!',
+            'Heavy traffic on your route, please expect delays!',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
