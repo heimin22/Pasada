@@ -44,11 +44,27 @@ class PolylineService {
     final resp =
         await NetworkUtility.postUrl(uri, headers: headers, body: body);
     if (resp == null) return <LatLng>[];
-
     final data = json.decode(resp);
-    final poly = data['routes']?[0]?['polyline']?['encodedPolyline'] as String?;
-    if (poly == null) return <LatLng>[];
-
+    // Robustly handle routes as List or Map
+    dynamic routesData = data['routes'];
+    List<dynamic> routesList;
+    if (routesData is List) {
+      routesList = routesData;
+    } else if (routesData is Map) {
+      routesList = routesData.values.toList();
+    } else {
+      return <LatLng>[];
+    }
+    if (routesList.isEmpty) return <LatLng>[];
+    final firstRoute = routesList.first;
+    // Extract encodedPolyline safely
+    dynamic polylineData = firstRoute['polyline'];
+    String? poly;
+    if (polylineData is Map && polylineData['encodedPolyline'] != null) {
+      poly = polylineData['encodedPolyline'] as String;
+    } else {
+      return <LatLng>[];
+    }
     final decoded = PolylinePoints.decodePolyline(poly);
     final coords = decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
     MemoryManager.instance.addToCache(key, coords);

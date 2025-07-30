@@ -23,7 +23,6 @@ import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
-import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
@@ -267,20 +266,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Show startup alerts only once
     if (!_hasShownStartupAlerts) {
       final List<Widget> alertPages = [];
-      // Rush hour condition
-      final nowUtc = DateTime.now().toUtc();
-      final nowPH = nowUtc.add(const Duration(hours: 8));
-      final minutesSinceMidnight = nowPH.hour * 60 + nowPH.minute;
-      const morningStart = 6 * 60;
-      const morningEnd = 7 * 60 + 30;
-      const eveningStart = 16 * 60 + 30;
-      const eveningEnd = 19 * 60 + 30;
-      if ((minutesSinceMidnight >= morningStart &&
-              minutesSinceMidnight <= morningEnd) ||
-          (minutesSinceMidnight >= eveningStart &&
-              minutesSinceMidnight <= eveningEnd)) {
-        alertPages.add(const RushHourDialogContent());
-      }
       // Rain condition
       if (context.read<WeatherProvider>().isRaining) {
         alertPages.add(const WeatherAlertDialogContent());
@@ -664,7 +649,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     // Shrink sheet to fit content when still in 'requested' status
                     initialChildSize: bookingStatus == 'requested' ? 0.25 : 0.4,
                     minChildSize: bookingStatus == 'requested' ? 0.25 : 0.2,
-                    maxChildSize: 0.75,
+                    maxChildSize: 0.8,
                     builder: (context, scrollController) {
                       return Container(
                         decoration: BoxDecoration(
