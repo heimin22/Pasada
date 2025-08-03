@@ -406,7 +406,7 @@ class LoginScreen extends State<LoginPage> {
                   try {
                     final success = await authService.signInWithGoogle();
                     if (success && mounted) {
-                      Navigator.pushReplacement(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (context) => const selectionScreen()),
