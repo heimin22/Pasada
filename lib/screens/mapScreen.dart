@@ -414,10 +414,13 @@ class MapScreenState extends State<MapScreen>
   }
 
   // ito yung method para sa pick-up and drop-off location
-  Future<void> updateLocations({LatLng? pickup, LatLng? dropoff}) async {
+  Future<void> updateLocations(
+      {LatLng? pickup, LatLng? dropoff, bool skipDistanceCheck = false}) async {
     if (pickup != null) {
-      final shouldProceed = await checkPickupDistance(pickup);
-      if (!shouldProceed) return;
+      if (!skipDistanceCheck) {
+        final shouldProceed = await checkPickupDistance(pickup);
+        if (!shouldProceed) return;
+      }
       selectedPickupLatLng = pickup;
     }
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
-import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
@@ -315,10 +314,9 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
       await authService.logout();
       // Close loading dialog
       rootNavigator.pop();
-      if (!context.mounted) return;
-      // Navigate to IntroductionScreen
-      rootNavigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const IntroductionScreen()),
+      // Navigate back to the introduction screen via named route
+      rootNavigator.pushNamedAndRemoveUntil(
+        'introduction',
         (Route<dynamic> route) => false,
       );
     } catch (e) {

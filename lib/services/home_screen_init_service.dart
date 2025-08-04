@@ -19,6 +19,7 @@ class HomeScreenInitService {
     required VoidCallback measureContainers,
     required VoidCallback loadLocation,
     required VoidCallback loadPaymentMethod,
+    required VoidCallback loadRoute,
   }) async {
     final shouldReinitialize = PageStorage.of(context).readState(
           context,
@@ -57,6 +58,7 @@ class HomeScreenInitService {
 
     loadLocation();
     loadPaymentMethod();
+    loadRoute();
     measureContainers();
 
     await showOnboardingDialog(context);

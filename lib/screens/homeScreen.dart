@@ -27,6 +27,7 @@ import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
+import 'package:pasada_passenger_app/services/route_service.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -129,6 +130,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         selectedPickUpLocation = null;
         selectedDropOffLocation = null;
       });
+
+      // Save the route for persistence
+      await RouteService.saveRoute(result);
 
       debugPrint('Selected route:  ${result['route_name']}');
       debugPrint('Route details: $result');
@@ -257,6 +261,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       measureContainers: measureContainers,
       loadLocation: loadLocation,
       loadPaymentMethod: loadPaymentMethod,
+      loadRoute: loadRoute,
     );
     // Fetch and subscribe to weather updates based on device location
     await LocationWeatherService.fetchAndSubscribe(
@@ -289,6 +294,52 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       setState(() {
         selectedPaymentMethod = savedMethod;
       });
+    }
+  }
+
+  void loadRoute() async {
+    try {
+      final route = await RouteService.loadRoute();
+      if (route != null && mounted) {
+        setState(() {
+          selectedRoute = route;
+        });
+
+        debugPrint('Loaded route: ${route['route_name']}');
+
+        // Draw the route on the map if polyline coordinates are available
+        if (route['polyline_coordinates'] != null &&
+            route['polyline_coordinates'] is List<LatLng>) {
+          final coords = route['polyline_coordinates'] as List<LatLng>;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            mapScreenKey.currentState?.animateRouteDrawing(
+              const PolylineId('route'),
+              coords,
+              const Color(0xFFFFCE21),
+              8,
+            );
+            mapScreenKey.currentState?.zoomToBounds(coords);
+          });
+        } else if (route['origin_coordinates'] != null &&
+            route['destination_coordinates'] != null) {
+          // Fallback to drawing route from origin to destination
+          final origin = route['origin_coordinates'] as LatLng;
+          final destination = route['destination_coordinates'] as LatLng;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            final coords =
+                await PolylineService().generateBetween(origin, destination);
+            mapScreenKey.currentState?.animateRouteDrawing(
+              const PolylineId('route'),
+              coords,
+              const Color(0xFFFFCE21),
+              8,
+            );
+            mapScreenKey.currentState?.zoomToBounds(coords);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading route: $e');
     }
   }
 
@@ -436,6 +487,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         mapScreenKey.currentState?.updateLocations(
           pickup: selectedPickUpLocation!.coordinates,
           dropoff: selectedDropOffLocation!.coordinates,
+          skipDistanceCheck:
+              true, // Skip distance warning during app initialization
         );
       });
     }
