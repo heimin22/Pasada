@@ -7,6 +7,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/services/traffic_service.dart';
+import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 
@@ -179,6 +181,9 @@ class _RouteSelectionState extends State<RouteSelection> {
       }
     }
 
+    // Save the route for persistence
+    await RouteService.saveRoute(route);
+
     Navigator.pop(context, route);
   }
 
@@ -340,83 +345,9 @@ class _RouteSelectionState extends State<RouteSelection> {
                     itemCount: _filteredRoutes.length,
                     itemBuilder: (context, index) {
                       final route = _filteredRoutes[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        elevation: 1,
-                        color:
-                            isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: InkWell(
-                          onTap: () => _selectRoute(route),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 14, horizontal: 16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: isDarkMode
-                                        ? const Color(0xFF2A2A2A)
-                                        : const Color(0xFFEEEEEE),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.route,
-                                    size: 20,
-                                    color: const Color(0xFF00CC58),
-                                  ),
-                                ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        route['route_name'] ?? 'Unknown Route',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDarkMode
-                                              ? const Color(0xFFF5F5F5)
-                                              : const Color(0xFF121212),
-                                        ),
-                                      ),
-                                      if (route['description'] != null) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          route['description'],
-                                          style: TextStyle(
-                                            fontFamily: 'Inter',
-                                            fontSize: 12,
-                                            color: isDarkMode
-                                                ? const Color(0xFFAAAAAA)
-                                                : const Color(0xFF515151),
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Icon(
-                                  Icons.chevron_right,
-                                  color: isDarkMode
-                                      ? const Color(0xFFAAAAAA)
-                                      : const Color(0xFF515151),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      return RouteSelectionWidget(
+                        routeName: route['route_name'] ?? 'Unknown Route',
+                        onTap: () => _selectRoute(route),
                       );
                     },
                   ),

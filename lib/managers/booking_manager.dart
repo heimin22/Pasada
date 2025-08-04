@@ -18,6 +18,7 @@ import 'dart:async';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
+import 'package:pasada_passenger_app/services/route_service.dart';
 import 'dart:math';
 
 class BookingManager {
@@ -884,6 +885,10 @@ class BookingManager {
       }
       if (retainedDropOff != null) {
         await prefs.setString('dropoff', jsonEncode(retainedDropOff.toJson()));
+      }
+      // Save retained route to ensure it persists
+      if (retainedRoute != null) {
+        await RouteService.saveRoute(retainedRoute);
       }
     });
 
