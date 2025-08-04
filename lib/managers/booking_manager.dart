@@ -316,21 +316,53 @@ class BookingManager {
             }
           },
           onTimeout: () {
+            final isDarkMode =
+                Theme.of(_state.context).brightness == Brightness.dark;
             showDialog(
               context: _state.context,
               barrierDismissible: false,
               builder: (ctx) => ResponsiveDialog(
                 title: 'No Drivers Available',
-                content:
-                    const Text('Yun nga lang, walang driver. Hehe sorry boss.'),
+                contentPadding: const EdgeInsets.all(24),
+                content: Text(
+                  'Yun nga lang, walang driver. Hehe sorry boss.',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    color: isDarkMode
+                        ? const Color(0xFFDEDEDE)
+                        : const Color(0xFF1E1E1E),
+                  ),
+                ),
+                actionsAlignment: MainAxisAlignment.center,
                 actions: [
                   ElevatedButton(
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('OK'),
-                  )
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                      minimumSize: const Size(150, 40),
+                      backgroundColor: const Color(0xFF00CC58),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ).then((_) => handleBookingCancellation());
+            ).then((_) => handleNoDriverFound());
           },
         );
       } else {
@@ -338,7 +370,61 @@ class BookingManager {
         Fluttertoast.showToast(
           msg: bookingResult.errorMessage ?? 'Booking failed',
         );
-        handleBookingCancellation();
+
+        // Check if it's a 404 error (no drivers available)
+        if (bookingResult.isNoDriversError) {
+          // Show dialog and then handle as no driver found to preserve locations
+          final isDarkMode =
+              Theme.of(_state.context).brightness == Brightness.dark;
+          showDialog(
+            context: _state.context,
+            barrierDismissible: false,
+            builder: (ctx) => ResponsiveDialog(
+              title: 'No Drivers Available',
+              contentPadding: const EdgeInsets.all(24),
+              content: Text(
+                'Yun nga lang, walang driver. Hehe sorry boss.',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Inter',
+                  color: isDarkMode
+                      ? const Color(0xFFDEDEDE)
+                      : const Color(0xFF1E1E1E),
+                ),
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    minimumSize: const Size(150, 40),
+                    backgroundColor: const Color(0xFF00CC58),
+                    foregroundColor: const Color(0xFFF5F5F5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ).then((_) => handleNoDriverFound());
+        } else {
+          // Other booking failures - clear everything
+          handleBookingCancellation();
+        }
       }
     } else {
       Fluttertoast.showToast(msg: 'User or route missing.');
@@ -367,7 +453,6 @@ class BookingManager {
     });
 
     if (_state.mounted) {
-      _state.mapScreenKey.currentState?.clearAll();
       _state.setState(() {
         _state.isBookingConfirmed = false;
         _state.isDriverAssigned = false;
@@ -767,5 +852,60 @@ class BookingManager {
         );
       }
     });
+  }
+
+  /// Handles cancellation when no drivers found, retaining route, locations, seating preference, and fare
+  void handleNoDriverFound() {
+    // Preserve current selections
+    final retainedRoute = _state.selectedRoute;
+    final retainedPickUp = _state.selectedPickUpLocation;
+    final retainedDropOff = _state.selectedDropOffLocation;
+    final retainedFare = _state.currentFare;
+    final retainedSeating = _state.seatingPreference.value;
+    _acceptedNotified = false;
+    _progressNotificationStarted = false;
+    NotificationService.cancelRideProgressNotification();
+    _completionTimer?.cancel();
+    _completionTimer = null;
+    _state.driverAssignmentService?.stopPolling();
+    _state.bookingService?.stopLocationTracking();
+
+    final currentBookingId = _state.activeBookingId;
+
+    SharedPreferences.getInstance().then((prefs) async {
+      if (currentBookingId != null) {
+        await LocalDatabaseService().deleteBookingDetails(currentBookingId);
+      }
+      await prefs.remove('activeBookingId');
+
+      // Save retained locations to SharedPreferences to ensure they persist
+      if (retainedPickUp != null) {
+        await prefs.setString('pickup', jsonEncode(retainedPickUp.toJson()));
+      }
+      if (retainedDropOff != null) {
+        await prefs.setString('dropoff', jsonEncode(retainedDropOff.toJson()));
+      }
+    });
+
+    if (_state.mounted) {
+      _state.setState(() {
+        _state.isBookingConfirmed = false;
+        _state.isDriverAssigned = false;
+        _state.activeBookingId = null;
+        _state.bookingStatus = '';
+        // Restore retained values
+        _state.selectedRoute = retainedRoute;
+        _state.selectedPickUpLocation = retainedPickUp;
+        _state.selectedDropOffLocation = retainedDropOff;
+        _state.currentFare = retainedFare;
+        _state.seatingPreference.value = retainedSeating;
+      });
+      _state.bookingAnimationController.reverse();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_state.mounted) {
+          _state.measureContainers();
+        }
+      });
+    }
   }
 }
