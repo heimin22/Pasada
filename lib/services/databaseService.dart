@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DatabaseService {
@@ -16,14 +15,11 @@ class DatabaseService {
 
       // if response is successful but no data, return true
       if (response.isEmpty) {
-        if (kDebugMode) print('Database connection successful: No data found');
         return true;
       }
       // if response is successful, return true
-      if (kDebugMode) print('Database connection successful');
       return true;
     } catch (e) {
-      if (kDebugMode) print('Error connecting to the database: $e');
       return false;
     }
   }
@@ -34,8 +30,7 @@ class DatabaseService {
 
       return response;
     } catch (e) {
-      if (kDebugMode) print('Error inserting data: $e');
-      throw Exception('Failed to insert data');
+      throw Exception('Failed to insert data: $e');
     }
   }
 }
