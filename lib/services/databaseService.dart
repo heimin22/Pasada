@@ -34,31 +34,3 @@ class DatabaseService {
     }
   }
 }
-
-// class DatabaseService {
-//   Future<bool> connectToDatabase() async {
-//     try{
-//       // initializing postgreSQL connection
-//       var connection = await Connection.open(
-//         Endpoint(
-//           host: 'aws-0-ap-southeast-1.pooler.supabase.com',
-//           port: 5432,
-//           database: 'postgres',
-//           username: 'postgres.otbwhitwrmnfqgpmnjvf',
-//           password: 'FrierenTheSlayerCAFE',
-//         ),
-//       );
-//
-//       if (!connection.isOpen) {
-//         if (kDebugMode) print('Connection failed: Database is not open.');
-//         return false;
-//       }
-//       if (kDebugMode) print('Database connected successfully!');
-//       return true;
-//     }
-//     catch (e) {
-//       if (kDebugMode) print('Error connecting to the database: $e');
-//       return false;
-//     }
-//   }
-// }

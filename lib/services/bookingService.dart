@@ -259,10 +259,8 @@ class BookingService {
 
       // Update locally
       await _localDbService.updateLocalBookingStatus(bookingId, newStatus);
-
-      debugPrint('Booking $bookingId status updated to $newStatus');
     } catch (e) {
-      debugPrint('Error updating booking status: $e');
+      throw Exception('Error updating booking status: $e');
     }
   }
 
@@ -334,8 +332,7 @@ class BookingService {
       debugPrint('Driver assignment initiated: $response');
       return true;
     } catch (e) {
-      debugPrint('Error requesting driver assignment: $e');
-      return false;
+      throw Exception('Error requesting driver assignment: $e');
     }
   }
 

@@ -1,8 +1,5 @@
-// ignore_for_file: file_names
-
 import 'dart:async';
 import 'dart:math';
-// import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

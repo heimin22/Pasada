@@ -1,14 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:pasada_passenger_app/screens/homeScreen.dart';
-// import 'package:url_launcher/url_launcher.dart';
-// import 'package:location/location.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:pasada_passenger_app/screens/notificationScreen.dart';
-// import 'package:pasada_passenger_app/screens/activityScreen.dart';
-// import 'package:pasada_passenger_app/screens/profileSettingsScreen.dart';
-// import 'package:pasada_passenger_app/screens/settingsScreen.dart';
-// import 'package:pasada_passenger_app/screens/homeScreen.dart';
 
 void main() => runApp(const ProfileScreen());
 
@@ -26,9 +16,7 @@ class ProfileScreen extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const ProfileScreenStateful(title: 'Pasada'),
-      routes: <String, WidgetBuilder>{
-
-      },
+      routes: <String, WidgetBuilder>{},
     );
   }
 }
@@ -43,7 +31,6 @@ class ProfileScreenStateful extends StatefulWidget {
 }
 
 class ProfileScreenPageState extends State<ProfileScreenStateful> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
