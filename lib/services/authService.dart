@@ -64,11 +64,7 @@ class AuthService {
     return _instance;
   }
 
-  AuthService.internal() {
-    if (kDebugMode) {
-      print('Supabase Client Initialized: $supabase');
-    }
-  }
+  AuthService.internal();
 
   // login with email and password
   Future<AuthResponse> login(String email, String password) async {
@@ -86,8 +82,7 @@ class AuthService {
 
       return response;
     } catch (e) {
-      if (kDebugMode) print('Error during login: $e');
-      throw Exception('Failed to login');
+      throw Exception('Failed to login: $e');
     }
   }
 
@@ -280,10 +275,8 @@ class AuthService {
   Future<void> logout() async {
     try {
       await supabase.auth.signOut();
-      if (kDebugMode) print('Logout successful');
     } catch (e) {
-      if (kDebugMode) print('Error during logout: $e');
-      throw Exception('Failed to logout');
+      throw Exception('Failed to logout: $e');
     }
   }
 

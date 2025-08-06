@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -374,7 +373,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
     final String apiKey = dotenv.env["ANDROID_MAPS_API_KEY"] ?? '';
     if (apiKey.isEmpty) {
-      if (kDebugMode) print("API Key is not configured!");
       setState(() => isLoading = false);
       return;
     }
@@ -402,7 +400,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         setState(() => isLoading = false);
       }
     } catch (e) {
-      if (kDebugMode) print("Error fetching places: $e");
       setState(() => isLoading = false);
     }
   }

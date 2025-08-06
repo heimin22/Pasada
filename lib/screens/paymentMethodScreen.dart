@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter_svg/flutter_svg.dart';
-// import 'package:pasada_passenger_app/screens/paymongoPaymentScreen.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 
 class PaymentMethodScreen extends StatefulWidget {

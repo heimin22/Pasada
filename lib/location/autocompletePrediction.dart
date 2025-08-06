@@ -1,5 +1,3 @@
-// import 'package:flutter_google_maps_webservices/places.dart';
-
 class AutocompletePrediction {
   // ito yung human-readable name ng returned result. pwepwede ring business name ng establishment
   late final String? description;
@@ -26,7 +24,8 @@ class AutocompletePrediction {
       placeID: json['place_id'] as String? ?? '',
       reference: json['reference'] as String?,
       structuredFormatting: json['structured_formatting'] != null
-        ? StructuredFormatting.fromJson(json['structured_formatting']) : null,
+          ? StructuredFormatting.fromJson(json['structured_formatting'])
+          : null,
     );
   }
 }
@@ -41,7 +40,8 @@ class StructuredFormatting {
 
   factory StructuredFormatting.fromJson(Map<String, dynamic> json) {
     return StructuredFormatting(
-      mainText: json['main_text'] as String? ?? '', // mahahandle niya rin dapat yung null values
+      mainText: json['main_text'] as String? ??
+          '', // mahahandle niya rin dapat yung null values
       secondaryText: json['secondary_text'] as String? ?? '', // ganun din dito
     );
   }

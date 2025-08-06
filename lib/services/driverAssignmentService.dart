@@ -100,16 +100,6 @@ class DriverAssignmentService {
     });
   }
 
-  // Future<Map<String, dynamic>?> _fetchDriverDetails(int driverId) async {
-  //   try {
-  //     // Use the new endpoint
-  //     return await _apiService.get<Map<String, dynamic>>('drivers/$driverId');
-  //   } catch (e) {
-  //     debugPrint('Error fetching driver details: $e');
-  //     return null;
-  //   }
-  // }
-
   // Add a new method to fetch booking details
   Future<Map<String, dynamic>?> fetchBookingDetails(int bookingId) async {
     try {
