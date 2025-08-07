@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:pasada_passenger_app/widgets/optimized_cached_image.dart';
 import 'dart:math';
 
 class SettingsProfileHeader extends StatefulWidget {
@@ -99,18 +99,17 @@ class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
     final double avatarDiameter =
         min(widget.screenWidth, widget.screenHeight) * 0.23;
     final double avatarRadius = avatarDiameter / 2;
+
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
       return CircleAvatar(
         radius: avatarRadius,
         backgroundColor: Colors.transparent,
         child: ClipOval(
-          child: CachedNetworkImage(
+          child: OptimizedCachedImage.profile(
             imageUrl: avatarUrl,
-            placeholder: (context, url) => const CircularProgressIndicator(),
-            errorWidget: (context, url, error) => buildDefaultAvatar(),
-            fit: BoxFit.cover,
-            width: avatarDiameter,
-            height: avatarDiameter,
+            size: avatarDiameter,
+            placeholder: const CircularProgressIndicator(),
+            errorWidget: buildDefaultAvatar(),
           ),
         ),
       );

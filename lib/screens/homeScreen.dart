@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
+import 'package:pasada_passenger_app/widgets/optimized_cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
@@ -589,10 +590,22 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                               ),
                             );
                           } else if (weatherProv.weather != null) {
-                            return Image.network(
-                              weatherProv.weather!.iconUrl,
-                              width: weatherIconSize,
-                              height: weatherIconSize,
+                            return OptimizedCachedImage.thumbnail(
+                              imageUrl: weatherProv.weather!.iconUrl,
+                              size: weatherIconSize,
+                              placeholder: SizedBox(
+                                width: weatherIconSize,
+                                height: weatherIconSize,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF00CC58),
+                                ),
+                              ),
+                              errorWidget: Icon(
+                                Icons.cloud_off,
+                                size: weatherIconSize,
+                                color: Colors.grey,
+                              ),
                             );
                           } else {
                             return SizedBox(

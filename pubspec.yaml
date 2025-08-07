@@ -32,6 +32,7 @@ dependencies:
   bcrypt: ^1.1.3
   cached_network_image: ^3.4.1
   connectivity_plus: ^6.1.1
+  crypto: ^3.0.6
   cupertino_icons: ^1.0.8
   curved_navigation_bar: ^1.0.6
   dio: ^5.7.0
@@ -44,6 +45,7 @@ dependencies:
   flutter_animate: ^4.5.2
   flutter_dotenv: ^5.2.1
   flutter_google_maps_webservices: ^1.1.1
+  flutter_image_compress: ^2.4.0
   flutter_isolate: ^2.1.0
   flutter_local_notifications: ^19.1.0
   flutter_markdown: ^0.7.7
@@ -64,6 +66,7 @@ dependencies:
   intl: ^0.20.2
   location: ^8.0.0
   path: ^1.9.1
+  path_provider: ^2.1.5
   paymongo_sdk: ^1.7.0
   permission_handler: ^12.0.0+1
   postgres: ^3.4.7
