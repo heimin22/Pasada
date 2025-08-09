@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/services/image_compression_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
@@ -51,12 +52,70 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _imageFile = File(image.path);
-      });
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        // Show compression progress
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🖼️ Optimizing image...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+
+        // Compress the image for profile use
+        final originalFile = File(image.path);
+        final compressedFile = await originalFile.compressForProfile();
+
+        if (compressedFile != null) {
+          setState(() {
+            _imageFile = compressedFile;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✅ Image optimized successfully!'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+          }
+
+          // Log compression stats
+          ImageCompressionService().printCompressionReport();
+        } else {
+          // Fallback to original file if compression fails
+          setState(() {
+            _imageFile = originalFile;
+          });
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚠️ Using original image (compression failed)'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking/compressing image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Error selecting image'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
