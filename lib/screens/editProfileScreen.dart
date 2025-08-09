@@ -5,7 +5,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/image_compression_service.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 
 class EditProfileScreen extends StatefulWidget {
@@ -34,13 +33,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> loadUserData() async {
     final userData = await authService.getCurrentUserData();
     if (userData != null) {
-      final currentUser = Supabase.instance.client.auth.currentUser;
-      final isGoogleProvider =
-          currentUser?.appMetadata['provider'] == 'google' ||
-              currentUser?.identities
-                      ?.any((identity) => identity.provider == 'google') ==
-                  true;
-      true;
+      final isGoogleProvider = authService.isGoogleLinkedAccount();
+
       setState(() {
         nameController.text = userData['display_name'] ?? '';
         emailController.text = userData['passenger_email'] ?? '';
@@ -48,6 +42,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         profileImageUrl = userData['avatar_url'];
         isGoogleLinked = isGoogleProvider;
       });
+
+      // Auto-sync Google profile data when loading
+      if (isGoogleProvider) {
+        await authService.syncGoogleProfile();
+        // Reload data after sync
+        final updatedUserData = await authService.getCurrentUserData();
+        if (updatedUserData != null) {
+          setState(() {
+            nameController.text = updatedUserData['display_name'] ?? '';
+            emailController.text = updatedUserData['email'] ?? '';
+            profileImageUrl = updatedUserData['avatar_url'];
+          });
+        }
+      }
     }
   }
 
@@ -127,7 +135,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         newAvatarUrl = await authService.uploadNewProfileImage(_imageFile!);
       }
 
-      await authService.updateProfile(
+      // Use the enhanced update method that handles Google account constraints
+      await authService.updateProfileEnhanced(
         displayName: nameController.text,
         email: emailController.text,
         mobileNumber: mobileNumberController.text,
@@ -136,13 +145,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
+          SnackBar(
+            content: Text(isGoogleLinked
+                ? 'Profile updated successfully (Google profile synced)'
+                : 'Profile updated successfully'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile')),
+          SnackBar(content: Text('Error updating profile: ${e.toString()}')),
         );
       }
     }
@@ -247,8 +260,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         const SizedBox(height: 48),
                         buildInputField('Name', nameController, isDarkMode),
                         buildPhoneNumberField(isDarkMode),
-                        buildInputField(
-                            'Email Address', emailController, isDarkMode),
+                        buildEmailField(isDarkMode),
                         const SizedBox(height: 24),
                         buildLinkedAccountsSection(
                             screenSize.width, isDarkMode),
@@ -421,6 +433,102 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Widget buildEmailField(bool isDarkMode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Email Address',
+              style: TextStyle(
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            if (isGoogleLinked) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00CC58),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'Google',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: emailController,
+          enabled: !isGoogleLinked, // Disable for Google accounts
+          cursorColor:
+              isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isGoogleLinked
+                ? (isDarkMode
+                    ? const Color(0xFF888888)
+                    : const Color(0xFF666666))
+                : (isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212)),
+            fontFamily: 'Inter',
+          ),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: isGoogleLinked
+                ? (isDarkMode
+                    ? const Color(0xFF2A2A2A)
+                    : const Color(0xFFE0E0E0))
+                : (isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF5F5F5)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 12,
+              horizontal: 14,
+            ),
+            suffixIcon: isGoogleLinked
+                ? const Icon(Icons.lock_outline,
+                    color: Color(0xFF888888), size: 20)
+                : null,
+          ),
+        ),
+        if (isGoogleLinked) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Email is managed by Google and cannot be changed here',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDarkMode
+                  ? const Color(0xFF888888)
+                  : const Color(0xFF666666),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        const SizedBox(height: 45),
+      ],
+    );
+  }
+
   Widget buildLinkedAccountsSection(double screenWidth, bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,6 +580,53 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
               const Spacer(),
+              if (isGoogleLinked) ...[
+                // Sync button for Google accounts
+                GestureDetector(
+                  onTap: () async {
+                    try {
+                      final success = await authService.syncGoogleProfile();
+                      if (success && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text('✅ Google profile synced successfully'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        // Reload user data after sync
+                        await loadUserData();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('❌ Failed to sync Google profile'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00CC58),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text(
+                      'Sync',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Transform.scale(
                 scale: 0.8,
                 child: CupertinoSwitch(
