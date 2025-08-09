@@ -415,4 +415,102 @@ class AuthService {
       throw Exception('Failed to verify password reset code');
     }
   }
+
+  /// Check if the current user is linked to a Google account
+  bool isGoogleLinkedAccount() {
+    final currentUser = supabase.auth.currentUser;
+    if (currentUser == null) return false;
+
+    // Check if the provider is Google or if any identity is from Google
+    return currentUser.appMetadata['provider'] == 'google' ||
+        currentUser.identities
+                ?.any((identity) => identity.provider == 'google') ==
+            true;
+  }
+
+  /// Manually sync Google profile data for Google-linked accounts
+  Future<bool> syncGoogleProfile() async {
+    if (!isGoogleLinkedAccount()) {
+      debugPrint('User is not linked to Google account');
+      return false;
+    }
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return false;
+
+      final userMetadata = user.userMetadata;
+      final avatarUrl = userMetadata?['picture'] ?? '';
+      final displayName = userMetadata?['full_name'] ?? '';
+
+      // Update the passenger table with latest Google data
+      await passengersDatabase.update({
+        'email': user.email,
+        'avatar_url': avatarUrl,
+        'display_name': displayName,
+      }).eq('id', user.id);
+
+      debugPrint('Google profile synced successfully');
+      return true;
+    } catch (e) {
+      debugPrint('Error syncing Google profile: $e');
+      return false;
+    }
+  }
+
+  /// Enhanced update profile method that respects Google account constraints
+  Future<void> updateProfileEnhanced({
+    required String displayName,
+    required String email,
+    required String mobileNumber,
+    String? avatarUrl,
+  }) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      final isGoogleAccount = isGoogleLinkedAccount();
+
+      // For Google accounts, prevent email changes and sync from Google
+      if (isGoogleAccount) {
+        // Use the Google email instead of the provided email
+        final googleEmail = user.email;
+        if (googleEmail != null && googleEmail != email) {
+          debugPrint(
+              'Warning: Email change ignored for Google account. Using Google email: $googleEmail');
+          email = googleEmail;
+        }
+
+        // Sync latest Google profile data
+        await syncGoogleProfile();
+      }
+
+      // Format the mobile number
+      final formattedMobileNumber =
+          mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
+
+      // Update the passenger table
+      await passengersDatabase.update({
+        'display_name': displayName,
+        'email': email,
+        'contact_number': formattedMobileNumber,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      }).eq('id', user.id);
+
+      // Update auth metadata if not a Google account
+      if (!isGoogleAccount) {
+        await supabase.auth.updateUser(
+          UserAttributes(
+            email: email,
+            data: {
+              'display_name': displayName,
+            },
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating profile: $e');
+      throw Exception('Failed to update profile');
+    }
+  }
 }
