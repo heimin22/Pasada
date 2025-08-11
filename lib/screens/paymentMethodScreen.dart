@@ -172,18 +172,6 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                                       : const Color(0xFF121212),
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Note: If cashless payment is selected, the fare will be automatically paid once you are picked up by the driver.',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212),
-                                ),
-                              ),
                             ],
                           ),
                         ),
