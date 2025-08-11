@@ -10,8 +10,14 @@ class PolylineService {
   final _apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
 
   Future<List<LatLng>> generateBetween(LatLng start, LatLng end) async {
-    final key = 'polyline_${start.latitude}_${start.longitude}'
-        '_${end.latitude}_${end.longitude}';
+    // Use rounded coordinates for better cache hit rate (approx 11m precision)
+    final roundedStartLat = (start.latitude * 10000).round() / 10000;
+    final roundedStartLng = (start.longitude * 10000).round() / 10000;
+    final roundedEndLat = (end.latitude * 10000).round() / 10000;
+    final roundedEndLng = (end.longitude * 10000).round() / 10000;
+
+    final key = 'polyline_${roundedStartLat}_$roundedStartLng'
+        '_${roundedEndLat}_$roundedEndLng';
     final cached = MemoryManager.instance.getFromCache(key);
     if (cached is List<LatLng>) return cached;
 
@@ -67,6 +73,7 @@ class PolylineService {
     }
     final decoded = PolylinePoints.decodePolyline(poly);
     final coords = decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
+    // Cache with the rounded key for consistency
     MemoryManager.instance.addToCache(key, coords);
     return coords;
   }

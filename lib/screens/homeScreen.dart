@@ -758,6 +758,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                   phoneNumber: phoneNumber,
                                   isDriverAssigned: isDriverAssigned,
                                   bookingStatus: bookingStatus,
+                                  currentLocation: mapScreenKey
+                                      .currentState?.currentLocation,
                                 ),
                               ),
                             ),

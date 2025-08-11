@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'booking_details_container.dart';
 import 'payment_details_container.dart';
 import 'driver_details_container.dart';
@@ -20,6 +21,7 @@ class BookingStatusManager extends StatefulWidget {
   final String phoneNumber;
   final bool isDriverAssigned;
   final String bookingStatus;
+  final LatLng? currentLocation;
 
   const BookingStatusManager({
     super.key,
@@ -34,6 +36,7 @@ class BookingStatusManager extends StatefulWidget {
     required this.phoneNumber,
     required this.isDriverAssigned,
     this.bookingStatus = 'requested',
+    this.currentLocation,
   });
 
   @override
@@ -185,10 +188,12 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               // Show plate number above driver details
               DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
-              // Show ETA based on device location to drop-off
+              // Show ETA based on device location to drop-off (optimized with current location)
               if (widget.dropoffLocation != null)
                 EtaContainer(
                   destination: widget.dropoffLocation!.coordinates,
+                  currentLocation: widget
+                      .currentLocation, // Pass current location for faster loading
                 ),
               BookingDetailsContainer(
                 pickupLocation: widget.pickupLocation,

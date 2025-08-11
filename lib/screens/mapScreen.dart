@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -579,12 +579,22 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
+  // Cache for driver route polylines to avoid excessive API calls
+  List<LatLng>? _cachedDriverRoute;
+  LatLng? _lastDriverRouteLocation;
+  String? _lastRideStatus;
+  LatLng? _lastTargetLocation;
+
+  // Distance threshold in meters for polyline regeneration
+  static const double _ROUTE_UPDATE_THRESHOLD = 100.0;
+
   // Update driver marker and draw road-following polyline to pickup/dropoff
   Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
     if (!mounted) return;
+
+    // Update driver marker
     setState(() {
       driverLocation = location;
-      // Update driver marker
       final driverMarkerId = MarkerId('driver');
       markers[driverMarkerId] = Marker(
         markerId: driverMarkerId,
@@ -601,13 +611,37 @@ class MapScreenState extends State<MapScreen>
       }
     });
 
-    // Generate and draw driver route polyline for accepted or ongoing rides
-    List<LatLng> route = [];
+    // Determine target location based on ride status
+    LatLng? targetLocation;
     if (rideStatus == 'accepted') {
-      route = await _rideService.getRoute(location, widget.pickUpLocation);
+      targetLocation = widget.pickUpLocation;
     } else if (rideStatus == 'ongoing') {
-      route = await _rideService.getRoute(location, widget.dropOffLocation);
+      targetLocation = widget.dropOffLocation;
     }
+
+    // Only generate polyline for accepted or ongoing rides
+    if (targetLocation == null) return;
+
+    // Check if we need to regenerate the route
+    bool shouldRegenerateRoute =
+        _shouldRegenerateRoute(location, rideStatus, targetLocation);
+
+    List<LatLng> route = [];
+
+    if (shouldRegenerateRoute) {
+      // Generate new route and cache it
+      route = await _rideService.getRoute(location, targetLocation);
+      if (route.isNotEmpty) {
+        _cachedDriverRoute = route;
+        _lastDriverRouteLocation = location;
+        _lastRideStatus = rideStatus;
+        _lastTargetLocation = targetLocation;
+      }
+    } else if (_cachedDriverRoute != null) {
+      // Use cached route
+      route = _cachedDriverRoute!;
+    }
+
     if (route.isNotEmpty) {
       animateRouteDrawing(
         const PolylineId('driver_route_live'),
@@ -615,11 +649,67 @@ class MapScreenState extends State<MapScreen>
         const Color.fromARGB(255, 10, 179, 83),
         8,
       );
-      // Animate camera to include driver and target location
-      final controller = await mapController.future;
-      await moveCameraToBounds(controller, route,
-          padding: 0.01, boundPadding: 20.0);
+
+      // Only update camera if this is a new route or significant location change
+      if (shouldRegenerateRoute) {
+        final controller = await mapController.future;
+        await moveCameraToBounds(controller, route,
+            padding: 0.01, boundPadding: 20.0);
+      }
     }
+  }
+
+  // Check if route should be regenerated based on distance and status changes
+  bool _shouldRegenerateRoute(
+      LatLng currentLocation, String rideStatus, LatLng targetLocation) {
+    // Always regenerate if status changed
+    if (_lastRideStatus != rideStatus) {
+      // Clear cached route when status changes
+      _cachedDriverRoute = null;
+      _lastDriverRouteLocation = null;
+      return true;
+    }
+
+    // Always regenerate if target changed
+    if (_lastTargetLocation == null ||
+        _lastTargetLocation!.latitude != targetLocation.latitude ||
+        _lastTargetLocation!.longitude != targetLocation.longitude) {
+      return true;
+    }
+
+    // Regenerate if no cached route exists
+    if (_cachedDriverRoute == null || _lastDriverRouteLocation == null) {
+      return true;
+    }
+
+    // Calculate distance from last route generation point
+    double distance = _calculateDistance(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        _lastDriverRouteLocation!.latitude,
+        _lastDriverRouteLocation!.longitude);
+
+    // Regenerate if driver moved significantly
+    return distance > _ROUTE_UPDATE_THRESHOLD;
+  }
+
+  // Calculate distance between two points in meters
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371000; // Earth radius in meters
+    double dLat = _degreesToRadians(lat2 - lat1);
+    double dLon = _degreesToRadians(lon2 - lon1);
+    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_degreesToRadians(lat1)) *
+            math.cos(_degreesToRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * (math.pi / 180);
   }
 
   // Helper to generate and update polyline for driver route without clearing other polylines
@@ -702,8 +792,8 @@ class MapScreenState extends State<MapScreen>
     if (l2 == 0) return start; // If segment is a point, return that point
 
     // Calculate projection of point onto line
-    final double t =
-        max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
+    final double t = math.max(
+        0, math.min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
 
     // Calculate nearest point on line segment
     final double projX = x1 + t * (x2 - x1);
