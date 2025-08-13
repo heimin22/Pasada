@@ -49,6 +49,7 @@ android {
         minSdkVersion = 23
 
         manifestPlaceholders = [mapsApiKey: mapsApiKey, applicationName: "io.flutter.app.FlutterApplication"]
+        multiDexEnabled true
     }
 
     buildTypes {
@@ -69,8 +70,6 @@ flutter {
 }
 
 dependencies {
-    // ... existing dependencies
-
-    // Add the desugaring dependency
+    implementation 'androidx.multidex:multidex:2.0.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
 }

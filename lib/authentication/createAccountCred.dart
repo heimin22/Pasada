@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:flutter/gestures.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
-
-import '../screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
 
 class CreateAccountCredPage extends StatefulWidget {
   final String email;
@@ -465,24 +463,18 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     setState(() => isLoading = true);
 
     try {
-      final authService = AuthService();
-      const defaultAvatarUrl = 'assets/svg/default_user_profile.svg';
-
-      await authService.signUpAuth(
-        email,
-        password,
-        data: {
-          'display_name': displayName,
-          'contact_number': contactNumber,
-          'avatar_url': defaultAvatarUrl,
-        },
-      );
-
+      // Navigate to OTP verification instead of creating account directly
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const selectionScreen()),
-          (route) => false,
+          MaterialPageRoute(
+            builder: (context) => OTPVerificationScreen(
+              phoneNumber: contactNumber,
+              email: email,
+              password: password,
+              displayName: displayName,
+            ),
+          ),
         );
       }
     } catch (e) {

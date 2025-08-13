@@ -279,7 +279,7 @@ class _EtaContainerState extends State<EtaContainer> {
                   Icons.access_time,
                   size: 24,
                   color: _isUpdating
-                      ? const Color(0xFF00CC58).withOpacity(0.6)
+                      ? const Color(0xFF00CC58).withValues(alpha: 0.6)
                       : const Color(0xFF00CC58),
                 ),
                 const SizedBox(width: 12),
@@ -321,8 +321,10 @@ class _EtaContainerState extends State<EtaContainer> {
                           fontWeight: FontWeight.w600,
                           color: _isUpdating
                               ? (isDarkMode
-                                  ? const Color(0xFFF5F5F5).withOpacity(0.7)
-                                  : const Color(0xFF121212).withOpacity(0.7))
+                                  ? const Color(0xFFF5F5F5)
+                                      .withValues(alpha: 0.7)
+                                  : const Color(0xFF121212)
+                                      .withValues(alpha: 0.7))
                               : (isDarkMode
                                   ? const Color(0xFFF5F5F5)
                                   : const Color(0xFF121212)),
