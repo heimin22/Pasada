@@ -1,21 +1,16 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:pasada_passenger_app/utils/map_utils.dart';
-import 'package:pasada_passenger_app/services/map_location_service.dart';
-import 'package:pasada_passenger_app/services/fare_service.dart';
-import 'package:pasada_passenger_app/services/ride_service.dart';
-import 'package:pasada_passenger_app/services/polyline_service.dart';
-import 'package:pasada_passenger_app/utils/map_camera_utils.dart';
+import 'package:pasada_passenger_app/utils/map_location_manager.dart';
+import 'package:pasada_passenger_app/utils/map_camera_manager.dart';
+import 'package:pasada_passenger_app/utils/map_route_manager.dart';
+import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
+import 'package:pasada_passenger_app/utils/map_dialog_manager.dart';
+import 'package:pasada_passenger_app/utils/map_driver_tracker.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -46,102 +41,127 @@ class MapScreen extends StatefulWidget {
 class MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final Completer<GoogleMapController> mapController = Completer();
-  LatLng? currentLocation; // Location Data
-  final Location location = Location();
+  LatLng? currentLocation;
   final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-  StreamSubscription<LocationData>? locationSubscription;
-
-  bool isScreenActive = true;
 
   @override
   bool get wantKeepAlive => true;
 
-  // Markers para sa pick-up and drop-off
-  Marker? selectedPickupMarker;
-  Marker? selectedDropOffMarker;
+  // Manager instances
+  late MapLocationManager _locationManager;
+  late MapCameraManager _cameraManager;
+  late MapRouteManager _routeManager;
+  late MapMarkerManager _markerManager;
+  late MapDialogManager _dialogManager;
+  late MapDriverTracker _driverTracker;
 
-  // polylines sa mapa nigga
-  Map<PolylineId, Polyline> polylines = {};
-
-  // mauupdate ito kapag nakapagsearch na ng location si user
+  // State variables
   LatLng? selectedPickupLatLng;
   LatLng? selectedDropOffLatLng;
-
-  // null muna ito until mafetch yung current location
-  LatLng? currentPosition;
-
-  // animation ng location to kapag pinindot yung Location FAB
-  // animation flag
-  bool isAnimatingLocation = false;
-
-  // ETA text lang naman to nigga
+  LatLng? driverLocation;
   String? etaText;
-
-  // Class variable for location initialization
-  bool isLocationInitialized = false;
-  bool errorDialogVisible = false;
-
-  GoogleMapController? _mapController;
-
+  double fareAmount = 0.0;
   bool showRouteEndIndicator = false;
   String routeEndName = '';
-
-  Map<MarkerId, Marker> markers = {};
-
-  double fareAmount = 0.0;
-
-  // Field to store driver location and bus icon
-  LatLng? driverLocation;
-  late BitmapDescriptor busIcon;
-  late BitmapDescriptor pickupIcon;
-  late BitmapDescriptor dropoffIcon;
-
-  // PolylineId for the driver's live route
-  static const PolylineId driverRoutePolylineId =
-      PolylineId('driver_route_live');
-
-  late final MapLocationService _locationService;
-  late final RideService _rideService;
+  GoogleMapController? _mapController;
 
   // Override methods
   /// state of the app
   @override
   void initState() {
     super.initState();
-    // Load custom bus icon for driver marker
-    _loadBusIcon();
+    _initializeManagers();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Load last known location from cache for faster initial display and center map
-        (() async {
-          final prefs = await SharedPreferences.getInstance();
-          final lat = prefs.getDouble('last_latitude');
-          final lng = prefs.getDouble('last_longitude');
-          if (lat != null && lng != null && mounted) {
-            setState(() {
-              currentLocation = LatLng(lat, lng);
-            });
-            final controller = await mapController.future;
-            await controller.animateCamera(
-                CameraUpdate.newLatLngZoom(currentLocation!, 17.0));
-            pulseCurrentLocationMarker();
-          }
-          // Now fetch fresh location updates
-          await initializeLocation();
-          handleLocationUpdates();
-        })();
-        // Initialize ride service
-        _rideService = RideService();
-        // Initialize and subscribe to device location
-        _locationService.initialize((loc) {
-          if (mounted) {
-            setState(() => currentLocation = loc);
-            widget.onLocationUpdated?.call(loc);
-          }
-        });
+        _initializeMapComponents();
       }
     });
+  }
+
+  /// Initialize all manager instances
+  void _initializeManagers() {
+    // Initialize location manager
+    _locationManager = MapLocationManager(
+      onLocationUpdated: (location) {
+        if (mounted) {
+          setState(() => currentLocation = location);
+          widget.onLocationUpdated?.call(location);
+        }
+      },
+      onError: (error) => _dialogManager.showError(error),
+      onLocationPermissionDenied: () =>
+          _dialogManager.showLocationPermissionDialog(),
+      onLocationServiceDisabled: () => _dialogManager.showLocationErrorDialog(
+        onRetry: () => _locationManager.initializeLocation(),
+      ),
+    );
+
+    // Initialize camera manager
+    _cameraManager = MapCameraManager(
+      mapController: mapController,
+      onAnimationStateChanged: (isAnimating) {
+        if (mounted) setState(() {});
+      },
+    );
+
+    // Initialize route manager
+    _routeManager = MapRouteManager(
+      onFareUpdated: (fare) {
+        fareAmount = fare;
+        widget.onFareUpdated?.call(fare);
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+    );
+
+    // Initialize marker manager
+    _markerManager = MapMarkerManager(
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+    );
+
+    // Initialize dialog manager
+    _dialogManager = MapDialogManager(context);
+
+    // Initialize driver tracker
+    _driverTracker = MapDriverTracker(
+      onDriverRouteUpdated: (driverLocation, route) {
+        _routeManager.animateRouteDrawing(
+          const PolylineId('driver_route_live'),
+          route,
+          const Color.fromARGB(255, 10, 179, 83),
+          8,
+        );
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+  }
+
+  /// Initialize map components after managers are ready
+  Future<void> _initializeMapComponents() async {
+    // Initialize marker icons
+    await _markerManager.initializeIcons();
+
+    // Initialize camera manager with map controller
+    _cameraManager.initialize(mapController);
+
+    // Load cached location and animate to it
+    final cachedLocation = await _locationManager.getCachedLocation();
+    if (cachedLocation != null && mounted) {
+      setState(() => currentLocation = cachedLocation);
+      await _cameraManager.animateToLocation(cachedLocation);
+    }
+
+    // Initialize location tracking
+    await _locationManager.initializeLocation();
+
+    // Handle route updates based on widget parameters
+    handleLocationUpdates();
   }
 
   /// disposing of functions
@@ -149,7 +169,11 @@ class MapScreenState extends State<MapScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _mapController?.dispose();
-    locationSubscription?.cancel();
+    _locationManager.dispose();
+    _cameraManager.dispose();
+    _routeManager.dispose();
+    _markerManager.dispose();
+    _driverTracker.dispose();
     super.dispose();
   }
 
@@ -157,11 +181,11 @@ class MapScreenState extends State<MapScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // here once the app is opened,
     // intiate the location and get the location updates
-    isScreenActive = state == AppLifecycleState.resumed;
+    final isScreenActive = state == AppLifecycleState.resumed;
+    _locationManager.setScreenActive(isScreenActive);
+
     if (isScreenActive) {
       handleLocationUpdates();
-    } else {
-      locationSubscription?.pause();
     }
   }
 
@@ -179,56 +203,48 @@ class MapScreenState extends State<MapScreen>
   void calculateRoute() {
     //  make sure there's a null check before placing polylines
     if (selectedPickupLatLng == null || selectedDropOffLatLng == null) {
-      showError('Select both locations first.');
+      _dialogManager.showLocationSelectionRequired();
       return;
     }
     // generate the polylines calling selectedPickupLatlng and selectedDropOffLatLng
-    renderRouteBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
+    _renderRouteBetween(selectedPickupLatLng!, selectedDropOffLatLng!);
   }
 
   // handle yung location updates for the previous widget to generate polylines
   Future<void> handleLocationUpdates() async {
-    // Cancel previous subscription to avoid duplicate callbacks
-    locationSubscription?.cancel();
-    // Subscribe to location updates for map and routing
-    locationSubscription = location.onLocationChanged
-        .where((data) => data.latitude != null && data.longitude != null)
-        .listen((newLocation) {
-      if (mounted && isScreenActive) {
-        setState(() => currentLocation =
-            LatLng(newLocation.latitude!, newLocation.longitude!));
-        widget.onLocationUpdated?.call(currentLocation!);
-      }
-    });
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       debugPrint('MapScreen - Both pickup and dropoff locations are set');
-      final polyService = PolylineService();
+
       if (widget.routePolyline?.isNotEmpty == true) {
         debugPrint('MapScreen - Rendering official route segment');
-        final segment = polyService.generateAlongRoute(
+        final segment = await _routeManager.renderRouteAlongPolyline(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
           widget.routePolyline!,
         );
-        animateRouteDrawing(
-          const PolylineId('route'),
-          segment,
-          const Color(0xFFFFCE21),
-          8,
-        );
-        // Calculate fare based on the segment
-        final fare = FareService.calculateFareForPolyline(segment);
-        fareAmount = fare;
-        if (widget.onFareUpdated != null) widget.onFareUpdated!(fare);
-        // Zoom camera to the segment bounds
-        _moveCameraToRoute(
-            segment, widget.pickUpLocation!, widget.dropOffLocation!);
+
+        if (segment.isNotEmpty) {
+          // Zoom camera to the segment bounds
+          await _cameraManager.moveCameraToRoute(
+            segment,
+            widget.pickUpLocation!,
+            widget.dropOffLocation!,
+          );
+        }
       } else {
         debugPrint('MapScreen - Rendering direct route');
-        await renderRouteBetween(
+        final route = await _routeManager.renderRouteBetween(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
         );
+
+        if (route.isNotEmpty) {
+          await _cameraManager.moveCameraToRoute(
+            route,
+            widget.pickUpLocation!,
+            widget.dropOffLocation!,
+          );
+        }
       }
     } else {
       debugPrint('MapScreen - Missing pickup or dropoff location');
@@ -238,59 +254,16 @@ class MapScreenState extends State<MapScreen>
   // animate yung current location marker
   void pulseCurrentLocationMarker() {
     if (!mounted) return;
-    setState(() => isAnimatingLocation = true);
-
-    // reset ng animation after ng delay
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => isAnimatingLocation = false);
-      }
-    });
+    _cameraManager.pulseCurrentLocationMarker();
   }
 
   Future<bool> checkPickupDistance(LatLng pickupLocation) async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     if (currentLocation == null) return true;
 
-    final selectedLoc = SelectedLocation("", pickupLocation);
-    final distance = selectedLoc.distanceFrom(currentLocation!);
-
-    if (distance > 1.0) {
-      final bool? proceed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) => ResponsiveDialog(
-          title: 'Distance warning',
-          content: Text(
-            'The selected pick-up location is quite far from your current location. Do you want to continue?',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF067837),
-              ),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      return proceed ?? false;
-    }
-
-    return true;
+    return await _dialogManager.showPickupDistanceWarning(
+      pickupLocation,
+      currentLocation!,
+    );
   }
 
   Future<void> handleSearchLocationSelection(
@@ -312,102 +285,9 @@ class MapScreenState extends State<MapScreen>
     }
   }
 
-  // replace ko yung initLocation ko ng ganito
-  Future<void> initializeLocation() async {
-    if (isLocationInitialized || !mounted) return;
-
-    // service check
-    final serviceReady = await checkLocationService();
-    if (!serviceReady) return;
-
-    // permission check
-    final permissionGranted = await verifyLocationPermissions();
-    if (!permissionGranted) return;
-
-    // fetch updates
-    await getLocationUpdates();
-    isLocationInitialized = true;
-  }
-
-  // service status check helper
-  Future<bool> checkLocationService() async {
-    try {
-      // serviceEnabled variable to check the location services
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        // if not enabled then request for the activation
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled && mounted) {
-          showLocationErrorDialog();
-          return false;
-        }
-      }
-      return true;
-    } on PlatformException catch (e) {
-      if (mounted) showError('Service Error: ${e.message ?? 'Unknown'}');
-      return false;
-    }
-  }
-
-  Future<bool> verifyLocationPermissions() async {
-    final status = await location.hasPermission();
-    if (status == PermissionStatus.granted) return true;
-
-    final newStatus = await location.requestPermission();
-    if (newStatus != PermissionStatus.granted && mounted) {
-      showAlertDialog(
-        'Permission Required',
-        'Enable location permissions device settings',
-      );
-      return false;
-    }
-    return true;
-  }
-
   // animate yung camera papunta sa current location ng user
   Future<void> animateToLocation(LatLng target) async {
-    final GoogleMapController controller = await mapController.future;
-    controller.animateCamera(
-      CameraUpdate.newCameraPosition(CameraPosition(
-        target: target,
-        zoom: 17.0,
-      )),
-    );
-    pulseCurrentLocationMarker();
-  }
-
-  Future<void> getLocationUpdates() async {
-    try {
-      // kuha ng current location
-      LocationData locationData = await location.getLocation();
-      if (!mounted) return;
-      // Cache this location for next app start
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('last_latitude', locationData.latitude!);
-      await prefs.setDouble('last_longitude', locationData.longitude!);
-
-      setState(() => currentLocation =
-          LatLng(locationData.latitude!, locationData.longitude!));
-      widget.onLocationUpdated?.call(currentLocation!);
-
-      final controller = await mapController.future;
-      await controller
-          .animateCamera(CameraUpdate.newLatLngZoom(currentLocation!, 17.0));
-      pulseCurrentLocationMarker();
-
-      // Cancel previous subscription to avoid duplicate callbacks
-      locationSubscription?.cancel();
-      locationSubscription = location.onLocationChanged
-          .where((data) => data.latitude != null && data.longitude != null)
-          .listen((newLocation) {
-        if (!mounted) return;
-        setState(() => currentLocation =
-            LatLng(newLocation.latitude!, newLocation.longitude!));
-      });
-    } catch (e) {
-      // showError('An error occurred while fetching the location.');
-      if (mounted) showError('Location Error: ${e.toString()}');
-    }
+    await _cameraManager.animateToLocation(target);
   }
 
   // ito yung method para sa pick-up and drop-off location
@@ -424,23 +304,25 @@ class MapScreenState extends State<MapScreen>
     if (dropoff != null) selectedDropOffLatLng = dropoff;
 
     if (selectedPickupLatLng != null && selectedDropOffLatLng != null) {
-      // Generate and draw route using PolylineService
-      final polyService = PolylineService();
+      List<LatLng> route = [];
+
       if (widget.routePolyline?.isNotEmpty == true) {
-        final segment = polyService.generateAlongRoute(
+        route = await _routeManager.renderRouteAlongPolyline(
           selectedPickupLatLng!,
           selectedDropOffLatLng!,
           widget.routePolyline!,
         );
-        animateRouteDrawing(
-          const PolylineId('route'),
-          segment,
-          const Color(0xFFFFCE21),
-          8,
-        );
       } else {
         // Direct route fallback
-        await renderRouteBetween(
+        route = await _routeManager.renderRouteBetween(
+          selectedPickupLatLng!,
+          selectedDropOffLatLng!,
+        );
+      }
+
+      if (route.isNotEmpty) {
+        await _cameraManager.moveCameraToRoute(
+          route,
           selectedPickupLatLng!,
           selectedDropOffLatLng!,
         );
@@ -451,48 +333,23 @@ class MapScreenState extends State<MapScreen>
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
-      showError('No internet connection');
+      _dialogManager.showNetworkError();
       return false;
     }
     return true;
   }
 
-  // Replaced inline routing logic with service-based implementations
-  Future<void> renderRouteBetween(LatLng start, LatLng destination,
-      {bool updateFare = true}) async {
-    final polyService = PolylineService();
-    final List<LatLng> polylineCoordinates =
-        await polyService.generateBetween(start, destination);
-    if (!mounted || polylineCoordinates.isEmpty) return;
-    final double routeDistance =
-        await polyService.calculateRouteDistanceKm(start, destination);
-    final double fare = FareService.calculateFare(routeDistance);
-    if (updateFare) {
-      fareAmount = fare;
-      widget.onFareUpdated?.call(fare);
+  // Helper method for backward compatibility
+  Future<void> _renderRouteBetween(LatLng start, LatLng destination) async {
+    final route = await _routeManager.renderRouteBetween(start, destination);
+    if (route.isNotEmpty) {
+      await _cameraManager.moveCameraToRoute(route, start, destination);
     }
-    animateRouteDrawing(
-      const PolylineId('route'),
-      polylineCoordinates,
-      const Color.fromARGB(255, 4, 197, 88),
-      8,
-    );
-    _moveCameraToRoute(polylineCoordinates, start, destination);
-  }
-
-  Future<void> _moveCameraToRoute(List<LatLng> polylineCoordinates,
-      LatLng start, LatLng destination) async {
-    final controller = await mapController.future;
-    await moveCameraToBounds(controller, polylineCoordinates,
-        padding: 0.01, boundPadding: 20);
   }
 
   // Expose camera bounds zoom for external callers
   Future<void> zoomToBounds(List<LatLng> polylineCoordinates) async {
-    if (polylineCoordinates.isEmpty) return;
-    final LatLng start = polylineCoordinates.first;
-    final LatLng end = polylineCoordinates.last;
-    await _moveCameraToRoute(polylineCoordinates, start, end);
+    await _cameraManager.zoomToBounds(polylineCoordinates);
   }
 
   void onMapCreated(GoogleMapController controller) {
@@ -510,84 +367,6 @@ class MapScreenState extends State<MapScreen>
     _updateMapStyle();
   }
 
-  // helper function for showing alert dialogs to reduce repetition
-  void showAlertDialog(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => ResponsiveDialog(
-        title: title,
-        content: Text(content),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // specific error dialog using the helper function
-  void showLocationErrorDialog() {
-    if (errorDialogVisible) return;
-    errorDialogVisible = true;
-
-    showDialog(
-      context: context,
-      builder: (context) => ResponsiveDialog(
-        title: 'Location Error',
-        content: const Text('Enable location services to continue.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              errorDialogVisible = false;
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              errorDialogVisible = false;
-              Navigator.pop(context);
-              await initializeLocation();
-            },
-            child: const Text('Enable'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // generic error dialog using the helper function
-  void showError(String message) {
-    showAlertDialog('Error', message);
-  }
-
-  // Load the bus.svg asset as a BitmapDescriptor
-  Future<void> _loadBusIcon() async {
-    busIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(size: Size(48, 48)),
-      'assets/png/bus.png',
-    );
-    pickupIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(size: Size(48, 48)),
-      'assets/png/pin_pickup.png',
-    );
-    dropoffIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(size: Size(48, 48)),
-      'assets/png/pin_dropoff.png',
-    );
-  }
-
-  // Cache for driver route polylines to avoid excessive API calls
-  List<LatLng>? _cachedDriverRoute;
-  LatLng? _lastDriverRouteLocation;
-  String? _lastRideStatus;
-  LatLng? _lastTargetLocation;
-
-  // Distance threshold in meters for polyline regeneration
-  static const double _ROUTE_UPDATE_THRESHOLD = 100.0;
-
   // Update driver marker and draw road-following polyline to pickup/dropoff
   Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
     if (!mounted) return;
@@ -595,246 +374,65 @@ class MapScreenState extends State<MapScreen>
     // Update driver marker
     setState(() {
       driverLocation = location;
-      final driverMarkerId = MarkerId('driver');
-      markers[driverMarkerId] = Marker(
-        markerId: driverMarkerId,
-        position: driverLocation!,
-        icon: busIcon,
-      );
+      _markerManager.updateDriverMarker(location);
+
       // Remove any existing pickup->dropoff polylines
-      polylines.remove(const PolylineId('route'));
-      polylines.remove(const PolylineId('route_path'));
+      _routeManager.removePolyline(const PolylineId('route'));
+      _routeManager.removePolyline(const PolylineId('route_path'));
+
       // When accepted, remove end-of-route pin and indicator
       if (rideStatus == 'accepted') {
-        markers.remove(const MarkerId('route_destination'));
+        _markerManager.removeMarker('route_destination');
         showRouteEndIndicator = false;
       }
     });
 
-    // Determine target location based on ride status
-    LatLng? targetLocation;
-    if (rideStatus == 'accepted') {
-      targetLocation = widget.pickUpLocation;
-    } else if (rideStatus == 'ongoing') {
-      targetLocation = widget.dropOffLocation;
-    }
-
-    // Only generate polyline for accepted or ongoing rides
-    if (targetLocation == null) return;
-
-    // Check if we need to regenerate the route
-    bool shouldRegenerateRoute =
-        _shouldRegenerateRoute(location, rideStatus, targetLocation);
-
-    List<LatLng> route = [];
-
-    if (shouldRegenerateRoute) {
-      // Generate new route and cache it
-      route = await _rideService.getRoute(location, targetLocation);
-      if (route.isNotEmpty) {
-        _cachedDriverRoute = route;
-        _lastDriverRouteLocation = location;
-        _lastRideStatus = rideStatus;
-        _lastTargetLocation = targetLocation;
-      }
-    } else if (_cachedDriverRoute != null) {
-      // Use cached route
-      route = _cachedDriverRoute!;
-    }
-
-    if (route.isNotEmpty) {
-      animateRouteDrawing(
-        const PolylineId('driver_route_live'),
-        route,
-        const Color.fromARGB(255, 10, 179, 83),
-        8,
-      );
-
-      // Only update camera if this is a new route or significant location change
-      if (shouldRegenerateRoute) {
-        final controller = await mapController.future;
-        await moveCameraToBounds(controller, route,
-            padding: 0.01, boundPadding: 20.0);
-      }
-    }
-  }
-
-  // Check if route should be regenerated based on distance and status changes
-  bool _shouldRegenerateRoute(
-      LatLng currentLocation, String rideStatus, LatLng targetLocation) {
-    // Always regenerate if status changed
-    if (_lastRideStatus != rideStatus) {
-      // Clear cached route when status changes
-      _cachedDriverRoute = null;
-      _lastDriverRouteLocation = null;
-      return true;
-    }
-
-    // Always regenerate if target changed
-    if (_lastTargetLocation == null ||
-        _lastTargetLocation!.latitude != targetLocation.latitude ||
-        _lastTargetLocation!.longitude != targetLocation.longitude) {
-      return true;
-    }
-
-    // Regenerate if no cached route exists
-    if (_cachedDriverRoute == null || _lastDriverRouteLocation == null) {
-      return true;
-    }
-
-    // Calculate distance from last route generation point
-    double distance = _calculateDistance(
-        currentLocation.latitude,
-        currentLocation.longitude,
-        _lastDriverRouteLocation!.latitude,
-        _lastDriverRouteLocation!.longitude);
-
-    // Regenerate if driver moved significantly
-    return distance > _ROUTE_UPDATE_THRESHOLD;
-  }
-
-  // Calculate distance between two points in meters
-  double _calculateDistance(
-      double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371000; // Earth radius in meters
-    double dLat = _degreesToRadians(lat2 - lat1);
-    double dLon = _degreesToRadians(lon2 - lon1);
-    double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_degreesToRadians(lat1)) *
-            math.cos(_degreesToRadians(lat2)) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    return earthRadius * c;
-  }
-
-  double _degreesToRadians(double degrees) {
-    return degrees * (math.pi / 180);
+    // Use driver tracker to handle route generation and caching
+    await _driverTracker.updateDriverLocation(
+      location,
+      rideStatus,
+      pickupLocation: widget.pickUpLocation,
+      dropoffLocation: widget.dropOffLocation,
+    );
   }
 
   // Helper to generate and update polyline for driver route without clearing other polylines
   // Driver route generation is handled by RideService; remove inline implementation.
 
   Set<Marker> buildMarkers() {
-    final markerSet = <Marker>{};
-
-    // Add pickup marker
-    if (widget.pickUpLocation != null) {
-      final pickupMarkerId = MarkerId('pickup');
-      markers[pickupMarkerId] = Marker(
-        markerId: pickupMarkerId,
-        position: widget.pickUpLocation!,
-        icon: pickupIcon,
-      );
-    }
-
-    // Add dropoff marker
-    if (widget.dropOffLocation != null) {
-      final dropoffMarkerId = MarkerId('dropoff');
-      markers[dropoffMarkerId] = Marker(
-        markerId: dropoffMarkerId,
-        position: widget.dropOffLocation!,
-        icon: dropoffIcon,
-      );
-    }
-
-    // Add driver marker
-    if (driverLocation != null) {
-      final driverMarkerId = MarkerId('driver');
-      markers[driverMarkerId] = Marker(
-        markerId: driverMarkerId,
-        position: driverLocation!,
-        icon: busIcon,
-      );
-    }
-
-    // Convert map to set
-    markerSet.addAll(markers.values);
-    return markerSet;
+    return _markerManager.buildMarkers(
+      pickupLocation: widget.pickUpLocation,
+      dropoffLocation: widget.dropOffLocation,
+      driverLocation: driverLocation,
+    );
   }
 
-  // Add this method to find the nearest point on the route polyline
-  LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
-    if (routePolyline.isEmpty) return point;
-
-    double minDistance = double.infinity;
-    LatLng nearestPoint = routePolyline.first;
-
-    for (int i = 0; i < routePolyline.length - 1; i++) {
-      final LatLng start = routePolyline[i];
-      final LatLng end = routePolyline[i + 1];
-
-      // Find the nearest point on this segment
-      final LatLng nearestOnSegment =
-          findNearestPointOnSegment(point, start, end);
-      final double distance = calculateDistance(point, nearestOnSegment);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestPoint = nearestOnSegment;
-      }
-    }
-
-    return nearestPoint;
-  }
-
-  // Helper method to find nearest point on a line segment
-  LatLng findNearestPointOnSegment(LatLng point, LatLng start, LatLng end) {
-    final double x = point.latitude;
-    final double y = point.longitude;
-    final double x1 = start.latitude;
-    final double y1 = start.longitude;
-    final double x2 = end.latitude;
-    final double y2 = end.longitude;
-
-    // Calculate squared length of segment
-    final double l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-    if (l2 == 0) return start; // If segment is a point, return that point
-
-    // Calculate projection of point onto line
-    final double t = math.max(
-        0, math.min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / l2));
-
-    // Calculate nearest point on line segment
-    final double projX = x1 + t * (x2 - x1);
-    final double projY = y1 + t * (y2 - y1);
-
-    return LatLng(projX, projY);
-  }
-
-  // Helper method to calculate distance between two points
-  double calculateDistance(LatLng point1, LatLng point2) {
-    return calculateDistanceKm(point1, point2);
-  }
-
-  // Helper to animate drawing a polyline point-by-point
+  // Public interface methods for external access
+  /// Animate route drawing (delegates to route manager)
   void animateRouteDrawing(
-      PolylineId id, List<LatLng> fullRoute, Color color, int width) {
-    // Cancel any existing polyline with this id
-    polylines.remove(id);
-    int count = 0;
-    final total = fullRoute.length;
-    Timer.periodic(const Duration(milliseconds: 26), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      count += 2;
-      final int currentCount = count.clamp(0, total);
-      final segment = fullRoute.sublist(0, currentCount);
-      setState(() {
-        polylines[id] = Polyline(
-          polylineId: id,
-          points: segment,
-          color: color,
-          width: width,
-          startCap: Cap.roundCap,
-          endCap: Cap.roundCap,
-          jointType: JointType.round,
-        );
-      });
-      if (count >= total) timer.cancel();
-    });
+    PolylineId id,
+    List<LatLng> fullRoute,
+    Color color,
+    int width,
+  ) {
+    _routeManager.animateRouteDrawing(id, fullRoute, color, width);
+  }
+
+  /// Initialize location services (delegates to location manager)
+  Future<void> initializeLocation() async {
+    await _locationManager.initializeLocation();
+  }
+
+  /// Check if location is initialized (delegates to location manager)
+  bool get isLocationInitialized => _locationManager.isLocationInitialized;
+
+  // Helper methods that delegate to managers
+  LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
+    return _routeManager.findNearestPointOnRoute(point, routePolyline);
+  }
+
+  double calculateDistance(LatLng point1, LatLng point2) {
+    return _routeManager.calculateDistance(point1, point2);
   }
 
   @override
@@ -845,8 +443,8 @@ class MapScreenState extends State<MapScreen>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!isLocationInitialized) {
-        initializeLocation();
+      if (!_locationManager.isLocationInitialized) {
+        _locationManager.initializeLocation();
       }
     });
 
@@ -950,7 +548,7 @@ class MapScreenState extends State<MapScreen>
                 zoom: currentLocation != null ? 15.0 : 10.0,
               ),
               markers: buildMarkers(),
-              polylines: Set<Polyline>.of(polylines.values),
+              polylines: _routeManager.allPolylines,
               padding: EdgeInsets.only(
                 bottom: screenHeight * widget.bottomPadding,
                 left: screenWidth * 0.04,
@@ -976,8 +574,8 @@ class MapScreenState extends State<MapScreen>
     setState(() {
       selectedPickupLatLng = null;
       selectedDropOffLatLng = null;
-      polylines.clear();
-      markers.clear();
+      _routeManager.clearAllPolylines();
+      _markerManager.clearAllMarkers();
       fareAmount = 0.0;
       etaText = null;
     });

@@ -3,6 +3,7 @@ import 'package:pasada_passenger_app/widgets/loading_dialog.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/widgets/onboarding_dialog.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Service to handle HomeScreen initialization, onboarding, and rush-hour dialogs
 class HomeScreenInitService {
@@ -21,6 +22,15 @@ class HomeScreenInitService {
     required VoidCallback loadPaymentMethod,
     required VoidCallback loadRoute,
   }) async {
+    // Double-check authentication before proceeding with home screen initialization
+    final supabaseAuth = Supabase.instance.client.auth;
+    final session = supabaseAuth.currentSession;
+
+    if (session == null) {
+      debugPrint('User not authenticated, skipping home screen initialization');
+      return;
+    }
+
     final shouldReinitialize = PageStorage.of(context).readState(
           context,
           identifier: const ValueKey('homeInitialized'),
@@ -39,6 +49,8 @@ class HomeScreenInitService {
         );
       } catch (e) {
         debugPrint('Initialization error: $e');
+        // Don't mark as initialized if there was an error
+        return;
       } finally {
         if (context.mounted) {
           LoadingDialog.hide(context);

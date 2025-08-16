@@ -445,6 +445,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       routeDetails: selectedRoute,
       routePolyline: routePolyline,
       pickupOrder: pickupOrder,
+      selectedPickUpLocation: selectedPickUpLocation,
+      selectedDropOffLocation: selectedDropOffLocation,
     );
 
     if (result != null) {

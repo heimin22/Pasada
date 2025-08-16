@@ -25,6 +25,8 @@ class SearchLocationScreen extends StatefulWidget {
   final Map<String, dynamic>? routeDetails;
   final List<LatLng>? routePolyline;
   final int? pickupOrder;
+  final SelectedLocation? selectedPickUpLocation;
+  final SelectedLocation? selectedDropOffLocation;
 
   const SearchLocationScreen({
     super.key,
@@ -33,6 +35,8 @@ class SearchLocationScreen extends StatefulWidget {
     this.routeDetails,
     this.routePolyline,
     this.pickupOrder,
+    this.selectedPickUpLocation,
+    this.selectedDropOffLocation,
   });
 
   @override
@@ -64,6 +68,22 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     // Load stops and recent searches
     loadStops();
     loadRecentSearches();
+  }
+
+  // Helper method to check if a location is already selected
+  bool _isLocationAlreadySelected(LatLng coordinates) {
+    // Get the already selected location (the opposite of what we're currently selecting)
+    SelectedLocation? alreadySelected = widget.isPickup
+        ? widget.selectedDropOffLocation
+        : widget.selectedPickUpLocation;
+
+    if (alreadySelected == null) return false;
+
+    // Check if coordinates are within 50 meters of the already selected location
+    const double thresholdMeters = 50.0;
+    final distance =
+        calculateDistance(coordinates, alreadySelected.coordinates);
+    return distance < thresholdMeters;
   }
 
   Future<void> loadStops() async {
@@ -101,6 +121,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       } else {
         stops = await _stopsService.getAllActiveStops();
       }
+
+      // Filter out already selected locations
+      stops = stops
+          .where((stop) => !_isLocationAlreadySelected(stop.coordinates))
+          .toList();
 
       if (mounted) {
         setState(() {
@@ -175,6 +200,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       }
     }
 
+    // Filter out already selected locations
+    searches = searches
+        .where((search) => !_isLocationAlreadySelected(search.coordinates))
+        .toList();
+
     if (mounted) {
       setState(() {
         recentSearches = searches;
@@ -183,6 +213,52 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   }
 
   void onRecentSearchSelected(RecentSearch search) async {
+    // Check if this location is already selected
+    if (_isLocationAlreadySelected(search.coordinates)) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      await showDialog(
+        context: context,
+        builder: (context) => ResponsiveDialog(
+          title: 'Location Already Selected',
+          contentPadding: const EdgeInsets.all(24),
+          content: Text(
+            'This location is already selected as your ${widget.isPickup ? 'drop-off' : 'pick-up'} location. Please choose a different location.',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                backgroundColor: const Color(0xFF00CC58),
+                foregroundColor: const Color(0xFFF5F5F5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(search.coordinates);
       if (!shouldProceed) return;
@@ -246,6 +322,52 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   }
 
   void onStopSelected(Stop stop) async {
+    // Check if this location is already selected
+    if (_isLocationAlreadySelected(stop.coordinates)) {
+      final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+      await showDialog(
+        context: context,
+        builder: (context) => ResponsiveDialog(
+          title: 'Location Already Selected',
+          contentPadding: const EdgeInsets.all(24),
+          content: Text(
+            'This location is already selected as your ${widget.isPickup ? 'drop-off' : 'pick-up'} location. Please choose a different location.',
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
+              fontSize: 13,
+              color: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                backgroundColor: const Color(0xFF00CC58),
+                foregroundColor: const Color(0xFFF5F5F5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(stop.coordinates);
       if (!shouldProceed) return;
@@ -343,8 +465,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     try {
       // Filter stops locally since we can't modify the database
       final filteredStops = allowedStops.where((stop) {
-        return stop.name.toLowerCase().contains(query.toLowerCase()) ||
-            stop.address.toLowerCase().contains(query.toLowerCase());
+        final matchesQuery =
+            stop.name.toLowerCase().contains(query.toLowerCase()) ||
+                stop.address.toLowerCase().contains(query.toLowerCase());
+        final notAlreadySelected =
+            !_isLocationAlreadySelected(stop.coordinates);
+        return matchesQuery && notAlreadySelected;
       }).toList();
 
       if (filteredStops.isNotEmpty) {
@@ -425,6 +551,52 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         prediction.description!,
         LatLng(location['lat'], location['lng']),
       );
+
+      // Check if this location is already selected
+      if (_isLocationAlreadySelected(selectedLocation.coordinates)) {
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        await showDialog(
+          context: context,
+          builder: (context) => ResponsiveDialog(
+            title: 'Location Already Selected',
+            contentPadding: const EdgeInsets.all(24),
+            content: Text(
+              'This location is already selected as your ${widget.isPickup ? 'drop-off' : 'pick-up'} location. Please choose a different location.',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  backgroundColor: const Color(0xFF00CC58),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
 
       if (widget.isPickup) {
         final shouldProceed =

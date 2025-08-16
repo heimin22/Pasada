@@ -21,6 +21,8 @@ Future<SelectedLocation?> navigateToLocationSearch(
   Map<String, dynamic>? routeDetails,
   List<LatLng>? routePolyline,
   int? pickupOrder,
+  SelectedLocation? selectedPickUpLocation,
+  SelectedLocation? selectedDropOffLocation,
 }) async {
   return await Navigator.of(context).push<SelectedLocation>(
     MaterialPageRoute(
@@ -30,6 +32,8 @@ Future<SelectedLocation?> navigateToLocationSearch(
         routeDetails: routeDetails,
         routePolyline: routePolyline,
         pickupOrder: pickupOrder,
+        selectedPickUpLocation: selectedPickUpLocation,
+        selectedDropOffLocation: selectedDropOffLocation,
       ),
     ),
   );
