@@ -62,6 +62,15 @@ class LoadingDialog extends StatelessWidget {
 class InitializationService {
   static Future<void> initialize(BuildContext context) async {
     try {
+      // Check if user is authenticated before initializing resources
+      final supabaseAuth = Supabase.instance.client.auth;
+      final session = supabaseAuth.currentSession;
+
+      if (session == null) {
+        debugPrint('User not authenticated, skipping resource initialization');
+        return;
+      }
+
       // Initialize shared resources concurrently for efficiency
       await Future.wait([
         _initializeSupabase(),
