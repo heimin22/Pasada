@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 class MapLocationManager {
   final Location location = Location();
@@ -28,49 +28,27 @@ class MapLocationManager {
   Future<void> initializeLocation() async {
     if (isLocationInitialized) return;
 
-    // Service check
-    final serviceReady = await checkLocationService();
-    if (!serviceReady) return;
+    // Use centralized location permission manager to prevent multiple prompts
+    final locationManager = LocationPermissionManager.instance;
+    final locationReady = await locationManager.ensureLocationReady();
 
-    // Permission check
-    final permissionGranted = await verifyLocationPermissions();
-    if (!permissionGranted) return;
+    if (!locationReady) {
+      // Check specifically what failed to call appropriate callbacks
+      if (!locationManager.isServiceEnabled) {
+        onLocationServiceDisabled?.call();
+      } else if (!locationManager.isPermissionGranted) {
+        onLocationPermissionDenied?.call();
+      }
+      return;
+    }
 
     // Fetch updates
     await getLocationUpdates();
     isLocationInitialized = true;
   }
 
-  /// Check if location service is enabled
-  Future<bool> checkLocationService() async {
-    try {
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) {
-          onLocationServiceDisabled?.call();
-          return false;
-        }
-      }
-      return true;
-    } on PlatformException catch (e) {
-      onError?.call('Service Error: ${e.message ?? 'Unknown'}');
-      return false;
-    }
-  }
-
-  /// Verify location permissions
-  Future<bool> verifyLocationPermissions() async {
-    final status = await location.hasPermission();
-    if (status == PermissionStatus.granted) return true;
-
-    final newStatus = await location.requestPermission();
-    if (newStatus != PermissionStatus.granted) {
-      onLocationPermissionDenied?.call();
-      return false;
-    }
-    return true;
-  }
+  // Note: checkLocationService and verifyLocationPermissions methods removed
+  // as they are now handled by the centralized LocationPermissionManager
 
   /// Get initial location and start listening for updates
   Future<void> getLocationUpdates() async {

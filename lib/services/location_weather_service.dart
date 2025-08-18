@@ -1,5 +1,6 @@
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 /// Service that automatically fetches weather based on device location
 class LocationWeatherService {
@@ -7,19 +8,10 @@ class LocationWeatherService {
 
   /// Initializes location permissions, fetches current weather, and subscribes to updates
   static Future<void> fetchAndSubscribe(WeatherProvider provider) async {
-    // Ensure service enabled
-    bool serviceEnabled = await _location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _location.requestService();
-      if (!serviceEnabled) return;
-    }
-
-    // Ensure permission granted
-    PermissionStatus permissionGranted = await _location.hasPermission();
-    if (permissionGranted != PermissionStatus.granted) {
-      permissionGranted = await _location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) return;
-    }
+    // Use centralized location permission manager to prevent multiple prompts
+    final locationManager = LocationPermissionManager.instance;
+    final locationReady = await locationManager.ensureLocationReady();
+    if (!locationReady) return;
 
     try {
       // Initial weather fetch

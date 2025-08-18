@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 /// Callback to receive updated device locations
 typedef LocationCallback = void Function(LatLng);
@@ -21,19 +22,10 @@ class MapLocationService {
       onLocation(LatLng(lat, lng));
     }
 
-    // Ensure service enabled
-    bool serviceEnabled = await _location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _location.requestService();
-      if (!serviceEnabled) return;
-    }
-
-    // Ensure permission granted
-    PermissionStatus permissionGranted = await _location.hasPermission();
-    if (permissionGranted != PermissionStatus.granted) {
-      permissionGranted = await _location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) return;
-    }
+    // Use centralized location permission manager to prevent multiple prompts
+    final locationManager = LocationPermissionManager.instance;
+    final locationReady = await locationManager.ensureLocationReady();
+    if (!locationReady) return;
 
     // Fetch fresh location
     try {
