@@ -62,9 +62,6 @@ class LocationPermissionManager {
     }
   }
 
-  /// Check and request location permission if needed
-  /// Returns the permission status
-  /// Prevents multiple simultaneous requests
   Future<PermissionStatus> ensureLocationPermissionGranted() async {
     // Use cached result if recent
     if (_lastPermissionState != null &&
@@ -104,8 +101,6 @@ class LocationPermissionManager {
     }
   }
 
-  /// Complete location setup - ensures both service and permission are ready
-  /// Returns true only if both service is enabled AND permission is granted
   Future<bool> ensureLocationReady() async {
     final serviceEnabled = await ensureLocationServiceEnabled();
     if (!serviceEnabled) return false;
