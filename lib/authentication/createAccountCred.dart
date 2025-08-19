@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter/gestures.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
+import 'package:pasada_passenger_app/utils/toast_utils.dart';
 
 class CreateAccountCredPage extends StatefulWidget {
   final String email;
@@ -418,13 +419,9 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   }
 
   Future<void> handleSignUp() async {
+    // Check terms and conditions acceptance
     if (!isChecked) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please accept the terms and conditions.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastUtils.showWarning('Please accept the terms and conditions to continue.');
       return;
     }
 
@@ -436,27 +433,32 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     final password = args['password'];
     final contactNumber = '+63$contactDigits';
 
-    // Basic validation
+    // Input validation
     if (displayName.isEmpty || contactDigits.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all required fields.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ToastUtils.showWarning('Please fill in all required fields.');
+      return;
+    }
+
+    if (displayName.length < 2) {
+      ToastUtils.showError('Name must be at least 2 characters long.');
       return;
     }
 
     if (contactDigits.length != 10) {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Phone number must be 10 digits',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-      }
+      ToastUtils.showError('Phone number must be exactly 10 digits (without country code).');
+      return;
+    }
+
+    if (!_isValidPhoneNumber(contactDigits)) {
+      ToastUtils.showError('Please enter a valid Philippine mobile number (starting with 9).');
+      return;
+    }
+
+    // Check network connectivity
+    final connectivity = Connectivity();
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      ToastUtils.showError('No internet connection. Please check your network and try again.');
       return;
     }
 
@@ -478,17 +480,18 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         );
       }
     } catch (e) {
+      debugPrint('Error during sign-up process: $e');
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: e.toString(),
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
+        ToastUtils.showError('Failed to proceed with account creation. Please try again.');
       }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  bool _isValidPhoneNumber(String phoneDigits) {
+    // Philippine mobile numbers start with 9 and are 10 digits long
+    return phoneDigits.startsWith('9') && phoneDigits.length == 10 && 
+           RegExp(r'^\d{10}$').hasMatch(phoneDigits);
   }
 }

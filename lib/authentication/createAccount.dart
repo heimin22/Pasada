@@ -3,9 +3,9 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/utils/toast_utils.dart';
 import 'package:pasada_passenger_app/main.dart';
 
 class CreateAccountPage extends StatefulWidget {
@@ -105,58 +105,58 @@ class CreateAccountScreen extends State<CAPage> {
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;
 
+    // Input validation
     if (email.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Please fill in all fields.',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-        return;
-      }
+      ToastUtils.showWarning('Please fill in all fields.');
+      return;
+    }
+
+    if (!_isValidEmail(email)) {
+      ToastUtils.showError('Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 8) {
+      ToastUtils.showError('Password must be at least 8 characters long.');
+      return;
     }
 
     if (password != confirmPassword) {
-      if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Passwords do not match.',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
-        return;
-      }
+      ToastUtils.showError('Passwords do not match.');
+      return;
     }
 
-    // attempt na masign-up
+    // Check network connectivity
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      ToastUtils.showError('No internet connection. Please check your network and try again.');
+      return;
+    }
+
+    // Navigate to credentials screen
     try {
       setState(() => isLoading = true);
-      debugPrint('Navigating to cred');
+      debugPrint('Navigating to credentials screen');
+      
       Navigator.pushNamed(
         context,
         'cred',
-        // pass success argument
         arguments: {'email': email, 'password': password},
       );
+      
       debugPrint('Navigation completed');
     } catch (e) {
+      debugPrint('Error during navigation: $e');
       if (mounted) {
-        Fluttertoast.showToast(
-          msg: 'Error: $e',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Color(0xFFF5F5F5),
-          textColor: Color(0xFF121212),
-        );
+        ToastUtils.showError('Failed to proceed. Please try again.');
       }
-      // pop the register page
-      Navigator.pop(context);
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
   @override
@@ -555,27 +555,37 @@ class CreateAccountScreen extends State<CAPage> {
         onPressed: isGoogleLoading
             ? null
             : () async {
+                // Check network connectivity first
+                final connectivityResult = await connectivity.checkConnectivity();
+                if (connectivityResult.contains(ConnectivityResult.none)) {
+                  ToastUtils.showError('No internet connection. Please check your network and try again.');
+                  return;
+                }
+
                 setState(() => isGoogleLoading = true);
+                
                 try {
+                  ToastUtils.showInfo('Signing up with Google...');
                   final success = await authService.signInWithGoogle();
+                  
                   if (success && mounted) {
+                    ToastUtils.showSuccess('Account created successfully! Welcome to Pasada!');
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const selectionScreen()),
                     );
                   } else if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Failed to sign in with Google')),
-                    );
+                    ToastUtils.showError('Google sign-up was cancelled or failed. Please try again.');
                   }
                 } catch (e) {
-                  debugPrint('Google sign-in error: $e');
+                  debugPrint('Google sign-up error: $e');
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
-                    );
+                    String errorMessage = ToastUtils.parseAuthError(e.toString());
+                    if (errorMessage.contains('unexpected error')) {
+                      errorMessage = 'Google sign-up failed. Please try again or use email/password.';
+                    }
+                    ToastUtils.showError(errorMessage);
                   }
                 } finally {
                   if (mounted) setState(() => isGoogleLoading = false);
