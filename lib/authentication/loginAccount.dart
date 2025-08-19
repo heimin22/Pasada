@@ -141,12 +141,13 @@ class LoginScreen extends State<LoginPage> {
     ));
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Container(
           decoration: BoxDecoration(
             gradient: _getTimeBasedGradient(),
           ),
+          height: MediaQuery.of(context).size.height,
           child: Column(
             children: [
               Padding(
@@ -160,11 +161,10 @@ class LoginScreen extends State<LoginPage> {
                 ),
               ),
               Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
+                child: SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).size.height * 0.01,
+                      top: MediaQuery.of(context).size.height * 0.03,
                       left: MediaQuery.of(context).size.height * 0.035,
                       right: MediaQuery.of(context).size.height * 0.035,
                       bottom: MediaQuery.of(context).size.height * 0.035,
@@ -349,117 +349,111 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Flexible buildLogInButton() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isLoading ? null : login,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF5F5F5),
-            minimumSize: const Size(360, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
+  Container buildLogInButton() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : login,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFF5F5F5),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
           ),
-          child: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF00CC58),
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  'Log-in',
-                  style: TextStyle(
-                    color: Color(0xFF00CC58),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                  ),
-                ),
         ),
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF00CC58),
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Log-in',
+                style: TextStyle(
+                  color: Color(0xFF00CC58),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                ),
+              ),
       ),
     );
   }
 
   Widget buildOrDesign() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        width: double.infinity,
-        child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
-      ),
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
     );
   }
 
   Widget buildLoginGoogle() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isLoading
-              ? null
-              : () async {
-                  setState(() => isLoading = true);
-                  try {
-                    final success = await authService.signInWithGoogle();
-                    if (success && mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const selectionScreen()),
-                      );
-                    } else if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Failed to sign in with Google')),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: ${e.toString()}')),
-                      );
-                    }
-                  } finally {
-                    if (mounted) setState(() => isLoading = false);
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading
+            ? null
+            : () async {
+                setState(() => isLoading = true);
+                try {
+                  final success = await authService.signInWithGoogle();
+                  if (success && mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const selectionScreen()),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Failed to sign in with Google')),
+                    );
                   }
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFFF5F5F5),
-            minimumSize: const Size(360, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-              side: const BorderSide(
-                color: Color(0xFFF5F5F5),
-                width: 2,
-              ),
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${e.toString()}')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => isLoading = false);
+                }
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: const Color(0xFFF5F5F5),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            side: const BorderSide(
+              color: Color(0xFFF5F5F5),
+              width: 2,
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/svg/googleIcon.svg',
-                height: 24,
-                width: 24,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              'assets/svg/googleIcon.svg',
+              height: 24,
+              width: 24,
+            ),
+            const SizedBox(width: 25),
+            const Text(
+              'Log-in with Google',
+              style: TextStyle(
+                color: Color(0xFFF5F5F5),
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 25),
-              const Text(
-                'Log-in with Google',
-                style: TextStyle(
-                  color: Color(0xFFF5F5F5),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
