@@ -170,54 +170,56 @@ class CreateAccountScreen extends State<CAPage> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: _getTimeBasedGradient(),
-        ),
-        child: Column(
-          children: [
-            // Back button with its own padding
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.07,
-                left: MediaQuery.of(context).size.height * 0.01,
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _getTimeBasedGradient(),
+          ),
+          child: Column(
+            children: [
+              // Back button with its own padding
+              Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.02,
+                  left: MediaQuery.of(context).size.height * 0.01,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: buildBackButton(),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: buildBackButton(),
-              ),
-            ),
-            // Expanded widget to fill remaining space with main content
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.01,
-                    left: MediaQuery.of(context).size.height * 0.035,
-                    right: MediaQuery.of(context).size.height * 0.035,
-                    bottom: MediaQuery.of(context).size.height * 0.035,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      buildHeader(),
-                      buildPassengerEmailNumberText(),
-                      buildPassengerEmailNumberInput(),
-                      buildPassengerPassText(),
-                      buildPassengerPassInput(),
-                      buildConfirmPassText(),
-                      buildConfirmPassInput(),
-                      buildCreateAccountButton(),
-                      buildOrDesign(),
-                      buildSignUpGoogle(),
-                    ],
+              // Expanded widget to fill remaining space with main content
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.01,
+                      left: MediaQuery.of(context).size.height * 0.035,
+                      right: MediaQuery.of(context).size.height * 0.035,
+                      bottom: MediaQuery.of(context).size.height * 0.035,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        buildHeader(),
+                        buildPassengerEmailNumberText(),
+                        buildPassengerEmailNumberInput(),
+                        buildPassengerPassText(),
+                        buildPassengerPassInput(),
+                        buildConfirmPassText(),
+                        buildConfirmPassInput(),
+                        buildCreateAccountButton(),
+                        buildOrDesign(),
+                        buildSignUpGoogle(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -293,7 +295,7 @@ class CreateAccountScreen extends State<CAPage> {
       child: const Row(
         children: [
           Text(
-            'Email or Phone Number',
+            'Email',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',

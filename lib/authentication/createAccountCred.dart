@@ -72,49 +72,51 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: _getTimeBasedGradient(),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.07,
-                left: MediaQuery.of(context).size.height * 0.01,
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _getTimeBasedGradient(),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.02,
+                  left: MediaQuery.of(context).size.height * 0.01,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: buildBackButton(),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: buildBackButton(),
-              ),
-            ),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.10,
-                    left: MediaQuery.of(context).size.height * 0.035,
-                    right: MediaQuery.of(context).size.height * 0.035,
-                    bottom: MediaQuery.of(context).size.height * 0.035,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      buildHeader(),
-                      buildPassengerDisplayNameText(),
-                      buildPassengerDisplayNameInput(),
-                      buildPassengerContactNumberText(),
-                      buildPassengerContactNumberInput(),
-                      buildTermsCheckbox(),
-                      buildCreateAccountButton(),
-                    ],
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.10,
+                      left: MediaQuery.of(context).size.height * 0.035,
+                      right: MediaQuery.of(context).size.height * 0.035,
+                      bottom: MediaQuery.of(context).size.height * 0.035,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        buildHeader(),
+                        buildPassengerDisplayNameText(),
+                        buildPassengerDisplayNameInput(),
+                        buildPassengerContactNumberText(),
+                        buildPassengerContactNumberInput(),
+                        buildTermsCheckbox(),
+                        buildCreateAccountButton(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
