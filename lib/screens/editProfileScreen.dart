@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/image_compression_service.dart';
+import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -22,12 +23,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String? profileImageUrl;
   File? _imageFile;
   bool isGoogleLinked = false;
+  String originalPhoneNumber = '';
 
   @override
   void initState() {
     super.initState();
     // Fetch user data and initialize controllers
     loadUserData();
+  }
+
+  String formatPhoneNumberForDisplay(String? phoneNumber) {
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      return '';
+    }
+
+    // Remove +63 prefix if it exists
+    if (phoneNumber.startsWith('+63')) {
+      return phoneNumber.substring(3);
+    }
+
+    return phoneNumber;
+  }
+
+  String formatPhoneNumberForSave(String? phoneNumber) {
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      return '';
+    }
+
+    // Add +63 prefix if it doesn't exist and the number is not empty
+    if (!phoneNumber.startsWith('+63') && phoneNumber.isNotEmpty) {
+      return '+63$phoneNumber';
+    }
+
+    return phoneNumber;
   }
 
   Future<void> loadUserData() async {
@@ -38,7 +66,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         nameController.text = userData['display_name'] ?? '';
         emailController.text = userData['passenger_email'] ?? '';
-        mobileNumberController.text = userData['contact_number'] ?? '';
+        mobileNumberController.text =
+            formatPhoneNumberForDisplay(userData['contact_number']);
+        originalPhoneNumber =
+            formatPhoneNumberForDisplay(userData['contact_number']);
         profileImageUrl = userData['avatar_url'];
         isGoogleLinked = isGoogleProvider;
       });
@@ -128,6 +159,54 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> saveProfile() async {
+    final currentPhoneNumber = mobileNumberController.text.trim();
+
+    // Check if phone number changed
+    if (currentPhoneNumber != originalPhoneNumber &&
+        currentPhoneNumber.isNotEmpty) {
+      // Phone number changed, need OTP verification
+      await _handlePhoneNumberChange(currentPhoneNumber);
+    } else {
+      // No phone number change, proceed with regular profile update
+      await _updateProfileWithoutOTP();
+    }
+  }
+
+  Future<void> _handlePhoneNumberChange(String newPhoneNumber) async {
+    try {
+      // Format the phone number with +63 prefix for OTP
+      final formattedPhoneNumber = formatPhoneNumberForSave(newPhoneNumber);
+
+      // Navigate to OTP verification screen
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OTPVerificationScreen(
+            phoneNumber: formattedPhoneNumber,
+            isEditingProfile: true,
+          ),
+        ),
+      );
+
+      // If OTP verification was successful, update the rest of the profile
+      if (result == true) {
+        await _updateProfileWithoutOTP(skipPhoneNumber: true);
+        // Update the original phone number to the new one
+        setState(() {
+          originalPhoneNumber = newPhoneNumber;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Error verifying phone number: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateProfileWithoutOTP({bool skipPhoneNumber = false}) async {
     try {
       // upload yung image if selected
       String? newAvatarUrl;
@@ -136,12 +215,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       // Use the enhanced update method that handles Google account constraints
-      await authService.updateProfileEnhanced(
-        displayName: nameController.text,
-        email: emailController.text,
-        mobileNumber: mobileNumberController.text,
-        avatarUrl: newAvatarUrl ?? profileImageUrl,
-      );
+      if (skipPhoneNumber) {
+        // Update profile without changing phone number
+        await authService.updateProfileEnhanced(
+          displayName: nameController.text,
+          email: emailController.text,
+          mobileNumber: formatPhoneNumberForSave(
+              originalPhoneNumber), // Keep original phone number
+          avatarUrl: newAvatarUrl ?? profileImageUrl,
+        );
+      } else {
+        // Update profile including phone number
+        await authService.updateProfileEnhanced(
+          displayName: nameController.text,
+          email: emailController.text,
+          mobileNumber: formatPhoneNumberForSave(mobileNumberController.text),
+          avatarUrl: newAvatarUrl ?? profileImageUrl,
+        );
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

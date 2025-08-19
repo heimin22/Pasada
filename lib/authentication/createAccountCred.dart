@@ -71,50 +71,52 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     ));
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: _getTimeBasedGradient(),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.07,
-                left: MediaQuery.of(context).size.height * 0.01,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _getTimeBasedGradient(),
+          ),
+          height: MediaQuery.of(context).size.height,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.02,
+                  left: MediaQuery.of(context).size.height * 0.01,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: buildBackButton(),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: buildBackButton(),
-              ),
-            ),
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.10,
-                    left: MediaQuery.of(context).size.height * 0.035,
-                    right: MediaQuery.of(context).size.height * 0.035,
-                    bottom: MediaQuery.of(context).size.height * 0.035,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      buildHeader(),
-                      buildPassengerDisplayNameText(),
-                      buildPassengerDisplayNameInput(),
-                      buildPassengerContactNumberText(),
-                      buildPassengerContactNumberInput(),
-                      buildTermsCheckbox(),
-                      buildCreateAccountButton(),
-                    ],
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.10,
+                      left: MediaQuery.of(context).size.height * 0.035,
+                      right: MediaQuery.of(context).size.height * 0.035,
+                      bottom: MediaQuery.of(context).size.height * 0.035,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        buildHeader(),
+                        buildPassengerDisplayNameText(),
+                        buildPassengerDisplayNameInput(),
+                        buildPassengerContactNumberText(),
+                        buildPassengerContactNumberInput(),
+                        buildTermsCheckbox(),
+                        buildCreateAccountButton(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -388,31 +390,29 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Flexible buildCreateAccountButton() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isLoading ? null : () => handleSignUp(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF5F5F5),
-            minimumSize: const Size(360, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
+  Container buildCreateAccountButton() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : () => handleSignUp(),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFF5F5F5),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
           ),
-          child: isLoading
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Text(
-                  'Sign-up',
-                  style: TextStyle(
-                    color: Color(0xFF00CC58),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                  ),
-                ),
         ),
+        child: isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+                'Sign-up',
+                style: TextStyle(
+                  color: Color(0xFF00CC58),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                ),
+              ),
       ),
     );
   }

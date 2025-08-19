@@ -169,55 +169,57 @@ class CreateAccountScreen extends State<CAPage> {
     ));
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: _getTimeBasedGradient(),
-        ),
-        child: Column(
-          children: [
-            // Back button with its own padding
-            Padding(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.07,
-                left: MediaQuery.of(context).size.height * 0.01,
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: _getTimeBasedGradient(),
+          ),
+          height: MediaQuery.of(context).size.height,
+          child: Column(
+            children: [
+              // Back button with its own padding
+              Padding(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).size.height * 0.02,
+                  left: MediaQuery.of(context).size.height * 0.01,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: buildBackButton(),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: buildBackButton(),
-              ),
-            ),
-            // Expanded widget to fill remaining space with main content
-            Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.01,
-                    left: MediaQuery.of(context).size.height * 0.035,
-                    right: MediaQuery.of(context).size.height * 0.035,
-                    bottom: MediaQuery.of(context).size.height * 0.035,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      buildHeader(),
-                      buildPassengerEmailNumberText(),
-                      buildPassengerEmailNumberInput(),
-                      buildPassengerPassText(),
-                      buildPassengerPassInput(),
-                      buildConfirmPassText(),
-                      buildConfirmPassInput(),
-                      buildCreateAccountButton(),
-                      buildOrDesign(),
-                      buildSignUpGoogle(),
-                    ],
+              // Expanded widget to fill remaining space with main content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).size.height * 0.01,
+                      left: MediaQuery.of(context).size.height * 0.035,
+                      right: MediaQuery.of(context).size.height * 0.035,
+                      bottom: MediaQuery.of(context).size.height * 0.035,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        buildHeader(),
+                        buildPassengerEmailNumberText(),
+                        buildPassengerEmailNumberInput(),
+                        buildPassengerPassText(),
+                        buildPassengerPassInput(),
+                        buildConfirmPassText(),
+                        buildConfirmPassInput(),
+                        buildCreateAccountButton(),
+                        buildOrDesign(),
+                        buildSignUpGoogle(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -293,7 +295,7 @@ class CreateAccountScreen extends State<CAPage> {
       child: const Row(
         children: [
           Text(
-            'Email or Phone Number',
+            'Email',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontFamily: 'Inter',
@@ -503,128 +505,122 @@ class CreateAccountScreen extends State<CAPage> {
     );
   }
 
-  Flexible buildCreateAccountButton() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isLoading ? null : SigningUp,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF5F5F5),
-            minimumSize: const Size(360, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
+  Container buildCreateAccountButton() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : SigningUp,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFF5F5F5),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
           ),
-          child: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF00CC58),
-                    strokeWidth: 2,
-                  ),
-                )
-              : const Text(
-                  'Continue',
-                  style: TextStyle(
-                    color: Color(0xFF00CC58),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                  ),
-                ),
         ),
-      ),
-    );
-  }
-
-  Flexible buildOrDesign() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
-        width: double.infinity,
-        child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
-      ),
-    );
-  }
-
-  Flexible buildSignUpGoogle() {
-    return Flexible(
-      child: Container(
-        margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: isGoogleLoading
-              ? null
-              : () async {
-                  setState(() => isGoogleLoading = true);
-                  try {
-                    final success = await authService.signInWithGoogle();
-                    if (success && mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const selectionScreen()),
-                      );
-                    } else if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Failed to sign in with Google')),
-                      );
-                    }
-                  } catch (e) {
-                    debugPrint('Google sign-in error: $e');
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: ${e.toString()}')),
-                      );
-                    }
-                  } finally {
-                    if (mounted) setState(() => isGoogleLoading = false);
-                  }
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: const Color(0xFFF5F5F5),
-            minimumSize: const Size(360, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-              side: const BorderSide(
-                color: Color(0xFFF5F5F5),
-                width: 2,
+        child: isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Color(0xFF00CC58),
+                  strokeWidth: 2,
+                ),
+              )
+            : const Text(
+                'Continue',
+                style: TextStyle(
+                  color: Color(0xFF00CC58),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20,
+                ),
               ),
+      ),
+    );
+  }
+
+  Container buildOrDesign() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      width: double.infinity,
+      child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
+    );
+  }
+
+  Container buildSignUpGoogle() {
+    return Container(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: isGoogleLoading
+            ? null
+            : () async {
+                setState(() => isGoogleLoading = true);
+                try {
+                  final success = await authService.signInWithGoogle();
+                  if (success && mounted) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const selectionScreen()),
+                    );
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Failed to sign in with Google')),
+                    );
+                  }
+                } catch (e) {
+                  debugPrint('Google sign-in error: $e');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${e.toString()}')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => isGoogleLoading = false);
+                }
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: const Color(0xFFF5F5F5),
+          minimumSize: const Size(360, 50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            side: const BorderSide(
+              color: Color(0xFFF5F5F5),
+              width: 2,
             ),
           ),
-          child: isGoogleLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    color: Color(0xFFF5F5F5),
-                    strokeWidth: 2,
-                  ),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/svg/googleIcon.svg',
-                      height: 24,
-                      width: 24,
-                    ),
-                    const SizedBox(width: 25),
-                    const Text(
-                      'Sign-up with Google',
-                      style: TextStyle(
-                        color: Color(0xFFF5F5F5),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
         ),
+        child: isGoogleLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  color: Color(0xFFF5F5F5),
+                  strokeWidth: 2,
+                ),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/svg/googleIcon.svg',
+                    height: 24,
+                    width: 24,
+                  ),
+                  const SizedBox(width: 25),
+                  const Text(
+                    'Sign-up with Google',
+                    style: TextStyle(
+                      color: Color(0xFFF5F5F5),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }
