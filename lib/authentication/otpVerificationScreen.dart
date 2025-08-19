@@ -8,16 +8,18 @@ import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
-  final String email;
-  final String password;
-  final String displayName;
+  final String? email;
+  final String? password;
+  final String? displayName;
+  final bool isEditingProfile;
 
   const OTPVerificationScreen({
     super.key,
     required this.phoneNumber,
-    required this.email,
-    required this.password,
-    required this.displayName,
+    this.email,
+    this.password,
+    this.displayName,
+    this.isEditingProfile = false,
   });
 
   @override
@@ -119,7 +121,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     }
   }
 
-  Future<void> verifyOTPAndCreateAccount() async {
+  Future<void> verifyOTPAndProcessAction() async {
     final code = codeController.text.trim();
 
     if (code.isEmpty) {
@@ -151,41 +153,71 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
       bool isVerified = await SMSVerificationService.verifyOTP(
         otpCode: code,
         onSuccess: () async {
-          // OTP verified successfully, now create the account
           try {
-            await authService.signUpAuth(
-              widget.email,
-              widget.password,
-              data: {
-                'display_name': widget.displayName,
-                'contact_number': widget.phoneNumber,
-                'avatar_url': 'assets/svg/default_user_profile.svg',
-              },
-            );
-
-            // Clear SMS verification session
-            SMSVerificationService.clearSession();
-
-            if (mounted) {
-              Fluttertoast.showToast(
-                msg: 'Account created successfully',
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                backgroundColor: Color(0xFFF5F5F5),
-                textColor: Color(0xFF121212),
+            if (widget.isEditingProfile) {
+              // Update phone number for existing user
+              final userData = await authService.getCurrentUserData();
+              await authService.updateProfileEnhanced(
+                displayName: userData?['display_name'] ?? '',
+                email: userData?['passenger_email'] ?? userData?['email'] ?? '',
+                mobileNumber: widget.phoneNumber,
               );
 
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const selectionScreen()),
-                (route) => false,
+              // Clear SMS verification session
+              SMSVerificationService.clearSession();
+
+              if (mounted) {
+                Fluttertoast.showToast(
+                  msg: 'Phone number updated successfully',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  textColor: Color(0xFF121212),
+                );
+
+                // Go back to edit profile screen
+                Navigator.pop(context, true); // Return true to indicate success
+              }
+            } else {
+              // OTP verified successfully, now create the account
+              await authService.signUpAuth(
+                widget.email!,
+                widget.password!,
+                data: {
+                  'display_name': widget.displayName!,
+                  'contact_number': widget.phoneNumber,
+                  'avatar_url': 'assets/svg/default_user_profile.svg',
+                },
               );
+
+              // Clear SMS verification session
+              SMSVerificationService.clearSession();
+
+              if (mounted) {
+                Fluttertoast.showToast(
+                  msg: 'Account created successfully',
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: Color(0xFFF5F5F5),
+                  textColor: Color(0xFF121212),
+                );
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const selectionScreen()),
+                  (route) => false,
+                );
+              }
             }
           } catch (e) {
             if (mounted) {
+              String errorMsg = widget.isEditingProfile
+                  ? 'Failed to update phone number: ${e.toString()}'
+                  : 'Failed to create account: ${e.toString()}';
+
               Fluttertoast.showToast(
-                msg: 'Failed to create account: ${e.toString()}',
+                msg: errorMsg,
                 toastLength: Toast.LENGTH_SHORT,
                 gravity: ToastGravity.BOTTOM,
                 backgroundColor: Color(0xFFF5F5F5),
@@ -237,7 +269,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: Text(
-          'Verify Phone Number',
+          widget.isEditingProfile
+              ? 'Verify New Phone Number'
+              : 'Verify Phone Number',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 18,
@@ -327,7 +361,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 24),
               child: ElevatedButton(
-                onPressed: isLoading ? null : verifyOTPAndCreateAccount,
+                onPressed: isLoading ? null : verifyOTPAndProcessAction,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00CC58),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -345,9 +379,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                               AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text(
-                        'Verify & Create Account',
-                        style: TextStyle(
+                    : Text(
+                        widget.isEditingProfile
+                            ? 'Verify & Update Number'
+                            : 'Verify & Create Account',
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFFF5F5F5),
