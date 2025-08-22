@@ -1,3 +1,117 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    
+    // Flutter SDK configuration for Docker environment
+    "dart.flutterSdkPath": "/opt/flutter",
+    "dart.sdkPath": "/opt/flutter/bin/cache/dart-sdk",
+    
+    // Flutter development settings
+    "dart.devToolsPort": 3000,
+    "dart.flutterRunAdditionalArgs": [
+        "--web-port=8080",
+        "--web-hostname=0.0.0.0"
+    ],
+    
+    // Flutter hot reload settings
+    "dart.hotReloadOnSave": "all",
+    "dart.hotRestartOnSave": "never",
+    
+    // Code formatting and analysis
+    "dart.lineLength": 80,
+    "dart.enableSdkFormatter": true,
+    "dart.enableSdkFormatterForAllFiles": true,
+    
+    // Flutter specific settings
+    "flutter.sdkPath": "/opt/flutter",
+    "flutter.hotReloadOnSave": "all",
+    "flutter.hotRestartOnSave": "never",
+    
+    // Editor settings for Flutter development
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+    },
+    
+    // File associations
+    "files.associations": {
+        "*.dart": "dart",
+        "*.yaml": "yaml",
+        "*.yml": "yaml"
+    },
+    
+    // Terminal settings for Docker
+    "terminal.integrated.defaultProfile.windows": "Git Bash",
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.defaultProfile.osx": "bash",
+    
+    // Docker integration
+    "docker.host": "localhost",
+    "docker.attachShellCommand.linuxContainer": "/bin/bash",
+    "docker.attachShellCommand.windowsContainer": "powershell",
+    
+    // Debugging settings
+    "dart.debugExternalPackageLibraries": false,
+    "dart.debugSdkLibraries": false,
+    
+    // Performance settings
+    "dart.analyzerPath": "/opt/flutter/bin/cache/dart-sdk/bin/dart",
+    "dart.analyzerAdditionalArgs": [
+        "--enable-experiment=non-nullable"
+    ],
+    
+    // Git settings
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    
+    // File watching (important for Docker volumes)
+    "files.watcherExclude": {
+        "**/build/**": true,
+        "**/.dart_tool/**": true,
+        "**/node_modules/**": true,
+        "**/.git/**": true
+    },
+    
+    // Search settings
+    "search.exclude": {
+        "**/build": true,
+        "**/.dart_tool": true,
+        "**/node_modules": true,
+        "**/.git": true,
+        "**/android/app/build": true,
+        "**/ios/Pods": true
+    },
+    
+    // Extensions recommendations
+    "extensions.ignoreRecommendations": false,
+    
+    // Workspace settings
+    "files.autoSave": "onFocusChange",
+    "editor.minimap.enabled": true,
+    "editor.rulers": [80],
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    
+    // Language specific settings
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "editor.rulers": [80],
+        "editor.selectionHighlight": false,
+        "editor.suggest.snippetsPreventQuickSuggestions": false,
+        "editor.suggestSelection": "first",
+        "editor.tabCompletion": "onlySnippets",
+        "editor.wordBasedSuggestions": "off"
+    },
+    
+    "[yaml]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2
+    },
+    
+    "[json]": {
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2
+    }
 }
