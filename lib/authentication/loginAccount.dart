@@ -282,7 +282,7 @@ class LoginScreen extends State<LoginPage> {
           ),
           cursorColor: Color(0xFF00CC58),
           decoration: InputDecoration(
-            labelText: 'Enter your email or phone number',
+            labelText: 'Enter your email',
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -337,7 +337,7 @@ class LoginScreen extends State<LoginPage> {
       child: const Row(
         children: [
           Text(
-            'Email or Phone Number',
+            'Email',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
