@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:pasada_passenger_app/utils/toast_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_links/app_links.dart';
 
@@ -40,24 +39,14 @@ class AuthService {
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      showNoInternetToast();
+      ToastUtils.showError('No internet connection detected. Please check your network settings.');
     }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
-    if (result.contains(ConnectivityResult.none)) showNoInternetToast();
-  }
-
-  void showNoInternetToast() {
-    Fluttertoast.showToast(
-      msg: 'No internet connection detected',
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-      timeInSecForIosWeb: 1,
-      backgroundColor: Color(0xFFF2F2F2),
-      textColor: Color(0xFF121212),
-      fontSize: 16.0,
-    );
+    if (result.contains(ConnectivityResult.none)) {
+      ToastUtils.showError('Internet connection lost. Please check your network settings.');
+    }
   }
 
   factory AuthService() {
@@ -71,17 +60,25 @@ class AuthService {
     // checking internet connection of the device
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      showNoInternetToast();
       throw Exception("No internet connection");
     }
+    
     try {
       AuthResponse response = await supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
+      if (response.user == null) {
+        throw Exception('Login failed: No user data received');
+      }
+
       return response;
+    } on AuthException catch (e) {
+      debugPrint('Auth error during login: ${e.message}');
+      rethrow;
     } catch (e) {
+      debugPrint('Unexpected error during login: $e');
       throw Exception('Failed to login: $e');
     }
   }
@@ -142,13 +139,7 @@ class AuthService {
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
-      Fluttertoast.showToast(
-        msg: 'No internet connection',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Color(0xFFF5F5F5),
-        textColor: Color(0xFF121212),
-      );
+      ToastUtils.showError('No internet connection. Please check your network and try again.');
       return false;
     }
     return true;
