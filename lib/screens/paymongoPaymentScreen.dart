@@ -3,7 +3,7 @@ import 'package:paymongo_sdk/paymongo_sdk.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pasada_passenger_app/screens/paymentWebViewScreen.dart';
+import 'package:pasada_passenger_app/screens/paymentWebviewScreen.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';

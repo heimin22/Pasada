@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/forgotPasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/utils/toast_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/services.dart';
 
@@ -68,52 +68,73 @@ class LoginScreen extends State<LoginPage> {
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      showNoInternetToast();
+      ToastUtils.showError('No internet connection detected. Please check your network settings.');
     }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
-    if (result.contains(ConnectivityResult.none)) showNoInternetToast();
+    if (result.contains(ConnectivityResult.none)) {
+      ToastUtils.showError('Internet connection lost. Please check your network settings.');
+    }
   }
 
-  void showNoInternetToast() {
-    Fluttertoast.showToast(
-      msg: 'No internet connection detected',
-      toastLength: Toast.LENGTH_LONG,
-      gravity: ToastGravity.BOTTOM,
-      timeInSecForIosWeb: 1,
-      backgroundColor: Color(0xFFF2F2F2),
-      textColor: Color(0xFF121212),
-      fontSize: 16.0,
-    );
-  }
+
 
   Future<void> login() async {
-    final email = emailController.text;
+    // Input validation
+    final email = emailController.text.trim();
     final password = passwordController.text;
-    final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult.contains(ConnectivityResult.none)) {
-      showNoInternetToast();
+
+    if (email.isEmpty || password.isEmpty) {
+      ToastUtils.showWarning('Please fill in all fields.');
+      return;
     }
 
+    if (!_isValidEmail(email)) {
+      ToastUtils.showError('Please enter a valid email address.');
+      return;
+    }
+
+    // Check network connectivity
+    final connectivityResult = await connectivity.checkConnectivity();
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      ToastUtils.showError('No internet connection. Please check your network and try again.');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+
     try {
-      await authService.supabase.auth.signInWithPassword(
+      // Attempt to sign in
+      final response = await authService.supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
 
+      if (response.user == null) {
+        throw Exception('Login failed: No user data received');
+      }
+
       if (mounted) {
+        ToastUtils.showSuccess('Login successful! Welcome back.');
         Navigator.push(context,
             MaterialPageRoute(builder: (context) => selectionScreen()));
       }
     } on AuthException catch (e) {
+      debugPrint('Auth error during login: ${e.message}');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        String userFriendlyMessage = ToastUtils.parseAuthError(e.message);
+        ToastUtils.showError(userFriendlyMessage);
       }
-    } catch (err) {
-      setState(() => errorMessage = 'An unexpected error occurred');
+    } catch (e) {
+      debugPrint('Unexpected error during login: $e');
+      if (mounted) {
+        String userFriendlyMessage = ToastUtils.parseAuthError(e.toString());
+        ToastUtils.showError(userFriendlyMessage);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -121,6 +142,10 @@ class LoginScreen extends State<LoginPage> {
         });
       }
     }
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
   @override
@@ -282,7 +307,7 @@ class LoginScreen extends State<LoginPage> {
           ),
           cursorColor: Color(0xFF00CC58),
           decoration: InputDecoration(
-            labelText: 'Enter your email or phone number',
+            labelText: 'Enter your email',
             labelStyle: const TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 12,
@@ -337,7 +362,7 @@ class LoginScreen extends State<LoginPage> {
       child: const Row(
         children: [
           Text(
-            'Email or Phone Number',
+            'Email',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontFamily: 'Inter',
@@ -399,26 +424,37 @@ class LoginScreen extends State<LoginPage> {
         onPressed: isLoading
             ? null
             : () async {
+                // Check network connectivity first
+                final connectivityResult = await connectivity.checkConnectivity();
+                if (connectivityResult.contains(ConnectivityResult.none)) {
+                  ToastUtils.showError('No internet connection. Please check your network and try again.');
+                  return;
+                }
+
                 setState(() => isLoading = true);
+                
                 try {
+                  ToastUtils.showInfo('Signing in with Google...');
                   final success = await authService.signInWithGoogle();
+                  
                   if (success && mounted) {
+                    ToastUtils.showSuccess('Google sign-in successful! Welcome!');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const selectionScreen()),
                     );
                   } else if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Failed to sign in with Google')),
-                    );
+                    ToastUtils.showError('Google sign-in was cancelled or failed. Please try again.');
                   }
                 } catch (e) {
+                  debugPrint('Google sign-in error: $e');
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${e.toString()}')),
-                    );
+                    String errorMessage = ToastUtils.parseAuthError(e.toString());
+                    if (errorMessage.contains('unexpected error')) {
+                      errorMessage = 'Google sign-in failed. Please try again or use email/password.';
+                    }
+                    ToastUtils.showError(errorMessage);
                   }
                 } finally {
                   if (mounted) setState(() => isLoading = false);
