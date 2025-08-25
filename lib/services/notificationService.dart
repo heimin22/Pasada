@@ -6,6 +6,7 @@ import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -187,14 +188,19 @@ class NotificationService {
       }
 
       try {
-        // Get user's display name
+        // Get user's display name, then decrypt it
         final userData = await Supabase.instance.client
             .from('passenger')
             .select('display_name')
             .eq('id', user.id)
             .single();
 
-        final String userName = userData['display_name'] ?? 'user';
+        String userName = userData['display_name'] ?? 'user';
+        try {
+          final encryptionService = EncryptionService();
+          await encryptionService.initialize();
+          userName = encryptionService.decryptUserData(userName);
+        } catch (_) {}
 
         // For local notification fallback
         await showNotification(

@@ -11,6 +11,7 @@ import 'dart:convert';
 import '../network/networkUtilities.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
 
 class ViewRideDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? booking;
@@ -139,11 +140,19 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
               .eq('id', bookingDetails['id'])
               .single();
 
+          // Decrypt fields if needed
+          String decryptedName = passengerResponse['display_name'] ?? '';
+          String decryptedNumber = passengerResponse['contact_number'] ?? '';
+          try {
+            final encryptionService = EncryptionService();
+            await encryptionService.initialize();
+            decryptedName = encryptionService.decryptUserData(decryptedName);
+            decryptedNumber = encryptionService.decryptUserData(decryptedNumber);
+          } catch (_) {}
+
           setState(() {
-            bookingDetails['passenger_name'] =
-                passengerResponse['display_name'];
-            bookingDetails['contact_number'] =
-                passengerResponse['contact_number'];
+            bookingDetails['passenger_name'] = decryptedName;
+            bookingDetails['contact_number'] = decryptedNumber;
           });
         } catch (e) {
           debugPrint('Error fetching passenger details: $e');
