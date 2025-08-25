@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/services/authService.dart';
 import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -77,6 +79,7 @@ class InitializationService {
         _preloadUserPreferences(),
         _initializeLocalDatabase(),
         _configureNotifications(),
+        _initializeEncryption(),  // Add encryption initialization
         _preloadGoogleMap(context),
       ]);
 
@@ -130,21 +133,39 @@ class InitializationService {
     await NotificationService.saveTokenAfterInit();
   }
 
+  static Future<void> _initializeEncryption() async {
+    // Initialize encryption service for secure user data handling
+    final encryptionService = EncryptionService();
+    await encryptionService.initialize();
+    
+    // Test encryption to ensure it's working properly
+    final testPassed = await encryptionService.testEncryption();
+    if (!testPassed) {
+      throw Exception('Encryption service test failed');
+    }
+    
+    debugPrint('Encryption service initialized and tested successfully');
+  }
+
   static Future<void> _loadUserProfile() async {
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) return;
 
     try {
-      // Fetch user profile data
-      final profileData = await Supabase.instance.client
-          .from('passenger')
-          .select('*')
-          .eq('id', currentUser.id)
-          .single();
+      // Initialize AuthService to handle migration
+      final authService = AuthService();
+      
+      // Migrate existing user data to encrypted format if needed
+      await authService.migrateExistingUserDataToEncrypted();
+      
+      // Fetch user profile data (now decrypted automatically)
+      final profileData = await authService.getCurrentUserData();
 
-      // Cache profile data in shared preferences for faster access
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_profile', profileData.toString());
+      if (profileData != null) {
+        // Cache profile data in shared preferences for faster access
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_profile', profileData.toString());
+      }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
     }

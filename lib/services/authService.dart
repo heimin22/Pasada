@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:pasada_passenger_app/utils/toast_utils.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:app_links/app_links.dart';
 
@@ -89,12 +90,17 @@ class AuthService {
   Future<AuthResponse> signUpAuth(String email, String password,
       {Map<String, dynamic>? data}) async {
     try {
-      // Check if phone number exists if provided
+      // Check if phone number exists if provided (handles plain and encrypted)
       if (data?['contact_number'] != null) {
+        final String plainPhone = data!['contact_number'];
+        final encryptionService = EncryptionService();
+        await encryptionService.initialize();
+        final String encryptedPhone = encryptionService.encryptUserData(plainPhone);
+
         final existingPhoneData = await supabase
             .from('passenger')
             .select()
-            .eq('contact_number', data!['contact_number'])
+            .or('contact_number.eq.$plainPhone,contact_number.eq.$encryptedPhone')
             .maybeSingle();
 
         if (existingPhoneData != null) {
@@ -114,14 +120,24 @@ class AuthService {
       }
 
       try {
-        // Then, insert into passenger table
-        await supabase.from('passenger').upsert({
-          'id': response.user!.id,
-          'passenger_email': email,
+        // Encrypt sensitive user data before storing
+        final encryptionService = EncryptionService();
+        await encryptionService.initialize();
+        
+        final encryptedData = encryptionService.encryptUserFields({
           'display_name': data?['display_name'],
           'contact_number': data?['contact_number'],
-          'avatar_url':
-              data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+          'passenger_email': email,
+          'avatar_url': data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+        });
+
+        // Then, insert into passenger table with encrypted data
+        await supabase.from('passenger').upsert({
+          'id': response.user!.id,
+          'passenger_email': encryptedData['passenger_email'],
+          'display_name': encryptedData['display_name'],
+          'contact_number': encryptedData['contact_number'],
+          'avatar_url': encryptedData['avatar_url'],
           'created_at': DateTime.now().toIso8601String(),
         }, onConflict: 'id');
       } catch (dbError) {
@@ -187,17 +203,34 @@ class AuthService {
             final displayName = userMetadata?['full_name'] ?? '';
 
             if (existingUser == null) {
-              await passengersDatabase.insert({
-                'id': user.id,
-                'email': user.email,
+              // Encrypt before insert
+              final encryptionService = EncryptionService();
+              await encryptionService.initialize();
+              final encrypted = encryptionService.encryptUserFields({
+                'passenger_email': user.email,
                 'display_name': displayName,
                 'avatar_url': avatarUrl,
+              });
+              await passengersDatabase.insert({
+                'id': user.id,
+                'passenger_email': encrypted['passenger_email'],
+                'display_name': encrypted['display_name'],
+                'avatar_url': encrypted['avatar_url'],
                 'created_at': DateTime.now().toIso8601String(),
               });
             } else {
-              await passengersDatabase.update({
+              // Encrypt before update
+              final encryptionService = EncryptionService();
+              await encryptionService.initialize();
+              final encrypted = encryptionService.encryptUserFields({
                 'avatar_url': avatarUrl,
                 'display_name': displayName,
+                'passenger_email': user.email,
+              });
+              await passengersDatabase.update({
+                'avatar_url': encrypted['avatar_url'],
+                'display_name': encrypted['display_name'],
+                'passenger_email': encrypted['passenger_email'],
               }).eq('id', user.id);
             }
             completer.complete(true);
@@ -289,12 +322,50 @@ class AuthService {
             .eq('id', user.id)
             .single();
 
-        return response;
+        // Decrypt sensitive user data
+        final encryptionService = EncryptionService();
+        await encryptionService.initialize();
+
+        // Self-heal: if any fields are still plaintext, encrypt them in DB now
+        final fieldsToCheck = {
+          'display_name': response['display_name']?.toString() ?? '',
+          'contact_number': response['contact_number']?.toString() ?? '',
+          'passenger_email': response['passenger_email']?.toString() ?? '',
+          'avatar_url': response['avatar_url']?.toString() ?? '',
+        };
+        final toEncryptUpdate = <String, String>{};
+        fieldsToCheck.forEach((key, value) {
+          if (value.isNotEmpty && !encryptionService.isEncrypted(value)) {
+            toEncryptUpdate[key] = encryptionService.encryptUserData(value);
+          }
+        });
+        if (toEncryptUpdate.isNotEmpty) {
+          try {
+            await passengersDatabase.update(toEncryptUpdate).eq('id', user.id);
+          } catch (e) {
+            debugPrint('Self-heal encryption update failed: $e');
+          }
+        }
+        final decryptedData = encryptionService.decryptUserFields({
+          'display_name': response['display_name'],
+          'contact_number': response['contact_number'],
+          'passenger_email': response['passenger_email'],
+          'avatar_url': response['avatar_url'],
+        });
+
+        // Return decrypted data with original structure
+        return {
+          ...response,
+          'display_name': decryptedData['display_name'],
+          'contact_number': decryptedData['contact_number'],
+          'passenger_email': decryptedData['passenger_email'],
+          'avatar_url': decryptedData['avatar_url'],
+        };
       } else {
         return null;
       }
     } catch (e) {
-      if (kDebugMode) ('Error fetching user data: $e');
+      debugPrint('Error fetching user data: $e');
       return null;
     }
   }
@@ -338,12 +409,22 @@ class AuthService {
       final formattedMobileNumber =
           mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
 
-      // update the passenger table
-      await passengersDatabase.update({
+      // Encrypt sensitive data before updating
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      final encryptedData = encryptionService.encryptUserFields({
         'display_name': displayName,
         'passenger_email': email,
         'contact_number': formattedMobileNumber,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
+      });
+
+      // update the passenger table with encrypted data
+      await passengersDatabase.update({
+        'display_name': encryptedData['display_name'],
+        'passenger_email': encryptedData['passenger_email'],
+        'contact_number': encryptedData['contact_number'],
+        if (avatarUrl != null) 'avatar_url': encryptedData['avatar_url'],
       }).eq('id', user.id);
 
       // update auth metadata if needed
@@ -435,10 +516,17 @@ class AuthService {
       final displayName = userMetadata?['full_name'] ?? '';
 
       // Update the passenger table with latest Google data
-      await passengersDatabase.update({
-        'email': user.email,
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      final encrypted = encryptionService.encryptUserFields({
+        'passenger_email': user.email,
         'avatar_url': avatarUrl,
         'display_name': displayName,
+      });
+      await passengersDatabase.update({
+        'passenger_email': encrypted['passenger_email'],
+        'avatar_url': encrypted['avatar_url'],
+        'display_name': encrypted['display_name'],
       }).eq('id', user.id);
 
       debugPrint('Google profile synced successfully');
@@ -480,12 +568,22 @@ class AuthService {
       final formattedMobileNumber =
           mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
 
-      // Update the passenger table
-      await passengersDatabase.update({
+      // Encrypt sensitive data before updating
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      final encryptedData = encryptionService.encryptUserFields({
         'display_name': displayName,
-        'email': email,
+        'passenger_email': email,
         'contact_number': formattedMobileNumber,
         if (avatarUrl != null) 'avatar_url': avatarUrl,
+      });
+
+      // Update the passenger table with encrypted data
+      await passengersDatabase.update({
+        'display_name': encryptedData['display_name'],
+        'passenger_email': encryptedData['passenger_email'],
+        'contact_number': encryptedData['contact_number'],
+        if (avatarUrl != null) 'avatar_url': encryptedData['avatar_url'],
       }).eq('id', user.id);
 
       // Update auth metadata if not a Google account
@@ -502,6 +600,138 @@ class AuthService {
     } catch (e) {
       debugPrint('Error updating profile: $e');
       throw Exception('Failed to update profile');
+    }
+  }
+
+  Future<void> migrateExistingUserDataToEncrypted() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      
+      // Fetch current user data
+      final response = await supabase
+          .from('passenger')
+          .select()
+          .eq('id', user.id)
+          .single();
+
+      // Check if data is already encrypted
+      final fieldsToCheck = ['display_name', 'contact_number', 'passenger_email', 'avatar_url'];
+      bool needsMigration = false;
+      final unencryptedFields = <String>[];
+      
+      for (final field in fieldsToCheck) {
+        final value = response[field]?.toString();
+        if (value != null && 
+            value.isNotEmpty && 
+            !encryptionService.isEncrypted(value)) {
+          needsMigration = true;
+          unencryptedFields.add(field);
+        }
+      }
+
+      if (needsMigration) {
+        debugPrint('🔄 Migrating existing user data to encrypted format');
+        debugPrint('Fields to encrypt: $unencryptedFields');
+        
+        // Log current field values (truncated for security)
+        for (final field in unencryptedFields) {
+          final value = response[field]?.toString() ?? '';
+          debugPrint('$field: "${value.length > 20 ? '${value.substring(0, 20)}...' : value}"');
+        }
+        
+        // Only encrypt fields that are not already encrypted
+        final dataToEncrypt = <String, String?>{};
+        for (final field in unencryptedFields) {
+          dataToEncrypt[field] = response[field]?.toString();
+        }
+        
+        final encryptedData = encryptionService.encryptUserFields(dataToEncrypt);
+
+        // Update only the fields that needed encryption
+        if (encryptedData.isNotEmpty) {
+          debugPrint('Updating ${encryptedData.length} encrypted fields in database');
+          await passengersDatabase.update(encryptedData).eq('id', user.id);
+          debugPrint('User data migration completed successfully for fields: ${encryptedData.keys}');
+        }
+      } else {
+        debugPrint('User data is already encrypted, no migration needed');
+      }
+    } catch (e) {
+      debugPrint('Error migrating user data: $e');
+    }
+  }
+
+  /// Repair corrupted encrypted user data with fresh values
+  Future<void> repairCorruptedUserData({
+    required String displayName,
+    required String email,
+    required String mobileNumber,
+    String? avatarUrl,
+  }) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      debugPrint('Repairing corrupted user data...');
+
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      
+      // Format the mobile number properly
+      final formattedMobileNumber =
+          mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
+
+      // Force re-encrypt with proper values
+      final repairedData = encryptionService.forceReEncryptUserData({
+        'display_name': displayName,
+        'passenger_email': email,
+        'contact_number': formattedMobileNumber,
+        'avatar_url': avatarUrl ?? 'assets/svg/default_user_profile.svg',
+      });
+
+      // Update the database with repaired data
+      await passengersDatabase.update(repairedData).eq('id', user.id);
+
+      debugPrint('User data repaired successfully');
+      debugPrint('   Name: $displayName');
+      debugPrint('   Email: $email');
+      debugPrint('   Phone: $formattedMobileNumber');
+      
+    } catch (e) {
+      debugPrint('Error repairing user data: $e');
+      throw Exception('Failed to repair user data: $e');
+    }
+  }
+
+  /// Check if user data needs repair (has recovery markers)
+  Future<bool> userDataNeedsRepair() async {
+    try {
+      final userData = await getCurrentUserData();
+      if (userData == null) return false;
+
+      // Check for recovery markers
+      final fieldsToCheck = ['display_name', 'contact_number', 'passenger_email', 'avatar_url'];
+      
+      for (final field in fieldsToCheck) {
+        final value = userData[field]?.toString() ?? '';
+        if (value.contains('[RECOVERY_NEEDED]') || 
+            value.contains('[ENCRYPTED_DATA_RECOVERY_NEEDED]') ||
+            value.startsWith('+639000000000') || // Default placeholder number
+            value == 'user@example.com' || // Default placeholder email
+            value == 'User') { // Default placeholder name
+          debugPrint('Field $field needs repair: $value');
+          return true;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Error checking if user data needs repair: $e');
+      return true; // Assume repair is needed if we can't check
     }
   }
 }
