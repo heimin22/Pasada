@@ -6,6 +6,7 @@ import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/settings_profile_header.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -30,11 +31,14 @@ class SettingsScreenStateful extends StatefulWidget {
 
 class SettingsScreenPageState extends State<SettingsScreenStateful> {
   final AuthService authService = AuthService();
+  final GlobalKey<SettingsProfileHeaderState> _profileHeaderKey = GlobalKey<SettingsProfileHeaderState>();
+  bool isSynced = true;
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final connectivityService = OfflineConnectionCheckService();
 
     return Scaffold(
       backgroundColor:
@@ -43,9 +47,41 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
         child: Column(
           children: [
             SettingsProfileHeader(
+              key: _profileHeaderKey,
               authService: authService,
               screenHeight: screenSize.height,
               screenWidth: screenSize.width,
+            ),
+            // Not synced / offline indicator
+            StreamBuilder<bool>(
+              stream: connectivityService.connectionStream,
+              initialData: connectivityService.isConnected,
+              builder: (context, snapshot) {
+                final online = snapshot.data ?? true;
+                final showBanner = !online || !isSynced;
+                if (!showBanner) return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  color: const Color(0x33D7481D),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sync_problem, color: Color(0xFFD7481D), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          online ? 'Profile may be out of date. Pull to refresh.' : 'Offline. Showing last known profile.',
+                          style: TextStyle(
+                            color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
             Divider(
               height: 0,
@@ -56,7 +92,28 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: buildSettingsSection(),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {
+                    isSynced = false;
+                  });
+                  try {
+                    await _profileHeaderKey.currentState?.refreshUserData();
+                    setState(() {
+                      isSynced = true;
+                    });
+                  } catch (_) {
+                    setState(() {
+                      isSynced = false;
+                    });
+                  }
+                },
+                color: const Color(0xFF067837),
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: buildSettingsSection(),
+                ),
+              ),
             ),
           ],
         ),

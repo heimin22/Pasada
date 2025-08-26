@@ -5,6 +5,8 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
+import 'package:pasada_passenger_app/widgets/offline_bottom_sheet.dart';
 import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -64,6 +66,9 @@ class LoadingDialog extends StatelessWidget {
 class InitializationService {
   static Future<void> initialize(BuildContext context) async {
     try {
+      // Initialize and check connectivity first
+      await _initializeConnectivity(context);
+
       // Check if user is authenticated before initializing resources
       final supabaseAuth = Supabase.instance.client.auth;
       final session = supabaseAuth.currentSession;
@@ -90,6 +95,95 @@ class InitializationService {
       await Future.delayed(const Duration(milliseconds: 300));
     } catch (e) {
       debugPrint('Initialization error: $e');
+      rethrow; // Re-throw to handle in calling code
+    }
+  }
+
+  /// Initialize connectivity service and check internet connection
+  static Future<void> _initializeConnectivity(BuildContext context) async {
+    // Initialize the connectivity service
+    await OfflineConnectionCheckService().initialize();
+    
+    // Check initial connectivity
+    final isConnected = await OfflineConnectionCheckService().checkConnectivity();
+    
+    if (!isConnected) {
+      debugPrint('No internet connection detected during initialization');
+      
+      // Show offline bottom sheet and wait for connection
+      await _handleOfflineState(context);
+    }
+  }
+
+  /// Handle offline state by showing bottom sheet until connection is restored
+  static Future<void> _handleOfflineState(BuildContext context) async {
+    final connectivityService = OfflineConnectionCheckService();
+    
+    // Only show the bottom sheet if it's not already shown
+    if (!connectivityService.isOfflineBottomSheetShown) {
+      connectivityService.setOfflineBottomSheetShown(true);
+      
+      final completer = Completer<void>();
+      
+      // Show the offline bottom sheet
+      await OfflineBottomSheet.show(
+        context,
+        onConnectionRestored: () async {
+          debugPrint('Connection restored, continuing initialization');
+          connectivityService.setOfflineBottomSheetShown(false);
+          completer.complete();
+        },
+        isPersistent: true,
+      );
+      
+      // Wait until connection is restored
+      await completer.future;
+    } else {
+      debugPrint('Offline bottom sheet already shown, waiting for connection silently');
+      
+      // Wait for connection without showing another bottom sheet
+      final completer = Completer<void>();
+      late StreamSubscription<bool> subscription;
+      
+      subscription = connectivityService.connectionStream.listen((isConnected) {
+        if (isConnected) {
+          debugPrint('Connection restored silently');
+          subscription.cancel();
+          completer.complete();
+        }
+      });
+      
+      // Check if already connected
+      if (connectivityService.isConnected) {
+        subscription.cancel();
+        completer.complete();
+      }
+      
+      await completer.future;
+    }
+  }
+
+  /// Initialize resources and sync profile when connection is restored
+  static Future<void> _initializeResourcesAndProfile() async {
+    try {
+      debugPrint('Initializing resources and syncing profile after connection restore');
+      
+      // Initialize shared resources concurrently for efficiency
+      await Future.wait([
+        _initializeSupabase(),
+        _preloadUserPreferences(),
+        _initializeLocalDatabase(),
+        _configureNotifications(),
+        _initializeEncryption(),
+      ]);
+
+      // Load and sync user profile data if authenticated
+      await _loadUserProfile();
+      
+      debugPrint('Resources and profile sync completed successfully');
+    } catch (e) {
+      debugPrint('Error during resource initialization and profile sync: $e');
+      rethrow;
     }
   }
 

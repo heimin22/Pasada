@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'dart:async';
+import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -29,6 +30,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
   Timer? _debounceTimer;
   List<Map<String, dynamic>> bookings = [];
   bool isLoading = true;
+  bool isSynced = true;
 
   @override
   void initState() {
@@ -45,12 +47,17 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
 
   Future<void> fetchBookings() async {
     try {
+      setState(() {
+        // mark as syncing; UI may show indicator accordingly
+        isSynced = false;
+      });
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
         debugPrint('No user logged in');
         setState(() {
           bookings = [];
           isLoading = false;
+          isSynced = true;
         });
         return;
       }
@@ -72,10 +79,14 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
         }).toList();
         bookings = filteredBookings.take(10).toList();
         isLoading = false;
+        isSynced = true;
       });
     } catch (e) {
       debugPrint('Error fetching bookings: $e');
-      setState(() => isLoading = false);
+      setState(() {
+        isLoading = false;
+        isSynced = false;
+      });
     }
   }
 
@@ -91,6 +102,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final connectivityService = OfflineConnectionCheckService();
 
     return Scaffold(
       backgroundColor:
@@ -112,30 +124,78 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
                 ),
               ),
             ),
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : bookings.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No booking history found',
-                            style: TextStyle(
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
+            // Not synced / offline indicator
+            StreamBuilder<bool>(
+              stream: connectivityService.connectionStream,
+              initialData: connectivityService.isConnected,
+              builder: (context, snapshot) {
+                final online = snapshot.data ?? true;
+                final showBanner = !online || !isSynced;
+                if (!showBanner) return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  color: const Color(0x33D7481D),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sync_problem, color: Color(0xFFD7481D), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          online ? 'Data may be out of date. Pull to refresh.' : 'Offline. Showing last known data.',
+                          style: TextStyle(
+                            color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: bookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = bookings[index];
-                            return GestureDetector(
-                              onTap: () => _viewBookingDetails(booking),
-                              child: BookingListItem(booking: booking),
-                            );
-                          },
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: fetchBookings,
+                color: const Color(0xFF067837),
+                child: isLoading
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 200),
+                          Center(child: CircularProgressIndicator()),
+                        ],
+                      )
+                    : bookings.isEmpty
+                        ? ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: [
+                              const SizedBox(height: 120),
+                              Center(
+                                child: Text(
+                                  'No booking history found',
+                                  style: TextStyle(
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: bookings.length,
+                            itemBuilder: (context, index) {
+                              final booking = bookings[index];
+                              return GestureDetector(
+                                onTap: () => _viewBookingDetails(booking),
+                                child: BookingListItem(booking: booking),
+                              );
+                            },
+                          ),
+              ),
             ),
           ],
         ),

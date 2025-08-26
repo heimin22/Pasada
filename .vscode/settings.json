@@ -113,5 +113,8 @@
     "[json]": {
         "editor.formatOnSave": true,
         "editor.tabSize": 2
-    }
+    },
+    "java.jdt.ls.java.home": "/usr/lib/jvm/java-21-openjdk",
+    "java.import.gradle.java.home": "/usr/lib/jvm/java-21-openjdk",
+    "gradle.java.home": "/usr/lib/jvm/java-21-openjdk"
 }
