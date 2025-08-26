@@ -33,6 +33,15 @@ class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
     _userFuture = widget.authService.getCurrentUserData();
   }
 
+  Future<void> refreshUserData() async {
+    setState(() {
+      _loadUserData();
+    });
+    try {
+      await _userFuture;
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
