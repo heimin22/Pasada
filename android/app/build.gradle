@@ -22,8 +22,8 @@ def mapsApiKey = properties.getProperty("mapsApiKey", "")
 
 android {
     namespace = "com.example.pasada_passenger_app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdkVersion 35
+    ndkVersion "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -42,11 +42,10 @@ android {
         applicationId = "com.example.pasada_passenger_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        minSdkVersion 23
+        targetSdkVersion flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        minSdkVersion flutter.minSdkVersion
 
         manifestPlaceholders = [mapsApiKey: mapsApiKey, applicationName: "io.flutter.app.FlutterApplication"]
         multiDexEnabled true

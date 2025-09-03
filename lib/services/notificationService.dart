@@ -199,7 +199,7 @@ class NotificationService {
         try {
           final encryptionService = EncryptionService();
           await encryptionService.initialize();
-          userName = encryptionService.decryptUserData(userName);
+          userName = await encryptionService.decryptUserData(userName);
         } catch (_) {}
 
         // For local notification fallback
