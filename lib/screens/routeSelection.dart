@@ -11,6 +11,7 @@ import 'package:pasada_passenger_app/services/route_service.dart';
 import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
+import 'package:pasada_passenger_app/widgets/traffic_insights_sheet.dart';
 
 class RouteSelection extends StatefulWidget {
   const RouteSelection({super.key});
@@ -99,6 +100,8 @@ class _RouteSelectionState extends State<RouteSelection> {
       }
     }
   }
+
+
 
   void _selectRoute(Map<String, dynamic> route) async {
     // Make sure the route has an ID field
@@ -353,6 +356,15 @@ class _RouteSelectionState extends State<RouteSelection> {
                   ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showTrafficInsightsSheet(context, _routes, _filteredRoutes),
+        icon: const Icon(Icons.traffic),
+        label: const Text('Traffic'),
+        backgroundColor:
+            isDarkMode ? const Color(0xFFFFCE21) : const Color(0xFF067837),
+        foregroundColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       ),
     );
   }

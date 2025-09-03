@@ -11,7 +11,7 @@ class ActivityScreen extends StatefulWidget {
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
-
+  
 class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
