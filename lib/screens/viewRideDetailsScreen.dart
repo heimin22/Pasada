@@ -146,8 +146,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           try {
             final encryptionService = EncryptionService();
             await encryptionService.initialize();
-            decryptedName = encryptionService.decryptUserData(decryptedName);
-            decryptedNumber = encryptionService.decryptUserData(decryptedNumber);
+            decryptedName = await encryptionService.decryptUserData(decryptedName);
+            decryptedNumber = await encryptionService.decryptUserData(decryptedNumber);
           } catch (_) {}
 
           setState(() {

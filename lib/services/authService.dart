@@ -95,7 +95,8 @@ class AuthService {
         final String plainPhone = data!['contact_number'];
         final encryptionService = EncryptionService();
         await encryptionService.initialize();
-        final String encryptedPhone = encryptionService.encryptUserData(plainPhone);
+
+        final String encryptedPhone = await encryptionService.encryptUserData(plainPhone);
 
         final existingPhoneData = await supabase
             .from('passenger')
@@ -124,7 +125,7 @@ class AuthService {
         final encryptionService = EncryptionService();
         await encryptionService.initialize();
         
-        final encryptedData = encryptionService.encryptUserFields({
+        final encryptedData = await encryptionService.encryptUserFields({
           'display_name': data?['display_name'],
           'contact_number': data?['contact_number'],
           'passenger_email': email,
@@ -206,7 +207,7 @@ class AuthService {
               // Encrypt before insert
               final encryptionService = EncryptionService();
               await encryptionService.initialize();
-              final encrypted = encryptionService.encryptUserFields({
+              final encrypted = await encryptionService.encryptUserFields({
                 'passenger_email': user.email,
                 'display_name': displayName,
                 'avatar_url': avatarUrl,
@@ -222,7 +223,7 @@ class AuthService {
               // Encrypt before update
               final encryptionService = EncryptionService();
               await encryptionService.initialize();
-              final encrypted = encryptionService.encryptUserFields({
+              final encrypted = await encryptionService.encryptUserFields({
                 'avatar_url': avatarUrl,
                 'display_name': displayName,
                 'passenger_email': user.email,
@@ -334,11 +335,13 @@ class AuthService {
           'avatar_url': response['avatar_url']?.toString() ?? '',
         };
         final toEncryptUpdate = <String, String>{};
-        fieldsToCheck.forEach((key, value) {
+        for (final entry in fieldsToCheck.entries) {
+          final key = entry.key;
+          final value = entry.value;
           if (value.isNotEmpty && !encryptionService.isEncrypted(value)) {
-            toEncryptUpdate[key] = encryptionService.encryptUserData(value);
+            toEncryptUpdate[key] = await encryptionService.encryptUserData(value);
           }
-        });
+        }
         if (toEncryptUpdate.isNotEmpty) {
           try {
             await passengersDatabase.update(toEncryptUpdate).eq('id', user.id);
@@ -346,7 +349,7 @@ class AuthService {
             debugPrint('Self-heal encryption update failed: $e');
           }
         }
-        final decryptedData = encryptionService.decryptUserFields({
+        final decryptedData = await encryptionService.decryptUserFields({
           'display_name': response['display_name'],
           'contact_number': response['contact_number'],
           'passenger_email': response['passenger_email'],
@@ -412,7 +415,7 @@ class AuthService {
       // Encrypt sensitive data before updating
       final encryptionService = EncryptionService();
       await encryptionService.initialize();
-      final encryptedData = encryptionService.encryptUserFields({
+      final encryptedData = await encryptionService.encryptUserFields({
         'display_name': displayName,
         'passenger_email': email,
         'contact_number': formattedMobileNumber,
@@ -518,7 +521,7 @@ class AuthService {
       // Update the passenger table with latest Google data
       final encryptionService = EncryptionService();
       await encryptionService.initialize();
-      final encrypted = encryptionService.encryptUserFields({
+      final encrypted = await encryptionService.encryptUserFields({
         'passenger_email': user.email,
         'avatar_url': avatarUrl,
         'display_name': displayName,
@@ -571,7 +574,7 @@ class AuthService {
       // Encrypt sensitive data before updating
       final encryptionService = EncryptionService();
       await encryptionService.initialize();
-      final encryptedData = encryptionService.encryptUserFields({
+      final encryptedData = await encryptionService.encryptUserFields({
         'display_name': displayName,
         'passenger_email': email,
         'contact_number': formattedMobileNumber,
@@ -649,7 +652,7 @@ class AuthService {
           dataToEncrypt[field] = response[field]?.toString();
         }
         
-        final encryptedData = encryptionService.encryptUserFields(dataToEncrypt);
+        final encryptedData = await encryptionService.encryptUserFields(dataToEncrypt);
 
         // Update only the fields that needed encryption
         if (encryptedData.isNotEmpty) {
@@ -686,7 +689,7 @@ class AuthService {
           mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
 
       // Force re-encrypt with proper values
-      final repairedData = encryptionService.forceReEncryptUserData({
+      final repairedData = await encryptionService.forceReEncryptUserData({
         'display_name': displayName,
         'passenger_email': email,
         'contact_number': formattedMobileNumber,

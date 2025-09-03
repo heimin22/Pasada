@@ -19,7 +19,7 @@ class SMSVerificationService {
         phoneNumber: phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
           Fluttertoast.showToast(
-            msg: 'Verification successful',
+            msg: 'Verification code sent to $phoneNumber',
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             backgroundColor: Color(0xFFF5F5F5),
@@ -29,7 +29,7 @@ class SMSVerificationService {
         verificationFailed: (FirebaseAuthException e) {
           onError(e.message ?? 'Verification failed');
           Fluttertoast.showToast(
-            msg: e.message ?? 'Verification failed',
+            msg: e.message ?? 'Verification code failed',
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             backgroundColor: Color(0xFFF5F5F5),
@@ -40,7 +40,7 @@ class SMSVerificationService {
           _verificationId = verificationId;
           _resendToken = resendToken;
           Fluttertoast.showToast(
-            msg: 'Verification successful',
+            msg: 'Verification code sent to $phoneNumber',
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             backgroundColor: Color(0xFFF5F5F5),
@@ -51,7 +51,7 @@ class SMSVerificationService {
         codeAutoRetrievalTimeout: (String verificationId) {
           onTimeout();
           Fluttertoast.showToast(
-            msg: 'Verification timed out',
+            msg: 'Verification code timed out. Please try again.',
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             backgroundColor: Color(0xFFF5F5F5),
