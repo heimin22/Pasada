@@ -1,11 +1,11 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
-import 'package:pasada_passenger_app/widgets/optimized_cached_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
@@ -19,6 +19,11 @@ import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
 import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 import 'package:pasada_passenger_app/widgets/notification_container.dart';
+import 'package:pasada_passenger_app/widgets/home_weather_widget.dart';
+import 'package:pasada_passenger_app/widgets/home_location_display.dart';
+import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
+import 'package:pasada_passenger_app/widgets/home_header_section.dart';
+import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
@@ -128,8 +133,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (result != null && mounted) {
       setState(() {
         selectedRoute = result;
-        selectedPickUpLocation = null;
-        selectedDropOffLocation = null;
+        // Keep existing locations when switching routes - users can clear them manually if needed
+        // selectedPickUpLocation = null;
+        // selectedDropOffLocation = null;
       });
 
       // Save the route for persistence
@@ -246,9 +252,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     });
   }
 
-  /// Initialize core resources, then fetch weather and display dialogs after loading
+  /// Initialize core resources including weather, then display dialogs after loading
   Future<void> _initializeHomeScreen() async {
-    // Boot and load core resources first
+    // Boot and load core resources (including weather) first
     await HomeScreenInitService.runInitialization(
       context: context,
       getIsInitialized: () => _isInitialized,
@@ -264,12 +270,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       loadPaymentMethod: loadPaymentMethod,
       loadRoute: loadRoute,
     );
-    // Fetch and subscribe to weather updates based on device location
-    await LocationWeatherService.fetchAndSubscribe(
-      context.read<WeatherProvider>(),
-    );
 
-    // Show startup alerts only once
+    // Show startup alerts only once (weather should be loaded by now)
     if (!_hasShownStartupAlerts) {
       final List<Widget> alertPages = [];
       // Rain condition
@@ -391,6 +393,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
+
   // Add new bottom sheet method for seating preference
   Future<void> _showSeatingPreferenceSheet() async {
     final result = await showSeatingPreferenceBottomSheet(
@@ -457,6 +460,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           selectedDropOffLocation = result;
         }
       });
+      // Save the updated location to cache
+      saveLocation();
       WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
     }
   }
@@ -469,6 +474,18 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (selectedDropOffLocation != null) {
       prefs.setString('dropoff', jsonEncode(selectedDropOffLocation!.toJson()));
     }
+  }
+
+  /// Clear cached locations from device storage
+  void clearCachedLocations() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('pickup');
+    await prefs.remove('dropoff');
+    setState(() {
+      selectedPickUpLocation = null;
+      selectedDropOffLocation = null;
+    });
+    debugPrint('Cached locations cleared');
   }
 
   void loadLocation() async {
@@ -559,64 +576,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   top: MediaQuery.of(context).padding.top + 10,
                   left: responsivePadding,
                   right: responsivePadding,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedBuilder(
-                        animation: bookingAnimationController,
-                        builder: (context, child) {
-                          return Transform.translate(
-                            offset: Offset(0, -_downwardAnimation.value),
-                            child: Opacity(
-                              opacity: 1 - bookingAnimationController.value,
-                              child: RouteSelectionWidget(
-                                routeName: selectedRoute?['route_name'] ??
-                                    'Select Route',
-                                onTap: _showRouteSelection,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Consumer<WeatherProvider>(
-                        builder: (context, weatherProv, _) {
-                          if (weatherProv.isLoading) {
-                            return SizedBox(
-                              width: weatherIconSize,
-                              height: weatherIconSize,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFF00CC58),
-                              ),
-                            );
-                          } else if (weatherProv.weather != null) {
-                            return OptimizedCachedImage.thumbnail(
-                              imageUrl: weatherProv.weather!.iconUrl,
-                              size: weatherIconSize,
-                              placeholder: SizedBox(
-                                width: weatherIconSize,
-                                height: weatherIconSize,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Color(0xFF00CC58),
-                                ),
-                              ),
-                              errorWidget: Icon(
-                                Icons.cloud_off,
-                                size: weatherIconSize,
-                                color: Colors.grey,
-                              ),
-                            );
-                          } else {
-                            return SizedBox(
-                                width: weatherIconSize,
-                                height: weatherIconSize);
-                          }
-                        },
-                      ),
-                    ],
+                  child: HomeHeaderSection(
+                    bookingAnimationController: bookingAnimationController,
+                    downwardAnimation: _downwardAnimation,
+                    routeName: selectedRoute?['route_name'] ?? 'Select Route',
+                    onRouteSelectionTap: _showRouteSelection,
+                    weatherIconSize: weatherIconSize,
                   ),
                 ),
                 HomeScreenFAB(
@@ -653,122 +618,51 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     bottom: bottomNavBarHeight,
                     left: responsivePadding,
                     right: responsivePadding,
-                    child: AnimatedBuilder(
-                      animation: bookingAnimationController,
-                      builder: (context, child) {
-                        return Transform.translate(
-                          offset: Offset(0, _downwardAnimation.value),
-                          child: Opacity(
-                            opacity: 1 - bookingAnimationController.value,
-                            child: Column(
-                              key: locationInputContainerKey, // Assign key here
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isNotificationVisible)
-                                  NotificationContainer(
-                                    downwardAnimation: _downwardAnimation,
-                                    notificationHeight: notificationHeight,
-                                    onClose: () {
-                                      setState(() {
-                                        isNotificationVisible = false;
-                                      });
-                                      measureContainers();
-                                    },
-                                  ),
-                                SizedBox(height: 10),
-                                LocationInputContainer(
-                                    parentContext: context,
-                                    screenWidth: screenWidth,
-                                    responsivePadding: responsivePadding,
-                                    iconSize:
-                                        fabIconSize, // Use fabIconSize from LayoutBuilder
-                                    isRouteSelected: isRouteSelected,
-                                    selectedPickUpLocation:
-                                        selectedPickUpLocation,
-                                    selectedDropOffLocation:
-                                        selectedDropOffLocation,
-                                    currentFare: currentFare,
-                                    selectedPaymentMethod:
-                                        selectedPaymentMethod,
-                                    seatingPreference: seatingPreference,
-                                    onNavigateToLocationSearch:
-                                        _navigateToLocationSearch,
-                                    onShowSeatingPreferenceDialog:
-                                        _showSeatingPreferenceSheet,
-                                    onConfirmBooking:
-                                        _showBookingConfirmationDialog,
-                                    onPaymentMethodSelected: (method) {
-                                      setState(
-                                          () => selectedPaymentMethod = method);
-                                      SharedPreferences.getInstance().then(
-                                          (prefs) => prefs.setString(
-                                              'selectedPaymentMethod', method));
-                                    }),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                    child: Container(
+                      key: locationInputContainerKey, // Assign key here for measurements
+                      child: HomeBottomSection(
+                        bookingAnimationController: bookingAnimationController,
+                        downwardAnimation: _downwardAnimation,
+                        isNotificationVisible: isNotificationVisible,
+                        notificationHeight: notificationHeight,
+                        onNotificationClose: () {
+                          setState(() {
+                            isNotificationVisible = false;
+                          });
+                        },
+                        onMeasureContainers: measureContainers,
+                        isRouteSelected: isRouteSelected,
+                        selectedPickUpLocation: selectedPickUpLocation,
+                        selectedDropOffLocation: selectedDropOffLocation,
+                        currentFare: currentFare,
+                        selectedPaymentMethod: selectedPaymentMethod,
+                        seatingPreference: seatingPreference,
+                        screenWidth: screenWidth,
+                        responsivePadding: responsivePadding,
+                        onNavigateToLocationSearch: _navigateToLocationSearch,
+                        onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+                        onConfirmBooking: _showBookingConfirmationDialog,
+                        onPaymentMethodSelected: (method) {
+                          setState(() => selectedPaymentMethod = method);
+                        },
+                      ),
                     ),
                   ),
                 if (isBookingConfirmed)
-                  DraggableScrollableSheet(
+                  HomeBookingSheet(
                     controller: _bookingSheetController,
-                    // Shrink sheet to fit content when still in 'requested' status
-                    initialChildSize: bookingStatus == 'requested' ? 0.25 : 0.4,
-                    minChildSize: bookingStatus == 'requested' ? 0.25 : 0.2,
-                    maxChildSize: 0.8,
-                    builder: (context, scrollController) {
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16)),
-                          boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 10)
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Center(
-                              child: Container(
-                                width: 40,
-                                height: 4,
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).dividerColor,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                controller: scrollController,
-                                child: BookingStatusManager(
-                                  key: ValueKey<String>(bookingStatus),
-                                  pickupLocation: selectedPickUpLocation,
-                                  dropoffLocation: selectedDropOffLocation,
-                                  paymentMethod:
-                                      selectedPaymentMethod ?? 'Cash',
-                                  fare: currentFare,
-                                  onCancelBooking:
-                                      _bookingManager.handleBookingCancellation,
-                                  driverName: driverName,
-                                  plateNumber: plateNumber,
-                                  vehicleModel: vehicleModel,
-                                  phoneNumber: phoneNumber,
-                                  isDriverAssigned: isDriverAssigned,
-                                  bookingStatus: bookingStatus,
-                                  currentLocation: mapScreenKey
-                                      .currentState?.currentLocation,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    bookingStatus: bookingStatus,
+                    pickupLocation: selectedPickUpLocation,
+                    dropoffLocation: selectedDropOffLocation,
+                    paymentMethod: selectedPaymentMethod ?? 'Cash',
+                    fare: currentFare,
+                    bookingManager: _bookingManager,
+                    driverName: driverName,
+                    plateNumber: plateNumber,
+                    vehicleModel: vehicleModel,
+                    phoneNumber: phoneNumber,
+                    isDriverAssigned: isDriverAssigned,
+                    currentLocation: mapScreenKey.currentState?.currentLocation,
                   ),
               ],
             );

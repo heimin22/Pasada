@@ -3,9 +3,9 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 class ToastUtils {
   // Standard toast colors
-  static const Color _successBg = Color(0xFF00CC58);
-  static const Color _errorBg = Color(0xFFE53E3E);
-  static const Color _warningBg = Color(0xFFF59E0B);
+  static const Color _successBg = Color(0xFF00A347);
+  static const Color _errorBg = Color(0xFFC82909);
+  static const Color _warningBg = Color(0xFFE8A917);
   static const Color _infoBg = Color(0xFFF5F5F5);
   static const Color _lightText = Color(0xFFF5F5F5);
   static const Color _darkText = Color(0xFF121212);

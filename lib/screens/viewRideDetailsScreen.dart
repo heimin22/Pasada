@@ -178,48 +178,25 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     final String emailAddress = 'contact.pasada@gmail.com';
     final String subject =
         'Support Request: Booking ${bookingDetails['booking_id'] ?? bookingDetails['id']}';
-
-    // First try the mailto scheme (default email client)
-    final Uri emailUri = Uri(
+    
+    final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: emailAddress,
       queryParameters: {
         'subject': subject,
       },
     );
-
-    try {
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-      } else {
-        // If default email client fails, try opening Gmail directly
-        final Uri gmailUri = Uri(
-          scheme: 'https',
-          host: 'mail.google.com',
-          path: '/mail/u/0/',
-          queryParameters: {
-            'view': 'cm',
-            'fs': '1',
-            'to': emailAddress,
-            'su': subject,
-          },
-        );
-
-        if (await canLaunchUrl(gmailUri)) {
-          await launchUrl(gmailUri, mode: LaunchMode.externalApplication);
-        } else {
-          // If both methods fail, show a toast with the email address
-          Fluttertoast.showToast(
-            msg: 'Could not open email client. Please email $emailAddress',
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.BOTTOM,
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error launching email: $e');
+    
+    // Attempt to launch the email client externally (same as settingsScreen)
+    final bool launched = await launchUrl(
+      emailLaunchUri,
+      mode: LaunchMode.externalApplication,
+    );
+    
+    if (!launched) {
+      // Show error message if email client couldn't be launched
       Fluttertoast.showToast(
-        msg: 'Error contacting support. Please email $emailAddress directly.',
+        msg: 'Could not launch email client. Please email $emailAddress directly.',
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
       );

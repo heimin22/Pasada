@@ -4,7 +4,6 @@ import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 
 class LocationInputContainer extends StatelessWidget {
-  final BuildContext parentContext;
   final double screenWidth;
   final double responsivePadding;
   final double iconSize;
@@ -22,7 +21,6 @@ class LocationInputContainer extends StatelessWidget {
 
   const LocationInputContainer({
     super.key,
-    required this.parentContext,
     required this.screenWidth,
     required this.responsivePadding,
     required this.iconSize,
@@ -37,6 +35,48 @@ class LocationInputContainer extends StatelessWidget {
     required this.onConfirmBooking,
     required this.onPaymentMethodSelected,
   });
+
+  /// Shows the LocationInputContainer as a modal bottom sheet
+  static Future<void> showBottomSheet({
+    required BuildContext context,
+    required bool isRouteSelected,
+    SelectedLocation? selectedPickUpLocation,
+    SelectedLocation? selectedDropOffLocation,
+    required double currentFare,
+    String? selectedPaymentMethod,
+    required ValueNotifier<String> seatingPreference,
+    required Function(bool) onNavigateToLocationSearch,
+    required VoidCallback onShowSeatingPreferenceDialog,
+    required VoidCallback onConfirmBooking,
+    required Function(String) onPaymentMethodSelected,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final responsivePadding = screenWidth * 0.04;
+    final iconSize = screenWidth * 0.06;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return LocationInputContainer(
+          screenWidth: screenWidth,
+          responsivePadding: responsivePadding,
+          iconSize: iconSize,
+          isRouteSelected: isRouteSelected,
+          selectedPickUpLocation: selectedPickUpLocation,
+          selectedDropOffLocation: selectedDropOffLocation,
+          currentFare: currentFare,
+          selectedPaymentMethod: selectedPaymentMethod,
+          seatingPreference: seatingPreference,
+          onNavigateToLocationSearch: onNavigateToLocationSearch,
+          onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
+          onConfirmBooking: onConfirmBooking,
+          onPaymentMethodSelected: onPaymentMethodSelected,
+        );
+      },
+    );
+  }
 
   List<String> _splitLocation(String location) {
     // Handle newline-based addresses (e.g., stop selections with "name\naddress")
@@ -167,138 +207,171 @@ class LocationInputContainer extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      padding: EdgeInsets.all(responsivePadding),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: screenWidth * 0.03,
-            spreadRadius: screenWidth * 0.005,
+            color: Colors.black26,
+            blurRadius: 10,
+            spreadRadius: 1,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildLocationRow(
-            context,
-            svgAssetPickup,
-            selectedPickUpLocation,
-            true,
-            iconSize, // Pass original iconSize here
-            enabled: isRouteSelected,
+          // Bottom sheet drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey[600] : Colors.grey[400],
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-          const Divider(),
-          _buildLocationRow(
-            context,
-            svgAssetDropOff,
-            selectedDropOffLocation,
-            false,
-            iconSize, // Pass original iconSize here
-            enabled: isRouteSelected,
-          ),
-          SizedBox(height: 27),
-          if (isRouteSelected)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: onShowSeatingPreferenceDialog,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.event_seat,
-                          size: 24,
-                          color: const Color(0xFF00CC58),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Preference:',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isRouteSelected
-                                ? (isDarkMode
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF121212))
-                                : Colors.grey,
+          // Main content with padding
+          Padding(
+            padding: EdgeInsets.all(responsivePadding),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildLocationRow(
+                  context,
+                  svgAssetPickup,
+                  selectedPickUpLocation,
+                  true,
+                  iconSize, // Pass original iconSize here
+                  enabled: isRouteSelected,
+                ),
+                const Divider(),
+                _buildLocationRow(
+                  context,
+                  svgAssetDropOff,
+                  selectedDropOffLocation,
+                  false,
+                  iconSize, // Pass original iconSize here
+                  enabled: isRouteSelected,
+                ),
+                SizedBox(height: 27),
+                if (isRouteSelected)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
+                      onTap: onShowSeatingPreferenceDialog,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.event_seat,
+                                size: 24,
+                                color: const Color(0xFF00CC58),
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Preference:',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isRouteSelected
+                                      ? (isDarkMode
+                                          ? const Color(0xFFF5F5F5)
+                                          : const Color(0xFF121212))
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          Row(
+                            children: [
+                              ValueListenableBuilder<String>(
+                                valueListenable: seatingPreference,
+                                builder: (context, preference, _) => Text(
+                                  preference,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isRouteSelected
+                                        ? (isDarkMode
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212))
+                                        : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: isRouteSelected
+                                    ? (isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212))
+                                    : Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                    Row(
-                      children: [
-                        ValueListenableBuilder<String>(
-                          valueListenable: seatingPreference,
-                          builder: (context, preference, _) => Text(
-                            preference,
+                  ),
+                InkWell(
+                  onTap: (isRouteSelected &&
+                          selectedPickUpLocation != null &&
+                          selectedDropOffLocation != null)
+                      ? () async {
+                          final result = await Navigator.push<String>(
+                            context, // Use current context for navigation
+                            MaterialPageRoute(
+                              builder: (context) => PaymentMethodScreen(
+                                currentSelection: selectedPaymentMethod,
+                                fare: currentFare,
+                              ),
+                              fullscreenDialog: true,
+                            ),
+                          );
+                          if (result != null) {
+                            onPaymentMethodSelected(result); // Use callback
+                          }
+                        }
+                      : null,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.payment,
+                            size: 24,
+                            color: const Color(0xFF00CC58),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            selectedPaymentMethod ?? 'Select Payment Method',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: isRouteSelected
+                              color: (isRouteSelected &&
+                                      selectedPickUpLocation != null &&
+                                      selectedDropOffLocation != null)
                                   ? (isDarkMode
                                       ? const Color(0xFFF5F5F5)
                                       : const Color(0xFF121212))
                                   : Colors.grey,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: isRouteSelected
-                              ? (isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212))
-                              : Colors.grey,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          InkWell(
-            onTap: (isRouteSelected &&
-                    selectedPickUpLocation != null &&
-                    selectedDropOffLocation != null)
-                ? () async {
-                    final result = await Navigator.push<String>(
-                      parentContext, // Use parentContext for navigation
-                      MaterialPageRoute(
-                        builder: (context) => PaymentMethodScreen(
-                          currentSelection: selectedPaymentMethod,
-                          fare: currentFare,
-                        ),
-                        fullscreenDialog: true,
+                        ],
                       ),
-                    );
-                    if (result != null) {
-                      onPaymentMethodSelected(result); // Use callback
-                    }
-                  }
-                : null,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.payment,
-                      size: 24,
-                      color: const Color(0xFF00CC58),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      selectedPaymentMethod ?? 'Select Payment Method',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
                         color: (isRouteSelected &&
                                 selectedPickUpLocation != null &&
                                 selectedDropOffLocation != null)
@@ -307,53 +380,44 @@ class LocationInputContainer extends StatelessWidget {
                                 : const Color(0xFF121212))
                             : Colors.grey,
                       ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.05),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (selectedPickUpLocation != null &&
+                            selectedDropOffLocation != null &&
+                            selectedPaymentMethod != null &&
+                            isRouteSelected)
+                        ? onConfirmBooking
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00CC58),
+                      disabledBackgroundColor: const Color(0xFFD3D3D3),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      disabledForegroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  ],
+                    child: const Text(
+                      'Confirm Booking',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: (isRouteSelected &&
-                          selectedPickUpLocation != null &&
-                          selectedDropOffLocation != null)
-                      ? (isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212))
-                      : Colors.grey,
-                ),
+                // Add some bottom padding for the bottom sheet
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
               ],
             ),
           ),
-          SizedBox(height: screenWidth * 0.05),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (selectedPickUpLocation != null &&
-                      selectedDropOffLocation != null &&
-                      selectedPaymentMethod != null &&
-                      isRouteSelected)
-                  ? onConfirmBooking
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00CC58),
-                disabledBackgroundColor: const Color(0xFFD3D3D3),
-                foregroundColor: const Color(0xFFF5F5F5),
-                disabledForegroundColor: const Color(0xFFF5F5F5),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Confirm Booking',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          )
         ],
       ),
     );
