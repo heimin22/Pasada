@@ -2,9 +2,9 @@
 
 **Last Updated:** April 22, 2025
 
-Welcome to Pasada. This Privacy Policy explains how we (“Pasada,” “we,” “us,” or “our”) collect, use, disclose, and safeguard your personal information when you use our mobile application (the “App”). By using the App, you consent to the practices described herein.
+Welcome to Pasada. This Privacy Policy explains how we collect, use, disclose, and safeguard your personal information when you use our mobile application (the “App”). By using the App, you consent to the practices described herein.
 
----
+
 
 ## 1. Information We Collect
 
@@ -28,7 +28,7 @@ We collect information you provide directly, information automatically gathered,
 - **ETA Prediction Provider:** A third-party ETA service that receives anonymized coordinates and time-of-day data.  
 - **Other Integrations:** Any additional vendors we engage, each subject to their own privacy practices.
 
----
+
 
 ## 2. How We Use Your Information
 
@@ -42,7 +42,7 @@ We use your information to:
 - Conduct internal analytics to understand usage trends and improve our service.  
 - Comply with legal obligations.
 
----
+
 
 ## 3. Information Sharing and Disclosure
 
@@ -55,19 +55,19 @@ We share information only as follows:
 
 We do **not** sell, rent, or trade your personal information for marketing purposes.
 
----
+
 
 ## 4. Data Security
 
 We implement administrative, technical, and physical safeguards designed to protect your information against unauthorized access, alteration, disclosure, or destruction. However, no security measure is perfect or impenetrable.
 
----
+
 
 ## 5. Data Retention
 
 We retain personal data only for as long as required to provide our services, comply with legal obligations, resolve disputes, and enforce our agreements. Local data caches may remain on your device until you clear them or uninstall the App.
 
----
+
 
 ## 6. Your Rights and Choices
 
@@ -79,19 +79,19 @@ We retain personal data only for as long as required to provide our services, co
 
 Depending on your jurisdiction, you may have additional rights (e.g., data portability, restriction of processing). To exercise any rights, please contact us.
 
----
+
 
 ## 7. Children’s Privacy
 
 Our App is not directed to children under 13 (or higher age where required by local law). We do not knowingly collect personal information from children below this age. If we learn that we have inadvertently collected such information, we will promptly delete it.
 
----
+
 
 ## 8. Changes to This Privacy Policy
 
 We may update this Privacy Policy from time to time. If we make material changes, we will notify you via the App or other communication methods before those changes take effect. Your continued use of the App constitutes acceptance of the revised policy.
 
----
+
 
 ## 9. Contact Us
 
