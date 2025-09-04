@@ -1,39 +1,33 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/managers/booking_manager.dart';
+import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/screens/mapScreen.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/screens/mapScreen.dart';
-import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/widgets/location_input_container.dart';
-import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
-import 'package:pasada_passenger_app/managers/booking_manager.dart';
-import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
-import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
-import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
-import 'package:pasada_passenger_app/widgets/notification_container.dart';
-import 'package:pasada_passenger_app/widgets/home_weather_widget.dart';
-import 'package:pasada_passenger_app/widgets/home_location_display.dart';
-import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
-import 'package:pasada_passenger_app/widgets/home_header_section.dart';
-import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
-import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
-import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
-import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
-import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
-import 'package:provider/provider.dart';
-import 'package:pasada_passenger_app/providers/weather_provider.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
+import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
+import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
+import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
+import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
+import 'package:pasada_passenger_app/widgets/home_header_section.dart';
+import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
+import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
+import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -275,12 +269,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (!_hasShownStartupAlerts) {
       final List<Widget> alertPages = [];
       final weatherProvider = context.read<WeatherProvider>();
-      
+
       // Rain condition
       if (weatherProvider.isRaining) {
         alertPages.add(const WeatherAlertDialogContent());
       }
-      
+
       // Show alerts in one unified dialog
       if (alertPages.isNotEmpty) {
         await showDialog(
@@ -290,7 +284,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         );
       }
       _hasShownStartupAlerts = true;
-      
+
       // If weather wasn't loaded during initialization, try again after a delay
       if (weatherProvider.weather == null && !weatherProvider.isLoading) {
         _retryWeatherAfterDelay();
@@ -306,7 +300,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         if (weatherProvider.weather == null && !weatherProvider.isLoading) {
           debugPrint('Retrying weather initialization after delay');
           try {
-            final success = await LocationWeatherService.fetchAndSubscribe(weatherProvider);
+            final success =
+                await LocationWeatherService.fetchAndSubscribe(weatherProvider);
             if (success) {
               debugPrint('Delayed weather initialization successful');
             } else {
@@ -422,7 +417,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       });
     }
   }
-
 
   // Add new bottom sheet method for seating preference
   Future<void> _showSeatingPreferenceSheet() async {
@@ -649,7 +643,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     left: responsivePadding,
                     right: responsivePadding,
                     child: Container(
-                      key: locationInputContainerKey, // Assign key here for measurements
+                      key:
+                          locationInputContainerKey, // Assign key here for measurements
                       child: HomeBottomSection(
                         bookingAnimationController: bookingAnimationController,
                         downwardAnimation: _downwardAnimation,
@@ -670,7 +665,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         screenWidth: screenWidth,
                         responsivePadding: responsivePadding,
                         onNavigateToLocationSearch: _navigateToLocationSearch,
-                        onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+                        onShowSeatingPreferenceDialog:
+                            _showSeatingPreferenceSheet,
                         onConfirmBooking: _showBookingConfirmationDialog,
                         onPaymentMethodSelected: (method) {
                           setState(() => selectedPaymentMethod = method);

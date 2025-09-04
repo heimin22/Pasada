@@ -72,18 +72,24 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       final dynamic data = json.decode(response);
 
       Map<String, dynamic> reports = {};
-      
+
       if (data is List) {
         for (final item in data) {
-          final String routeName = item['routeName']?.toString() ?? 'Unknown Route';
-          final String summary = item['summary']?.toString() ?? 'No traffic data available';
+          final String routeName =
+              item['routeName']?.toString() ?? 'Unknown Route';
+          final String summary =
+              item['summary']?.toString() ?? 'No traffic data available';
           final double density = (item['averageDensity'] ?? 0.0).toDouble();
-          
+
           final densityPercentage = (density * 100).round();
-          final densityText = densityPercentage > 70 ? 'Heavy' : 
-                            densityPercentage > 40 ? 'Moderate' : 'Light';
-          
-          reports[routeName] = '$densityText traffic ($densityPercentage%). $summary';
+          final densityText = densityPercentage > 70
+              ? 'Heavy'
+              : densityPercentage > 40
+                  ? 'Moderate'
+                  : 'Light';
+
+          reports[routeName] =
+              '$densityText traffic ($densityPercentage%). $summary';
         }
       }
 
@@ -170,7 +176,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               CircularProgressIndicator(
                 strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  isDarkMode ? const Color(0xFF00CC58) : const Color(0xFF00CC58),
+                  isDarkMode
+                      ? const Color(0xFF00CC58)
+                      : const Color(0xFF00CC58),
                 ),
               ),
               const SizedBox(height: 16),
@@ -278,8 +286,8 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
           final dynamic reportValue = _trafficReports[routeName] ??
               _trafficReports[routeName.toLowerCase()] ??
               _trafficReports[routeName.toUpperCase()];
-          final String reportText = reportValue?.toString() ??
-              'No current traffic report.';
+          final String reportText =
+              reportValue?.toString() ?? 'No current traffic report.';
 
           return _buildTrafficCard(routeName, reportText, isDarkMode);
         },
@@ -287,11 +295,12 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     );
   }
 
-  Widget _buildTrafficCard(String routeName, String reportText, bool isDarkMode) {
+  Widget _buildTrafficCard(
+      String routeName, String reportText, bool isDarkMode) {
     // Extract traffic density for color coding
     String densityLevel = 'Light';
     Color statusColor = const Color(0xFF00CC58); // Green for light traffic
-    
+
     if (reportText.toLowerCase().contains('heavy')) {
       densityLevel = 'Heavy';
       statusColor = const Color(0xFFFF5722); // Red for heavy traffic
@@ -311,7 +320,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.08),
+            color: Colors.black.withAlpha(isDarkMode ? 20 : 8),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -342,9 +351,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
+                  color: statusColor.withAlpha(10),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                  border: Border.all(color: statusColor.withAlpha(30)),
                 ),
                 child: Text(
                   densityLevel,
