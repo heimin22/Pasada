@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:pasada_passenger_app/services/weather_service.dart';
+import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherService _service = WeatherService();
@@ -98,6 +100,32 @@ class WeatherProvider extends ChangeNotifier {
     _lastLon = null;
     _retryCount = 0;
     notifyListeners();
+  }
+
+  /// Initialize weather with location services (used during app startup)
+  Future<bool> initializeWeatherService() async {
+    try {
+      final locationManager = LocationPermissionManager.instance;
+      final locationReady = await locationManager.ensureLocationReady();
+      if (!locationReady) {
+        debugPrint('Cannot initialize weather - location not ready');
+        return false;
+      }
+
+      final location = Location();
+      final locationData = await location.getLocation().timeout(
+        const Duration(seconds: 5),
+      );
+
+      if (locationData.latitude != null && locationData.longitude != null) {
+        await fetchWeather(locationData.latitude!, locationData.longitude!, forceRefresh: true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error initializing weather service: $e');
+      return false;
+    }
   }
 
   /// Format error messages for better user experience

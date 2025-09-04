@@ -23,12 +23,19 @@ class LocationWeatherService {
         return false;
       }
 
-      // Get initial location with timeout
-      final locData = await _location.getLocation().timeout(_locationTimeout);
+      // Get initial location with optimized timeout (since location should already be ready)
+      final locData = await _location.getLocation().timeout(
+        const Duration(seconds: 5), // Reduced timeout since location should be ready
+      );
+      
       if (locData.latitude != null && locData.longitude != null) {
         // Fetch weather immediately for better user experience
         await provider.fetchWeather(locData.latitude!, locData.longitude!);
         _lastLocationUpdate = DateTime.now();
+        debugPrint('Weather fetched for location: ${locData.latitude}, ${locData.longitude}');
+      } else {
+        debugPrint('Location data is null despite location being ready');
+        return false;
       }
 
       // Cancel existing subscription if any

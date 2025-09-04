@@ -274,10 +274,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Show startup alerts only once (weather should be loaded by now)
     if (!_hasShownStartupAlerts) {
       final List<Widget> alertPages = [];
+      final weatherProvider = context.read<WeatherProvider>();
+      
       // Rain condition
-      if (context.read<WeatherProvider>().isRaining) {
+      if (weatherProvider.isRaining) {
         alertPages.add(const WeatherAlertDialogContent());
       }
+      
       // Show alerts in one unified dialog
       if (alertPages.isNotEmpty) {
         await showDialog(
@@ -287,7 +290,34 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         );
       }
       _hasShownStartupAlerts = true;
+      
+      // If weather wasn't loaded during initialization, try again after a delay
+      if (weatherProvider.weather == null && !weatherProvider.isLoading) {
+        _retryWeatherAfterDelay();
+      }
     }
+  }
+
+  /// Retry weather initialization after a delay (fallback for initialization failures)
+  void _retryWeatherAfterDelay() {
+    Future.delayed(const Duration(seconds: 5), () async {
+      if (mounted) {
+        final weatherProvider = context.read<WeatherProvider>();
+        if (weatherProvider.weather == null && !weatherProvider.isLoading) {
+          debugPrint('Retrying weather initialization after delay');
+          try {
+            final success = await LocationWeatherService.fetchAndSubscribe(weatherProvider);
+            if (success) {
+              debugPrint('Delayed weather initialization successful');
+            } else {
+              debugPrint('Delayed weather initialization failed');
+            }
+          } catch (e) {
+            debugPrint('Error in delayed weather retry: $e');
+          }
+        }
+      }
+    });
   }
 
   void loadPaymentMethod() async {

@@ -12,6 +12,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
+import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 class LoadingDialog extends StatefulWidget {
   final String message;
@@ -140,9 +142,17 @@ class InitializationService {
       LoadingDialog.updateMessage('Loading user profile...');
       await _loadUserProfile();
 
-      // Initialize weather data (this requires location permission and network)
-      LoadingDialog.updateMessage('Loading weather data...');
-      await _initializeWeather(context);
+      // Initialize location services first (required for weather)
+      LoadingDialog.updateMessage('Setting up location services...');
+      final locationReady = await _initializeLocation(context);
+
+      // Initialize weather data only if location is available
+      if (locationReady) {
+        LoadingDialog.updateMessage('Loading weather data...');
+        await _initializeWeather(context);
+      } else {
+        debugPrint('Skipping weather initialization - location not available');
+      }
 
       LoadingDialog.updateMessage('Finalizing setup...');
       // Add a slight delay to ensure smooth transition
@@ -347,16 +357,60 @@ class InitializationService {
     entry.remove();
   }
 
-  /// Initialize weather data during resource loading
+  /// Initialize location services and permissions
+  static Future<bool> _initializeLocation(BuildContext context) async {
+    try {
+      final locationManager = LocationPermissionManager.instance;
+      
+      // Ensure location permissions are granted with reasonable timeout
+      final locationReady = await locationManager.ensureLocationReady().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('Location permission setup timed out');
+          return false;
+        },
+      );
+
+      if (!locationReady) {
+        debugPrint('Location not ready - permissions not granted or service unavailable');
+        return false;
+      }
+
+      // Test if we can actually get location data
+      try {
+        final location = Location();
+        final locationData = await location.getLocation().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => throw TimeoutException('Location fetch timeout', const Duration(seconds: 8)),
+        );
+        
+        if (locationData.latitude != null && locationData.longitude != null) {
+          debugPrint('Location services initialized successfully');
+          return true;
+        } else {
+          debugPrint('Location data is invalid');
+          return false;
+        }
+      } catch (e) {
+        debugPrint('Error getting initial location: $e');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error initializing location services: $e');
+      return false;
+    }
+  }
+
+  /// Initialize weather data during resource loading (assumes location is ready)
   static Future<void> _initializeWeather(BuildContext context) async {
     try {
       final weatherProvider = context.read<WeatherProvider>();
       
-      // Attempt to fetch weather data with timeout
+      // Since location is already confirmed to be ready, use a shorter timeout
       final weatherInitialized = await LocationWeatherService.fetchAndSubscribe(
         weatherProvider,
       ).timeout(
-        const Duration(seconds: 15),
+        const Duration(seconds: 8),
         onTimeout: () {
           debugPrint('Weather initialization timed out');
           return false;
@@ -364,8 +418,7 @@ class InitializationService {
       );
 
       if (!weatherInitialized) {
-        debugPrint('Weather initialization failed - location not available');
-        // Don't throw error, just log it - weather is not critical for app function
+        debugPrint('Weather initialization failed despite location being ready');
       } else {
         debugPrint('Weather initialized successfully');
       }

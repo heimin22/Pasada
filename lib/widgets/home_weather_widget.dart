@@ -73,7 +73,12 @@ class HomeWeatherWidget extends StatelessWidget {
         } else {
           return GestureDetector(
             onTap: () async {
-              await LocationWeatherService.refreshWeatherNow(weatherProv);
+              // Try the weather provider's built-in initialization first
+              final initialized = await weatherProv.initializeWeatherService();
+              if (!initialized) {
+                // Fallback to the location weather service
+                await LocationWeatherService.refreshWeatherNow(weatherProv);
+              }
             },
             child: Tooltip(
               message: 'Tap to load weather',
