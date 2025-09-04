@@ -152,9 +152,14 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
                   MaterialPageRoute(builder: (context) => PreferencesScreen()));
             }),
             buildSettingsListItem('Contact Support', screenWidth, () async {
+              final String emailAddress = 'contact.pasada@gmail.com';
+              final String subject = 'Support Request';
               final Uri emailLaunchUri = Uri(
                 scheme: 'mailto',
-                path: 'contact.pasada@gmail.com',
+                path: emailAddress,
+                queryParameters: {
+                  'subject': subject,
+                },
               );
               // Attempt to launch the email client externally
               final bool launched = await launchUrl(

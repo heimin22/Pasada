@@ -9,23 +9,68 @@ import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart
 import 'package:pasada_passenger_app/widgets/offline_bottom_sheet.dart';
 import 'dart:async';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/services/location_weather_service.dart';
+import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
-class LoadingDialog extends StatelessWidget {
+class LoadingDialog extends StatefulWidget {
   final String message;
 
   const LoadingDialog({super.key, this.message = 'Loading resources...'});
 
+  static OverlayEntry? _overlayEntry;
+  static final ValueNotifier<String> _messageNotifier = ValueNotifier('Loading resources...');
+
   static Future<void> show(BuildContext context,
       {String message = 'Loading resources...'}) async {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => LoadingDialog(message: message),
+    if (_overlayEntry != null) return;
+    
+    _messageNotifier.value = message;
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Material(
+        color: Colors.black54,
+        child: Center(
+          child: ValueListenableBuilder<String>(
+            valueListenable: _messageNotifier,
+            builder: (context, currentMessage, _) => LoadingDialog(message: currentMessage),
+          ),
+        ),
+      ),
     );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  static void updateMessage(String message) {
+    _messageNotifier.value = message;
   }
 
   static void hide(BuildContext context) {
-    Navigator.of(context).pop();
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  State<LoadingDialog> createState() => _LoadingDialogState();
+}
+
+class _LoadingDialogState extends State<LoadingDialog> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -42,12 +87,15 @@ class LoadingDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
+            RotationTransition(
+              turns: _controller,
+              child: const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
+              ),
             ),
             const SizedBox(height: 24),
             Text(
-              message,
+              widget.message,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -67,6 +115,7 @@ class InitializationService {
   static Future<void> initialize(BuildContext context) async {
     try {
       // Initialize and check connectivity first
+      LoadingDialog.updateMessage('Checking connectivity...');
       await _initializeConnectivity(context);
 
       // Check if user is authenticated before initializing resources
@@ -79,6 +128,7 @@ class InitializationService {
       }
 
       // Initialize shared resources concurrently for efficiency
+      LoadingDialog.updateMessage('Loading core resources...');
       await Future.wait([
         _initializeSupabase(),
         _preloadUserPreferences(),
@@ -89,8 +139,22 @@ class InitializationService {
       ]);
 
       // Load user profile data if authenticated
+      LoadingDialog.updateMessage('Loading user profile...');
       await _loadUserProfile();
 
+      // Initialize location services first (required for weather)
+      LoadingDialog.updateMessage('Setting up location services...');
+      final locationReady = await _initializeLocation(context);
+
+      // Initialize weather data only if location is available
+      if (locationReady) {
+        LoadingDialog.updateMessage('Loading weather data...');
+        await _initializeWeather(context);
+      } else {
+        debugPrint('Skipping weather initialization - location not available');
+      }
+
+      LoadingDialog.updateMessage('Finalizing setup...');
       // Add a slight delay to ensure smooth transition
       await Future.delayed(const Duration(milliseconds: 300));
     } catch (e) {
@@ -291,5 +355,76 @@ class InitializationService {
       // ignore timeout or errors
     }
     entry.remove();
+  }
+
+  /// Initialize location services and permissions
+  static Future<bool> _initializeLocation(BuildContext context) async {
+    try {
+      final locationManager = LocationPermissionManager.instance;
+      
+      // Ensure location permissions are granted with reasonable timeout
+      final locationReady = await locationManager.ensureLocationReady().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('Location permission setup timed out');
+          return false;
+        },
+      );
+
+      if (!locationReady) {
+        debugPrint('Location not ready - permissions not granted or service unavailable');
+        return false;
+      }
+
+      // Test if we can actually get location data
+      try {
+        final location = Location();
+        final locationData = await location.getLocation().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => throw TimeoutException('Location fetch timeout', const Duration(seconds: 8)),
+        );
+        
+        if (locationData.latitude != null && locationData.longitude != null) {
+          debugPrint('Location services initialized successfully');
+          return true;
+        } else {
+          debugPrint('Location data is invalid');
+          return false;
+        }
+      } catch (e) {
+        debugPrint('Error getting initial location: $e');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('Error initializing location services: $e');
+      return false;
+    }
+  }
+
+  /// Initialize weather data during resource loading (assumes location is ready)
+  static Future<void> _initializeWeather(BuildContext context) async {
+    try {
+      final weatherProvider = context.read<WeatherProvider>();
+      
+      // Since location is already confirmed to be ready, use a shorter timeout
+      final weatherInitialized = await LocationWeatherService.fetchAndSubscribe(
+        weatherProvider,
+      ).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          debugPrint('Weather initialization timed out');
+          return false;
+        },
+      );
+
+      if (!weatherInitialized) {
+        debugPrint('Weather initialization failed despite location being ready');
+      } else {
+        debugPrint('Weather initialized successfully');
+      }
+    } catch (e) {
+      debugPrint('Error initializing weather: $e');
+      // Don't throw error, weather loading failure shouldn't block app initialization
+    }
   }
 }
