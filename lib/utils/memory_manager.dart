@@ -1,12 +1,29 @@
-import 'dart:collection';
 import 'dart:async';
+import 'dart:collection';
+
 import 'package:flutter/cupertino.dart';
+
+// Enhanced cache item with TTL support
+class CacheItem {
+  final dynamic value;
+  final DateTime createdAt;
+  final Duration? ttl;
+
+  CacheItem(this.value, {this.ttl}) : createdAt = DateTime.now();
+
+  bool get isExpired {
+    if (ttl == null) return false;
+    return DateTime.now().difference(createdAt) > ttl!;
+  }
+}
 
 // this class is used to manage the memory of the app
 class MemoryManager {
-  MemoryManager._privateConstructor() : cacheSizeLimit = 100 {
-    cache = LinkedHashMap<String, dynamic>();
+  MemoryManager._privateConstructor() : cacheSizeLimit = 250 {
+    // Increased from 100
+    cache = LinkedHashMap<String, CacheItem>();
     _initializeMemoryMonitoring();
+    _startTTLCleanupTimer();
   }
 
   static final MemoryManager instance = MemoryManager._privateConstructor();
@@ -15,11 +32,14 @@ class MemoryManager {
     return instance;
   }
 
-  // maximum number of items in the cache
+  // maximum number of items in the cache (increased for better performance)
   final int cacheSizeLimit;
 
   // internal cache storage using linked hash map para sa LRU behavior
-  late final LinkedHashMap<String, dynamic> cache;
+  late final LinkedHashMap<String, CacheItem> cache;
+
+  // TTL cleanup timer
+  Timer? _ttlCleanupTimer;
 
   // Memory pressure monitoring thresholds
   static const double _highPressureThreshold = 0.8; // 80% capacity
@@ -32,8 +52,8 @@ class MemoryManager {
   int _pressureCleanups = 0;
   DateTime? _lastPressureCleanup;
 
-  MemoryManager.privateConstructor({this.cacheSizeLimit = 100}) {
-    cache = LinkedHashMap<String, dynamic>();
+  MemoryManager.privateConstructor({this.cacheSizeLimit = 250}) {
+    cache = LinkedHashMap<String, CacheItem>();
   }
 
   // Initialize memory monitoring system
@@ -46,8 +66,37 @@ class MemoryManager {
         'Medium pressure threshold: ${(_mediumPressureThreshold * 100).toInt()}%');
   }
 
-  // Enhanced add to cache with proactive memory pressure monitoring
-  void addToCache(String key, dynamic value) {
+  // Start TTL cleanup timer
+  void _startTTLCleanupTimer() {
+    _ttlCleanupTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      _cleanupExpiredItems();
+    });
+  }
+
+  // Clean up expired items
+  void _cleanupExpiredItems() {
+    final expiredKeys = <String>[];
+
+    for (final entry in cache.entries) {
+      if (entry.value.isExpired) {
+        expiredKeys.add(entry.key);
+      }
+    }
+
+    for (final key in expiredKeys) {
+      cache.remove(key);
+    }
+
+    if (expiredKeys.isNotEmpty) {
+      debugPrint('🕐 TTL cleanup: removed ${expiredKeys.length} expired items');
+    }
+  }
+
+  // Enhanced add to cache with proactive memory pressure monitoring and TTL support
+  void addToCache(String key, dynamic value, {Duration? ttl}) {
+    // Clean up expired items first
+    _cleanupExpiredItems();
+
     // Proactive memory pressure check BEFORE adding new items
     _handleMemoryPressure();
 
@@ -56,8 +105,8 @@ class MemoryManager {
       cache.remove(key);
     }
 
-    // add the new value, making it the most recently used
-    cache[key] = value;
+    // add the new value with TTL, making it the most recently used
+    cache[key] = CacheItem(value, ttl: ttl);
 
     // Final safety check - if still over limit after pressure management
     if (cache.length > cacheSizeLimit) {
@@ -66,6 +115,13 @@ class MemoryManager {
     }
 
     _logCacheStatus();
+  }
+
+  // Convenience method for adding items with default TTL
+  void addToCacheWithDefaultTTL(String key, dynamic value,
+      {Duration? customTTL}) {
+    final ttl = customTTL ?? const Duration(hours: 1); // Default 1 hour TTL
+    addToCache(key, value, ttl: ttl);
   }
 
   // Proactive memory pressure monitoring and cleanup
@@ -120,18 +176,40 @@ class MemoryManager {
         'Cache: ${cache.length}/$cacheSizeLimit items | Status: $status (${(pressure * 100).toInt()}%)');
   }
 
-  // Enhanced retrieval with performance tracking
+  // Enhanced retrieval with performance tracking and TTL checking
   dynamic getFromCache(String key) {
-    final value = cache.remove(key);
-    if (value != null) {
+    final cacheItem = cache.remove(key);
+    if (cacheItem != null) {
+      // Check if item is expired
+      if (cacheItem.isExpired) {
+        // Don't re-add expired item, treat as cache miss
+        _totalCacheMisses++;
+        debugPrint('🕐 Cache item expired: $key');
+        return null;
+      }
+
       // Move to end (most recently used) and track cache hit
-      cache[key] = value;
+      cache[key] = cacheItem;
       _totalCacheHits++;
+      return cacheItem.value;
     } else {
       // Track cache miss
       _totalCacheMisses++;
+      return null;
     }
-    return value;
+  }
+
+  // Get cache item age
+  Duration? getCacheItemAge(String key) {
+    final item = cache[key];
+    if (item == null) return null;
+    return DateTime.now().difference(item.createdAt);
+  }
+
+  // Check if cache item exists and is not expired
+  bool isCacheItemValid(String key) {
+    final item = cache[key];
+    return item != null && !item.isExpired;
   }
 
   // clears the entire cache
@@ -239,7 +317,10 @@ class MemoryManager {
     // Print final memory health report
     printMemoryHealthReport();
 
-    // Clean up timers
+    // Clean up TTL timer
+    _ttlCleanupTimer?.cancel();
+
+    // Clean up throttle/debounce timers
     for (var timer in throttleTimers.values) {
       timer.cancel();
     }
@@ -251,6 +332,7 @@ class MemoryManager {
 
     // Clear cache
     clearCache();
-    debugPrint("Enhanced Memory Manager with pressure monitoring disposed");
+    debugPrint(
+        "Enhanced Memory Manager with TTL and pressure monitoring disposed");
   }
 }
