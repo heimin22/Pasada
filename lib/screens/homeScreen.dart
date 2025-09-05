@@ -23,6 +23,7 @@ import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
+import 'package:pasada_passenger_app/widgets/location_input_container.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
@@ -98,6 +99,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   final ValueNotifier<String> seatingPreference = // Made public
       ValueNotifier<String>('Sitting');
+  final ValueNotifier<String> selectedDiscountSpecification = // Made public
+      ValueNotifier<String>('');
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
@@ -429,6 +432,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
+  // Add new bottom sheet method for discount selection
+  Future<void> _showDiscountSelectionSheet() async {
+    await LocationInputContainer.showDiscountSelectionDialog(
+      context: context,
+      selectedDiscountSpecification: selectedDiscountSpecification,
+    );
+  }
+
   Future<void> _navigateToLocationSearch(bool isPickup) async {
     int? routeId;
     List<LatLng>? routePolyline;
@@ -661,12 +672,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         selectedDropOffLocation: selectedDropOffLocation,
                         currentFare: currentFare,
                         selectedPaymentMethod: selectedPaymentMethod,
+                        selectedDiscountSpecification:
+                            selectedDiscountSpecification,
                         seatingPreference: seatingPreference,
                         screenWidth: screenWidth,
                         responsivePadding: responsivePadding,
                         onNavigateToLocationSearch: _navigateToLocationSearch,
                         onShowSeatingPreferenceDialog:
                             _showSeatingPreferenceSheet,
+                        onShowDiscountSelectionDialog:
+                            _showDiscountSelectionSheet,
                         onConfirmBooking: _showBookingConfirmationDialog,
                         onPaymentMethodSelected: (method) {
                           setState(() => selectedPaymentMethod = method);
