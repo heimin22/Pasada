@@ -333,6 +333,7 @@ class SequentialPermissionManager {
                     'Skip',
                     style: TextStyle(
                       fontFamily: 'Inter',
+                      color: Color(0xFFD7481D),
                     ),
                   ),
                 ),
@@ -342,6 +343,7 @@ class SequentialPermissionManager {
                   'Allow',
                   style: TextStyle(
                     fontFamily: 'Inter',
+                    color: Color(0xFF00CC58),
                   ),
                 ),
               ),

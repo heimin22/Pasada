@@ -101,6 +101,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ValueNotifier<String>('Sitting');
   final ValueNotifier<String> selectedDiscountSpecification = // Made public
       ValueNotifier<String>('');
+  final ValueNotifier<String?> selectedIdImagePath = // Made public
+      ValueNotifier<String?>(null);
 
   bool get isRouteSelected =>
       selectedRoute != null && selectedRoute!['route_name'] != 'Select Route';
@@ -437,6 +439,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     await LocationInputContainer.showDiscountSelectionDialog(
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
+      selectedIdImagePath: selectedIdImagePath,
     );
   }
 
@@ -675,6 +678,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         selectedDiscountSpecification:
                             selectedDiscountSpecification,
                         seatingPreference: seatingPreference,
+                        selectedIdImagePath: selectedIdImagePath,
                         screenWidth: screenWidth,
                         responsivePadding: responsivePadding,
                         onNavigateToLocationSearch: _navigateToLocationSearch,

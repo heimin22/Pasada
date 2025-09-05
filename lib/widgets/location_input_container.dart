@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
+import 'package:pasada_passenger_app/services/id_camera_service.dart';
 
 class LocationInputContainer extends StatelessWidget {
   final double screenWidth;
@@ -14,6 +17,7 @@ class LocationInputContainer extends StatelessWidget {
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
+  final ValueNotifier<String?> selectedIdImagePath;
   final Function(bool) onNavigateToLocationSearch;
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
@@ -33,6 +37,7 @@ class LocationInputContainer extends StatelessWidget {
     this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
     required this.seatingPreference,
+    required this.selectedIdImagePath,
     required this.onNavigateToLocationSearch,
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
@@ -50,6 +55,7 @@ class LocationInputContainer extends StatelessWidget {
     String? selectedPaymentMethod,
     required ValueNotifier<String> selectedDiscountSpecification,
     required ValueNotifier<String> seatingPreference,
+    required ValueNotifier<String?> selectedIdImagePath,
     required Function(bool) onNavigateToLocationSearch,
     required VoidCallback onShowSeatingPreferenceDialog,
     required VoidCallback onShowDiscountSelectionDialog,
@@ -76,6 +82,7 @@ class LocationInputContainer extends StatelessWidget {
           selectedPaymentMethod: selectedPaymentMethod,
           selectedDiscountSpecification: selectedDiscountSpecification,
           seatingPreference: seatingPreference,
+          selectedIdImagePath: selectedIdImagePath,
           onNavigateToLocationSearch: onNavigateToLocationSearch,
           onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
           onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
@@ -90,6 +97,7 @@ class LocationInputContainer extends StatelessWidget {
   static Future<void> showDiscountSelectionDialog({
     required BuildContext context,
     required ValueNotifier<String> selectedDiscountSpecification,
+    required ValueNotifier<String?> selectedIdImagePath,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final discountOptions = [
@@ -161,17 +169,36 @@ class LocationInputContainer extends StatelessWidget {
                         builder: (context, currentValue, _) {
                           final isSelected = currentValue == option['value'];
                           return InkWell(
-                            onTap: () {
-                              selectedDiscountSpecification.value =
-                                  option['value']!;
-                              Navigator.of(context).pop();
+                            onTap: () async {
+                              final discountType = option['value']!;
+
+                              // If selecting "None", clear both discount and image
+                              if (discountType.isEmpty) {
+                                selectedDiscountSpecification.value = '';
+                                selectedIdImagePath.value = null;
+                                Navigator.of(context).pop();
+                                return;
+                              }
+
+                              // For other discounts, capture ID image first
+                              Navigator.of(context)
+                                  .pop(); // Close current dialog
+
+                              final capturedImage =
+                                  await IdCameraService.captureIdImage(context);
+                              if (capturedImage != null) {
+                                selectedDiscountSpecification.value =
+                                    discountType;
+                                selectedIdImagePath.value = capturedImage.path;
+                              }
+                              // If image capture fails or is cancelled, don't update discount
                             },
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(0xFF00CC58).withOpacity(0.1)
+                                    ? const Color(0xFF00CC58).withAlpha(10)
                                     : (isDarkMode
                                         ? const Color(0xFF2A2A2A)
                                         : Colors.white),
@@ -246,6 +273,161 @@ class LocationInputContainer extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  /// Builds the ID image display container
+  Widget _buildIdImageContainer(
+    BuildContext context,
+    String imagePath,
+    ValueNotifier<String> selectedDiscountSpecification,
+    ValueNotifier<String?> selectedIdImagePath,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF00CC58).withAlpha(50),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.verified_user,
+                color: const Color(0xFF00CC58),
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'ID Verification',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
+                ),
+              ),
+              const Spacer(),
+              PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 18,
+                  color: isDarkMode
+                      ? const Color(0xFFAAAAAA)
+                      : const Color(0xFF666666),
+                ),
+                onSelected: (value) async {
+                  if (value == 'retake') {
+                    final newImage =
+                        await IdCameraService.captureIdImage(context);
+                    if (newImage != null) {
+                      selectedIdImagePath.value = newImage.path;
+                    }
+                  } else if (value == 'remove') {
+                    selectedIdImagePath.value = null;
+                    selectedDiscountSpecification.value = '';
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'retake',
+                    child: Row(
+                      children: [
+                        Icon(Icons.camera_alt, size: 18),
+                        SizedBox(width: 8),
+                        Text('Retake Photo'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'remove',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Remove', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: double.infinity,
+              height: 120,
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF3A3A3A)
+                    : const Color(0xFFF0F0F0),
+              ),
+              child: Image.file(
+                File(imagePath),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Failed to load image',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDarkMode
+                                ? const Color(0xFFAAAAAA)
+                                : const Color(0xFF666666),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: const Color(0xFF00CC58),
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              ValueListenableBuilder<String>(
+                valueListenable: selectedDiscountSpecification,
+                builder: (context, discount, _) => Text(
+                  '$discount ID verified',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: const Color(0xFF00CC58),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -493,6 +675,24 @@ class LocationInputContainer extends StatelessWidget {
                       ),
                     ),
                   ),
+                // ID Image Display Container
+                ValueListenableBuilder<String?>(
+                  valueListenable: selectedIdImagePath,
+                  builder: (context, imagePath, _) {
+                    if (imagePath != null && imagePath.isNotEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildIdImageContainer(
+                          context,
+                          imagePath,
+                          selectedDiscountSpecification,
+                          selectedIdImagePath,
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
                 if (isRouteSelected)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
