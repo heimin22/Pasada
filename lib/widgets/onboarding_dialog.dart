@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
+
+import '../services/sequential_permission_manager.dart';
 
 class OnboardingDialog extends StatefulWidget {
   const OnboardingDialog({super.key});
@@ -98,9 +99,10 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                     },
                     child: Text(
                       'Previous',
-                      style: TextStyle(
-                        color: const Color(0xFF00CC58),
+                      style: const TextStyle(
+                        color: Color(0xFF00CC58),
                         fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
                       ),
                     ),
                   )
@@ -132,6 +134,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
+                      fontFamily: 'Inter',
                     ),
                   ),
                 ),
@@ -223,9 +226,6 @@ Future<void> showOnboardingDialog(BuildContext context) async {
     return;
   }
 
-  // Request location permissions first
-  await _requestLocationPermissions();
-
   // Get shared preferences
   final prefs = await SharedPreferences.getInstance();
 
@@ -250,6 +250,9 @@ Future<void> showOnboardingDialog(BuildContext context) async {
 
         // After dialog is closed, mark onboarding as complete
         await prefs.setBool('onboarding_complete', true);
+
+        // Request permissions sequentially after onboarding is complete
+        await _requestPermissionsSequentially(context);
       } finally {
         _isOnboardingDialogShowing = false;
       }
@@ -263,16 +266,153 @@ Future<bool> shouldShowOnboarding() async {
   return !(prefs.getBool('onboarding_complete') ?? false);
 }
 
-// Helper function to request location permissions
-Future<void> _requestLocationPermissions() async {
-  // Request location permissions
-  await Permission.location.request();
+// Helper function to request permissions sequentially
+Future<void> _requestPermissionsSequentially(BuildContext context) async {
+  if (!context.mounted) return;
 
-  // For background location on Android, we need to request it separately
-  if (await Permission.location.isGranted) {
-    await Permission.locationAlways.request();
+  try {
+    debugPrint('Starting sequential permission flow...');
+
+    final result =
+        await SequentialPermissionManager.instance.requestOnboardingPermissions(
+      context: context,
+      showExplanations: true,
+    );
+
+    if (result.success) {
+      debugPrint('All essential permissions granted successfully');
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.message,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+              ),
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      debugPrint(
+          'Some essential permissions were not granted: ${result.message}');
+      // Show warning about missing permissions
+      if (context.mounted) {
+        _showPermissionWarningDialog(context, result);
+      }
+    }
+  } catch (e) {
+    debugPrint('Error during permission flow: $e');
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Failed to set up permissions. Please check app settings.',
+            style: TextStyle(
+              fontFamily: 'Inter',
+            ),
+          ),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
   }
+}
 
-  // Request notification permissions
-  await Permission.notification.request();
+// Show warning dialog for missing essential permissions
+Future<void> _showPermissionWarningDialog(
+  BuildContext context,
+  PermissionFlowResult result,
+) async {
+  if (!context.mounted) return;
+
+  return showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.warning, color: Colors.orange, size: 24),
+          SizedBox(width: 12),
+          Text(
+            'Permissions Required',
+            style: TextStyle(
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            result.message,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'You can grant these permissions later in the app settings or when prompted.',
+            style: TextStyle(
+              fontSize: 14,
+              fontFamily: 'Inter',
+            ),
+          ),
+          if (result.failedEssentialPermissions?.isNotEmpty == true) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'Essential permissions not granted:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Inter',
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...result.failedEssentialPermissions!.map(
+              (permission) => Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 4),
+                child: Text(
+                  '• ${permission.title}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text(
+            'Continue',
+            style: TextStyle(
+              fontFamily: 'Inter',
+            ),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            // Retry permission flow
+            _requestPermissionsSequentially(context);
+          },
+          child: const Text(
+            'Retry',
+            style: TextStyle(
+              fontFamily: 'Inter',
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
