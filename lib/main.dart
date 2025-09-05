@@ -1,19 +1,20 @@
 import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:pasada_passenger_app/authentication/authGate.dart';
 import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
-import 'package:pasada_passenger_app/theme/theme_controller.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_passenger_app/authentication/authGate.dart';
-import 'package:pasada_passenger_app/utils/memory_manager.dart';
-import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/theme/theme_controller.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Define a top-level handler for background messages
 @pragma('vm:entry-point')
@@ -26,20 +27,19 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 }
 
-/// Bootstraps core services in parallel and caches env vars
-Future<void> _bootstrapServices() async {
+/// Bootstraps only critical services for faster initial startup
+Future<void> _bootstrapCriticalServices() async {
   final memoryManager = MemoryManager();
 
-  // Kick off Firebase, env loading, and Notification Service concurrently
+  // Start only absolutely essential services in parallel
   await Future.wait([
     Firebase.initializeApp(),
     dotenv.load(fileName: '.env').then((_) {
-      // Cache supabase config
+      // Cache only essential config
       memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
       memoryManager.addToCache(
           'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
     }),
-    NotificationService.initialize(),
   ]);
 
   // Initialize Supabase if config is present
@@ -64,14 +64,127 @@ Future<void> main() async {
   // Attach background handler before Firebase init
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Start core bootstrapping but don't await to let UI render
-  final initFuture = _bootstrapServices();
+  // Enhanced: Use priority-based initialization for faster startup
+  // Start only critical services, let rest load progressively
+  final initFuture = _bootstrapCriticalServices();
 
-  // Show splash / loader while services boot
-  runApp(AppInitializer(initFuture));
+  // Show enhanced app initializer with priority loading
+  runApp(EnhancedAppInitializer(initFuture));
 }
 
-/// Shows a loading indicator until bootstrap completes, then launches the real app
+/// Enhanced app initializer with priority-based loading
+class EnhancedAppInitializer extends StatefulWidget {
+  final Future<void> criticalInitFuture;
+  const EnhancedAppInitializer(this.criticalInitFuture, {super.key});
+
+  @override
+  State<EnhancedAppInitializer> createState() => _EnhancedAppInitializerState();
+}
+
+class _EnhancedAppInitializerState extends State<EnhancedAppInitializer> {
+  bool _criticalComplete = false;
+  String _statusMessage = 'Starting core services...';
+  double _progress = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWithProgress();
+  }
+
+  Future<void> _initializeWithProgress() async {
+    try {
+      // Wait for critical services
+      await widget.criticalInitFuture;
+
+      if (mounted) {
+        setState(() {
+          _criticalComplete = true;
+          _statusMessage = 'Ready to launch!';
+          _progress = 1.0;
+        });
+      }
+    } catch (e) {
+      debugPrint('Critical initialization error: $e');
+      if (mounted) {
+        setState(() {
+          _statusMessage = 'Initialization failed';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_criticalComplete) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: const Color(0xFF121212),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // App logo
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFF00CC58),
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // App name
+                const Text(
+                  'Pasada',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFF5F5F5),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+                const SizedBox(height: 48),
+
+                // Progress indicator
+                SizedBox(
+                  width: 200,
+                  child: LinearProgressIndicator(
+                    value: _progress > 0 ? _progress : null,
+                    backgroundColor: const Color(0xFF333333),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Color(0xFF00CC58)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Status message
+                Text(
+                  _statusMessage,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFFCCCCCC),
+                    fontFamily: 'Inter',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return const PasadaPassenger();
+  }
+}
+
+/// Legacy app initializer (kept for compatibility)
 class AppInitializer extends StatelessWidget {
   final Future<void> initFuture;
   const AppInitializer(this.initFuture, {super.key});

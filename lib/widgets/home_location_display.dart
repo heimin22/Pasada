@@ -11,11 +11,14 @@ class HomeLocationDisplay extends StatelessWidget {
   final SelectedLocation? selectedDropOffLocation;
   final double currentFare;
   final String? selectedPaymentMethod;
+  final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
+  final ValueNotifier<String?> selectedIdImagePath;
   final double screenWidth;
   final double responsivePadding;
   final Function(bool) onNavigateToLocationSearch;
   final VoidCallback onShowSeatingPreferenceDialog;
+  final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
   final Function(String) onPaymentMethodSelected;
 
@@ -26,11 +29,14 @@ class HomeLocationDisplay extends StatelessWidget {
     required this.selectedDropOffLocation,
     required this.currentFare,
     required this.selectedPaymentMethod,
+    required this.selectedDiscountSpecification,
     required this.seatingPreference,
+    required this.selectedIdImagePath,
     required this.screenWidth,
     required this.responsivePadding,
     required this.onNavigateToLocationSearch,
     required this.onShowSeatingPreferenceDialog,
+    required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
     required this.onPaymentMethodSelected,
   });
@@ -82,15 +88,17 @@ class HomeLocationDisplay extends StatelessWidget {
             selectedDropOffLocation: selectedDropOffLocation,
             currentFare: currentFare,
             selectedPaymentMethod: selectedPaymentMethod,
+            selectedDiscountSpecification: selectedDiscountSpecification,
             seatingPreference: seatingPreference,
+            selectedIdImagePath: selectedIdImagePath,
             onNavigateToLocationSearch: onNavigateToLocationSearch,
             onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
+            onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
             onConfirmBooking: onConfirmBooking,
             onPaymentMethodSelected: (method) {
               onPaymentMethodSelected(method);
               SharedPreferences.getInstance().then(
-                (prefs) => prefs.setString('selectedPaymentMethod', method)
-              );
+                  (prefs) => prefs.setString('selectedPaymentMethod', method));
             },
           );
         },
@@ -152,7 +160,7 @@ class HomeLocationDisplay extends StatelessWidget {
               ),
               const SizedBox(height: 8),
             ],
-            
+
             // Pickup Location with Icon
             Row(
               children: [
@@ -164,28 +172,30 @@ class HomeLocationDisplay extends StatelessWidget {
                 SizedBox(width: screenWidth * 0.03),
                 Expanded(
                   child: selectedPickUpLocation != null
-                      ? _buildLocationDisplay(selectedPickUpLocation!.address, context)
+                      ? _buildLocationDisplay(
+                          selectedPickUpLocation!.address, context)
                       : Text(
                           'Pick-up location',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
                           ),
                         ),
                 ),
               ],
             ),
-            
+
             // Divider and Drop-off Location
             if (selectedDropOffLocation != null) ...[
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8.0),
                 child: Divider(),
               ),
-              
+
               // Drop-off Location with Icon
               Row(
                 children: [
@@ -196,7 +206,8 @@ class HomeLocationDisplay extends StatelessWidget {
                   ),
                   SizedBox(width: screenWidth * 0.03),
                   Expanded(
-                    child: _buildLocationDisplay(selectedDropOffLocation!.address, context),
+                    child: _buildLocationDisplay(
+                        selectedDropOffLocation!.address, context),
                   ),
                 ],
               ),

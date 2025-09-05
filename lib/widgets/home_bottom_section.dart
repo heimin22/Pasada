@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/widgets/notification_container.dart';
-import 'package:pasada_passenger_app/widgets/home_location_display.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/widgets/home_location_display.dart';
+import 'package:pasada_passenger_app/widgets/notification_container.dart';
 
 /// Bottom section containing notification and location display
 class HomeBottomSection extends StatelessWidget {
@@ -16,11 +16,14 @@ class HomeBottomSection extends StatelessWidget {
   final SelectedLocation? selectedDropOffLocation;
   final double currentFare;
   final String? selectedPaymentMethod;
+  final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
+  final ValueNotifier<String?> selectedIdImagePath;
   final double screenWidth;
   final double responsivePadding;
   final Function(bool) onNavigateToLocationSearch;
   final VoidCallback onShowSeatingPreferenceDialog;
+  final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
   final Function(String) onPaymentMethodSelected;
 
@@ -37,11 +40,14 @@ class HomeBottomSection extends StatelessWidget {
     required this.selectedDropOffLocation,
     required this.currentFare,
     required this.selectedPaymentMethod,
+    required this.selectedDiscountSpecification,
     required this.seatingPreference,
+    required this.selectedIdImagePath,
     required this.screenWidth,
     required this.responsivePadding,
     required this.onNavigateToLocationSearch,
     required this.onShowSeatingPreferenceDialog,
+    required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
     required this.onPaymentMethodSelected,
   });
@@ -74,11 +80,14 @@ class HomeBottomSection extends StatelessWidget {
                   selectedDropOffLocation: selectedDropOffLocation,
                   currentFare: currentFare,
                   selectedPaymentMethod: selectedPaymentMethod,
+                  selectedDiscountSpecification: selectedDiscountSpecification,
                   seatingPreference: seatingPreference,
+                  selectedIdImagePath: selectedIdImagePath,
                   screenWidth: screenWidth,
                   responsivePadding: responsivePadding,
                   onNavigateToLocationSearch: onNavigateToLocationSearch,
                   onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
+                  onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
                   onConfirmBooking: onConfirmBooking,
                   onPaymentMethodSelected: onPaymentMethodSelected,
                 ),

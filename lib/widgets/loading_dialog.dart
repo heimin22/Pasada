@@ -21,12 +21,13 @@ class LoadingDialog extends StatefulWidget {
   const LoadingDialog({super.key, this.message = 'Loading resources...'});
 
   static OverlayEntry? _overlayEntry;
-  static final ValueNotifier<String> _messageNotifier = ValueNotifier('Loading resources...');
+  static final ValueNotifier<String> _messageNotifier =
+      ValueNotifier('Loading resources...');
 
   static Future<void> show(BuildContext context,
       {String message = 'Loading resources...'}) async {
     if (_overlayEntry != null) return;
-    
+
     _messageNotifier.value = message;
     _overlayEntry = OverlayEntry(
       builder: (context) => Material(
@@ -34,7 +35,8 @@ class LoadingDialog extends StatefulWidget {
         child: Center(
           child: ValueListenableBuilder<String>(
             valueListenable: _messageNotifier,
-            builder: (context, currentMessage, _) => LoadingDialog(message: currentMessage),
+            builder: (context, currentMessage, _) =>
+                LoadingDialog(message: currentMessage),
           ),
         ),
       ),
@@ -55,7 +57,8 @@ class LoadingDialog extends StatefulWidget {
   State<LoadingDialog> createState() => _LoadingDialogState();
 }
 
-class _LoadingDialogState extends State<LoadingDialog> with SingleTickerProviderStateMixin {
+class _LoadingDialogState extends State<LoadingDialog>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -134,7 +137,7 @@ class InitializationService {
         _preloadUserPreferences(),
         _initializeLocalDatabase(),
         _configureNotifications(),
-        _initializeEncryption(),  // Add encryption initialization
+        _initializeEncryption(), // Add encryption initialization
         _preloadGoogleMap(context),
       ]);
 
@@ -167,13 +170,14 @@ class InitializationService {
   static Future<void> _initializeConnectivity(BuildContext context) async {
     // Initialize the connectivity service
     await OfflineConnectionCheckService().initialize();
-    
+
     // Check initial connectivity
-    final isConnected = await OfflineConnectionCheckService().checkConnectivity();
-    
+    final isConnected =
+        await OfflineConnectionCheckService().checkConnectivity();
+
     if (!isConnected) {
       debugPrint('No internet connection detected during initialization');
-      
+
       // Show offline bottom sheet and wait for connection
       await _handleOfflineState(context);
     }
@@ -182,13 +186,13 @@ class InitializationService {
   /// Handle offline state by showing bottom sheet until connection is restored
   static Future<void> _handleOfflineState(BuildContext context) async {
     final connectivityService = OfflineConnectionCheckService();
-    
+
     // Only show the bottom sheet if it's not already shown
     if (!connectivityService.isOfflineBottomSheetShown) {
       connectivityService.setOfflineBottomSheetShown(true);
-      
+
       final completer = Completer<void>();
-      
+
       // Show the offline bottom sheet
       await OfflineBottomSheet.show(
         context,
@@ -199,16 +203,17 @@ class InitializationService {
         },
         isPersistent: true,
       );
-      
+
       // Wait until connection is restored
       await completer.future;
     } else {
-      debugPrint('Offline bottom sheet already shown, waiting for connection silently');
-      
+      debugPrint(
+          'Offline bottom sheet already shown, waiting for connection silently');
+
       // Wait for connection without showing another bottom sheet
       final completer = Completer<void>();
       late StreamSubscription<bool> subscription;
-      
+
       subscription = connectivityService.connectionStream.listen((isConnected) {
         if (isConnected) {
           debugPrint('Connection restored silently');
@@ -216,38 +221,14 @@ class InitializationService {
           completer.complete();
         }
       });
-      
+
       // Check if already connected
       if (connectivityService.isConnected) {
         subscription.cancel();
         completer.complete();
       }
-      
+
       await completer.future;
-    }
-  }
-
-  /// Initialize resources and sync profile when connection is restored
-  static Future<void> _initializeResourcesAndProfile() async {
-    try {
-      debugPrint('Initializing resources and syncing profile after connection restore');
-      
-      // Initialize shared resources concurrently for efficiency
-      await Future.wait([
-        _initializeSupabase(),
-        _preloadUserPreferences(),
-        _initializeLocalDatabase(),
-        _configureNotifications(),
-        _initializeEncryption(),
-      ]);
-
-      // Load and sync user profile data if authenticated
-      await _loadUserProfile();
-      
-      debugPrint('Resources and profile sync completed successfully');
-    } catch (e) {
-      debugPrint('Error during resource initialization and profile sync: $e');
-      rethrow;
     }
   }
 
@@ -295,13 +276,13 @@ class InitializationService {
     // Initialize encryption service for secure user data handling
     final encryptionService = EncryptionService();
     await encryptionService.initialize();
-    
+
     // Test encryption to ensure it's working properly
     final testPassed = await encryptionService.testEncryption();
     if (!testPassed) {
       throw Exception('Encryption service test failed');
     }
-    
+
     debugPrint('Encryption service initialized and tested successfully');
   }
 
@@ -312,10 +293,10 @@ class InitializationService {
     try {
       // Initialize AuthService to handle migration
       final authService = AuthService();
-      
+
       // Migrate existing user data to encrypted format if needed
       await authService.migrateExistingUserDataToEncrypted();
-      
+
       // Fetch user profile data (now decrypted automatically)
       final profileData = await authService.getCurrentUserData();
 
@@ -361,7 +342,7 @@ class InitializationService {
   static Future<bool> _initializeLocation(BuildContext context) async {
     try {
       final locationManager = LocationPermissionManager.instance;
-      
+
       // Ensure location permissions are granted with reasonable timeout
       final locationReady = await locationManager.ensureLocationReady().timeout(
         const Duration(seconds: 10),
@@ -372,7 +353,8 @@ class InitializationService {
       );
 
       if (!locationReady) {
-        debugPrint('Location not ready - permissions not granted or service unavailable');
+        debugPrint(
+            'Location not ready - permissions not granted or service unavailable');
         return false;
       }
 
@@ -380,10 +362,11 @@ class InitializationService {
       try {
         final location = Location();
         final locationData = await location.getLocation().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () => throw TimeoutException('Location fetch timeout', const Duration(seconds: 8)),
-        );
-        
+              const Duration(seconds: 8),
+              onTimeout: () => throw TimeoutException(
+                  'Location fetch timeout', const Duration(seconds: 8)),
+            );
+
         if (locationData.latitude != null && locationData.longitude != null) {
           debugPrint('Location services initialized successfully');
           return true;
@@ -405,7 +388,7 @@ class InitializationService {
   static Future<void> _initializeWeather(BuildContext context) async {
     try {
       final weatherProvider = context.read<WeatherProvider>();
-      
+
       // Since location is already confirmed to be ready, use a shorter timeout
       final weatherInitialized = await LocationWeatherService.fetchAndSubscribe(
         weatherProvider,
@@ -418,7 +401,8 @@ class InitializationService {
       );
 
       if (!weatherInitialized) {
-        debugPrint('Weather initialization failed despite location being ready');
+        debugPrint(
+            'Weather initialization failed despite location being ready');
       } else {
         debugPrint('Weather initialized successfully');
       }

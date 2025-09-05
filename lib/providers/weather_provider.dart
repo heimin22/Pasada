@@ -23,7 +23,7 @@ class WeatherProvider extends ChangeNotifier {
   bool get isRaining => _weather?.isRaining ?? false;
   bool get hasError => _error != null;
   bool get canRetry => _retryCount < _maxUserRetries && !_isLoading;
-  
+
   /// Check if cache is still valid
   bool get isCacheValid {
     if (_lastFetchTime == null) return false;
@@ -31,11 +31,12 @@ class WeatherProvider extends ChangeNotifier {
   }
 
   /// Fetch weather with optional force refresh
-  Future<void> fetchWeather(double lat, double lon, {bool forceRefresh = false}) async {
+  Future<void> fetchWeather(double lat, double lon,
+      {bool forceRefresh = false}) async {
     final now = DateTime.now();
-    
+
     // Check if we can use cached data
-    if (!forceRefresh && 
+    if (!forceRefresh &&
         _lastFetchTime != null &&
         _lastLat == lat &&
         _lastLon == lon &&
@@ -51,7 +52,7 @@ class WeatherProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
       final w = await _service.fetchWeather(lat, lon);
       _weather = w;
@@ -61,9 +62,7 @@ class WeatherProvider extends ChangeNotifier {
       _error = _formatError(e.toString());
       _retryCount++;
       // Don't clear existing weather data on error unless it's the first fetch
-      if (_weather == null) {
-        _weather = null;
-      }
+      _weather ??= null;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -114,11 +113,12 @@ class WeatherProvider extends ChangeNotifier {
 
       final location = Location();
       final locationData = await location.getLocation().timeout(
-        const Duration(seconds: 5),
-      );
+            const Duration(seconds: 5),
+          );
 
       if (locationData.latitude != null && locationData.longitude != null) {
-        await fetchWeather(locationData.latitude!, locationData.longitude!, forceRefresh: true);
+        await fetchWeather(locationData.latitude!, locationData.longitude!,
+            forceRefresh: true);
         return true;
       }
       return false;
@@ -131,7 +131,7 @@ class WeatherProvider extends ChangeNotifier {
   /// Format error messages for better user experience
   String _formatError(String error) {
     final lowerError = error.toLowerCase();
-    
+
     if (lowerError.contains('no internet connection')) {
       return 'No internet connection. Please check your network.';
     } else if (lowerError.contains('timeout')) {
