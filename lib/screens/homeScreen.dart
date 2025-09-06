@@ -11,6 +11,7 @@ import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
@@ -89,6 +90,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   final double notificationHeight = 60.0;
 
   double currentFare = 0.0;
+  double originalFare = 0.0; // Store original fare before discount
   // Controller and current extent for booking bottom sheet
   final DraggableScrollableController _bookingSheetController =
       DraggableScrollableController();
@@ -441,6 +443,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
     );
+
+    // Update fare when discount changes
+    if (mounted) {
+      setState(() {
+        currentFare = FareService.calculateDiscountedFare(
+            originalFare, selectedDiscountSpecification.value);
+      });
+    }
   }
 
   Future<void> _navigateToLocationSearch(bool isPickup) async {
@@ -604,7 +614,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       .read<WeatherProvider>()
                       .fetchWeather(loc.latitude, loc.longitude),
                   onFareUpdated: (fare) {
-                    if (mounted) setState(() => currentFare = fare);
+                    if (mounted) {
+                      setState(() {
+                        originalFare = fare;
+                        currentFare = FareService.calculateDiscountedFare(
+                            fare, selectedDiscountSpecification.value);
+                      });
+                    }
                   },
                   selectedRoute: selectedRoute,
                   routePolyline:
@@ -674,6 +690,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         selectedPickUpLocation: selectedPickUpLocation,
                         selectedDropOffLocation: selectedDropOffLocation,
                         currentFare: currentFare,
+                        originalFare: originalFare,
                         selectedPaymentMethod: selectedPaymentMethod,
                         selectedDiscountSpecification:
                             selectedDiscountSpecification,

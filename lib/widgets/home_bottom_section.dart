@@ -15,6 +15,7 @@ class HomeBottomSection extends StatelessWidget {
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
   final double currentFare;
+  final double originalFare;
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
@@ -39,6 +40,7 @@ class HomeBottomSection extends StatelessWidget {
     required this.selectedPickUpLocation,
     required this.selectedDropOffLocation,
     required this.currentFare,
+    required this.originalFare,
     required this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
     required this.seatingPreference,
@@ -79,6 +81,7 @@ class HomeBottomSection extends StatelessWidget {
                   selectedPickUpLocation: selectedPickUpLocation,
                   selectedDropOffLocation: selectedDropOffLocation,
                   currentFare: currentFare,
+                  originalFare: originalFare,
                   selectedPaymentMethod: selectedPaymentMethod,
                   selectedDiscountSpecification: selectedDiscountSpecification,
                   seatingPreference: seatingPreference,

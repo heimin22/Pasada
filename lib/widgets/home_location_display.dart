@@ -10,6 +10,7 @@ class HomeLocationDisplay extends StatelessWidget {
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
   final double currentFare;
+  final double originalFare;
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
@@ -28,6 +29,7 @@ class HomeLocationDisplay extends StatelessWidget {
     required this.selectedPickUpLocation,
     required this.selectedDropOffLocation,
     required this.currentFare,
+    required this.originalFare,
     required this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
     required this.seatingPreference,
@@ -87,6 +89,7 @@ class HomeLocationDisplay extends StatelessWidget {
             selectedPickUpLocation: selectedPickUpLocation,
             selectedDropOffLocation: selectedDropOffLocation,
             currentFare: currentFare,
+            originalFare: originalFare,
             selectedPaymentMethod: selectedPaymentMethod,
             selectedDiscountSpecification: selectedDiscountSpecification,
             seatingPreference: seatingPreference,
@@ -124,14 +127,62 @@ class HomeLocationDisplay extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      Text(
-                        "₱${currentFare.toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: Color(0xFF00CC58),
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          ValueListenableBuilder<String>(
+                            valueListenable: selectedDiscountSpecification,
+                            builder: (context, discount, _) {
+                              if (discount.isNotEmpty && discount != 'None') {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "₱${originalFare.toStringAsFixed(2)}",
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      "₱${currentFare.toStringAsFixed(2)}",
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        color: Color(0xFF00CC58),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    const Text(
+                                      "20% Discount",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                        color: Color(0xFF00CC58),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                return Text(
+                                  "₱${currentFare.toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16,
+                                    color: Color(0xFF00CC58),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(width: 8),
                       Icon(

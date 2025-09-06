@@ -14,6 +14,7 @@ class LocationInputContainer extends StatelessWidget {
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
   final double currentFare;
+  final double originalFare;
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
@@ -34,6 +35,7 @@ class LocationInputContainer extends StatelessWidget {
     this.selectedPickUpLocation,
     this.selectedDropOffLocation,
     required this.currentFare,
+    required this.originalFare,
     this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
     required this.seatingPreference,
@@ -52,6 +54,7 @@ class LocationInputContainer extends StatelessWidget {
     SelectedLocation? selectedPickUpLocation,
     SelectedLocation? selectedDropOffLocation,
     required double currentFare,
+    required double originalFare,
     String? selectedPaymentMethod,
     required ValueNotifier<String> selectedDiscountSpecification,
     required ValueNotifier<String> seatingPreference,
@@ -79,6 +82,7 @@ class LocationInputContainer extends StatelessWidget {
           selectedPickUpLocation: selectedPickUpLocation,
           selectedDropOffLocation: selectedDropOffLocation,
           currentFare: currentFare,
+          originalFare: originalFare,
           selectedPaymentMethod: selectedPaymentMethod,
           selectedDiscountSpecification: selectedDiscountSpecification,
           seatingPreference: seatingPreference,
@@ -416,7 +420,7 @@ class LocationInputContainer extends StatelessWidget {
               ValueListenableBuilder<String>(
                 valueListenable: selectedDiscountSpecification,
                 builder: (context, discount, _) => Text(
-                  '$discount ID verified',
+                  '$discount ID uploaded successfully and will be used for verification.',
                   style: TextStyle(
                     fontSize: 12,
                     color: const Color(0xFF00CC58),
@@ -486,14 +490,47 @@ class LocationInputContainer extends StatelessWidget {
                         : Colors.grey,
                   ),
                 ),
-                Text(
-                  "₱${currentFare.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: enabled ? const Color(0xFF00CC58) : Colors.grey,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (selectedDiscountSpecification.value.isNotEmpty &&
+                        selectedDiscountSpecification.value != 'None') ...[
+                      Text(
+                        "₱${originalFare.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: enabled ? Colors.grey : Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                    Text(
+                      "₱${currentFare.toStringAsFixed(2)}",
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: enabled ? const Color(0xFF00CC58) : Colors.grey,
+                      ),
+                    ),
+                    if (selectedDiscountSpecification.value.isNotEmpty &&
+                        selectedDiscountSpecification.value != 'None') ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        "20% OFF",
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color:
+                              enabled ? const Color(0xFF00CC58) : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

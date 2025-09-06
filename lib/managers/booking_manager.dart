@@ -1,25 +1,26 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/main.dart'; // For supabase
+import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
-import 'package:pasada_passenger_app/services/localDatabaseService.dart';
-import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:pasada_passenger_app/main.dart'; // For supabase
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pasada_passenger_app/services/map_location_service.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'dart:convert';
-import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
-import 'dart:async';
-import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
+import 'package:pasada_passenger_app/services/localDatabaseService.dart';
+import 'package:pasada_passenger_app/services/map_location_service.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
-import 'dart:math';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingManager {
   final HomeScreenPageState _state;
@@ -263,6 +264,11 @@ class BookingManager {
         paymentMethod: _state.selectedPaymentMethod ?? 'Cash',
         fare: _state.currentFare,
         seatingPreference: _state.seatingPreference.value,
+        passengerType: _state.selectedDiscountSpecification.value.isNotEmpty &&
+                _state.selectedDiscountSpecification.value != 'None'
+            ? _state.selectedDiscountSpecification.value
+            : null,
+        idImagePath: _state.selectedIdImagePath.value,
         onDriverAssigned: (details) =>
             _loadBookingAfterDriverAssignment(details.bookingId),
       );
