@@ -20,6 +20,7 @@ import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
@@ -438,26 +439,32 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add new bottom sheet method for discount selection
   Future<void> _showDiscountSelectionSheet() async {
-    await LocationInputContainer.showDiscountSelectionDialog(
+    await DiscountSelectionDialog.show(
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
-      // Pass parameters to enable auto-reopening after discount is applied
-      isRouteSelected: isRouteSelected,
-      selectedPickUpLocation: selectedPickUpLocation,
-      selectedDropOffLocation: selectedDropOffLocation,
-      currentFare: currentFare,
-      originalFare: originalFare,
-      selectedPaymentMethod: selectedPaymentMethod,
-      seatingPreference: seatingPreference,
-      onNavigateToLocationSearch: _navigateToLocationSearch,
-      onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
-      onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
-      onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-      onPaymentMethodSelected: (method) {
-        setState(() {
-          selectedPaymentMethod = method;
-        });
+      onReopenMainBottomSheet: () {
+        LocationInputContainer.showBottomSheet(
+          context: context,
+          isRouteSelected: isRouteSelected,
+          selectedPickUpLocation: selectedPickUpLocation,
+          selectedDropOffLocation: selectedDropOffLocation,
+          currentFare: currentFare,
+          originalFare: originalFare,
+          selectedPaymentMethod: selectedPaymentMethod,
+          selectedDiscountSpecification: selectedDiscountSpecification,
+          seatingPreference: seatingPreference,
+          selectedIdImagePath: selectedIdImagePath,
+          onNavigateToLocationSearch: _navigateToLocationSearch,
+          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+          onPaymentMethodSelected: (method) {
+            setState(() {
+              selectedPaymentMethod = method;
+            });
+          },
+        );
       },
     );
 
