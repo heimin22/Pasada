@@ -1,25 +1,27 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/main.dart'; // For supabase
+import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
-import 'package:pasada_passenger_app/services/localDatabaseService.dart';
-import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
-import 'package:pasada_passenger_app/main.dart'; // For supabase
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pasada_passenger_app/services/map_location_service.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'dart:convert';
-import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
-import 'dart:async';
-import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
+import 'package:pasada_passenger_app/services/localDatabaseService.dart';
+import 'package:pasada_passenger_app/services/map_location_service.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
-import 'dart:math';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingManager {
   final HomeScreenPageState _state;
@@ -253,6 +255,12 @@ class BookingManager {
       _state.bookingService = BookingService();
       final bookingService = _state.bookingService!;
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
+
+      final passengerTypeToSend =
+          _state.selectedDiscountSpecification.value.isNotEmpty &&
+                  _state.selectedDiscountSpecification.value != 'None'
+              ? _state.selectedDiscountSpecification.value
+              : null;
       final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
@@ -263,6 +271,8 @@ class BookingManager {
         paymentMethod: _state.selectedPaymentMethod ?? 'Cash',
         fare: _state.currentFare,
         seatingPreference: _state.seatingPreference.value,
+        passengerType: passengerTypeToSend,
+        idImagePath: _state.selectedIdImagePath.value,
         onDriverAssigned: (details) =>
             _loadBookingAfterDriverAssignment(details.bookingId),
       );
@@ -636,8 +646,22 @@ class BookingManager {
       _state.setState(() {
         _state.bookingStatus = details['ride_status'] ?? 'requested';
         if (details['fare'] != null) {
-          _state.currentFare =
+          // Get the original fare from server
+          final originalFare =
               double.tryParse(details['fare'].toString()) ?? _state.currentFare;
+
+          // Preserve discount calculation on client side
+          if (_state.selectedDiscountSpecification.value.isNotEmpty &&
+              _state.selectedDiscountSpecification.value != 'None') {
+            // Recalculate discounted fare to ensure discount is preserved
+            _state.currentFare = FareService.calculateDiscountedFare(
+                originalFare, _state.selectedDiscountSpecification.value);
+            // Update original fare for UI display
+            _state.originalFare = originalFare;
+          } else {
+            // No discount, use fare from server
+            _state.currentFare = originalFare;
+          }
         }
         if (details['payment_method'] != null) {
           _state.selectedPaymentMethod = details['payment_method'];

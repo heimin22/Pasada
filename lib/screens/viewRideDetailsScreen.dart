@@ -1,17 +1,19 @@
+import 'dart:convert';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_passenger_app/screens/selectionScreen.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:convert';
-import '../network/networkUtilities.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../network/networkUtilities.dart';
 
 class ViewRideDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? booking;
@@ -146,8 +148,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           try {
             final encryptionService = EncryptionService();
             await encryptionService.initialize();
-            decryptedName = await encryptionService.decryptUserData(decryptedName);
-            decryptedNumber = await encryptionService.decryptUserData(decryptedNumber);
+            decryptedName =
+                await encryptionService.decryptUserData(decryptedName);
+            decryptedNumber =
+                await encryptionService.decryptUserData(decryptedNumber);
           } catch (_) {}
 
           setState(() {
@@ -156,6 +160,28 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           });
         } catch (e) {
           debugPrint('Error fetching passenger details: $e');
+        }
+      }
+
+      // Decrypt ID image path if present
+      if (bookingDetails.containsKey('id_image_path') &&
+          bookingDetails['id_image_path'] != null) {
+        try {
+          final encryptionService = EncryptionService();
+          await encryptionService.initialize();
+          final encryptedPath = bookingDetails['id_image_path'].toString();
+          if (encryptedPath.isNotEmpty) {
+            final decryptedPath =
+                await encryptionService.decryptUserData(encryptedPath);
+            setState(() {
+              bookingDetails['id_image_path'] = decryptedPath;
+            });
+            debugPrint('ID image path decrypted for booking $bookingId');
+          }
+        } catch (e) {
+          debugPrint(
+              'Error decrypting ID image path for booking $bookingId: $e');
+          // Keep the encrypted path if decryption fails
         }
       }
     } catch (e) {
@@ -178,7 +204,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     final String emailAddress = 'contact.pasada@gmail.com';
     final String subject =
         'Support Request: Booking ${bookingDetails['booking_id'] ?? bookingDetails['id']}';
-    
+
     final Uri emailLaunchUri = Uri(
       scheme: 'mailto',
       path: emailAddress,
@@ -186,17 +212,18 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         'subject': subject,
       },
     );
-    
+
     // Attempt to launch the email client externally (same as settingsScreen)
     final bool launched = await launchUrl(
       emailLaunchUri,
       mode: LaunchMode.externalApplication,
     );
-    
+
     if (!launched) {
       // Show error message if email client couldn't be launched
       Fluttertoast.showToast(
-        msg: 'Could not launch email client. Please email $emailAddress directly.',
+        msg:
+            'Could not launch email client. Please email $emailAddress directly.',
         toastLength: Toast.LENGTH_LONG,
         gravity: ToastGravity.BOTTOM,
       );

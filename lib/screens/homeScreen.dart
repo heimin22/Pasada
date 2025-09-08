@@ -11,6 +11,7 @@ import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
@@ -19,6 +20,7 @@ import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
@@ -89,6 +91,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   final double notificationHeight = 60.0;
 
   double currentFare = 0.0;
+  double originalFare = 0.0; // Store original fare before discount
   // Controller and current extent for booking bottom sheet
   final DraggableScrollableController _bookingSheetController =
       DraggableScrollableController();
@@ -436,11 +439,42 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Add new bottom sheet method for discount selection
   Future<void> _showDiscountSelectionSheet() async {
-    await LocationInputContainer.showDiscountSelectionDialog(
+    await DiscountSelectionDialog.show(
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
+      onReopenMainBottomSheet: () {
+        LocationInputContainer.showBottomSheet(
+          context: context,
+          isRouteSelected: isRouteSelected,
+          selectedPickUpLocation: selectedPickUpLocation,
+          selectedDropOffLocation: selectedDropOffLocation,
+          currentFare: currentFare,
+          originalFare: originalFare,
+          selectedPaymentMethod: selectedPaymentMethod,
+          selectedDiscountSpecification: selectedDiscountSpecification,
+          seatingPreference: seatingPreference,
+          selectedIdImagePath: selectedIdImagePath,
+          onNavigateToLocationSearch: _navigateToLocationSearch,
+          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+          onPaymentMethodSelected: (method) {
+            setState(() {
+              selectedPaymentMethod = method;
+            });
+          },
+        );
+      },
     );
+
+    // Update fare when discount changes
+    if (mounted) {
+      setState(() {
+        currentFare = FareService.calculateDiscountedFare(
+            originalFare, selectedDiscountSpecification.value);
+      });
+    }
   }
 
   Future<void> _navigateToLocationSearch(bool isPickup) async {
@@ -604,7 +638,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       .read<WeatherProvider>()
                       .fetchWeather(loc.latitude, loc.longitude),
                   onFareUpdated: (fare) {
-                    if (mounted) setState(() => currentFare = fare);
+                    if (mounted) {
+                      setState(() {
+                        originalFare = fare;
+                        currentFare = FareService.calculateDiscountedFare(
+                            fare, selectedDiscountSpecification.value);
+                      });
+                    }
                   },
                   selectedRoute: selectedRoute,
                   routePolyline:
@@ -674,6 +714,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         selectedPickUpLocation: selectedPickUpLocation,
                         selectedDropOffLocation: selectedDropOffLocation,
                         currentFare: currentFare,
+                        originalFare: originalFare,
                         selectedPaymentMethod: selectedPaymentMethod,
                         selectedDiscountSpecification:
                             selectedDiscountSpecification,

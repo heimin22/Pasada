@@ -1,12 +1,15 @@
 import 'dart:async';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter/material.dart';
-import 'localDatabaseService.dart';
-import 'bookingDetails.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'apiService.dart';
+import 'bookingDetails.dart';
 import 'driverAssignmentService.dart';
+import 'encryptionService.dart';
+import 'localDatabaseService.dart';
 
 // Object to return from createBooking with additional error information
 class BookingResult {
@@ -87,12 +90,23 @@ class BookingService {
     required String
         seatingPreference, // Note: Not used by backend 'requestTrip' or BookingDetails model
     required double fare,
+    String? passengerType, // Student, Senior Citizen, PWD, or null
+    String? idImagePath, // Path to captured ID image
     Function(BookingDetails)? onDriverAssigned,
     Function(String)? onStatusChange,
     Function? onTimeout,
   }) async {
     try {
       final apiService = ApiService();
+      final encryptionService = EncryptionService();
+
+      // Encrypt the ID image path if provided
+      String? encryptedIdImagePath;
+      if (idImagePath != null && idImagePath.isNotEmpty) {
+        encryptedIdImagePath =
+            await encryptionService.encryptUserData(idImagePath);
+        debugPrint('ID image path encrypted for booking');
+      }
 
       // Build and log the request body to ensure seat_type is included
       final requestBody = {
@@ -106,6 +120,9 @@ class BookingService {
         'fare': fare,
         'payment_method': paymentMethod,
         'seat_type': seatingPreference,
+        'passenger_type': passengerType, // Add passenger type for discount
+        'passenger_id_image_path':
+            encryptedIdImagePath, // Add encrypted ID image path for verification
       };
       debugPrint('BookingService.createBooking request body: $requestBody');
       final response = await apiService.post<Map<String, dynamic>>(
@@ -361,20 +378,48 @@ class BookingService {
         debugPrint('getBookingDetails: response null for booking $bookingId');
         return null;
       }
+
+      Map<String, dynamic> bookingData;
       // If wrapped under 'trip', unwrap
       if (response.containsKey('trip') &&
           response['trip'] is Map<String, dynamic>) {
         debugPrint('getBookingDetails: unwrapped trip for booking $bookingId');
-        return response['trip'] as Map<String, dynamic>;
+        bookingData = response['trip'] as Map<String, dynamic>;
       }
       // If response directly has ride_status, return it
-      if (response.containsKey('ride_status')) {
+      else if (response.containsKey('ride_status')) {
         debugPrint('getBookingDetails: direct response for booking $bookingId');
-        return response;
+        bookingData = response;
       }
       // Fallback: return the entire response
-      debugPrint('getBookingDetails: fallback response for booking $bookingId');
-      return response;
+      else {
+        debugPrint(
+            'getBookingDetails: fallback response for booking $bookingId');
+        bookingData = response;
+      }
+
+      // Decrypt ID image path if present
+      if (bookingData.containsKey('passenger_id_image_path') &&
+          bookingData['passenger_id_image_path'] != null) {
+        try {
+          final encryptionService = EncryptionService();
+          await encryptionService.initialize();
+          final encryptedPath =
+              bookingData['passenger_id_image_path'].toString();
+          if (encryptedPath.isNotEmpty) {
+            final decryptedPath =
+                await encryptionService.decryptUserData(encryptedPath);
+            bookingData['passenger_id_image_path'] = decryptedPath;
+            debugPrint('ID image path decrypted for booking $bookingId');
+          }
+        } catch (e) {
+          debugPrint(
+              'Error decrypting ID image path for booking $bookingId: $e');
+          // Keep the encrypted path if decryption fails
+        }
+      }
+
+      return bookingData;
     } catch (e) {
       debugPrint('Error fetching booking details from API: $e');
       return null;
