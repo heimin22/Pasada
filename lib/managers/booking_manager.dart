@@ -255,6 +255,23 @@ class BookingManager {
       _state.bookingService = BookingService();
       final bookingService = _state.bookingService!;
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
+
+      // Debug: Check discount values before creating booking
+      debugPrint('=== DISCOUNT DEBUG ===');
+      debugPrint(
+          'selectedDiscountSpecification.value: "${_state.selectedDiscountSpecification.value}"');
+      debugPrint(
+          'selectedIdImagePath.value: "${_state.selectedIdImagePath.value}"');
+      debugPrint('currentFare: ${_state.currentFare}');
+      debugPrint('originalFare: ${_state.originalFare}');
+
+      final passengerTypeToSend =
+          _state.selectedDiscountSpecification.value.isNotEmpty &&
+                  _state.selectedDiscountSpecification.value != 'None'
+              ? _state.selectedDiscountSpecification.value
+              : null;
+      debugPrint('passengerTypeToSend: $passengerTypeToSend');
+      debugPrint('=== END DISCOUNT DEBUG ===');
       final bookingResult = await bookingService.createBooking(
         passengerId: user.id,
         routeId: routeId,
@@ -265,10 +282,7 @@ class BookingManager {
         paymentMethod: _state.selectedPaymentMethod ?? 'Cash',
         fare: _state.currentFare,
         seatingPreference: _state.seatingPreference.value,
-        passengerType: _state.selectedDiscountSpecification.value.isNotEmpty &&
-                _state.selectedDiscountSpecification.value != 'None'
-            ? _state.selectedDiscountSpecification.value
-            : null,
+        passengerType: passengerTypeToSend,
         idImagePath: _state.selectedIdImagePath.value,
         onDriverAssigned: (details) =>
             _loadBookingAfterDriverAssignment(details.bookingId),

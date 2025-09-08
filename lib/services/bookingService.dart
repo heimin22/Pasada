@@ -125,6 +125,11 @@ class BookingService {
             encryptedIdImagePath, // Add encrypted ID image path for verification
       };
       debugPrint('BookingService.createBooking request body: $requestBody');
+      debugPrint('=== BOOKING SERVICE DEBUG ===');
+      debugPrint('passengerType parameter: $passengerType');
+      debugPrint('idImagePath parameter: $idImagePath');
+      debugPrint('encryptedIdImagePath: $encryptedIdImagePath');
+      debugPrint('=== END BOOKING SERVICE DEBUG ===');
       final response = await apiService.post<Map<String, dynamic>>(
         'bookings/assign-driver',
         body: requestBody,
