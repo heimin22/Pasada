@@ -14,6 +14,7 @@ import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
+import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 import 'package:pasada_passenger_app/services/map_location_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
@@ -642,8 +643,22 @@ class BookingManager {
       _state.setState(() {
         _state.bookingStatus = details['ride_status'] ?? 'requested';
         if (details['fare'] != null) {
-          _state.currentFare =
+          // Get the original fare from server
+          final originalFare =
               double.tryParse(details['fare'].toString()) ?? _state.currentFare;
+
+          // Preserve discount calculation on client side
+          if (_state.selectedDiscountSpecification.value.isNotEmpty &&
+              _state.selectedDiscountSpecification.value != 'None') {
+            // Recalculate discounted fare to ensure discount is preserved
+            _state.currentFare = FareService.calculateDiscountedFare(
+                originalFare, _state.selectedDiscountSpecification.value);
+            // Update original fare for UI display
+            _state.originalFare = originalFare;
+          } else {
+            // No discount, use fare from server
+            _state.currentFare = originalFare;
+          }
         }
         if (details['payment_method'] != null) {
           _state.selectedPaymentMethod = details['payment_method'];

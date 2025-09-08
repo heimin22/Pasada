@@ -420,7 +420,7 @@ class LocationInputContainer extends StatelessWidget {
               ValueListenableBuilder<String>(
                 valueListenable: selectedDiscountSpecification,
                 builder: (context, discount, _) => Text(
-                  '$discount ID uploaded successfully and will be used for verification.',
+                  '$discount ID uploaded successfully.',
                   style: TextStyle(
                     fontSize: 12,
                     color: const Color(0xFF00CC58),
@@ -520,7 +520,7 @@ class LocationInputContainer extends StatelessWidget {
                         selectedDiscountSpecification.value != 'None') ...[
                       const SizedBox(height: 2),
                       Text(
-                        "20% OFF",
+                        "20% discount",
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,

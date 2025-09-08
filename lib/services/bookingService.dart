@@ -121,7 +121,7 @@ class BookingService {
         'payment_method': paymentMethod,
         'seat_type': seatingPreference,
         'passenger_type': passengerType, // Add passenger type for discount
-        'id_image_path':
+        'passenger_id_image_path':
             encryptedIdImagePath, // Add encrypted ID image path for verification
       };
       debugPrint('BookingService.createBooking request body: $requestBody');
@@ -399,16 +399,17 @@ class BookingService {
       }
 
       // Decrypt ID image path if present
-      if (bookingData.containsKey('id_image_path') &&
-          bookingData['id_image_path'] != null) {
+      if (bookingData.containsKey('passenger_id_image_path') &&
+          bookingData['passenger_id_image_path'] != null) {
         try {
           final encryptionService = EncryptionService();
           await encryptionService.initialize();
-          final encryptedPath = bookingData['id_image_path'].toString();
+          final encryptedPath =
+              bookingData['passenger_id_image_path'].toString();
           if (encryptedPath.isNotEmpty) {
             final decryptedPath =
                 await encryptionService.decryptUserData(encryptedPath);
-            bookingData['id_image_path'] = decryptedPath;
+            bookingData['passenger_id_image_path'] = decryptedPath;
             debugPrint('ID image path decrypted for booking $bookingId');
           }
         } catch (e) {
