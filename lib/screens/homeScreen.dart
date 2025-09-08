@@ -442,6 +442,23 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
+      // Pass parameters to enable auto-reopening after discount is applied
+      isRouteSelected: isRouteSelected,
+      selectedPickUpLocation: selectedPickUpLocation,
+      selectedDropOffLocation: selectedDropOffLocation,
+      currentFare: currentFare,
+      originalFare: originalFare,
+      selectedPaymentMethod: selectedPaymentMethod,
+      seatingPreference: seatingPreference,
+      onNavigateToLocationSearch: _navigateToLocationSearch,
+      onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+      onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+      onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+      onPaymentMethodSelected: (method) {
+        setState(() {
+          selectedPaymentMethod = method;
+        });
+      },
     );
 
     // Update fare when discount changes

@@ -102,6 +102,19 @@ class LocationInputContainer extends StatelessWidget {
     required BuildContext context,
     required ValueNotifier<String> selectedDiscountSpecification,
     required ValueNotifier<String?> selectedIdImagePath,
+    // Optional parameters to automatically reopen main bottom sheet after discount is applied
+    bool? isRouteSelected,
+    SelectedLocation? selectedPickUpLocation,
+    SelectedLocation? selectedDropOffLocation,
+    double? currentFare,
+    double? originalFare,
+    String? selectedPaymentMethod,
+    ValueNotifier<String>? seatingPreference,
+    Function(bool)? onNavigateToLocationSearch,
+    VoidCallback? onShowSeatingPreferenceDialog,
+    VoidCallback? onShowDiscountSelectionDialog,
+    VoidCallback? onConfirmBooking,
+    Function(String)? onPaymentMethodSelected,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final discountOptions = [
@@ -194,6 +207,50 @@ class LocationInputContainer extends StatelessWidget {
                                 selectedDiscountSpecification.value =
                                     discountType;
                                 selectedIdImagePath.value = capturedImage.path;
+
+                                // Automatically reopen the main bottom sheet to show the discount
+                                if (isRouteSelected != null &&
+                                    selectedPickUpLocation != null &&
+                                    selectedDropOffLocation != null &&
+                                    currentFare != null &&
+                                    originalFare != null &&
+                                    seatingPreference != null &&
+                                    onNavigateToLocationSearch != null &&
+                                    onShowSeatingPreferenceDialog != null &&
+                                    onShowDiscountSelectionDialog != null &&
+                                    onConfirmBooking != null &&
+                                    onPaymentMethodSelected != null) {
+                                  // Small delay to ensure ValueNotifiers are updated
+                                  await Future.delayed(
+                                      const Duration(milliseconds: 100));
+
+                                  // Reopen the main bottom sheet with updated discount
+                                  showBottomSheet(
+                                    context: context,
+                                    isRouteSelected: isRouteSelected,
+                                    selectedPickUpLocation:
+                                        selectedPickUpLocation,
+                                    selectedDropOffLocation:
+                                        selectedDropOffLocation,
+                                    currentFare: currentFare,
+                                    originalFare: originalFare,
+                                    selectedPaymentMethod:
+                                        selectedPaymentMethod,
+                                    selectedDiscountSpecification:
+                                        selectedDiscountSpecification,
+                                    seatingPreference: seatingPreference,
+                                    selectedIdImagePath: selectedIdImagePath,
+                                    onNavigateToLocationSearch:
+                                        onNavigateToLocationSearch,
+                                    onShowSeatingPreferenceDialog:
+                                        onShowSeatingPreferenceDialog,
+                                    onShowDiscountSelectionDialog:
+                                        onShowDiscountSelectionDialog,
+                                    onConfirmBooking: onConfirmBooking,
+                                    onPaymentMethodSelected:
+                                        onPaymentMethodSelected,
+                                  );
+                                }
                               }
                               // If image capture fails or is cancelled, don't update discount
                             },
@@ -653,7 +710,30 @@ class LocationInputContainer extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: InkWell(
-                      onTap: onShowDiscountSelectionDialog,
+                      onTap: () async {
+                        await showDiscountSelectionDialog(
+                          context: context,
+                          selectedDiscountSpecification:
+                              selectedDiscountSpecification,
+                          selectedIdImagePath: selectedIdImagePath,
+                          // Pass parameters to enable auto-reopening after discount is applied
+                          isRouteSelected: isRouteSelected,
+                          selectedPickUpLocation: selectedPickUpLocation,
+                          selectedDropOffLocation: selectedDropOffLocation,
+                          currentFare: currentFare,
+                          originalFare: originalFare,
+                          selectedPaymentMethod: selectedPaymentMethod,
+                          seatingPreference: seatingPreference,
+                          onNavigateToLocationSearch:
+                              onNavigateToLocationSearch,
+                          onShowSeatingPreferenceDialog:
+                              onShowSeatingPreferenceDialog,
+                          onShowDiscountSelectionDialog:
+                              onShowDiscountSelectionDialog,
+                          onConfirmBooking: onConfirmBooking,
+                          onPaymentMethodSelected: onPaymentMethodSelected,
+                        );
+                      },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -862,7 +942,12 @@ class LocationInputContainer extends StatelessWidget {
                             selectedDropOffLocation != null &&
                             selectedPaymentMethod != null &&
                             isRouteSelected)
-                        ? onConfirmBooking
+                        ? () {
+                            // Close the bottom sheet first
+                            Navigator.of(context).pop();
+                            // Then trigger the booking
+                            onConfirmBooking();
+                          }
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00CC58),
