@@ -326,9 +326,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   void loadPaymentMethod() async {
     final prefs = await SharedPreferences.getInstance();
     final savedMethod = prefs.getString('selectedPaymentMethod');
-    if (savedMethod != null && mounted) {
+    if (mounted) {
       setState(() {
-        selectedPaymentMethod = savedMethod;
+        // Set Cash as default payment method
+        selectedPaymentMethod = savedMethod ?? 'Cash';
       });
     }
   }
@@ -459,11 +460,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
           onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
           onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-          onPaymentMethodSelected: (method) {
-            setState(() {
-              selectedPaymentMethod = method;
-            });
-          },
         );
       },
     );
@@ -728,9 +724,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         onShowDiscountSelectionDialog:
                             _showDiscountSelectionSheet,
                         onConfirmBooking: _showBookingConfirmationDialog,
-                        onPaymentMethodSelected: (method) {
-                          setState(() => selectedPaymentMethod = method);
-                        },
                       ),
                     ),
                   ),

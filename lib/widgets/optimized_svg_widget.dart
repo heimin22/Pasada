@@ -169,7 +169,6 @@ class SvgAssetBatcher {
     'branding': [
       'assets/svg/pasadaLogoWithoutText.svg',
       'assets/svg/googleIcon.svg',
-      'assets/svg/paymongo_logo.svg',
     ],
   };
 

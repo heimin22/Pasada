@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/services/bookingService.dart';
 
 class PaymentMethodScreen extends StatefulWidget {
   final String? currentSelection;
@@ -17,23 +16,12 @@ class PaymentMethodScreen extends StatefulWidget {
 
 class PaymentMethodScreenState extends State<PaymentMethodScreen> {
   String? selectPaymentMethod;
-  bool isOnlinePayment = false;
-  final BookingService _bookingService = BookingService();
-  bool _isOnlinePaymentAllowed = true;
 
   @override
   void initState() {
     super.initState();
-    selectPaymentMethod = widget.currentSelection;
-    _updatePaymentType(selectPaymentMethod);
-    _isOnlinePaymentAllowed =
-        _bookingService.isOnlinePaymentAllowed(widget.fare);
-  }
-
-  void _updatePaymentType(String? paymentMethod) {
-    setState(() {
-      isOnlinePayment = paymentMethod == 'GCash';
-    });
+    // Set default to Cash
+    selectPaymentMethod = 'Cash';
   }
 
   // helper function para magbuild ng list tiles for payment methods
@@ -41,12 +29,8 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     required String title,
     required String value,
     Widget? leadingIcon,
-    bool enabled = true,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final bool isOnlineOption = value == 'GCash' || value == 'PayMaya';
-    final bool optionEnabled =
-        enabled && (!isOnlineOption || _isOnlinePaymentAllowed);
 
     return RadioListTile<String>(
       contentPadding:
@@ -57,27 +41,20 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
           fontFamily: 'Inter',
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: optionEnabled
-              ? (isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212))
-              : Colors.grey,
+          color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         ),
       ),
       value: value,
       groupValue: selectPaymentMethod,
-      onChanged: optionEnabled
-          ? (String? newValue) {
-              if (newValue != null) {
-                setState(() {
-                  selectPaymentMethod = newValue;
-                });
-                _updatePaymentType(newValue);
-                // Only auto-return for Cash option
-                if (newValue == 'Cash') {
-                  Navigator.pop(context, newValue);
-                }
-              }
-            }
-          : null,
+      onChanged: (String? newValue) {
+        if (newValue != null) {
+          setState(() {
+            selectPaymentMethod = newValue;
+          });
+          // Auto-return since only Cash is available
+          Navigator.pop(context, newValue);
+        }
+      },
       secondary: leadingIcon,
       controlAffinity: ListTileControlAffinity.trailing,
       selected: selectPaymentMethod == value,
@@ -108,7 +85,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Payment Methods',
+          'Payment Method',
           style: TextStyle(
             fontFamily: 'Inter',
             fontSize: 18,
@@ -162,7 +139,7 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Warning: Please choose the correct payment method for the passenger to avoid any payment issues.',
+                                'Cash payment is the only available payment method.',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 13,
@@ -181,74 +158,16 @@ class PaymentMethodScreenState extends State<PaymentMethodScreen> {
                 ),
                 const SizedBox(height: 16),
                 // Cash option
-                buildSectionHeader('Cash Payment'),
+                buildSectionHeader('Payment Method'),
                 buildPaymentOption(
                   title: 'Cash',
                   value: 'Cash',
                   leadingIcon:
                       const Icon(Icons.money_rounded, color: Color(0xFF00CC58)),
                 ),
-                // buildSectionHeader('Online Payment'),
-                // buildPaymentOption(
-                //   title: 'GCash',
-                //   value: 'GCash',
-                //   leadingIcon: SvgPicture.asset(
-                //     'assets/svg/gcash_logo.svg',
-                //     width: 24,
-                //     height: 24,
-                //     placeholderBuilder: (context) =>
-                //         const Icon(Icons.credit_card, color: Color(0xFF00CC58)),
-                //   ),
-                //   enabled: true,
-                // ),
               ],
             ),
           ),
-          // Continue button for online payments
-          // if (isOnlinePayment)
-          //   Padding(
-          //     padding: const EdgeInsets.all(24.0),
-          //     child: SizedBox(
-          //       width: double.infinity,
-          //       child: ElevatedButton(
-          //         onPressed: () async {
-          //           // Navigate to the Paymongo payment flow and await result
-          //           final result = await Navigator.push<String>(
-          //             context,
-          //             MaterialPageRoute(
-          //               builder: (_) => PaymongoPaymentScreen(
-          //                 paymentMethod: selectPaymentMethod!,
-          //                 amount: widget.fare,
-          //               ),
-          //             ),
-          //           );
-
-          //           // If payment was successful, return the payment method to HomeScreen
-          //           if (result != null) {
-          //             Navigator.pop(context, result);
-          //           }
-          //         },
-          //         style: ElevatedButton.styleFrom(
-          //           backgroundColor: const Color(0xFF00CC58),
-          //           foregroundColor: isDarkMode
-          //               ? const Color(0xFFF5F5F5)
-          //               : const Color(0xFF121212),
-          //           padding: const EdgeInsets.symmetric(vertical: 14),
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(8),
-          //           ),
-          //         ),
-          //         child: const Text(
-          //           'Proceed to Payment',
-          //           style: TextStyle(
-          //               fontSize: 16,
-          //               fontWeight: FontWeight.w700,
-          //               fontFamily: 'Inter',
-          //               color: Color(0xFFF5F5F5)),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
         ],
       ),
     );

@@ -363,11 +363,6 @@ class BookingService {
     await _localDbService.deleteBookingDetails(bookingId);
   }
 
-  bool isOnlinePaymentAllowed(double fare) {
-    // Minimum payment for online methods is ₱20.00 (2000 centavos)
-    return fare >= 20.0;
-  }
-
   // Fetch booking details from the API
   Future<Map<String, dynamic>?> getBookingDetails(int bookingId) async {
     try {

@@ -21,7 +21,6 @@ class DiscountSelectionDialog {
     VoidCallback? onShowSeatingPreferenceDialog,
     VoidCallback? onShowDiscountSelectionDialog,
     VoidCallback? onConfirmBooking,
-    Function(String)? onPaymentMethodSelected,
     Function? onReopenMainBottomSheet,
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;

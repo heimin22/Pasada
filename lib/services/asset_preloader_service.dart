@@ -46,9 +46,6 @@ class AssetPreloaderService {
     'assets/svg/bus.svg',
     'assets/png/bus.png',
     'assets/svg/googleIcon.svg',
-    'assets/svg/paymongo_logo.svg',
-    'assets/svg/gcash_logo.svg',
-    'assets/svg/maya_logo.svg',
   ];
 
   // Low priority assets - rarely used or decorative

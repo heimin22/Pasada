@@ -69,7 +69,6 @@ dependencies:
   location: ^8.0.0
   path: ^1.9.1
   path_provider: ^2.1.5
-  paymongo_sdk: ^1.7.0
   permission_handler: ^12.0.0+1
   postgres: ^3.4.7
   provider: ^6.1.5
@@ -141,14 +140,10 @@ flutter:
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
     - assets/svg/pasadaLogoWithoutText.svg
-    - assets/svg/paymongo_svg.svg
-    - assets/svg/gcash_logo.svg
-    - assets/svg/maya_logo.svg
     - assets/svg/pickupPin.svg
     - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
     - assets/svg/phFlag.svg
-    - assets/svg/paymongo_logo.svg
     - assets/svg/default_user_profile.svg
     - assets/png/default_user_profile.png
     - assets/png/bus.png

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/screens/paymentMethodScreen.dart';
 import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/id_image_container.dart';
 import 'package:pasada_passenger_app/widgets/location_row_widget.dart';
@@ -22,7 +21,6 @@ class LocationInputContainer extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
-  final Function(String) onPaymentMethodSelected;
 
   const LocationInputContainer({
     super.key,
@@ -42,7 +40,6 @@ class LocationInputContainer extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
-    required this.onPaymentMethodSelected,
   });
 
   /// Shows the LocationInputContainer as a modal bottom sheet
@@ -61,7 +58,6 @@ class LocationInputContainer extends StatelessWidget {
     required VoidCallback onShowSeatingPreferenceDialog,
     required VoidCallback onShowDiscountSelectionDialog,
     required VoidCallback onConfirmBooking,
-    required Function(String) onPaymentMethodSelected,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final responsivePadding = screenWidth * 0.04;
@@ -89,7 +85,6 @@ class LocationInputContainer extends StatelessWidget {
           onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
           onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
           onConfirmBooking: onConfirmBooking,
-          onPaymentMethodSelected: onPaymentMethodSelected,
         );
       },
     );
@@ -180,7 +175,6 @@ class LocationInputContainer extends StatelessWidget {
                     onShowDiscountSelectionDialog:
                         onShowDiscountSelectionDialog,
                     onConfirmBooking: onConfirmBooking,
-                    onPaymentMethodSelected: onPaymentMethodSelected,
                     isDarkMode: isDarkMode,
                   ),
                 // ID Image Display Container
@@ -209,15 +203,7 @@ class LocationInputContainer extends StatelessWidget {
                     isRouteSelected: isRouteSelected,
                     isDarkMode: isDarkMode,
                   ),
-                PaymentMethodButton(
-                  selectedPaymentMethod: selectedPaymentMethod,
-                  selectedPickUpLocation: selectedPickUpLocation,
-                  selectedDropOffLocation: selectedDropOffLocation,
-                  isRouteSelected: isRouteSelected,
-                  currentFare: currentFare,
-                  onPaymentMethodSelected: onPaymentMethodSelected,
-                  isDarkMode: isDarkMode,
-                ),
+                // Payment method is always Cash, no need for selection button
                 SizedBox(height: screenWidth * 0.05),
                 ConfirmBookingButton(
                   selectedPickUpLocation: selectedPickUpLocation,
@@ -251,7 +237,6 @@ class DiscountSelectionButton extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
-  final Function(String) onPaymentMethodSelected;
   final bool isDarkMode;
 
   const DiscountSelectionButton({
@@ -269,7 +254,6 @@ class DiscountSelectionButton extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
-    required this.onPaymentMethodSelected,
     required this.isDarkMode,
   });
 
@@ -299,7 +283,6 @@ class DiscountSelectionButton extends StatelessWidget {
                 onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
                 onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
                 onConfirmBooking: onConfirmBooking,
-                onPaymentMethodSelected: onPaymentMethodSelected,
               );
             },
           );
@@ -441,92 +424,6 @@ class SeatingPreferenceButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class PaymentMethodButton extends StatelessWidget {
-  final String? selectedPaymentMethod;
-  final SelectedLocation? selectedPickUpLocation;
-  final SelectedLocation? selectedDropOffLocation;
-  final bool isRouteSelected;
-  final double currentFare;
-  final Function(String) onPaymentMethodSelected;
-  final bool isDarkMode;
-
-  const PaymentMethodButton({
-    super.key,
-    required this.selectedPaymentMethod,
-    required this.selectedPickUpLocation,
-    required this.selectedDropOffLocation,
-    required this.isRouteSelected,
-    required this.currentFare,
-    required this.onPaymentMethodSelected,
-    required this.isDarkMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: (isRouteSelected &&
-              selectedPickUpLocation != null &&
-              selectedDropOffLocation != null)
-          ? () async {
-              final result = await Navigator.push<String>(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PaymentMethodScreen(
-                    currentSelection: selectedPaymentMethod,
-                    fare: currentFare,
-                  ),
-                  fullscreenDialog: true,
-                ),
-              );
-              if (result != null) {
-                onPaymentMethodSelected(result);
-              }
-            }
-          : null,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.payment,
-                size: 24,
-                color: const Color(0xFF00CC58),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                selectedPaymentMethod ?? 'Select Payment Method',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: (isRouteSelected &&
-                          selectedPickUpLocation != null &&
-                          selectedDropOffLocation != null)
-                      ? (isDarkMode
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212))
-                      : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: (isRouteSelected &&
-                    selectedPickUpLocation != null &&
-                    selectedDropOffLocation != null)
-                ? (isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212))
-                : Colors.grey,
-          ),
-        ],
       ),
     );
   }
