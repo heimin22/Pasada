@@ -3,13 +3,115 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pasada_passenger_app/services/id_image_upload_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Service for handling ID camera capture and permissions
 class IdCameraService {
   static final ImagePicker _picker = ImagePicker();
 
-  /// Captures an ID image with proper permissions handling
+  /// Captures an ID image with proper permissions handling and uploads to Supabase
+  /// Returns the uploaded image URL instead of local file
+  static Future<String?> captureAndUploadIdImage({
+    required BuildContext context,
+    required String passengerType,
+    String? bookingId,
+  }) async {
+    try {
+      // Request camera permission
+      final cameraPermission = await Permission.camera.request();
+
+      if (cameraPermission.isDenied) {
+        _showPermissionDialog(context);
+        return null;
+      }
+
+      if (cameraPermission.isPermanentlyDenied) {
+        _showSettingsDialog(context);
+        return null;
+      }
+
+      // Show capture instructions before opening camera
+      final shouldProceed = await _showCaptureInstructionsDialog(context);
+      if (!shouldProceed) {
+        return null;
+      }
+
+      // Capture image using camera
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85, // Optimize image size while maintaining quality
+        maxWidth: 1080,
+        maxHeight: 1080,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+
+      if (image != null) {
+        final File imageFile = File(image.path);
+
+        // Validate image size (should be reasonable for ID)
+        final int fileSizeInBytes = await imageFile.length();
+        const int maxSizeInBytes = 5 * 1024 * 1024; // 5MB limit
+
+        if (fileSizeInBytes > maxSizeInBytes) {
+          Fluttertoast.showToast(
+            msg: "Image file too large. Please try again.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.red,
+            textColor: Color(0xFFF5F5F5),
+          );
+          return null;
+        }
+
+        // Show uploading toast
+        Fluttertoast.showToast(
+          msg: "Uploading ID image...",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: const Color(0xFF00CC58),
+          textColor: Color(0xFFF5F5F5),
+        );
+
+        // Upload to Supabase Storage
+        final uploadedUrl = await IdImageUploadService.uploadIdImage(
+          imageFile: imageFile,
+          passengerType: passengerType,
+          bookingId: bookingId,
+        );
+
+        if (uploadedUrl != null) {
+          // Clean up local file after successful upload
+          try {
+            await imageFile.delete();
+          } catch (e) {
+            // Ignore deletion errors - file might already be cleaned up
+          }
+
+          Fluttertoast.showToast(
+            msg: "ID image uploaded successfully!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: const Color(0xFF00CC58),
+            textColor: Color(0xFFF5F5F5),
+          );
+
+          return uploadedUrl;
+        } else {
+          _showErrorToast("Failed to upload image. Please try again.");
+          return null;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      _showErrorToast("Failed to capture and upload image. Please try again.");
+      return null;
+    }
+  }
+
+  /// Legacy method for backward compatibility - captures local image only
+  @deprecated
   static Future<File?> captureIdImage(BuildContext context) async {
     try {
       // Request camera permission
@@ -53,7 +155,7 @@ class IdCameraService {
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             backgroundColor: Colors.red,
-            textColor: Colors.white,
+            textColor: Color(0xFFF5F5F5),
           );
           return null;
         }
@@ -109,7 +211,7 @@ class IdCameraService {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00CC58),
-                foregroundColor: Colors.white,
+                foregroundColor: Color(0xFFF5F5F5),
               ),
               child: const Text('Allow'),
             ),

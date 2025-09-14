@@ -8,7 +8,7 @@ class DiscountSelectionDialog {
   static Future<void> show({
     required BuildContext context,
     required ValueNotifier<String> selectedDiscountSpecification,
-    required ValueNotifier<String?> selectedIdImagePath,
+    required ValueNotifier<String?> selectedIdImageUrl,
     // Optional parameters to automatically reopen main bottom sheet after discount is applied
     bool? isRouteSelected,
     SelectedLocation? selectedPickUpLocation,
@@ -100,24 +100,27 @@ class DiscountSelectionDialog {
                               // If selecting "None", clear both discount and image
                               if (discountType.isEmpty) {
                                 selectedDiscountSpecification.value = '';
-                                selectedIdImagePath.value = null;
+                                selectedIdImageUrl.value = null;
                                 // Immediately update fare when discount is cleared
                                 onFareUpdated?.call();
                                 Navigator.of(context).pop();
                                 return;
                               }
 
-                              // For other discounts, capture ID image first
+                              // For other discounts, capture and upload ID image first
                               Navigator.of(context)
                                   .pop(); // Close current dialog
 
-                              final capturedImage =
-                                  await IdCameraService.captureIdImage(context);
-                              if (capturedImage != null) {
+                              final uploadedImageUrl =
+                                  await IdCameraService.captureAndUploadIdImage(
+                                context: context,
+                                passengerType: discountType,
+                              );
+                              if (uploadedImageUrl != null) {
                                 // Update discount values
                                 selectedDiscountSpecification.value =
                                     discountType;
-                                selectedIdImagePath.value = capturedImage.path;
+                                selectedIdImageUrl.value = uploadedImageUrl;
 
                                 // Immediately update fare after discount is applied
                                 onFareUpdated?.call();

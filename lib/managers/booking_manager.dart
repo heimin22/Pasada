@@ -273,7 +273,7 @@ class BookingManager {
             .originalFare, // Send original fare to server, not discounted fare
         seatingPreference: _state.seatingPreference.value,
         passengerType: passengerTypeToSend,
-        idImagePath: _state.selectedIdImagePath.value,
+        idImageUrl: _state.selectedIdImageUrl.value,
         onDriverAssigned: (details) =>
             _loadBookingAfterDriverAssignment(details.bookingId),
       );

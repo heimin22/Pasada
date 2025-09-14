@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/locationButton.dart'; // Corrected import path
+import 'package:pasada_passenger_app/widgets/bounds_fab.dart';
 
 class HomeScreenFAB extends StatelessWidget {
   final GlobalKey<State<StatefulWidget>>
@@ -11,6 +12,8 @@ class HomeScreenFAB extends StatelessWidget {
   final double iconSize;
   final VoidCallback onPressed;
   final double bottomOffset; // New property to control bottom positioning
+  final String bookingStatus; // Booking status to show bounds button
+  final bool isBookingConfirmed; // Check if booking is confirmed
 
   const HomeScreenFAB({
     super.key,
@@ -22,12 +25,15 @@ class HomeScreenFAB extends StatelessWidget {
     required this.iconSize,
     required this.onPressed,
     required this.bottomOffset, // Initialize in constructor
+    required this.bookingStatus,
+    required this.isBookingConfirmed,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Access MapScreenState - specific to your implementation
-    // dynamic mapState = mapScreenKey.currentState;
+    // Check if bounds button should be shown
+    final shouldShowBoundsButton = isBookingConfirmed &&
+        (bookingStatus == 'accepted' || bookingStatus == 'ongoing');
 
     return Positioned(
       right: responsivePadding,
@@ -41,18 +47,59 @@ class HomeScreenFAB extends StatelessWidget {
             offset: Offset(0, downwardAnimation.value),
             child: Opacity(
               opacity: 1 - bookingAnimationControllerValue.value,
-              child: LocationFAB(
-                heroTag: "homeLocationFAB",
-                onPressed: onPressed,
-                iconSize: iconSize,
-                buttonSize: MediaQuery.of(context).size.width * 0.12,
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF5F5F5),
-                iconColor: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF00E865)
-                    : const Color(0xFF00CC58),
-              ),
+              child: shouldShowBoundsButton
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Bounds button
+                        BoundsFAB(
+                          heroTag: "homeBoundsFAB",
+                          onPressed: () {
+                            (mapScreenKey.currentState as dynamic)
+                                ?.showBookingBounds();
+                          },
+                          iconSize: iconSize,
+                          buttonSize: MediaQuery.of(context).size.width * 0.12,
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF1E1E1E)
+                                  : const Color(0xFFF5F5F5),
+                          iconColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF00E865)
+                                  : const Color(0xFF00CC58),
+                        ),
+                        SizedBox(height: fabVerticalSpacing * 0.5),
+                        // Location button
+                        LocationFAB(
+                          heroTag: "homeLocationFAB",
+                          onPressed: onPressed,
+                          iconSize: iconSize,
+                          buttonSize: MediaQuery.of(context).size.width * 0.12,
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF1E1E1E)
+                                  : const Color(0xFFF5F5F5),
+                          iconColor:
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF00E865)
+                                  : const Color(0xFF00CC58),
+                        ),
+                      ],
+                    )
+                  : LocationFAB(
+                      heroTag: "homeLocationFAB",
+                      onPressed: onPressed,
+                      iconSize: iconSize,
+                      buttonSize: MediaQuery.of(context).size.width * 0.12,
+                      backgroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF1E1E1E)
+                              : const Color(0xFFF5F5F5),
+                      iconColor: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF00E865)
+                          : const Color(0xFF00CC58),
+                    ),
             ),
           );
         },

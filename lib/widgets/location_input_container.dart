@@ -15,7 +15,7 @@ class LocationInputContainer extends StatelessWidget {
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
   final ValueNotifier<String> seatingPreference;
-  final ValueNotifier<String?> selectedIdImagePath;
+  final ValueNotifier<String?> selectedIdImageUrl;
   final Function(bool) onNavigateToLocationSearch;
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
@@ -35,7 +35,7 @@ class LocationInputContainer extends StatelessWidget {
     this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
     required this.seatingPreference,
-    required this.selectedIdImagePath,
+    required this.selectedIdImageUrl,
     required this.onNavigateToLocationSearch,
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
@@ -54,7 +54,7 @@ class LocationInputContainer extends StatelessWidget {
     String? selectedPaymentMethod,
     required ValueNotifier<String> selectedDiscountSpecification,
     required ValueNotifier<String> seatingPreference,
-    required ValueNotifier<String?> selectedIdImagePath,
+    required ValueNotifier<String?> selectedIdImageUrl,
     required Function(bool) onNavigateToLocationSearch,
     required VoidCallback onShowSeatingPreferenceDialog,
     required VoidCallback onShowDiscountSelectionDialog,
@@ -82,7 +82,7 @@ class LocationInputContainer extends StatelessWidget {
           selectedPaymentMethod: selectedPaymentMethod,
           selectedDiscountSpecification: selectedDiscountSpecification,
           seatingPreference: seatingPreference,
-          selectedIdImagePath: selectedIdImagePath,
+          selectedIdImageUrl: selectedIdImageUrl,
           onNavigateToLocationSearch: onNavigateToLocationSearch,
           onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
           onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
@@ -164,7 +164,7 @@ class LocationInputContainer extends StatelessWidget {
                   DiscountSelectionButton(
                     selectedDiscountSpecification:
                         selectedDiscountSpecification,
-                    selectedIdImagePath: selectedIdImagePath,
+                    selectedIdImageUrl: selectedIdImageUrl,
                     isRouteSelected: isRouteSelected,
                     selectedPickUpLocation: selectedPickUpLocation,
                     selectedDropOffLocation: selectedDropOffLocation,
@@ -183,16 +183,16 @@ class LocationInputContainer extends StatelessWidget {
                   ),
                 // ID Image Display Container
                 ValueListenableBuilder<String?>(
-                  valueListenable: selectedIdImagePath,
+                  valueListenable: selectedIdImageUrl,
                   builder: (context, imagePath, _) {
                     if (imagePath != null && imagePath.isNotEmpty) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: IdImageContainer(
-                          imagePath: imagePath,
+                          imageUrl: imagePath,
                           selectedDiscountSpecification:
                               selectedDiscountSpecification,
-                          selectedIdImagePath: selectedIdImagePath,
+                          selectedIdImageUrl: selectedIdImageUrl,
                         ),
                       );
                     }
@@ -229,7 +229,7 @@ class LocationInputContainer extends StatelessWidget {
 
 class DiscountSelectionButton extends StatelessWidget {
   final ValueNotifier<String> selectedDiscountSpecification;
-  final ValueNotifier<String?> selectedIdImagePath;
+  final ValueNotifier<String?> selectedIdImageUrl;
   final bool isRouteSelected;
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
@@ -247,7 +247,7 @@ class DiscountSelectionButton extends StatelessWidget {
   const DiscountSelectionButton({
     super.key,
     required this.selectedDiscountSpecification,
-    required this.selectedIdImagePath,
+    required this.selectedIdImageUrl,
     required this.isRouteSelected,
     required this.selectedPickUpLocation,
     required this.selectedDropOffLocation,

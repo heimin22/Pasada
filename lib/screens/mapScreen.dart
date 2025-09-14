@@ -426,6 +426,17 @@ class MapScreenState extends State<MapScreen>
   /// Check if location is initialized (delegates to location manager)
   bool get isLocationInitialized => _locationManager.isLocationInitialized;
 
+  /// Move camera to show booking bounds (driver, pickup, dropoff)
+  Future<void> showBookingBounds() async {
+    if (widget.pickUpLocation == null || widget.dropOffLocation == null) return;
+
+    await _cameraManager.showBookingBounds(
+      driverLocation,
+      widget.pickUpLocation!,
+      widget.dropOffLocation!,
+    );
+  }
+
   // Helper methods that delegate to managers
   LatLng findNearestPointOnRoute(LatLng point, List<LatLng> routePolyline) {
     return _routeManager.findNearestPointOnRoute(point, routePolyline);

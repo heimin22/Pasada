@@ -108,7 +108,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       ValueNotifier<String>('Sitting');
   final ValueNotifier<String> selectedDiscountSpecification = // Made public
       ValueNotifier<String>('');
-  final ValueNotifier<String?> selectedIdImagePath = // Made public
+  final ValueNotifier<String?> selectedIdImageUrl = // Made public
       ValueNotifier<String?>(null);
 
   bool get isRouteSelected =>
@@ -458,7 +458,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     await DiscountSelectionDialog.show(
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
-      selectedIdImagePath: selectedIdImagePath,
+      selectedIdImageUrl: selectedIdImageUrl,
       onFareUpdated: _updateFareForDiscount, // Pass the fare update callback
       onReopenMainBottomSheet: _reopenBottomSheetAfterLocationUpdate,
     );
@@ -552,7 +552,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           selectedPaymentMethod: selectedPaymentMethod,
           selectedDiscountSpecification: selectedDiscountSpecification,
           seatingPreference: seatingPreference,
-          selectedIdImagePath: selectedIdImagePath,
+          selectedIdImageUrl: selectedIdImageUrl,
           onNavigateToLocationSearch: _navigateToLocationSearch,
           onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
           onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
@@ -696,6 +696,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   responsivePadding: responsivePadding,
                   fabVerticalSpacing: fabVerticalSpacing,
                   iconSize: fabIconSize,
+                  bookingStatus: bookingStatus,
+                  isBookingConfirmed: isBookingConfirmed,
                   onPressed: () async {
                     final mapState = mapScreenKey.currentState;
                     if (mapState != null) {
@@ -744,7 +746,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         selectedDiscountSpecification:
                             selectedDiscountSpecification,
                         seatingPreference: seatingPreference,
-                        selectedIdImagePath: selectedIdImagePath,
+                        selectedIdImageUrl: selectedIdImageUrl,
                         screenWidth: screenWidth,
                         responsivePadding: responsivePadding,
                         onNavigateToLocationSearch: _navigateToLocationSearch,
@@ -778,7 +780,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                 selectedDiscountSpecification.value != 'None'
                             ? selectedDiscountSpecification.value
                             : null,
-                    capturedImagePath: selectedIdImagePath.value,
+                    capturedImageUrl: selectedIdImageUrl.value,
                   ),
               ],
             );
