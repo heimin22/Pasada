@@ -20,6 +20,7 @@ class HomeLocationDisplay extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
+  final VoidCallback? onFareUpdated;
 
   const HomeLocationDisplay({
     super.key,
@@ -38,6 +39,7 @@ class HomeLocationDisplay extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
+    this.onFareUpdated,
   });
 
   /// Splits location address into primary and secondary parts
@@ -95,6 +97,7 @@ class HomeLocationDisplay extends StatelessWidget {
             onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
             onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
             onConfirmBooking: onConfirmBooking,
+            onFareUpdated: onFareUpdated,
           );
         },
         child: Column(

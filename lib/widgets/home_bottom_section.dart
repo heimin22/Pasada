@@ -26,6 +26,7 @@ class HomeBottomSection extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
+  final VoidCallback? onFareUpdated;
 
   const HomeBottomSection({
     super.key,
@@ -50,6 +51,7 @@ class HomeBottomSection extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
+    this.onFareUpdated,
   });
 
   @override
@@ -90,6 +92,7 @@ class HomeBottomSection extends StatelessWidget {
                   onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
                   onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
                   onConfirmBooking: onConfirmBooking,
+                  onFareUpdated: onFareUpdated,
                 ),
               ],
             ),

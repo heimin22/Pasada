@@ -21,6 +21,7 @@ class LocationInputContainer extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
+  final VoidCallback? onFareUpdated; // New callback for fare update
 
   const LocationInputContainer({
     super.key,
@@ -40,6 +41,7 @@ class LocationInputContainer extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
+    this.onFareUpdated,
   });
 
   /// Shows the LocationInputContainer as a modal bottom sheet
@@ -58,6 +60,7 @@ class LocationInputContainer extends StatelessWidget {
     required VoidCallback onShowSeatingPreferenceDialog,
     required VoidCallback onShowDiscountSelectionDialog,
     required VoidCallback onConfirmBooking,
+    VoidCallback? onFareUpdated,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final responsivePadding = screenWidth * 0.04;
@@ -85,6 +88,7 @@ class LocationInputContainer extends StatelessWidget {
           onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
           onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
           onConfirmBooking: onConfirmBooking,
+          onFareUpdated: onFareUpdated,
         );
       },
     );
@@ -175,6 +179,7 @@ class LocationInputContainer extends StatelessWidget {
                     onShowDiscountSelectionDialog:
                         onShowDiscountSelectionDialog,
                     onConfirmBooking: onConfirmBooking,
+                    onFareUpdated: onFareUpdated,
                     isDarkMode: isDarkMode,
                   ),
                 // ID Image Display Container
@@ -237,6 +242,7 @@ class DiscountSelectionButton extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
+  final VoidCallback? onFareUpdated;
   final bool isDarkMode;
 
   const DiscountSelectionButton({
@@ -254,6 +260,7 @@ class DiscountSelectionButton extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
+    this.onFareUpdated,
     required this.isDarkMode,
   });
 
@@ -267,6 +274,7 @@ class DiscountSelectionButton extends StatelessWidget {
             context: context,
             selectedDiscountSpecification: selectedDiscountSpecification,
             selectedIdImagePath: selectedIdImagePath,
+            onFareUpdated: onFareUpdated,
             onReopenMainBottomSheet: () {
               LocationInputContainer.showBottomSheet(
                 context: context,
