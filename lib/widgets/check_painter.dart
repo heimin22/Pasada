@@ -7,36 +7,56 @@ class CheckPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (progress <= 0) return;
+
     final Paint paint = Paint()
       ..color = const Color(0xFF00CC58)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0
-      ..strokeCap = StrokeCap.round;
+      ..strokeWidth = 8.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
 
-    final Path path = Path();
-    path.moveTo(size.width * 0.2, size.height * 0.5);
-    path.lineTo(size.width * 0.4, size.height * 0.7);
-    path.lineTo(size.width * 0.8, size.height * 0.3);
+    // Center the checkmark in the canvas
+    final centerX = size.width / 2;
+    final centerY = size.height / 2;
+    final scale = size.width / 120; // Scale based on canvas size
 
-    final metrics = path.computeMetrics();
-    final totalLength =
-        metrics.fold(0.0, (double prev, metric) => prev + metric.length);
-    final drawLength = totalLength * progress;
+    // Simple animated checkmark - draw strokes based on progress
+    if (progress >= 0.3) {
+      // First stroke (left part of check)
+      final firstStrokeProgress = ((progress - 0.3) / 0.35).clamp(0.0, 1.0);
+      final startX = centerX - 15 * scale;
+      final startY = centerY;
+      final midX = centerX - 5 * scale;
+      final midY = centerY + 10 * scale;
 
-    double currentLength = 0.0;
-    final Path extractPath = Path();
-    for (final metric in metrics) {
-      final nextLength = currentLength + metric.length;
-      if (drawLength > currentLength) {
-        final length = (drawLength < nextLength)
-            ? drawLength - currentLength
-            : metric.length;
-        extractPath.addPath(metric.extractPath(0, length), Offset.zero);
-      }
-      currentLength = nextLength;
+      canvas.drawLine(
+        Offset(startX, startY),
+        Offset(
+          startX + (midX - startX) * firstStrokeProgress,
+          startY + (midY - startY) * firstStrokeProgress,
+        ),
+        paint,
+      );
     }
 
-    canvas.drawPath(extractPath, paint);
+    if (progress >= 0.65) {
+      // Second stroke (right part of check)
+      final secondStrokeProgress = ((progress - 0.65) / 0.35).clamp(0.0, 1.0);
+      final midX = centerX - 5 * scale;
+      final midY = centerY + 10 * scale;
+      final endX = centerX + 20 * scale;
+      final endY = centerY - 15 * scale;
+
+      canvas.drawLine(
+        Offset(midX, midY),
+        Offset(
+          midX + (endX - midX) * secondStrokeProgress,
+          midY + (endY - midY) * secondStrokeProgress,
+        ),
+        paint,
+      );
+    }
   }
 
   @override

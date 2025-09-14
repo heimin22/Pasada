@@ -1,16 +1,16 @@
 import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-
-import 'package:pasada_passenger_app/utils/map_location_manager.dart';
 import 'package:pasada_passenger_app/utils/map_camera_manager.dart';
-import 'package:pasada_passenger_app/utils/map_route_manager.dart';
-import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
 import 'package:pasada_passenger_app/utils/map_dialog_manager.dart';
 import 'package:pasada_passenger_app/utils/map_driver_tracker.dart';
+import 'package:pasada_passenger_app/utils/map_location_manager.dart';
+import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
+import 'package:pasada_passenger_app/utils/map_route_manager.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -135,7 +135,7 @@ class MapScreenState extends State<MapScreen>
           const PolylineId('driver_route_live'),
           route,
           const Color.fromARGB(255, 10, 179, 83),
-          8,
+          4,
         );
       },
       onError: (error) => _dialogManager.showError(error),

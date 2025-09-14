@@ -197,7 +197,7 @@ class BookingManager {
           const PolylineId('route'),
           coords,
           const Color(0xFFFFCE21),
-          8,
+          4,
         );
       }
       final user = supabase.auth.currentUser;

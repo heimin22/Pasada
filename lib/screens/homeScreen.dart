@@ -182,7 +182,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           const PolylineId('route'),
           coords,
           const Color(0xFFFFCE21),
-          8,
+          4,
         );
         mapScreenKey.currentState?.zoomToBounds(coords);
       } else if (originCoordinates != null && destinationCoordinates != null) {
@@ -193,7 +193,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           const PolylineId('route'),
           coords,
           const Color(0xFFFFCE21),
-          8,
+          4,
         );
         mapScreenKey.currentState?.zoomToBounds(coords);
       }
@@ -357,7 +357,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               const PolylineId('route'),
               coords,
               const Color(0xFFFFCE21),
-              8,
+              4,
             );
             mapScreenKey.currentState?.zoomToBounds(coords);
           });
@@ -373,7 +373,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               const PolylineId('route'),
               coords,
               const Color(0xFFFFCE21),
-              8,
+              4,
             );
             mapScreenKey.currentState?.zoomToBounds(coords);
           });
