@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:app_links/app_links.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:pasada_passenger_app/utils/toast_utils.dart';
+import 'package:pasada_passenger_app/services/avatarService.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/utils/toast_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:app_links/app_links.dart';
 
 extension on AppLinks {
   Future<Uri?> getInitialAppLink() async {
@@ -40,13 +42,15 @@ class AuthService {
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('No internet connection detected. Please check your network settings.');
+      ToastUtils.showError(
+          'No internet connection detected. Please check your network settings.');
     }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
     if (result.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('Internet connection lost. Please check your network settings.');
+      ToastUtils.showError(
+          'Internet connection lost. Please check your network settings.');
     }
   }
 
@@ -63,7 +67,7 @@ class AuthService {
     if (connectivityResult.contains(ConnectivityResult.none)) {
       throw Exception("No internet connection");
     }
-    
+
     try {
       AuthResponse response = await supabase.auth.signInWithPassword(
         email: email,
@@ -96,7 +100,8 @@ class AuthService {
         final encryptionService = EncryptionService();
         await encryptionService.initialize();
 
-        final String encryptedPhone = await encryptionService.encryptUserData(plainPhone);
+        final String encryptedPhone =
+            await encryptionService.encryptUserData(plainPhone);
 
         final existingPhoneData = await supabase
             .from('passenger')
@@ -124,12 +129,13 @@ class AuthService {
         // Encrypt sensitive user data before storing
         final encryptionService = EncryptionService();
         await encryptionService.initialize();
-        
+
         final encryptedData = await encryptionService.encryptUserFields({
           'display_name': data?['display_name'],
           'contact_number': data?['contact_number'],
           'passenger_email': email,
-          'avatar_url': data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
+          'avatar_url':
+              data?['avatar_url'] ?? 'assets/svg/default_user_profile.svg',
         });
 
         // Then, insert into passenger table with encrypted data
@@ -156,7 +162,8 @@ class AuthService {
   Future<bool> checkNetworkConnection() async {
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('No internet connection. Please check your network and try again.');
+      ToastUtils.showError(
+          'No internet connection. Please check your network and try again.');
       return false;
     }
     return true;
@@ -339,7 +346,8 @@ class AuthService {
           final key = entry.key;
           final value = entry.value;
           if (value.isNotEmpty && !encryptionService.isEncrypted(value)) {
-            toEncryptUpdate[key] = await encryptionService.encryptUserData(value);
+            toEncryptUpdate[key] =
+                await encryptionService.encryptUserData(value);
           }
         }
         if (toEncryptUpdate.isNotEmpty) {
@@ -375,26 +383,38 @@ class AuthService {
 
   Future<String?> uploadNewProfileImage(File imageFile) async {
     try {
-      // generate a unique file name using timestamp
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileExt = imageFile.path.split('.').last;
-      final fileName = 'avatar_$timestamp.$fileExt';
+      // Use the new AvatarService for private storage
+      final avatarPath = await AvatarService.uploadAvatar(imageFile: imageFile);
 
-      // upload the file to Supabase Storage
-      final response =
-          await supabase.storage.from('avatars').upload(fileName, imageFile);
-
-      if (response.isEmpty) {
+      if (avatarPath == null) {
         throw Exception('Failed to upload image');
       }
 
-      // get the public URL of the uploaded file
-      final imageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+      // Clean up old avatars to save storage space
+      final user = supabase.auth.currentUser;
+      if (user != null) {
+        await AvatarService.cleanupOldAvatars(user.id);
+      }
 
-      return imageUrl;
+      return avatarPath;
     } catch (e) {
       debugPrint('Error uploading profile image: $e');
       throw Exception('Failed to upload profile image');
+    }
+  }
+
+  /// Get a signed URL for displaying an avatar image
+  /// This should be called when displaying the image in the UI
+  Future<String?> getAvatarDisplayUrl(String? avatarPath) async {
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return null;
+    }
+
+    try {
+      return await AvatarService.getAvatarSignedUrl(avatarPath: avatarPath);
+    } catch (e) {
+      debugPrint('Error getting avatar display URL: $e');
+      return null;
     }
   }
 
@@ -613,23 +633,25 @@ class AuthService {
 
       final encryptionService = EncryptionService();
       await encryptionService.initialize();
-      
+
       // Fetch current user data
-      final response = await supabase
-          .from('passenger')
-          .select()
-          .eq('id', user.id)
-          .single();
+      final response =
+          await supabase.from('passenger').select().eq('id', user.id).single();
 
       // Check if data is already encrypted
-      final fieldsToCheck = ['display_name', 'contact_number', 'passenger_email', 'avatar_url'];
+      final fieldsToCheck = [
+        'display_name',
+        'contact_number',
+        'passenger_email',
+        'avatar_url'
+      ];
       bool needsMigration = false;
       final unencryptedFields = <String>[];
-      
+
       for (final field in fieldsToCheck) {
         final value = response[field]?.toString();
-        if (value != null && 
-            value.isNotEmpty && 
+        if (value != null &&
+            value.isNotEmpty &&
             !encryptionService.isEncrypted(value)) {
           needsMigration = true;
           unencryptedFields.add(field);
@@ -639,26 +661,30 @@ class AuthService {
       if (needsMigration) {
         debugPrint('🔄 Migrating existing user data to encrypted format');
         debugPrint('Fields to encrypt: $unencryptedFields');
-        
+
         // Log current field values (truncated for security)
         for (final field in unencryptedFields) {
           final value = response[field]?.toString() ?? '';
-          debugPrint('$field: "${value.length > 20 ? '${value.substring(0, 20)}...' : value}"');
+          debugPrint(
+              '$field: "${value.length > 20 ? '${value.substring(0, 20)}...' : value}"');
         }
-        
+
         // Only encrypt fields that are not already encrypted
         final dataToEncrypt = <String, String?>{};
         for (final field in unencryptedFields) {
           dataToEncrypt[field] = response[field]?.toString();
         }
-        
-        final encryptedData = await encryptionService.encryptUserFields(dataToEncrypt);
+
+        final encryptedData =
+            await encryptionService.encryptUserFields(dataToEncrypt);
 
         // Update only the fields that needed encryption
         if (encryptedData.isNotEmpty) {
-          debugPrint('Updating ${encryptedData.length} encrypted fields in database');
+          debugPrint(
+              'Updating ${encryptedData.length} encrypted fields in database');
           await passengersDatabase.update(encryptedData).eq('id', user.id);
-          debugPrint('User data migration completed successfully for fields: ${encryptedData.keys}');
+          debugPrint(
+              'User data migration completed successfully for fields: ${encryptedData.keys}');
         }
       } else {
         debugPrint('User data is already encrypted, no migration needed');
@@ -683,7 +709,7 @@ class AuthService {
 
       final encryptionService = EncryptionService();
       await encryptionService.initialize();
-      
+
       // Format the mobile number properly
       final formattedMobileNumber =
           mobileNumber.startsWith('+63') ? mobileNumber : '+63$mobileNumber';
@@ -703,7 +729,6 @@ class AuthService {
       debugPrint('   Name: $displayName');
       debugPrint('   Email: $email');
       debugPrint('   Phone: $formattedMobileNumber');
-      
     } catch (e) {
       debugPrint('Error repairing user data: $e');
       throw Exception('Failed to repair user data: $e');
@@ -717,15 +742,21 @@ class AuthService {
       if (userData == null) return false;
 
       // Check for recovery markers
-      final fieldsToCheck = ['display_name', 'contact_number', 'passenger_email', 'avatar_url'];
-      
+      final fieldsToCheck = [
+        'display_name',
+        'contact_number',
+        'passenger_email',
+        'avatar_url'
+      ];
+
       for (final field in fieldsToCheck) {
         final value = userData[field]?.toString() ?? '';
-        if (value.contains('[RECOVERY_NEEDED]') || 
+        if (value.contains('[RECOVERY_NEEDED]') ||
             value.contains('[ENCRYPTED_DATA_RECOVERY_NEEDED]') ||
             value.startsWith('+639000000000') || // Default placeholder number
             value == 'user@example.com' || // Default placeholder email
-            value == 'User') { // Default placeholder name
+            value == 'User') {
+          // Default placeholder name
           debugPrint('Field $field needs repair: $value');
           return true;
         }

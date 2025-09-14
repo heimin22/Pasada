@@ -1,12 +1,15 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/image_compression_service.dart';
-import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'package:pasada_passenger_app/services/phoneValidationService.dart';
+import 'package:pasada_passenger_app/widgets/avatar_image.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -100,7 +103,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('🖼️ Optimizing image...'),
+              content: Text('Optimizing image...'),
               duration: Duration(seconds: 2),
             ),
           );
@@ -119,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('✅ Image optimized successfully!'),
+                content: Text('Image optimized successfully!'),
                 duration: Duration(seconds: 1),
               ),
             );
@@ -137,7 +140,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('⚠️ Using original image (compression failed)'),
+                content: Text('Using original image (compression failed)'),
                 duration: Duration(seconds: 2),
               ),
             );
@@ -150,7 +153,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Error selecting image'),
+            content: Text('Error selecting image'),
             duration: Duration(seconds: 2),
           ),
         );
@@ -174,10 +177,38 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _handlePhoneNumberChange(String newPhoneNumber) async {
     try {
-      // Format the phone number with +63 prefix for OTP
+      // Format the phone number with +63 prefix for validation
       final formattedPhoneNumber = formatPhoneNumberForSave(newPhoneNumber);
 
-      // Navigate to OTP verification screen
+      // Get current user ID for validation
+      final currentUser = authService.supabase.auth.currentUser;
+      if (currentUser == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('User not authenticated')),
+          );
+        }
+        return;
+      }
+
+      // Check if the new phone number is already registered by another user
+      final isPhoneAvailable =
+          await PhoneValidationService.isPhoneNumberAvailableForUpdate(
+              formattedPhoneNumber, currentUser.id);
+
+      if (!isPhoneAvailable) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'This phone number is already registered by another user. Please use a different number.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Navigate to OTP verification screen only after validation
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
@@ -314,23 +345,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Center(
                           child: Stack(
                             children: [
-                              CircleAvatar(
-                                radius: screenSize.width * 0.12,
-                                backgroundColor: const Color(0xFF00CC58),
-                                backgroundImage: _imageFile != null
-                                    ? FileImage(_imageFile!) as ImageProvider
-                                    : (profileImageUrl != null
-                                        ? NetworkImage(profileImageUrl!)
-                                        : null),
-                                child: (_imageFile == null &&
-                                        profileImageUrl == null)
-                                    ? Icon(
-                                        Icons.person,
-                                        size: screenSize.width * 0.12,
-                                        color: const Color(0xFFF5F5F5),
-                                      )
-                                    : null,
-                              ),
+                              _imageFile != null
+                                  ? CircleAvatar(
+                                      radius: screenSize.width * 0.12,
+                                      backgroundColor: const Color(0xFF00CC58),
+                                      backgroundImage: FileImage(_imageFile!)
+                                          as ImageProvider,
+                                    )
+                                  : ProfileAvatar(
+                                      avatarPath: profileImageUrl,
+                                      size: screenSize.width * 0.24,
+                                    ),
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -680,8 +705,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (success && mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content:
-                                Text('✅ Google profile synced successfully'),
+                            content: Text('Google profile synced successfully'),
                             duration: Duration(seconds: 2),
                           ),
                         );
@@ -692,7 +716,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('❌ Failed to sync Google profile'),
+                            content: Text('Failed to sync Google profile'),
                             duration: Duration(seconds: 2),
                           ),
                         );
