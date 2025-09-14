@@ -64,7 +64,7 @@ class BookingDetailsContainer extends StatelessWidget {
                     : const Color(0xFFE8F5E8),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: const Color(0xFF00CC58).withOpacity(0.3),
+                  color: const Color(0xFF00CC58).withAlpha(0.3.toInt()),
                 ),
               ),
               child: Row(
@@ -132,7 +132,7 @@ class BookingDetailsContainer extends StatelessWidget {
                           : const Color(0xFFFFF8E1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: Colors.orange.withOpacity(0.3),
+                        color: Colors.orange.withAlpha(0.3.toInt()),
                       ),
                     ),
                     child: Column(
@@ -182,7 +182,7 @@ class BookingDetailsContainer extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF00CC58).withOpacity(0.3),
+                        color: const Color(0xFF00CC58).withAlpha(0.3.toInt()),
                       ),
                     ),
                     child: ClipRRect(

@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
+import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/utils/map_utils.dart';
 
 class MapRouteManager {
@@ -27,7 +28,7 @@ class MapRouteManager {
     LatLng destination, {
     bool updateFare = true,
     Color? polylineColor,
-    int polylineWidth = 8,
+    int polylineWidth = 4,
   }) async {
     try {
       final polyService = PolylineService();
@@ -68,7 +69,7 @@ class MapRouteManager {
     LatLng destination,
     List<LatLng> routePolyline, {
     Color? polylineColor,
-    int polylineWidth = 8,
+    int polylineWidth = 4,
   }) async {
     try {
       final polyService = PolylineService();
