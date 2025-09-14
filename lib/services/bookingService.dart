@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/id_image_upload_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'apiService.dart';
@@ -91,22 +92,18 @@ class BookingService {
         seatingPreference, // Note: Not used by backend 'requestTrip' or BookingDetails model
     required double fare,
     String? passengerType, // Student, Senior Citizen, PWD, or null
-    String? idImagePath, // Path to captured ID image
+    String? idImageUrl, // URL of uploaded ID image from Supabase Storage
     Function(BookingDetails)? onDriverAssigned,
     Function(String)? onStatusChange,
     Function? onTimeout,
   }) async {
     try {
       final apiService = ApiService();
-      final encryptionService = EncryptionService();
 
-      // Encrypt the ID image path if provided
-      String? encryptedIdImagePath;
-      if (idImagePath != null && idImagePath.isNotEmpty) {
-        encryptedIdImagePath =
-            await encryptionService.encryptUserData(idImagePath);
-        debugPrint('ID image path encrypted for booking');
-      }
+      // No need to encrypt the ID image URL - it's already securely stored in Supabase
+      // The URL contains signed tokens for access control
+      debugPrint(
+          'ID image URL provided for booking: ${idImageUrl != null ? 'Yes' : 'No'}');
 
       // Build and log the request body to ensure seat_type is included
       final requestBody = {
@@ -121,8 +118,8 @@ class BookingService {
         'payment_method': paymentMethod,
         'seat_type': seatingPreference,
         'passenger_type': passengerType, // Add passenger type for discount
-        'passenger_id_image_path':
-            encryptedIdImagePath, // Add encrypted ID image path for verification
+        'passenger_id_image_url':
+            idImageUrl, // Add Supabase Storage URL for ID image verification
       };
       debugPrint('BookingService.createBooking request body: $requestBody');
       final response = await apiService.post<Map<String, dynamic>>(
@@ -393,24 +390,55 @@ class BookingService {
         bookingData = response;
       }
 
-      // Decrypt ID image path if present
+      // Handle ID image URL (no decryption needed for Supabase URLs)
+      if (bookingData.containsKey('passenger_id_image_url') &&
+          bookingData['passenger_id_image_url'] != null) {
+        final imageUrl = bookingData['passenger_id_image_url'].toString();
+        if (imageUrl.isNotEmpty) {
+          // Check if URL is expired and refresh if needed
+          try {
+            // Extract file path from URL to generate new signed URL if needed
+            final filePath =
+                IdImageUploadService.extractFilePathFromUrl(imageUrl);
+            if (filePath != null) {
+              // Generate a fresh signed URL for better security
+              final refreshedUrl = await IdImageUploadService.getSignedUrl(
+                imagePath: filePath,
+                expiryInSeconds: 24 * 60 * 60, // 24 hours
+              );
+              if (refreshedUrl != null) {
+                bookingData['passenger_id_image_url'] = refreshedUrl;
+                debugPrint('ID image URL refreshed for booking $bookingId');
+              }
+            }
+          } catch (e) {
+            debugPrint(
+                'Error refreshing ID image URL for booking $bookingId: $e');
+            // Keep the original URL if refresh fails
+          }
+        }
+      }
+
+      // Legacy support: Handle old encrypted paths and convert to URLs if possible
       if (bookingData.containsKey('passenger_id_image_path') &&
-          bookingData['passenger_id_image_path'] != null) {
+          bookingData['passenger_id_image_path'] != null &&
+          !bookingData.containsKey('passenger_id_image_url')) {
         try {
           final encryptionService = EncryptionService();
           await encryptionService.initialize();
           final encryptedPath =
               bookingData['passenger_id_image_path'].toString();
-          if (encryptedPath.isNotEmpty) {
+          if (encryptedPath.isNotEmpty &&
+              encryptionService.isEncrypted(encryptedPath)) {
             final decryptedPath =
                 await encryptionService.decryptUserData(encryptedPath);
             bookingData['passenger_id_image_path'] = decryptedPath;
-            debugPrint('ID image path decrypted for booking $bookingId');
+            debugPrint('Legacy ID image path decrypted for booking $bookingId');
+            // Note: This is legacy data, new bookings should use passenger_id_image_url
           }
         } catch (e) {
           debugPrint(
-              'Error decrypting ID image path for booking $bookingId: $e');
-          // Keep the encrypted path if decryption fails
+              'Error decrypting legacy ID image path for booking $bookingId: $e');
         }
       }
 

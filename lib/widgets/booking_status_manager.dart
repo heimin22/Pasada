@@ -26,7 +26,7 @@ class BookingStatusManager extends StatefulWidget {
   final LatLng? currentLocation;
   final int? bookingId;
   final String? selectedDiscount;
-  final String? capturedImagePath;
+  final String? capturedImageUrl;
 
   const BookingStatusManager({
     super.key,
@@ -44,7 +44,8 @@ class BookingStatusManager extends StatefulWidget {
     this.currentLocation,
     this.bookingId,
     this.selectedDiscount,
-    this.capturedImagePath,
+    this.capturedImageUrl,
+    String? capturedImagePath,
   });
 
   @override
@@ -208,7 +209,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                 dropoffLocation: widget.dropoffLocation,
                 bookingId: widget.bookingId,
                 selectedDiscount: widget.selectedDiscount,
-                capturedImagePath: widget.capturedImagePath,
+                capturedImageUrl: widget.capturedImageUrl,
               ),
               PaymentDetailsContainer(
                 paymentMethod: widget.paymentMethod,

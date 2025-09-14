@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../location/selectedLocation.dart';
@@ -9,7 +8,7 @@ class BookingDetailsContainer extends StatelessWidget {
   final SelectedLocation? dropoffLocation;
   final int? bookingId;
   final String? selectedDiscount;
-  final String? capturedImagePath;
+  final String? capturedImageUrl;
 
   const BookingDetailsContainer({
     super.key,
@@ -17,7 +16,7 @@ class BookingDetailsContainer extends StatelessWidget {
     required this.dropoffLocation,
     this.bookingId,
     this.selectedDiscount,
-    this.capturedImagePath,
+    this.capturedImageUrl,
   });
 
   @override
@@ -173,8 +172,8 @@ class BookingDetailsContainer extends StatelessWidget {
                 ),
 
                 // ID Picture Preview
-                if (capturedImagePath != null &&
-                    capturedImagePath!.isNotEmpty) ...[
+                if (capturedImageUrl != null &&
+                    capturedImageUrl!.isNotEmpty) ...[
                   const SizedBox(width: 12),
                   Container(
                     width: 60,
@@ -187,10 +186,21 @@ class BookingDetailsContainer extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(7),
-                      child: Image.file(
-                        File(capturedImagePath!),
+                      child: CachedNetworkImage(
+                        imageUrl: capturedImageUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
+                        placeholder: (context, url) => Container(
+                          color: isDarkMode
+                              ? const Color(0xFF3A3A3A)
+                              : const Color(0xFFF0F0F0),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Color(0xFF00CC58),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) {
                           return Container(
                             color: isDarkMode
                                 ? const Color(0xFF2A2A2A)

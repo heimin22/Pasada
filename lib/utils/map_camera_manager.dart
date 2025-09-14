@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/utils/map_camera_utils.dart';
 
@@ -117,6 +118,31 @@ class MapCameraManager {
 
     // Create bounds that include both points
     final coordinates = [pickup, dropoff];
+    await moveCameraToBounds(
+      controller,
+      coordinates,
+      padding: padding,
+      boundPadding: 50.0,
+    );
+  }
+
+  /// Move camera to show booking bounds including driver, pickup, and dropoff locations
+  Future<void> showBookingBounds(
+    LatLng? driverLocation,
+    LatLng pickup,
+    LatLng dropoff, {
+    double padding = 0.05,
+  }) async {
+    if (mapController == null) return;
+
+    final controller = await mapController!.future;
+
+    // Create bounds that include all relevant points
+    final coordinates = <LatLng>[pickup, dropoff];
+    if (driverLocation != null) {
+      coordinates.add(driverLocation);
+    }
+
     await moveCameraToBounds(
       controller,
       coordinates,

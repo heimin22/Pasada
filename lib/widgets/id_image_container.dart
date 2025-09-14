@@ -1,18 +1,17 @@
-import 'dart:io';
-
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/id_camera_service.dart';
 
 class IdImageContainer extends StatelessWidget {
-  final String imagePath;
+  final String? imageUrl;
   final ValueNotifier<String> selectedDiscountSpecification;
-  final ValueNotifier<String?> selectedIdImagePath;
+  final ValueNotifier<String?> selectedIdImageUrl;
 
   const IdImageContainer({
     super.key,
-    required this.imagePath,
+    required this.imageUrl,
     required this.selectedDiscountSpecification,
-    required this.selectedIdImagePath,
+    required this.selectedIdImageUrl,
   });
 
   @override
@@ -35,11 +34,11 @@ class IdImageContainer extends StatelessWidget {
           IdImageHeader(
             isDarkMode: isDarkMode,
             selectedDiscountSpecification: selectedDiscountSpecification,
-            selectedIdImagePath: selectedIdImagePath,
+            selectedIdImageUrl: selectedIdImageUrl,
           ),
           const SizedBox(height: 12),
           IdImageDisplay(
-            imagePath: imagePath,
+            imageUrl: imageUrl,
             isDarkMode: isDarkMode,
           ),
           const SizedBox(height: 8),
@@ -55,13 +54,13 @@ class IdImageContainer extends StatelessWidget {
 class IdImageHeader extends StatelessWidget {
   final bool isDarkMode;
   final ValueNotifier<String> selectedDiscountSpecification;
-  final ValueNotifier<String?> selectedIdImagePath;
+  final ValueNotifier<String?> selectedIdImageUrl;
 
   const IdImageHeader({
     super.key,
     required this.isDarkMode,
     required this.selectedDiscountSpecification,
-    required this.selectedIdImagePath,
+    required this.selectedIdImageUrl,
   });
 
   @override
@@ -87,7 +86,7 @@ class IdImageHeader extends StatelessWidget {
         IdImageMenuButton(
           isDarkMode: isDarkMode,
           selectedDiscountSpecification: selectedDiscountSpecification,
-          selectedIdImagePath: selectedIdImagePath,
+          selectedIdImageUrl: selectedIdImageUrl,
         ),
       ],
     );
@@ -97,13 +96,13 @@ class IdImageHeader extends StatelessWidget {
 class IdImageMenuButton extends StatelessWidget {
   final bool isDarkMode;
   final ValueNotifier<String> selectedDiscountSpecification;
-  final ValueNotifier<String?> selectedIdImagePath;
+  final ValueNotifier<String?> selectedIdImageUrl;
 
   const IdImageMenuButton({
     super.key,
     required this.isDarkMode,
     required this.selectedDiscountSpecification,
-    required this.selectedIdImagePath,
+    required this.selectedIdImageUrl,
   });
 
   @override
@@ -116,12 +115,16 @@ class IdImageMenuButton extends StatelessWidget {
       ),
       onSelected: (value) async {
         if (value == 'retake') {
-          final newImage = await IdCameraService.captureIdImage(context);
-          if (newImage != null) {
-            selectedIdImagePath.value = newImage.path;
+          final currentDiscount = selectedDiscountSpecification.value;
+          final newImageUrl = await IdCameraService.captureAndUploadIdImage(
+            context: context,
+            passengerType: currentDiscount,
+          );
+          if (newImageUrl != null) {
+            selectedIdImageUrl.value = newImageUrl;
           }
         } else if (value == 'remove') {
-          selectedIdImagePath.value = null;
+          selectedIdImageUrl.value = null;
           selectedDiscountSpecification.value = '';
         }
       },
@@ -152,12 +155,12 @@ class IdImageMenuButton extends StatelessWidget {
 }
 
 class IdImageDisplay extends StatelessWidget {
-  final String imagePath;
+  final String? imageUrl;
   final bool isDarkMode;
 
   const IdImageDisplay({
     super.key,
-    required this.imagePath,
+    required this.imageUrl,
     required this.isDarkMode,
   });
 
@@ -171,35 +174,81 @@ class IdImageDisplay extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDarkMode ? const Color(0xFF3A3A3A) : const Color(0xFFF0F0F0),
         ),
-        child: Image.file(
-          File(imagePath),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    color: Colors.red,
-                    size: 32,
+        child: imageUrl != null && imageUrl!.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        color: const Color(0xFF00CC58),
+                        strokeWidth: 2,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Loading image...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode
+                              ? const Color(0xFFAAAAAA)
+                              : const Color(0xFF666666),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Failed to load image',
-                    style: TextStyle(
-                      fontSize: 12,
+                ),
+                errorWidget: (context, url, error) => Container(
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Failed to load image',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode
+                              ? const Color(0xFFAAAAAA)
+                              : const Color(0xFF666666),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : Container(
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image_not_supported,
                       color: isDarkMode
                           ? const Color(0xFFAAAAAA)
                           : const Color(0xFF666666),
+                      size: 32,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      'No image available',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode
+                            ? const Color(0xFFAAAAAA)
+                            : const Color(0xFF666666),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          },
-        ),
       ),
     );
   }

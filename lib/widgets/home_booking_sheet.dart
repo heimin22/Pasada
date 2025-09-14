@@ -41,6 +41,7 @@ class HomeBookingSheet extends StatelessWidget {
     this.bookingId,
     this.selectedDiscount,
     this.capturedImagePath,
+    String? capturedImageUrl,
   });
 
   @override

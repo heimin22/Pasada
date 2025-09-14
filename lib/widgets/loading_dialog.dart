@@ -139,6 +139,7 @@ class InitializationService {
         _initializeLocalDatabase(),
         _configureNotifications(),
         _initializeEncryption(), // Add encryption initialization
+        _initializeSupabaseStorage(), // Initialize Supabase Storage bucket
         _preloadGoogleMap(context),
       ]);
 
@@ -285,6 +286,18 @@ class InitializationService {
     }
 
     debugPrint('Encryption service initialized and tested successfully');
+  }
+
+  /// Initialize Supabase Storage bucket for ID images
+  static Future<void> _initializeSupabaseStorage() async {
+    try {
+      // We'll initialize the bucket when the service is first used
+      // This is a placeholder for future storage initialization
+      debugPrint('Supabase Storage initialization scheduled for first use');
+    } catch (e) {
+      debugPrint('Warning: Failed to initialize Supabase Storage: $e');
+      // Don't throw - app should still work without storage
+    }
   }
 
   static Future<void> _loadUserProfile() async {
