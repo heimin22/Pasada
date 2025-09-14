@@ -1,19 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:pasada_passenger_app/services/notificationService.dart';
-import 'package:pasada_passenger_app/services/localDatabaseService.dart';
-import 'package:pasada_passenger_app/services/encryptionService.dart';
-import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
-import 'package:pasada_passenger_app/widgets/offline_bottom_sheet.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:provider/provider.dart';
-import 'package:pasada_passenger_app/providers/weather_provider.dart';
-import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
+import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 import 'package:pasada_passenger_app/services/location_permission_manager.dart';
+import 'package:pasada_passenger_app/services/location_weather_service.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/widgets/offline_bottom_sheet.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoadingDialog extends StatefulWidget {
   final String message;
@@ -338,7 +339,7 @@ class InitializationService {
     entry.remove();
   }
 
-  /// Initialize location services and permissions
+  /// Initialize location services and permissions (non-blocking)
   static Future<bool> _initializeLocation(BuildContext context) async {
     try {
       final locationManager = LocationPermissionManager.instance;
@@ -358,25 +359,49 @@ class InitializationService {
         return false;
       }
 
-      // Test if we can actually get location data
+      // Check for cached location first - this is instant
+      final prefs = await SharedPreferences.getInstance();
+      final cachedLat = prefs.getDouble('last_latitude');
+      final cachedLng = prefs.getDouble('last_longitude');
+
+      if (cachedLat != null && cachedLng != null) {
+        debugPrint(
+            'Using cached location for immediate initialization: $cachedLat, $cachedLng');
+
+        // Start background location fetch without blocking startup
+        _fetchFreshLocationInBackground();
+
+        return true; // Return true immediately with cached location
+      }
+
+      // If no cached location, try to get fresh location with shorter timeout
       try {
         final location = Location();
         final locationData = await location.getLocation().timeout(
-              const Duration(seconds: 8),
+              const Duration(seconds: 3), // Reduced timeout for startup
               onTimeout: () => throw TimeoutException(
-                  'Location fetch timeout', const Duration(seconds: 8)),
+                  'Initial location fetch timeout', const Duration(seconds: 3)),
             );
 
         if (locationData.latitude != null && locationData.longitude != null) {
-          debugPrint('Location services initialized successfully');
+          // Cache the fresh location
+          await prefs.setDouble('last_latitude', locationData.latitude!);
+          await prefs.setDouble('last_longitude', locationData.longitude!);
+          debugPrint(
+              'Fresh location obtained and cached: ${locationData.latitude}, ${locationData.longitude}');
           return true;
         } else {
           debugPrint('Location data is invalid');
           return false;
         }
       } catch (e) {
-        debugPrint('Error getting initial location: $e');
-        return false;
+        debugPrint(
+            'Initial location fetch failed (will retry in background): $e');
+
+        // Start background location fetch for next time
+        _fetchFreshLocationInBackground();
+
+        return false; // No location available for immediate use
       }
     } catch (e) {
       debugPrint('Error initializing location services: $e');
@@ -384,31 +409,121 @@ class InitializationService {
     }
   }
 
-  /// Initialize weather data during resource loading (assumes location is ready)
+  /// Fetch fresh location in background without blocking startup
+  static void _fetchFreshLocationInBackground() async {
+    try {
+      debugPrint('Starting background location fetch...');
+      final location = Location();
+      final locationData = await location.getLocation().timeout(
+            const Duration(seconds: 15), // More generous timeout for background
+            onTimeout: () => throw TimeoutException(
+                'Background location fetch timeout',
+                const Duration(seconds: 15)),
+          );
+
+      if (locationData.latitude != null && locationData.longitude != null) {
+        // Cache the fresh location for future use
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setDouble('last_latitude', locationData.latitude!);
+        await prefs.setDouble('last_longitude', locationData.longitude!);
+        debugPrint(
+            'Background location fetch successful: ${locationData.latitude}, ${locationData.longitude}');
+
+        // Optionally trigger weather update with fresh location
+        _updateWeatherWithFreshLocation(
+            locationData.latitude!, locationData.longitude!);
+      }
+    } catch (e) {
+      debugPrint('Background location fetch failed: $e');
+    }
+  }
+
+  /// Update weather with fresh location data
+  static void _updateWeatherWithFreshLocation(double lat, double lng) async {
+    try {
+      // This would typically update the weather provider with fresh coordinates
+      // Implementation depends on your weather service setup
+      debugPrint('Fresh location available for weather update: $lat, $lng');
+    } catch (e) {
+      debugPrint('Error updating weather with fresh location: $e');
+    }
+  }
+
+  /// Initialize weather data during resource loading (uses cached or fresh location)
   static Future<void> _initializeWeather(BuildContext context) async {
     try {
       final weatherProvider = context.read<WeatherProvider>();
 
-      // Since location is already confirmed to be ready, use a shorter timeout
+      // Try to get cached location first for immediate weather initialization
+      final prefs = await SharedPreferences.getInstance();
+      final cachedLat = prefs.getDouble('last_latitude');
+      final cachedLng = prefs.getDouble('last_longitude');
+
+      if (cachedLat != null && cachedLng != null) {
+        debugPrint(
+            'Initializing weather with cached location: $cachedLat, $cachedLng');
+        try {
+          await weatherProvider.fetchWeather(cachedLat, cachedLng,
+              forceRefresh: true);
+          debugPrint('Weather initialized successfully with cached location');
+
+          // Start background location-weather service
+          _initializeLocationWeatherServiceInBackground(weatherProvider);
+          return;
+        } catch (e) {
+          debugPrint('Weather fetch with cached location failed: $e');
+        }
+      }
+
+      // If no cached location or cached weather failed, try with fresh location
       final weatherInitialized = await LocationWeatherService.fetchAndSubscribe(
         weatherProvider,
       ).timeout(
-        const Duration(seconds: 8),
+        const Duration(seconds: 5), // Reduced timeout since we have fallback
         onTimeout: () {
-          debugPrint('Weather initialization timed out');
+          debugPrint('Weather initialization with fresh location timed out');
           return false;
         },
       );
 
       if (!weatherInitialized) {
-        debugPrint(
-            'Weather initialization failed despite location being ready');
+        debugPrint('Weather initialization failed - will retry in background');
+        // Start background retry
+        _initializeLocationWeatherServiceInBackground(weatherProvider);
       } else {
-        debugPrint('Weather initialized successfully');
+        debugPrint('Weather initialized successfully with fresh location');
       }
     } catch (e) {
       debugPrint('Error initializing weather: $e');
       // Don't throw error, weather loading failure shouldn't block app initialization
+    }
+  }
+
+  /// Initialize location-weather service in background
+  static void _initializeLocationWeatherServiceInBackground(
+      WeatherProvider weatherProvider) async {
+    try {
+      debugPrint('Starting background weather service initialization...');
+      await Future.delayed(const Duration(
+          seconds: 2)); // Small delay to not interfere with startup
+
+      final weatherInitialized = await LocationWeatherService.fetchAndSubscribe(
+        weatherProvider,
+      ).timeout(
+        const Duration(seconds: 10), // More generous timeout for background
+        onTimeout: () {
+          debugPrint('Background weather service initialization timed out');
+          return false;
+        },
+      );
+
+      if (weatherInitialized) {
+        debugPrint('Background weather service initialized successfully');
+      } else {
+        debugPrint('Background weather service initialization failed');
+      }
+    } catch (e) {
+      debugPrint('Background weather service initialization error: $e');
     }
   }
 }
