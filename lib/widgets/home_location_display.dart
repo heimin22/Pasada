@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/widgets/location_input_container.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Location display container for the home screen
 class HomeLocationDisplay extends StatelessWidget {
@@ -21,7 +20,7 @@ class HomeLocationDisplay extends StatelessWidget {
   final VoidCallback onShowSeatingPreferenceDialog;
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
-  final Function(String) onPaymentMethodSelected;
+  final VoidCallback? onFareUpdated;
 
   const HomeLocationDisplay({
     super.key,
@@ -40,7 +39,7 @@ class HomeLocationDisplay extends StatelessWidget {
     required this.onShowSeatingPreferenceDialog,
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
-    required this.onPaymentMethodSelected,
+    this.onFareUpdated,
   });
 
   /// Splits location address into primary and secondary parts
@@ -98,11 +97,7 @@ class HomeLocationDisplay extends StatelessWidget {
             onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
             onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
             onConfirmBooking: onConfirmBooking,
-            onPaymentMethodSelected: (method) {
-              onPaymentMethodSelected(method);
-              SharedPreferences.getInstance().then(
-                  (prefs) => prefs.setString('selectedPaymentMethod', method));
-            },
+            onFareUpdated: onFareUpdated,
           );
         },
         child: Column(

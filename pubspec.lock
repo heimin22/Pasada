@@ -401,14 +401,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.2.0"
-  equatable:
-    dependency: transitive
-    description:
-      name: equatable
-      sha256: "567c64b3cb4cf82397aac55f4f0cbd3ca20d77c6c03bedbc4ceaddc08904aef7"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.7"
   fake_async:
     dependency: transitive
     description:
@@ -1487,14 +1479,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
-  paymongo_sdk:
-    dependency: "direct main"
-    description:
-      name: paymongo_sdk
-      sha256: "664dbece53bca57ecccc7b116446895ab9b8cbcb49989b65e7f941dd80207926"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.7.0"
   permission_handler:
     dependency: "direct main"
     description:

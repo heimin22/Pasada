@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-import '../services/asset_preloader_service.dart';
-import '../utils/memory_manager.dart';
+import '../services/asset_preloader_service.dart' as preloader;
+import '../utils/adaptive_memory_manager.dart';
 
 /// Optimized SVG widget that uses preloaded assets when available
 class OptimizedSvgWidget extends StatelessWidget {
@@ -27,8 +27,8 @@ class OptimizedSvgWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final preloaderService = AssetPreloaderService();
-    final memoryManager = MemoryManager();
+    final preloaderService = preloader.AssetPreloaderService();
+    final memoryManager = AdaptiveMemoryManager();
 
     // Check if SVG is preloaded
     final preloadedSvgData = preloaderService.getPreloadedSvg(assetPath);
@@ -169,7 +169,6 @@ class SvgAssetBatcher {
     'branding': [
       'assets/svg/pasadaLogoWithoutText.svg',
       'assets/svg/googleIcon.svg',
-      'assets/svg/paymongo_logo.svg',
     ],
   };
 
@@ -178,7 +177,7 @@ class SvgAssetBatcher {
     final assets = _assetGroups[groupName];
     if (assets == null) return;
 
-    final preloaderService = AssetPreloaderService();
+    final preloaderService = preloader.AssetPreloaderService();
 
     // Create a custom batch with only these assets
     await Future.wait(
@@ -186,13 +185,14 @@ class SvgAssetBatcher {
         try {
           await preloaderService.preloadAssets(
               maxPriority: AssetPriority.critical);
+          debugPrint('Preloaded SVG asset: $asset');
         } catch (e) {
           debugPrint('Failed to preload SVG asset: $asset - $e');
         }
       }),
     );
 
-    debugPrint('✅ Preloaded SVG group: $groupName (${assets.length} assets)');
+    debugPrint('Preloaded SVG group: $groupName (${assets.length} assets)');
   }
 
   /// Get all assets in a group

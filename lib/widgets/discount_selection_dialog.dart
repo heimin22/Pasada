@@ -21,8 +21,8 @@ class DiscountSelectionDialog {
     VoidCallback? onShowSeatingPreferenceDialog,
     VoidCallback? onShowDiscountSelectionDialog,
     VoidCallback? onConfirmBooking,
-    Function(String)? onPaymentMethodSelected,
     Function? onReopenMainBottomSheet,
+    VoidCallback? onFareUpdated, // New callback for fare update
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final discountOptions = [
@@ -101,6 +101,8 @@ class DiscountSelectionDialog {
                               if (discountType.isEmpty) {
                                 selectedDiscountSpecification.value = '';
                                 selectedIdImagePath.value = null;
+                                // Immediately update fare when discount is cleared
+                                onFareUpdated?.call();
                                 Navigator.of(context).pop();
                                 return;
                               }
@@ -116,6 +118,9 @@ class DiscountSelectionDialog {
                                 selectedDiscountSpecification.value =
                                     discountType;
                                 selectedIdImagePath.value = capturedImage.path;
+
+                                // Immediately update fare after discount is applied
+                                onFareUpdated?.call();
 
                                 // Show loading screen as a dialog
                                 if (context.mounted) {

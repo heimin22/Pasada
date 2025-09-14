@@ -4,9 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../utils/memory_manager.dart';
-
-enum AssetPriority { critical, high, medium, low }
+import '../utils/adaptive_memory_manager.dart';
 
 class AssetPreloaderService {
   static final AssetPreloaderService _instance =
@@ -14,7 +12,7 @@ class AssetPreloaderService {
   factory AssetPreloaderService() => _instance;
   AssetPreloaderService._internal();
 
-  final MemoryManager _memoryManager = MemoryManager();
+  final AdaptiveMemoryManager _memoryManager = AdaptiveMemoryManager();
   bool _isPreloading = false;
   bool _criticalAssetsLoaded = false;
   bool _highPriorityAssetsLoaded = false;
@@ -46,9 +44,6 @@ class AssetPreloaderService {
     'assets/svg/bus.svg',
     'assets/png/bus.png',
     'assets/svg/googleIcon.svg',
-    'assets/svg/paymongo_logo.svg',
-    'assets/svg/gcash_logo.svg',
-    'assets/svg/maya_logo.svg',
   ];
 
   // Low priority assets - rarely used or decorative
@@ -76,8 +71,7 @@ class AssetPreloaderService {
       await _preloadAssetBatch(_criticalAssets, AssetPriority.critical);
       _criticalAssetsLoaded = true;
       onCriticalComplete?.call();
-      debugPrint(
-          '✅ Critical assets preloaded (${_criticalAssets.length} items)');
+      debugPrint('Critical assets preloaded (${_criticalAssets.length} items)');
 
       // Load high priority if requested
       if (maxPriority.index >= AssetPriority.high.index) {
@@ -85,14 +79,14 @@ class AssetPreloaderService {
         _highPriorityAssetsLoaded = true;
         onHighPriorityComplete?.call();
         debugPrint(
-            '✅ High priority assets preloaded (${_highPriorityAssets.length} items)');
+            'High priority assets preloaded (${_highPriorityAssets.length} items)');
       }
 
       // Load medium priority if requested
       if (maxPriority.index >= AssetPriority.medium.index) {
         await _preloadAssetBatch(_mediumPriorityAssets, AssetPriority.medium);
         debugPrint(
-            '✅ Medium priority assets preloaded (${_mediumPriorityAssets.length} items)');
+            'Medium priority assets preloaded (${_mediumPriorityAssets.length} items)');
       }
 
       // Load low priority if requested (background loading)
@@ -100,11 +94,11 @@ class AssetPreloaderService {
         // Load low priority assets in background without blocking
         _preloadAssetBatch(_lowPriorityAssets, AssetPriority.low).then((_) {
           debugPrint(
-              '✅ Low priority assets preloaded (${_lowPriorityAssets.length} items)');
+              'Low priority assets preloaded (${_lowPriorityAssets.length} items)');
         });
       }
     } catch (e) {
-      debugPrint('❌ Asset preloading error: $e');
+      debugPrint('Asset preloading error: $e');
     } finally {
       _isPreloading = false;
     }
@@ -130,18 +124,9 @@ class AssetPreloaderService {
     }
   }
 
-  /// Get concurrency limit based on priority
+  /// Get concurrency limit based on priority using adaptive memory manager
   int _getConcurrencyLimit(AssetPriority priority) {
-    switch (priority) {
-      case AssetPriority.critical:
-        return 3; // Conservative for critical path
-      case AssetPriority.high:
-        return 5; // Balanced
-      case AssetPriority.medium:
-        return 8; // More aggressive
-      case AssetPriority.low:
-        return 10; // Maximum concurrency
-    }
+    return _memoryManager.getConcurrencyLimit(priority);
   }
 
   /// Preload single asset and cache it
@@ -181,9 +166,9 @@ class AssetPreloaderService {
         await completer.future;
       }
 
-      debugPrint('📦 Preloaded ${priority.name}: $assetPath');
+      debugPrint('Preloaded ${priority.name}: $assetPath');
     } catch (e) {
-      debugPrint('❌ Failed to preload $assetPath: $e');
+      debugPrint('Failed to preload $assetPath: $e');
     }
   }
 
@@ -240,6 +225,6 @@ class AssetPreloaderService {
 
     _criticalAssetsLoaded = false;
     _highPriorityAssetsLoaded = false;
-    debugPrint('🧹 Preloaded assets cache cleared');
+    debugPrint('Preloaded assets cache cleared');
   }
 }

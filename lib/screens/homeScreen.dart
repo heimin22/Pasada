@@ -326,9 +326,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   void loadPaymentMethod() async {
     final prefs = await SharedPreferences.getInstance();
     final savedMethod = prefs.getString('selectedPaymentMethod');
-    if (savedMethod != null && mounted) {
+    if (mounted) {
       setState(() {
-        selectedPaymentMethod = savedMethod;
+        // Set Cash as default payment method
+        selectedPaymentMethod = savedMethod ?? 'Cash';
       });
     }
   }
@@ -437,12 +438,23 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     }
   }
 
+  // Method to update fare when discount changes
+  void _updateFareForDiscount() {
+    if (mounted) {
+      setState(() {
+        currentFare = FareService.calculateDiscountedFare(
+            originalFare, selectedDiscountSpecification.value);
+      });
+    }
+  }
+
   // Add new bottom sheet method for discount selection
   Future<void> _showDiscountSelectionSheet() async {
     await DiscountSelectionDialog.show(
       context: context,
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
+      onFareUpdated: _updateFareForDiscount, // Pass the fare update callback
       onReopenMainBottomSheet: () {
         LocationInputContainer.showBottomSheet(
           context: context,
@@ -459,22 +471,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
           onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
           onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-          onPaymentMethodSelected: (method) {
-            setState(() {
-              selectedPaymentMethod = method;
-            });
-          },
+          onFareUpdated: _updateFareForDiscount,
         );
       },
     );
-
-    // Update fare when discount changes
-    if (mounted) {
-      setState(() {
-        currentFare = FareService.calculateDiscountedFare(
-            originalFare, selectedDiscountSpecification.value);
-      });
-    }
   }
 
   Future<void> _navigateToLocationSearch(bool isPickup) async {
@@ -728,9 +728,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         onShowDiscountSelectionDialog:
                             _showDiscountSelectionSheet,
                         onConfirmBooking: _showBookingConfirmationDialog,
-                        onPaymentMethodSelected: (method) {
-                          setState(() => selectedPaymentMethod = method);
-                        },
+                        onFareUpdated: _updateFareForDiscount,
                       ),
                     ),
                   ),

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
@@ -1395,33 +1394,12 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   }
 
   Widget _buildPaymentMethodIcon(String paymentMethod) {
-    switch (paymentMethod) {
-      case 'GCash':
-        return SvgPicture.asset(
-          'assets/svg/gcash_logo.svg',
-          width: 24,
-          height: 24,
-        );
-      case 'PayMaya':
-      case 'Maya':
-        return SvgPicture.asset(
-          'assets/svg/maya_logo.svg',
-          width: 24,
-          height: 24,
-        );
-      case 'Cash':
-        return const Icon(
-          Icons.money_rounded,
-          color: Color(0xFF00CC58),
-          size: 24,
-        );
-      default:
-        return const Icon(
-          Icons.payment,
-          color: Color(0xFF00CC58),
-          size: 24,
-        );
-    }
+    // Only Cash payment is supported
+    return const Icon(
+      Icons.money_rounded,
+      color: Color(0xFF00CC58),
+      size: 24,
+    );
   }
 
   Future<void> _submitReview() async {
