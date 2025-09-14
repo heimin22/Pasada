@@ -1,13 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+import '../location/selectedLocation.dart';
 import 'booking_details_container.dart';
-import 'payment_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
-import '../location/selectedLocation.dart';
-import 'dart:async';
 import 'eta_container.dart';
+import 'payment_details_container.dart';
 
 class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
@@ -22,6 +24,9 @@ class BookingStatusManager extends StatefulWidget {
   final bool isDriverAssigned;
   final String bookingStatus;
   final LatLng? currentLocation;
+  final int? bookingId;
+  final String? selectedDiscount;
+  final String? capturedImagePath;
 
   const BookingStatusManager({
     super.key,
@@ -37,6 +42,9 @@ class BookingStatusManager extends StatefulWidget {
     required this.isDriverAssigned,
     this.bookingStatus = 'requested',
     this.currentLocation,
+    this.bookingId,
+    this.selectedDiscount,
+    this.capturedImagePath,
   });
 
   @override
@@ -198,6 +206,9 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               BookingDetailsContainer(
                 pickupLocation: widget.pickupLocation,
                 dropoffLocation: widget.dropoffLocation,
+                bookingId: widget.bookingId,
+                selectedDiscount: widget.selectedDiscount,
+                capturedImagePath: widget.capturedImagePath,
               ),
               PaymentDetailsContainer(
                 paymentMethod: widget.paymentMethod,

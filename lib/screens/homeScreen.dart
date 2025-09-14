@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -75,6 +76,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedDropOffLocation; // variable for the selected drop off location
   bool isSearchingPickup = true; // true = pick-up, false - drop-off
   DateTime? lastBackPressTime;
+
+  // Debounce timer for bottom sheet reopening
+  Timer? _bottomSheetDebounce;
   // keep state alive
   @override
   bool get wantKeepAlive => true;
@@ -382,6 +386,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   @override
   void dispose() {
+    _bottomSheetDebounce?.cancel();
     bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -455,25 +460,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedDiscountSpecification: selectedDiscountSpecification,
       selectedIdImagePath: selectedIdImagePath,
       onFareUpdated: _updateFareForDiscount, // Pass the fare update callback
-      onReopenMainBottomSheet: () {
-        LocationInputContainer.showBottomSheet(
-          context: context,
-          isRouteSelected: isRouteSelected,
-          selectedPickUpLocation: selectedPickUpLocation,
-          selectedDropOffLocation: selectedDropOffLocation,
-          currentFare: currentFare,
-          originalFare: originalFare,
-          selectedPaymentMethod: selectedPaymentMethod,
-          selectedDiscountSpecification: selectedDiscountSpecification,
-          seatingPreference: seatingPreference,
-          selectedIdImagePath: selectedIdImagePath,
-          onNavigateToLocationSearch: _navigateToLocationSearch,
-          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
-          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
-          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-          onFareUpdated: _updateFareForDiscount,
-        );
-      },
+      onReopenMainBottomSheet: _reopenBottomSheetAfterLocationUpdate,
     );
   }
 
@@ -535,7 +522,45 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Save the updated location to cache
       saveLocation();
       WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
+
+      // Reopen the bottom sheet with updated location and fare values
+      _reopenBottomSheetAfterLocationUpdate();
     }
+  }
+
+  /// Reopens the bottom sheet with updated location and fare values
+  void _reopenBottomSheetAfterLocationUpdate() {
+    // Cancel any existing debounce timer
+    _bottomSheetDebounce?.cancel();
+
+    // Close any existing bottom sheet first (if there is one)
+    final navigatorState = Navigator.of(context);
+    if (navigatorState.canPop()) {
+      navigatorState.pop();
+    }
+
+    // Set up debounced bottom sheet reopening
+    _bottomSheetDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        LocationInputContainer.showBottomSheet(
+          context: context,
+          isRouteSelected: isRouteSelected,
+          selectedPickUpLocation: selectedPickUpLocation,
+          selectedDropOffLocation: selectedDropOffLocation,
+          currentFare: currentFare,
+          originalFare: originalFare,
+          selectedPaymentMethod: selectedPaymentMethod,
+          selectedDiscountSpecification: selectedDiscountSpecification,
+          seatingPreference: seatingPreference,
+          selectedIdImagePath: selectedIdImagePath,
+          onNavigateToLocationSearch: _navigateToLocationSearch,
+          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+          onFareUpdated: _updateFareForDiscount,
+        );
+      }
+    });
   }
 
   void saveLocation() async {
@@ -747,6 +772,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     phoneNumber: phoneNumber,
                     isDriverAssigned: isDriverAssigned,
                     currentLocation: mapScreenKey.currentState?.currentLocation,
+                    bookingId: activeBookingId,
+                    selectedDiscount:
+                        selectedDiscountSpecification.value.isNotEmpty &&
+                                selectedDiscountSpecification.value != 'None'
+                            ? selectedDiscountSpecification.value
+                            : null,
+                    capturedImagePath: selectedIdImagePath.value,
                   ),
               ],
             );
