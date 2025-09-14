@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'dart:async';
-import 'package:pasada_passenger_app/services/smsVerificationService.dart';
-import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/services/authService.dart';
+import 'package:pasada_passenger_app/services/smsVerificationService.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
@@ -37,6 +38,8 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   @override
   void initState() {
     super.initState();
+    // Phone number validation is now done before reaching this screen
+    // So we can safely send OTP immediately
     sendOTPCode();
     startTimer();
   }

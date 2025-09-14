@@ -1,10 +1,11 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/gestures.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
 import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
+import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
+import 'package:pasada_passenger_app/services/phoneValidationService.dart';
 import 'package:pasada_passenger_app/utils/toast_utils.dart';
 
 class CreateAccountCredPage extends StatefulWidget {
@@ -421,7 +422,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
   Future<void> handleSignUp() async {
     // Check terms and conditions acceptance
     if (!isChecked) {
-      ToastUtils.showWarning('Please accept the terms and conditions to continue.');
+      ToastUtils.showWarning(
+          'Please accept the terms and conditions to continue.');
       return;
     }
 
@@ -445,12 +447,14 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     }
 
     if (contactDigits.length != 10) {
-      ToastUtils.showError('Phone number must be exactly 10 digits (without country code).');
+      ToastUtils.showError(
+          'Phone number must be exactly 10 digits (without country code).');
       return;
     }
 
     if (!_isValidPhoneNumber(contactDigits)) {
-      ToastUtils.showError('Please enter a valid Philippine mobile number (starting with 9).');
+      ToastUtils.showError(
+          'Please enter a valid Philippine mobile number (starting with 9).');
       return;
     }
 
@@ -458,14 +462,27 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     final connectivity = Connectivity();
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('No internet connection. Please check your network and try again.');
+      ToastUtils.showError(
+          'No internet connection. Please check your network and try again.');
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      // Navigate to OTP verification instead of creating account directly
+      // Check if phone number is already registered before sending OTP
+      final isPhoneAvailable =
+          await PhoneValidationService.isPhoneNumberAvailable(contactNumber);
+
+      if (!isPhoneAvailable) {
+        if (mounted) {
+          ToastUtils.showError(
+              'This phone number is already registered. Please use a different number or try logging in.');
+        }
+        return;
+      }
+
+      // Navigate to OTP verification only after phone number validation
       if (mounted) {
         Navigator.push(
           context,
@@ -482,7 +499,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     } catch (e) {
       debugPrint('Error during sign-up process: $e');
       if (mounted) {
-        ToastUtils.showError('Failed to proceed with account creation. Please try again.');
+        ToastUtils.showError(
+            'Failed to proceed with account creation. Please try again.');
       }
     } finally {
       if (mounted) setState(() => isLoading = false);
@@ -491,7 +509,8 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
   bool _isValidPhoneNumber(String phoneDigits) {
     // Philippine mobile numbers start with 9 and are 10 digits long
-    return phoneDigits.startsWith('9') && phoneDigits.length == 10 && 
-           RegExp(r'^\d{10}$').hasMatch(phoneDigits);
+    return phoneDigits.startsWith('9') &&
+        phoneDigits.length == 10 &&
+        RegExp(r'^\d{10}$').hasMatch(phoneDigits);
   }
 }
