@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
+import 'package:pasada_passenger_app/widgets/booking_status_manager.dart';
 
 /// Booking bottom sheet wrapper for the home screen
 class HomeBookingSheet extends StatelessWidget {
@@ -19,6 +19,9 @@ class HomeBookingSheet extends StatelessWidget {
   final String phoneNumber;
   final bool isDriverAssigned;
   final LatLng? currentLocation;
+  final int? bookingId;
+  final String? selectedDiscount;
+  final String? capturedImagePath;
 
   const HomeBookingSheet({
     super.key,
@@ -35,6 +38,9 @@ class HomeBookingSheet extends StatelessWidget {
     required this.phoneNumber,
     required this.isDriverAssigned,
     required this.currentLocation,
+    this.bookingId,
+    this.selectedDiscount,
+    this.capturedImagePath,
   });
 
   @override
@@ -92,6 +98,9 @@ class HomeBookingSheet extends StatelessWidget {
                     isDriverAssigned: isDriverAssigned,
                     bookingStatus: bookingStatus,
                     currentLocation: currentLocation,
+                    bookingId: bookingId,
+                    selectedDiscount: selectedDiscount,
+                    capturedImagePath: capturedImagePath,
                   ),
                 ),
               ),

@@ -269,7 +269,8 @@ class BookingManager {
         dropoffAddress: _state.selectedDropOffLocation!.address,
         dropoffCoordinates: _state.selectedDropOffLocation!.coordinates,
         paymentMethod: _state.selectedPaymentMethod ?? 'Cash',
-        fare: _state.currentFare,
+        fare: _state
+            .originalFare, // Send original fare to server, not discounted fare
         seatingPreference: _state.seatingPreference.value,
         passengerType: passengerTypeToSend,
         idImagePath: _state.selectedIdImagePath.value,

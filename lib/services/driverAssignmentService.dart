@@ -1,10 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
 
 class DriverAssignmentService {
   final ApiService _apiService = ApiService();
+  final DriverService _driverService = DriverService();
   Timer? _pollingTimer;
   Timer? _timeoutTimer;
 
@@ -51,8 +53,8 @@ class DriverAssignmentService {
       }
     });
 
-    // Poll every 5 seconds using the bookings endpoint
-    _pollingTimer = Timer.periodic(const Duration(seconds: 5), (timer) async {
+    // Poll every 2 seconds for faster driver assignment detection
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       try {
         // Fetch booking details and unwrap if wrapped under 'trip'
         final raw =
@@ -78,18 +80,12 @@ class DriverAssignmentService {
           onStatusChange(response['ride_status'] as String);
         }
 
-        // When booking status is accepted, fetch driver details via RPC
+        // When booking status is accepted, fetch driver details using parallel approach
         if (response['ride_status'] == 'accepted') {
           // Polling continues to allow updates (do not stopPolling here)
 
-          // Fetch driver details
-          final driverDetails =
-              await DriverService().getDriverDetailsByBooking(bookingId);
-
-          if (driverDetails != null) {
-            // Call the callback with driver data
-            onDriverAssigned({'booking': response, 'driver': driverDetails});
-          }
+          // Use parallel fetching for faster driver details retrieval
+          _fetchDriverDetailsParallel(bookingId, response, onDriverAssigned);
         }
       } catch (e) {
         debugPrint('Error polling for driver assignment: $e');
@@ -98,6 +94,49 @@ class DriverAssignmentService {
         }
       }
     });
+  }
+
+  /// Faster parallel driver details fetching
+  Future<void> _fetchDriverDetailsParallel(
+      int bookingId,
+      Map<String, dynamic> bookingResponse,
+      Function(Map<String, dynamic>) onDriverAssigned) async {
+    try {
+      // Try multiple methods in parallel for fastest response
+      final futures = <Future>[];
+
+      // Method 1: RPC call (usually fastest)
+      final rpcFuture = _driverService.getDriverDetailsByBooking(bookingId);
+      futures.add(rpcFuture);
+
+      // Method 2: Direct driver query if we have driver_id
+      if (bookingResponse.containsKey('driver_id') &&
+          bookingResponse['driver_id'] != null) {
+        final directFuture = _driverService
+            .getDriverDetails(bookingResponse['driver_id'].toString());
+        futures.add(directFuture);
+      }
+
+      // Wait for first successful response
+      for (final future in futures) {
+        try {
+          final result = await future;
+          if (result != null) {
+            // Call the callback with driver data immediately
+            onDriverAssigned({'booking': bookingResponse, 'driver': result});
+            return; // Exit after first successful result
+          }
+        } catch (e) {
+          debugPrint('Driver details fetch method failed: $e');
+          continue; // Try next method
+        }
+      }
+
+      debugPrint(
+          'All parallel driver fetch methods failed for booking $bookingId');
+    } catch (e) {
+      debugPrint('Error in parallel driver details fetch: $e');
+    }
   }
 
   // Add a new method to fetch booking details

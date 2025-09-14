@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/id_image_container.dart';
 import 'package:pasada_passenger_app/widgets/location_row_widget.dart';
 
@@ -269,32 +268,7 @@ class DiscountSelectionButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () async {
-          await DiscountSelectionDialog.show(
-            context: context,
-            selectedDiscountSpecification: selectedDiscountSpecification,
-            selectedIdImagePath: selectedIdImagePath,
-            onFareUpdated: onFareUpdated,
-            onReopenMainBottomSheet: () {
-              LocationInputContainer.showBottomSheet(
-                context: context,
-                isRouteSelected: isRouteSelected,
-                selectedPickUpLocation: selectedPickUpLocation,
-                selectedDropOffLocation: selectedDropOffLocation,
-                currentFare: currentFare,
-                originalFare: originalFare,
-                selectedPaymentMethod: selectedPaymentMethod,
-                selectedDiscountSpecification: selectedDiscountSpecification,
-                seatingPreference: seatingPreference,
-                selectedIdImagePath: selectedIdImagePath,
-                onNavigateToLocationSearch: onNavigateToLocationSearch,
-                onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
-                onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
-                onConfirmBooking: onConfirmBooking,
-              );
-            },
-          );
-        },
+        onTap: onShowDiscountSelectionDialog,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
