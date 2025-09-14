@@ -15,7 +15,7 @@ class OptimizationDemo {
 
   /// Run a comprehensive optimization demo
   static Future<void> runOptimizationDemo() async {
-    debugPrint('\n🚀 STARTING OPTIMIZATION DEMO 🚀');
+    debugPrint('STARTING OPTIMIZATION DEMO');
     debugPrint('=====================================');
 
     // 1. Asset Optimization Demo
@@ -33,13 +33,13 @@ class OptimizationDemo {
     // 5. Asset Compression Demo
     await _demoAssetCompression();
 
-    debugPrint('\n✅ OPTIMIZATION DEMO COMPLETED ✅');
+    debugPrint('OPTIMIZATION DEMO COMPLETED');
     debugPrint('=====================================\n');
   }
 
   /// Demo asset optimization features
   static Future<void> _demoAssetOptimization() async {
-    debugPrint('\n📦 ASSET OPTIMIZATION DEMO');
+    debugPrint('ASSET OPTIMIZATION DEMO');
     debugPrint('---------------------------');
 
     final assetOptimizer = AssetOptimizerService();
@@ -61,13 +61,13 @@ class OptimizationDemo {
 
     for (final asset in testAssets) {
       final isUsed = assetOptimizer.isAssetUsed(asset);
-      debugPrint('Asset $asset: ${isUsed ? "✅ Used" : "❌ Unused"}');
+      debugPrint('Asset $asset: ${isUsed ? "Used" : "Unused"}');
     }
   }
 
   /// Demo memory management features
   static Future<void> _demoMemoryManagement() async {
-    debugPrint('\n🧠 MEMORY MANAGEMENT DEMO');
+    debugPrint('MEMORY MANAGEMENT DEMO');
     debugPrint('--------------------------');
 
     final memoryManager = AdaptiveMemoryManager();
@@ -92,7 +92,7 @@ class OptimizationDemo {
       AssetPriority.medium,
       AssetPriority.low
     ];
-    debugPrint('\nAdaptive Concurrency Limits:');
+    debugPrint('Adaptive Concurrency Limits:');
     for (final priority in priorities) {
       final limit = memoryManager.getConcurrencyLimit(priority);
       debugPrint('  ${priority.name}: $limit');
@@ -101,7 +101,7 @@ class OptimizationDemo {
 
   /// Demo performance monitoring features
   static Future<void> _demoPerformanceMonitoring() async {
-    debugPrint('\n📊 PERFORMANCE MONITORING DEMO');
+    debugPrint('PERFORMANCE MONITORING DEMO');
     debugPrint('-------------------------------');
 
     final performanceMonitor = PerformanceMonitoringService();
@@ -135,7 +135,7 @@ class OptimizationDemo {
 
   /// Demo lazy initialization features
   static Future<void> _demoLazyInitialization() async {
-    debugPrint('\n⏰ LAZY INITIALIZATION DEMO');
+    debugPrint('LAZY INITIALIZATION DEMO');
     debugPrint('----------------------------');
 
     final lazyInitService = LazyInitializationService();
@@ -148,11 +148,11 @@ class OptimizationDemo {
         '  Progress: ${(lazyInitService.initializationProgress * 100).toStringAsFixed(1)}%');
 
     // Start lazy initialization
-    debugPrint('\nStarting lazy initialization...');
+    debugPrint('Starting lazy initialization...');
     await lazyInitService.startLazyInitialization();
 
     // Check final status
-    debugPrint('\nFinal status:');
+    debugPrint('Final status:');
     debugPrint('  Is initializing: ${lazyInitService.isInitializing}');
     debugPrint('  Is complete: ${lazyInitService.isInitializationComplete}');
     debugPrint(
@@ -164,7 +164,7 @@ class OptimizationDemo {
 
   /// Demo asset compression features
   static Future<void> _demoAssetCompression() async {
-    debugPrint('\n🗜️  ASSET COMPRESSION DEMO');
+    debugPrint('ASSET COMPRESSION DEMO');
     debugPrint('---------------------------');
 
     final compressionService = EnhancedAssetCompressionService();
@@ -173,11 +173,11 @@ class OptimizationDemo {
     compressionService.printAssetCompressionReport();
 
     // Simulate pre-compressing critical assets
-    debugPrint('\nPre-compressing critical assets...');
+    debugPrint('Pre-compressing critical assets...');
     await compressionService.preCompressCriticalAssets();
 
     // Print updated stats
-    debugPrint('\nUpdated compression stats:');
+    debugPrint('Updated compression stats:');
     compressionService.printAssetCompressionReport();
   }
 
@@ -202,17 +202,17 @@ class OptimizationDemo {
   static void printOptimizationSummary() {
     final summary = getOptimizationSummary();
 
-    debugPrint('\n📋 OPTIMIZATION SUMMARY 📋');
+    debugPrint('OPTIMIZATION SUMMARY');
     debugPrint('===========================');
 
     for (final category in summary.entries) {
-      debugPrint('\n${category.key.toUpperCase()}:');
+      debugPrint('${category.key.toUpperCase()}:');
       final data = category.value as Map<String, dynamic>;
       for (final entry in data.entries) {
         debugPrint('  ${entry.key}: ${entry.value}');
       }
     }
 
-    debugPrint('\n===========================');
+    debugPrint('===========================');
   }
 }

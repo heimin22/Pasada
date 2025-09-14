@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import '../services/image_compression_service.dart';
 import '../utils/adaptive_memory_manager.dart';
 
-/// Enhanced cached network image with automatic compression and memory optimization
-/// Integrates with our custom memory manager and image compression service
 class OptimizedCachedImage extends StatelessWidget {
   final String imageUrl;
   final double? width;

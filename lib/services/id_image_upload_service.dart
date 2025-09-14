@@ -35,8 +35,6 @@ class IdImageUploadService {
     }
   }
 
-  /// Upload ID image to Supabase Storage
-  /// Returns the public URL of the uploaded image
   static Future<String?> uploadIdImage({
     required File imageFile,
     required String passengerType,
@@ -107,7 +105,7 @@ class IdImageUploadService {
 
       // Provide specific guidance for common errors
       if (e.toString().contains('Bucket not found')) {
-        debugPrint('❌ Storage bucket not found. Please create it manually:');
+        debugPrint('Storage bucket not found. Please create it manually:');
         debugPrint('1. Go to your Supabase Dashboard');
         debugPrint('2. Navigate to Storage');
         debugPrint('3. Create a new bucket named: $_bucketName');

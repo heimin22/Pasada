@@ -1,8 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
-import 'package:pasada_passenger_app/widgets/optimized_cached_image.dart';
-import 'dart:math';
+import 'package:pasada_passenger_app/widgets/avatar_image.dart';
 
 class SettingsProfileHeader extends StatefulWidget {
   final AuthService authService;
@@ -107,23 +108,13 @@ class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
     // calculate dynamic avatar size based on screen dimensions
     final double avatarDiameter =
         min(widget.screenWidth, widget.screenHeight) * 0.23;
-    final double avatarRadius = avatarDiameter / 2;
 
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: avatarRadius,
-        backgroundColor: Colors.transparent,
-        child: ClipOval(
-          child: OptimizedCachedImage.profile(
-            imageUrl: avatarUrl,
-            size: avatarDiameter,
-            placeholder: const CircularProgressIndicator(),
-            errorWidget: buildDefaultAvatar(),
-          ),
-        ),
-      );
-    }
-    return buildDefaultAvatar();
+    return ProfileAvatar(
+      avatarPath: avatarUrl,
+      size: avatarDiameter,
+      placeholder: const CircularProgressIndicator(),
+      errorWidget: buildDefaultAvatar(),
+    );
   }
 
   Widget buildDefaultAvatar() {
