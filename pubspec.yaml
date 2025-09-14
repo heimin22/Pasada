@@ -119,41 +119,50 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/svg/bus.svg
-    - assets/svg/Ellipse.svg
-    - assets/svg/otherOptions.svg
-    - assets/svg/lines.svg
-    - assets/svg/otherOptionsOptimized.svg
-    - assets/svg/googleIcon.svg
-    - assets/svg/viberIcon.svg
+    # Critical navigation assets
+    - assets/svg/pasadaLogoWithoutText.svg
     - assets/svg/homeIcon.svg
+    - assets/svg/homeSelectedIcon.svg
     - assets/svg/activityIcon.svg
+    - assets/svg/activitySelectedIcon.svg
     - assets/svg/notificationIcon.svg
+    - assets/svg/notificationSelectedIcon.svg
     - assets/svg/profileIcon.svg
     - assets/svg/profileSelectedIcon.svg
     - assets/svg/settingsIcon.svg
-    - assets/svg/homeSelectedIcon.svg
-    - assets/svg/activitySelectedIcon.svg
-    - assets/svg/notificationSelectedIcon.svg
-    - assets/svg/accountSelectedIcon.svg
     - assets/svg/settingsSelectedIcon.svg
+    - assets/svg/accountSelectedIcon.svg
+
+    # Map and location assets
     - assets/svg/locationPin.svg
     - assets/svg/navigation.svg
-    - assets/svg/pasadaLogoWithoutText.svg
     - assets/svg/pickupPin.svg
-    - assets/svg/pinpickup.svg
     - assets/svg/pindropoff.svg
-    - assets/svg/phFlag.svg
-    - assets/svg/default_user_profile.svg
-    - assets/png/default_user_profile.png
+    - assets/svg/pinpickup.svg
+
+    # Transportation assets
+    - assets/svg/bus.svg
     - assets/png/bus.png
     - assets/png/bus_h.png
     - assets/png/pin_pickup.png
     - assets/png/pin_dropoff.png
-    - assets/md/privacy_policy.md
+
+    # Branding and social assets
+    - assets/svg/googleIcon.svg
+    - assets/svg/viberIcon.svg
+    - assets/svg/phFlag.svg
+
+    # App icons
+    - assets/png/pasada_main_app_icon.png
     - assets/png/pasada_app_icon_text_colored.png
     - assets/png/pasada_app_icon_text_white.png
-    - assets/png/pasada_main_app_icon.png
+
+    # User profile assets
+    - assets/svg/default_user_profile.svg
+    - assets/png/default_user_profile.png
+
+    # Content assets
+    - assets/md/privacy_policy.md
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -168,36 +177,21 @@ flutter:
   fonts:
     - family: Inter
       fonts:
-        - asset: fonts/Inter_18pt-Black.ttf
-          weight: 900
-        - asset: fonts/Inter_18pt-BlackItalic.ttf
-          weight: 900
-          style: italic
-        - asset: fonts/Inter_18pt-Bold.ttf
-          weight: 700
-        - asset: fonts/Inter_18pt-BoldItalic.ttf
-          weight: 700
-          style: italic
-        - asset: fonts/Inter_18pt-Regular.ttf
-          weight: 400
-        - asset: fonts/Inter_18pt-Italic.ttf
-          weight: 400
-          style: italic
         - asset: fonts/Inter_18pt-Light.ttf
           weight: 300
-        - asset: fonts/Inter_18pt-LightItalic.ttf
-          weight: 300
-          style: italic
-        - asset: fonts/Inter_24pt-Bold.ttf
-          weight: 700
-        - asset: fonts/Inter_24pt-Regular.ttf
-          weight: 400
-        - asset: fonts/Inter_28pt-Bold.ttf
-          weight: 700
-        - asset: fonts/Inter_28pt-Regular.ttf
+        - asset: fonts/Inter_18pt-Regular.ttf
           weight: 400
         - asset: fonts/Inter_18pt-Medium.ttf
           weight: 500
+        - asset: fonts/Inter_18pt-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Inter_18pt-Bold.ttf
+          weight: 700
+        - asset: fonts/Inter_18pt-Black.ttf
+          weight: 900
+        - asset: fonts/Inter_18pt-Italic.ttf
+          weight: 400
+          style: italic
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 dependency_overrides:

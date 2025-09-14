@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+
 import '../services/image_compression_service.dart';
-import '../utils/memory_manager.dart';
+import '../utils/adaptive_memory_manager.dart';
 
 /// Enhanced cached network image with automatic compression and memory optimization
 /// Integrates with our custom memory manager and image compression service
@@ -109,7 +110,7 @@ class OptimizedCachedImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Check memory pressure and adjust cache behavior
-    final memoryManager = MemoryManager();
+    final memoryManager = AdaptiveMemoryManager();
     final isHighMemoryPressure = memoryManager.memoryPressureLevel > 0.8;
 
     Widget imageWidget = CachedNetworkImage(
@@ -234,7 +235,7 @@ class OptimizedCachedImage extends StatelessWidget {
 extension CachedNetworkImageMemoryOptimization on CachedNetworkImage {
   /// Create a memory-optimized version of this image
   Widget optimizeForMemory() {
-    final memoryManager = MemoryManager();
+    final memoryManager = AdaptiveMemoryManager();
     final isHighPressure = memoryManager.memoryPressureLevel > 0.8;
 
     if (!isHighPressure) {
@@ -286,7 +287,7 @@ class AdaptiveImageWidget extends StatefulWidget {
 }
 
 class _AdaptiveImageWidgetState extends State<AdaptiveImageWidget> {
-  final MemoryManager _memoryManager = MemoryManager();
+  final AdaptiveMemoryManager _memoryManager = AdaptiveMemoryManager();
   late bool _useOptimizedVersion;
 
   @override

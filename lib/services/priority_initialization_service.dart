@@ -9,6 +9,7 @@ import '../services/authService.dart';
 import '../services/encryptionService.dart';
 import '../services/localDatabaseService.dart';
 import '../services/notificationService.dart';
+import '../utils/adaptive_memory_manager.dart';
 import '../utils/memory_manager.dart';
 import '../widgets/loading_dialog.dart';
 

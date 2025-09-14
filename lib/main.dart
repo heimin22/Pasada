@@ -10,9 +10,11 @@ import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
+import 'package:pasada_passenger_app/services/lazy_initialization_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/services/performance_monitoring_service.dart';
 import 'package:pasada_passenger_app/theme/theme_controller.dart';
-import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:pasada_passenger_app/utils/adaptive_memory_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -29,7 +31,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 /// Bootstraps only critical services for faster initial startup
 Future<void> _bootstrapCriticalServices() async {
-  final memoryManager = MemoryManager();
+  final performanceMonitor = PerformanceMonitoringService();
+  final memoryManager = AdaptiveMemoryManager();
+
+  // Initialize performance monitoring
+  performanceMonitor.initialize();
+  performanceMonitor
+      .recordStartupMilestone('performance_monitoring_initialized');
+
+  // Initialize adaptive memory manager
+  await memoryManager.initialize();
+  performanceMonitor.recordStartupMilestone('memory_manager_initialized');
 
   // Start only absolutely essential services in parallel
   await Future.wait([
@@ -41,6 +53,8 @@ Future<void> _bootstrapCriticalServices() async {
           'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
     }),
   ]);
+
+  performanceMonitor.recordStartupMilestone('firebase_and_config_loaded');
 
   // Initialize Supabase if config is present
   final url = memoryManager.getFromCache('SUPABASE_URL');
@@ -55,6 +69,7 @@ Future<void> _bootstrapCriticalServices() async {
           const RealtimeClientOptions(logLevel: RealtimeLogLevel.info),
       storageOptions: const StorageClientOptions(retryAttempts: 3),
     );
+    performanceMonitor.recordStartupMilestone('supabase_initialized');
   }
 }
 
@@ -218,18 +233,28 @@ class PasadaPassenger extends StatefulWidget {
 
 class _PasadaPassengerState extends State<PasadaPassenger> {
   final ThemeController _themeController = ThemeController();
-  final MemoryManager _memoryManager = MemoryManager();
+  final AdaptiveMemoryManager _memoryManager = AdaptiveMemoryManager();
+  final LazyInitializationService _lazyInitService =
+      LazyInitializationService();
+  final PerformanceMonitoringService _performanceMonitor =
+      PerformanceMonitoringService();
 
   @override
   void initState() {
     super.initState();
     _themeController.initialize();
+
+    // Start lazy initialization after a short delay to let UI render
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _lazyInitService.startLazyInitialization();
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _memoryManager.addToCache('isDarkMode', _themeController.isDarkMode);
+    _performanceMonitor.recordStartupMilestone('ui_initialized');
   }
 
   @override
@@ -545,7 +570,7 @@ class PasadaHomePageState extends State<PasadaHomePage>
   void dispose() {
     _animationController.dispose();
     _pageController.dispose();
-    MemoryManager().dispose();
+    AdaptiveMemoryManager().disposeAdaptive();
     super.dispose();
   }
 
