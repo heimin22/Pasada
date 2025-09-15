@@ -22,6 +22,7 @@ class HomeBookingSheet extends StatelessWidget {
   final int? bookingId;
   final String? selectedDiscount;
   final String? capturedImagePath;
+  final String? capturedImageUrl;
 
   const HomeBookingSheet({
     super.key,
@@ -41,7 +42,7 @@ class HomeBookingSheet extends StatelessWidget {
     this.bookingId,
     this.selectedDiscount,
     this.capturedImagePath,
-    String? capturedImageUrl,
+    this.capturedImageUrl,
   });
 
   @override
@@ -102,6 +103,7 @@ class HomeBookingSheet extends StatelessWidget {
                     bookingId: bookingId,
                     selectedDiscount: selectedDiscount,
                     capturedImagePath: capturedImagePath,
+                    capturedImageUrl: capturedImageUrl,
                   ),
                 ),
               ),
