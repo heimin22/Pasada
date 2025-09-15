@@ -105,6 +105,23 @@ class BookingService {
       debugPrint(
           'ID image URL provided for booking: ${idImageUrl != null ? 'Yes' : 'No'}');
 
+      // Prepare encrypted path if an ID image URL is provided
+      String? encryptedIdImagePath;
+      if (idImageUrl != null) {
+        try {
+          final filePath =
+              IdImageUploadService.extractFilePathFromUrl(idImageUrl);
+          if (filePath != null && filePath.isNotEmpty) {
+            final encryptionService = EncryptionService();
+            await encryptionService.initialize();
+            encryptedIdImagePath =
+                await encryptionService.encryptUserData(filePath);
+          }
+        } catch (e) {
+          debugPrint('Error encrypting ID image path: $e');
+        }
+      }
+
       // Build and log the request body to ensure seat_type is included
       final requestBody = {
         'route_trip': routeId,
@@ -118,8 +135,10 @@ class BookingService {
         'payment_method': paymentMethod,
         'seat_type': seatingPreference,
         'passenger_type': passengerType, // Add passenger type for discount
-        'passenger_id_image_url':
-            idImageUrl, // Add Supabase Storage URL for ID image verification
+        'passenger_id_image_url': idImageUrl, // No need to encrypt the URL
+        // Also send the encrypted storage path so backend can persist to bookings.passenger_id_image_path
+        if (encryptedIdImagePath != null)
+          'passenger_id_image_path': encryptedIdImagePath,
       };
       debugPrint('BookingService.createBooking request body: $requestBody');
       final response = await apiService.post<Map<String, dynamic>>(

@@ -163,17 +163,18 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       }
 
       // Decrypt ID image path if present
-      if (bookingDetails.containsKey('id_image_path') &&
-          bookingDetails['id_image_path'] != null) {
+      if (bookingDetails.containsKey('passenger_id_image_path') &&
+          bookingDetails['passenger_id_image_path'] != null) {
         try {
           final encryptionService = EncryptionService();
           await encryptionService.initialize();
-          final encryptedPath = bookingDetails['id_image_path'].toString();
+          final encryptedPath =
+              bookingDetails['passenger_id_image_path'].toString();
           if (encryptedPath.isNotEmpty) {
             final decryptedPath =
                 await encryptionService.decryptUserData(encryptedPath);
             setState(() {
-              bookingDetails['id_image_path'] = decryptedPath;
+              bookingDetails['passenger_id_image_path'] = decryptedPath;
             });
             debugPrint('ID image path decrypted for booking $bookingId');
           }
