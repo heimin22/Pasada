@@ -1,4 +1,5 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/services/calendar_service.dart';
 import 'package:pasada_passenger_app/utils/map_utils.dart';
 
 /// Service to calculate fare based on distance in kilometers
@@ -26,10 +27,51 @@ class FareService {
     return originalFare * (1 - discountPercentage);
   }
 
+  /// Calculates discounted fare with holiday rule:
+  /// - If passenger is Student and the date is a PH holiday, no discount.
+  static Future<double> calculateDiscountedFareWithHoliday(
+      double originalFare, String passengerType,
+      {DateTime? date}) async {
+    if (passengerType.isEmpty || passengerType == 'None') {
+      return originalFare;
+    }
+
+    final DateTime now = date ?? DateTime.now();
+
+    if (passengerType.toLowerCase() == 'student') {
+      final bool isHoliday =
+          await CalendarService.instance.isPhilippineHoliday(now);
+      if (isHoliday) {
+        // No student discount on holidays
+        return originalFare;
+      }
+    }
+
+    return originalFare * (1 - discountPercentage);
+  }
+
   /// Gets the discount amount for display purposes
   static double getDiscountAmount(double originalFare, String passengerType) {
     if (passengerType.isEmpty || passengerType == 'None') {
       return 0.0;
+    }
+    return originalFare * discountPercentage;
+  }
+
+  /// Gets the discount amount for display considering holiday rule.
+  static Future<double> getDiscountAmountWithHoliday(
+      double originalFare, String passengerType,
+      {DateTime? date}) async {
+    if (passengerType.isEmpty || passengerType == 'None') {
+      return 0.0;
+    }
+    final DateTime now = date ?? DateTime.now();
+    if (passengerType.toLowerCase() == 'student') {
+      final bool isHoliday =
+          await CalendarService.instance.isPhilippineHoliday(now);
+      if (isHoliday) {
+        return 0.0;
+      }
     }
     return originalFare * discountPercentage;
   }

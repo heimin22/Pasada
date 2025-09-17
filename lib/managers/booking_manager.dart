@@ -654,9 +654,16 @@ class BookingManager {
           // Preserve discount calculation on client side
           if (_state.selectedDiscountSpecification.value.isNotEmpty &&
               _state.selectedDiscountSpecification.value != 'None') {
-            // Recalculate discounted fare to ensure discount is preserved
-            _state.currentFare = FareService.calculateDiscountedFare(
-                originalFare, _state.selectedDiscountSpecification.value);
+            // Recalculate discounted fare to ensure discount is preserved (holiday-aware)
+            FareService.calculateDiscountedFareWithHoliday(
+                    originalFare, _state.selectedDiscountSpecification.value)
+                .then((value) {
+              if (_state.mounted) {
+                _state.setState(() {
+                  _state.currentFare = value;
+                });
+              }
+            });
             // Update original fare for UI display
             _state.originalFare = originalFare;
           } else {

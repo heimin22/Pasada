@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 import 'package:pasada_passenger_app/widgets/home_weather_widget.dart';
+import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 
 /// Header section containing route selection and weather display
 class HomeHeaderSection extends StatelessWidget {
@@ -9,6 +9,7 @@ class HomeHeaderSection extends StatelessWidget {
   final String routeName;
   final VoidCallback onRouteSelectionTap;
   final double weatherIconSize;
+  final VoidCallback? onCalendarTap;
 
   const HomeHeaderSection({
     super.key,
@@ -17,6 +18,7 @@ class HomeHeaderSection extends StatelessWidget {
     required this.routeName,
     required this.onRouteSelectionTap,
     required this.weatherIconSize,
+    this.onCalendarTap,
   });
 
   @override
@@ -42,6 +44,19 @@ class HomeHeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         HomeWeatherWidget(size: weatherIconSize),
+        const SizedBox(height: 16),
+        if (onCalendarTap != null)
+          GestureDetector(
+            onTap: onCalendarTap,
+            child: Tooltip(
+              message: 'View calendar and holiday discount info',
+              child: Icon(
+                Icons.calendar_today,
+                size: 30,
+                color: const Color(0xFF00CC58),
+              ),
+            ),
+          ),
       ],
     );
   }
