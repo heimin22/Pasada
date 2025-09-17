@@ -11,6 +11,7 @@ import 'package:pasada_passenger_app/providers/weather_provider.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
+import 'package:pasada_passenger_app/services/calendar_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
@@ -22,6 +23,7 @@ import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
 import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
+import 'package:pasada_passenger_app/widgets/holiday_banner.dart';
 import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
@@ -93,6 +95,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool isNotificationVisible = true;
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
+  bool showHolidayBanner = false;
 
   double currentFare = 0.0;
   double originalFare = 0.0; // Store original fare before discount
@@ -445,10 +448,28 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Method to update fare when discount changes
   void _updateFareForDiscount() {
-    if (mounted) {
+    if (!mounted) return;
+    final String discount = selectedDiscountSpecification.value;
+    // Update holiday banner visibility asynchronously
+    _updateHolidayBannerVisibility(discount);
+    setState(() {
+      currentFare = FareService.calculateDiscountedFare(
+          originalFare, selectedDiscountSpecification.value);
+    });
+  }
+
+  Future<void> _updateHolidayBannerVisibility(String discount) async {
+    if (discount.toLowerCase() == 'student') {
+      final bool isHoliday =
+          await CalendarService.instance.isPhilippineHoliday(DateTime.now());
+      if (!mounted) return;
       setState(() {
-        currentFare = FareService.calculateDiscountedFare(
-            originalFare, selectedDiscountSpecification.value);
+        showHolidayBanner = isHoliday;
+      });
+    } else {
+      if (!mounted) return;
+      setState(() {
+        showHolidayBanner = false;
       });
     }
   }
@@ -643,6 +664,21 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
             return Stack(
               children: [
+                if (showHolidayBanner)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 10,
+                    left: responsivePadding,
+                    right: responsivePadding,
+                    child: HolidayBanner(
+                      message:
+                          'Holiday today: Student discounts are not available.',
+                      onClose: () {
+                        setState(() {
+                          showHolidayBanner = false;
+                        });
+                      },
+                    ),
+                  ),
                 MapScreen(
                   key: mapScreenKey,
                   pickUpLocation: selectedPickUpLocation?.coordinates,
@@ -662,21 +698,25 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   onLocationUpdated: (loc) => context
                       .read<WeatherProvider>()
                       .fetchWeather(loc.latitude, loc.longitude),
-                  onFareUpdated: (fare) {
-                    if (mounted) {
-                      setState(() {
-                        originalFare = fare;
-                        currentFare = FareService.calculateDiscountedFare(
-                            fare, selectedDiscountSpecification.value);
-                      });
-                    }
+                  onFareUpdated: (fare) async {
+                    if (!mounted) return;
+                    final String discount = selectedDiscountSpecification.value;
+                    final double discounted =
+                        await FareService.calculateDiscountedFareWithHoliday(
+                            fare, discount);
+                    if (!mounted) return;
+                    setState(() {
+                      originalFare = fare;
+                      currentFare = discounted;
+                    });
                   },
                   selectedRoute: selectedRoute,
                   routePolyline:
                       selectedRoute?['polyline_coordinates'] as List<LatLng>?,
                 ),
                 Positioned(
-                  top: MediaQuery.of(context).padding.top + 10,
+                  top: (MediaQuery.of(context).padding.top + 10) +
+                      (showHolidayBanner ? 58 : 0),
                   left: responsivePadding,
                   right: responsivePadding,
                   child: HomeHeaderSection(
