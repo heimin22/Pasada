@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/managers/booking_manager.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
+import 'package:pasada_passenger_app/screens/calendar_screen.dart';
 import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
@@ -201,6 +202,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         mapScreenKey.currentState?.zoomToBounds(coords);
       }
     }
+  }
+
+  Future<void> _showCalendarScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CalendarScreen(),
+      ),
+    );
   }
 
   /// Update yung proper location base duon sa search type
@@ -725,6 +735,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     routeName: selectedRoute?['route_name'] ?? 'Select Route',
                     onRouteSelectionTap: _showRouteSelection,
                     weatherIconSize: weatherIconSize,
+                    onCalendarTap: _showCalendarScreen,
                   ),
                 ),
                 HomeScreenFAB(
