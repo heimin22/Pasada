@@ -413,10 +413,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    shape: BoxShape.rectangle,
-                    color: Colors.transparent,
+                    shape: BoxShape.circle,
+                    color: isToday
+                        ? const Color(0xFF00CC58).withValues(alpha: 0.2)
+                        : Colors.transparent,
                     border: isToday
-                        ? Border.all(color: const Color(0xFF00CC58), width: 1.0)
+                        ? Border.all(color: const Color(0xFF00CC58), width: 1.5)
                         : null,
                   ),
                   child: Column(
