@@ -12,11 +12,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   bool? _isHoliday;
+  String? _holidayName;
+  Map<DateTime, String> _holidayByDate = {};
 
   @override
   void initState() {
     super.initState();
     _checkHolidayStatus();
+    _loadVisibleRangeHolidays();
   }
 
   Future<void> _checkHolidayStatus() async {
@@ -27,9 +30,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       final isHoliday =
           await CalendarService.instance.isPhilippineHoliday(_selectedDate);
+      final holidayName = isHoliday
+          ? await CalendarService.instance.getHolidayName(_selectedDate)
+          : null;
       if (mounted) {
         setState(() {
           _isHoliday = isHoliday;
+          _holidayName = holidayName;
           _isLoading = false;
         });
       }
@@ -37,10 +44,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (mounted) {
         setState(() {
           _isHoliday = null;
+          _holidayName = null;
           _isLoading = false;
         });
       }
     }
+  }
+
+  Future<void> _loadVisibleRangeHolidays() async {
+    // Determine current visible grid range (6 weeks grid)
+    final DateTime currentMonth =
+        DateTime(_selectedDate.year, _selectedDate.month);
+    final DateTime firstDayOfMonth = currentMonth;
+    final int firstWeekday = firstDayOfMonth.weekday; // Mon=1..Sun=7
+
+    final DateTime firstVisibleDay =
+        firstDayOfMonth.subtract(Duration(days: firstWeekday - 1));
+    final int totalCells = 42; // 6 weeks * 7 days
+    final DateTime lastVisibleDay = firstVisibleDay.add(
+      Duration(days: totalCells - 1),
+    );
+
+    final Map<DateTime, String> holidays = await CalendarService.instance
+        .getHolidaysInRange(firstVisibleDay, lastVisibleDay);
+    if (!mounted) return;
+    setState(() {
+      _holidayByDate = holidays;
+    });
   }
 
   @override
@@ -116,7 +146,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           _isLoading
                               ? 'Checking holiday status...'
                               : _isHoliday == true
-                                  ? 'Philippine Holiday'
+                                  ? _holidayName == null ||
+                                          _holidayName!.isEmpty
+                                      ? 'Philippine Holiday'
+                                      : 'Philippine Holiday — ${_holidayName!}'
                                   : 'Regular Day',
                           style: const TextStyle(
                             fontFamily: 'Inter',
@@ -275,6 +308,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _selectedDate =
                         DateTime(_selectedDate.year, _selectedDate.month - 1);
                   });
+                  _loadVisibleRangeHolidays();
                 },
                 icon: const Icon(Icons.chevron_left, color: Color(0xFF00CC58)),
               ),
@@ -293,6 +327,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _selectedDate =
                         DateTime(_selectedDate.year, _selectedDate.month + 1);
                   });
+                  _loadVisibleRangeHolidays();
                 },
                 icon: const Icon(Icons.chevron_right, color: Color(0xFF00CC58)),
               ),
@@ -373,38 +408,72 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     _selectedDate = day;
                   });
                   _checkHolidayStatus();
+                  _loadVisibleRangeHolidays();
                 },
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isToday
-                        ? const Color(0xFF00CC58).withOpacity(0.2)
-                        : isSelected
-                            ? const Color(0xFF00CC58)
-                            : Colors.transparent,
+                    shape: BoxShape.rectangle,
+                    color: Colors.transparent,
                     border: isToday
-                        ? Border.all(color: const Color(0xFF00CC58), width: 1.5)
+                        ? Border.all(color: const Color(0xFF00CC58), width: 1.0)
                         : null,
                   ),
-                  child: Center(
-                    child: Text(
-                      '${day.day}',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: isToday || isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: isToday
-                            ? const Color(0xFF00CC58)
-                            : isSelected
-                                ? const Color(0xFF121212)
-                                : isCurrentMonth
-                                    ? const Color(0xFFF5F5F5)
-                                    : const Color(0xFF666666),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '${day.day}',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: isToday || isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: isToday
+                              ? const Color(0xFF00CC58)
+                              : isCurrentMonth
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF666666),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      if (isSelected)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF00CC58),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      if (!isSelected) const SizedBox(height: 6),
+                      // Holiday label (single line, ellipsis)
+                      Builder(builder: (context) {
+                        final DateTime key =
+                            DateTime(day.year, day.month, day.day);
+                        final String? label = _holidayByDate[key];
+                        if (label == null || label.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 9,
+                              color: isCurrentMonth
+                                  ? const Color(0xFFCCCCCC)
+                                  : const Color(0xFF555555),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               );
