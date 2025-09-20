@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 
@@ -140,15 +141,34 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Title
-                Text(
-                  'AI Traffic Insights',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
+                // Title with info button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'AI Traffic Insights',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _showInfoDialog(context, isDarkMode),
+                      icon: Icon(
+                        Icons.info_outline,
+                        color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+                        size: 24,
+                      ),
+                      tooltip: 'How it works',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 // Content
@@ -158,6 +178,140 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showInfoDialog(BuildContext context, bool isDarkMode) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: isDarkMode ? const Color(0xFF2D2D2D) : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                color: const Color(0xFF00CC58),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'How Traffic Analytics Work',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildInfoSection(
+                  'Real-time Data Collection',
+                  'Our system continuously monitors passenger density, vehicle speeds, and route patterns to provide accurate traffic insights.',
+                  Icons.sensors,
+                  isDarkMode,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  'Traffic Density Analysis',
+                  'Traffic levels are calculated based on passenger count and vehicle capacity:\n• Light: 0-40% capacity\n• Moderate: 40-70% capacity\n• Heavy: 70%+ capacity',
+                  Icons.traffic,
+                  isDarkMode,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  'AI-Powered Insights',
+                  'AI analyzes historical patterns and current conditions to predict traffic trends and provide actionable recommendations.',
+                  Icons.psychology,
+                  isDarkMode,
+                ),
+                const SizedBox(height: 16),
+                _buildInfoSection(
+                  'Live Updates',
+                  'Traffic insights are refreshed automatically to ensure you have the most current information for your journey planning.',
+                  Icons.update,
+                  isDarkMode,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF00CC58),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Got it',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoSection(
+      String title, String description, IconData icon, bool isDarkMode) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF00CC58).withAlpha(20),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: const Color(0xFF00CC58),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 13,
+                  fontWeight: FontWeight.w400,
+                  color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
