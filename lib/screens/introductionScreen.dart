@@ -121,7 +121,7 @@ class _IntroductionScreenState extends State<IntroductionScreen>
                           const SizedBox(height: 16),
                           // Subtitle
                           const Text(
-                            'Sakay ka na, bossing!',
+                            'Sakay ka na, boss!',
                             style: TextStyle(
                               fontWeight: FontWeight.w400,
                               fontSize: 18,
