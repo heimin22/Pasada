@@ -155,6 +155,7 @@ flutter:
     - assets/png/pasada_main_app_icon.png
     - assets/png/pasada_app_icon_text_colored.png
     - assets/png/pasada_app_icon_text_white.png
+    - assets/png/pasada_white_brand.png
 
     # User profile assets
     - assets/svg/default_user_profile.svg

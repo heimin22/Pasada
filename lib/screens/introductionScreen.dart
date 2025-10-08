@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
 
 class IntroductionScreen extends StatefulWidget {
   const IntroductionScreen({super.key});
@@ -94,7 +93,7 @@ class _IntroductionScreenState extends State<IntroductionScreen>
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
             child: Column(
               children: [
                 Expanded(
@@ -105,30 +104,30 @@ class _IntroductionScreenState extends State<IntroductionScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SvgPicture.asset(
-                            'assets/svg/pasadaLogoWithoutText.svg',
-                            width: 80,
-                            height: 80,
-                          ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 60),
+                          // Welcome Text
                           const Text(
                             'Kumusta!',
                             style: TextStyle(
-                              fontSize: 52,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 56,
+                              fontWeight: FontWeight.w800,
                               color: Color(0xFFF5F5F5),
                               fontFamily: 'Inter',
+                              height: 1.1,
+                              letterSpacing: -1.0,
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 16),
+                          // Subtitle
                           const Text(
-                            'Welcome sa Pasada!',
+                            'Sakay ka na, bossing!',
                             style: TextStyle(
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w400,
                               fontSize: 18,
-                              color: Color(0xFFF5F5F5),
+                              color: Color(0xFFE0E0E0),
                               fontFamily: 'Inter',
+                              letterSpacing: 0.2,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -152,19 +151,21 @@ class _IntroductionScreenState extends State<IntroductionScreen>
                               Navigator.pushNamed(context, 'loginAccount');
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFF5F5F5),
-                              foregroundColor: const Color(0xFF00CC58),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: const Color(0xFF00CC58),
+                              foregroundColor: Colors.white,
+                              minimumSize: const Size(double.infinity, 56),
+                              elevation: 0,
+                              shadowColor: Colors.black.withValues(alpha: 0.3),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                              elevation: 3,
                             ),
                             child: const Text(
                               'Log In',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
@@ -178,27 +179,30 @@ class _IntroductionScreenState extends State<IntroductionScreen>
                               Navigator.pushNamed(context, 'createAccount');
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
+                              backgroundColor:
+                                  Colors.white.withValues(alpha: 0.12),
                               foregroundColor: const Color(0xFFF5F5F5),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              minimumSize: const Size(double.infinity, 56),
+                              elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: const BorderSide(
-                                  color: Color(0xFFF5F5F5),
-                                  width: 2,
+                                borderRadius: BorderRadius.circular(14),
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 1.5,
                                 ),
                               ),
                             ),
                             child: const Text(
                               'Create Account',
                               style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 30), // Bottom padding
+                        const SizedBox(height: 24), // Bottom padding
                       ],
                     ),
                   ),

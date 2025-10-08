@@ -148,7 +148,7 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
             top: MediaQuery.of(context).size.height * 0.02,
           ),
           child: Image.asset(
-            'assets/png/pasada_app_icon_text_white.png',
+            'assets/png/pasada_white_brand.png',
             height: 60,
             fit: BoxFit.contain,
           ),
