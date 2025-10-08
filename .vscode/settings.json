@@ -1,10 +1,10 @@
 {
     // Flutter SDK configuration
-    "dart.flutterSdkPath": "/usr/lib/flutter",
+    "dart.flutterSdkPath": "/home/arnecronomica/flutter",
     "flutter.sdkPath": "/usr/lib/flutter",
 
     // Dart SDK configuration (use Flutter's Dart for analyzer)
-    "dart.sdkPath": "/usr/bin",
+    "dart.sdkPath": "/home/arnecronomica/flutter/bin/cache/dart-sdk",
 
     // Flutter development settings
     "dart.devToolsPort": 3000,
