@@ -1,14 +1,15 @@
 import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/screens/forgotPasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
-import 'package:pasada_passenger_app/main.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/utils/toast_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/services.dart';
 
 class LoginAccountPage extends StatefulWidget {
   const LoginAccountPage({super.key});
@@ -68,17 +69,17 @@ class LoginScreen extends State<LoginPage> {
   Future<void> checkInitialConnectivity() async {
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('No internet connection detected. Please check your network settings.');
+      ToastUtils.showError(
+          'No internet connection detected. Please check your network settings.');
     }
   }
 
   void updateConnectionStatus(List<ConnectivityResult> result) {
     if (result.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('Internet connection lost. Please check your network settings.');
+      ToastUtils.showError(
+          'Internet connection lost. Please check your network settings.');
     }
   }
-
-
 
   Future<void> login() async {
     // Input validation
@@ -98,7 +99,8 @@ class LoginScreen extends State<LoginPage> {
     // Check network connectivity
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult.contains(ConnectivityResult.none)) {
-      ToastUtils.showError('No internet connection. Please check your network and try again.');
+      ToastUtils.showError(
+          'No internet connection. Please check your network and try again.');
       return;
     }
 
@@ -204,7 +206,6 @@ class LoginScreen extends State<LoginPage> {
                         buildPassengerPassText(),
                         buildPassengerPassInput(),
                         buildForgotPassword(),
-                        SizedBox(height: 48),
                         buildLogInButton(),
                         buildOrDesign(),
                         buildLoginGoogle(),
@@ -234,56 +235,64 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerPassInput() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
       child: SizedBox(
         width: double.infinity,
-        height: 45,
+        height: 56,
         child: TextField(
           style: const TextStyle(
             color: Color(0xFFF5F5F5),
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
-            fontSize: 14,
+            fontSize: 15,
           ),
           controller: passwordController,
           cursorColor: Color(0xFF00CC58),
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
-            labelText: 'Enter your password',
+            hintText: 'Enter your password',
+            hintStyle: const TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 15,
+              fontFamily: 'Inter',
+              color: Color(0xFF999999),
+            ),
+            prefixIcon: const Icon(
+              Icons.lock_outlined,
+              color: Color(0xFFCCCCCC),
+              size: 22,
+            ),
             suffixIcon: IconButton(
-              color: const Color(0xFFF5F5F5),
+              color: const Color(0xFFCCCCCC),
               onPressed: () {
                 setState(() {
                   isPasswordVisible = !isPasswordVisible;
                 });
               },
               icon: Icon(
-                isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                isPasswordVisible
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined,
+                size: 22,
               ),
-            ),
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontFamily: 'Inter',
-              fontSize: 12,
-              color: Color(0xFFAAAAAA),
-            ),
-            floatingLabelStyle: const TextStyle(
-              color: Color(0xFFF5F5F5),
             ),
             filled: true,
-            fillColor: Colors.black12,
-            enabledBorder: const OutlineInputBorder(
+            fillColor: Colors.white.withValues(alpha: 0.12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFF5F5F5),
-                width: 1.0,
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1.5,
               ),
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
+                width: 2.0,
               ),
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
             ),
           ),
         ),
@@ -293,45 +302,64 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerEmailNumberInput() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
       child: SizedBox(
         width: double.infinity,
-        height: 45,
+        height: 56,
         child: TextField(
           controller: emailController,
           style: const TextStyle(
             color: Color(0xFFF5F5F5),
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
-            fontSize: 14,
+            fontSize: 15,
           ),
           cursorColor: Color(0xFF00CC58),
           decoration: InputDecoration(
-            labelText: 'Enter your email',
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+            hintText: 'Enter your email',
+            hintStyle: const TextStyle(
+              fontWeight: FontWeight.w400,
+              fontSize: 15,
               fontFamily: 'Inter',
-              color: Color(0xFFAAAAAA),
+              color: Color(0xFF999999),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
-            floatingLabelStyle: const TextStyle(
-              color: Color(0xFFF5F5F5),
+            prefixIcon: const Icon(
+              Icons.email_outlined,
+              color: Color(0xFFCCCCCC),
+              size: 22,
             ),
             filled: true,
-            fillColor: Colors.black12,
-            enabledBorder: const OutlineInputBorder(
+            fillColor: Colors.white.withValues(alpha: 0.12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
-                color: Color(0xFFF5F5F5),
-                width: 1.0,
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1.5,
               ),
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(
                 color: Color(0xFF00CC58),
+                width: 2.0,
               ),
-              borderRadius: BorderRadius.all(Radius.circular(10.0)),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Colors.red.shade300,
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+                color: Colors.red.shade400,
+                width: 2.0,
+              ),
+              borderRadius: BorderRadius.all(Radius.circular(14.0)),
             ),
           ),
         ),
@@ -341,15 +369,18 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerPassText() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.025),
       child: const Row(
         children: [
           Text(
             'Password',
             style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Inter',
-                color: Color(0xFFF5F5F5)),
+              fontWeight: FontWeight.w700,
+              fontFamily: 'Inter',
+              fontSize: 15,
+              color: Color(0xFFF5F5F5),
+              letterSpacing: 0.3,
+            ),
           ),
         ],
       ),
@@ -358,15 +389,17 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildPassengerEmailNumberText() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.05),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.06),
       child: const Row(
         children: [
           Text(
-            'Email',
+            'Email Address',
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
+              fontSize: 15,
               color: Color(0xFFF5F5F5),
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -376,32 +409,36 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildLogInButton() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : login,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFF5F5F5),
-          minimumSize: const Size(360, 50),
+          backgroundColor: const Color(0xFF00CC58),
+          foregroundColor: Colors.white,
+          minimumSize: const Size(360, 56),
+          elevation: 0,
+          shadowColor: Colors.black.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
+            borderRadius: BorderRadius.circular(14.0),
           ),
         ),
         child: isLoading
             ? const SizedBox(
-                width: 20,
-                height: 20,
+                width: 22,
+                height: 22,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF00CC58),
-                  strokeWidth: 2,
+                  color: Colors.white,
+                  strokeWidth: 2.5,
                 ),
               )
             : const Text(
-                'Log-in',
+                'Log In',
                 style: TextStyle(
-                  color: Color(0xFF00CC58),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17,
+                  letterSpacing: 0.5,
                 ),
               ),
       ),
@@ -418,41 +455,47 @@ class LoginScreen extends State<LoginPage> {
 
   Widget buildLoginGoogle() {
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.015),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading
             ? null
             : () async {
                 // Check network connectivity first
-                final connectivityResult = await connectivity.checkConnectivity();
+                final connectivityResult =
+                    await connectivity.checkConnectivity();
                 if (connectivityResult.contains(ConnectivityResult.none)) {
-                  ToastUtils.showError('No internet connection. Please check your network and try again.');
+                  ToastUtils.showError(
+                      'No internet connection. Please check your network and try again.');
                   return;
                 }
 
                 setState(() => isLoading = true);
-                
+
                 try {
                   ToastUtils.showInfo('Signing in with Google...');
                   final success = await authService.signInWithGoogle();
-                  
+
                   if (success && mounted) {
-                    ToastUtils.showSuccess('Google sign-in successful! Welcome!');
+                    ToastUtils.showSuccess(
+                        'Google sign-in successful! Welcome!');
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (context) => const selectionScreen()),
                     );
                   } else if (mounted) {
-                    ToastUtils.showError('Google sign-in was cancelled or failed. Please try again.');
+                    ToastUtils.showError(
+                        'Google sign-in was cancelled or failed. Please try again.');
                   }
                 } catch (e) {
                   debugPrint('Google sign-in error: $e');
                   if (mounted) {
-                    String errorMessage = ToastUtils.parseAuthError(e.toString());
+                    String errorMessage =
+                        ToastUtils.parseAuthError(e.toString());
                     if (errorMessage.contains('unexpected error')) {
-                      errorMessage = 'Google sign-in failed. Please try again or use email/password.';
+                      errorMessage =
+                          'Google sign-in failed. Please try again or use email/password.';
                     }
                     ToastUtils.showError(errorMessage);
                   }
@@ -461,14 +504,15 @@ class LoginScreen extends State<LoginPage> {
                 }
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.white.withValues(alpha: 0.12),
           foregroundColor: const Color(0xFFF5F5F5),
-          minimumSize: const Size(360, 50),
+          minimumSize: const Size(360, 56),
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.0),
-            side: const BorderSide(
-              color: Color(0xFFF5F5F5),
-              width: 2,
+            borderRadius: BorderRadius.circular(14.0),
+            side: BorderSide(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1.5,
             ),
           ),
         ),
@@ -477,16 +521,17 @@ class LoginScreen extends State<LoginPage> {
           children: [
             SvgPicture.asset(
               'assets/svg/googleIcon.svg',
-              height: 24,
-              width: 24,
+              height: 22,
+              width: 22,
             ),
-            const SizedBox(width: 25),
+            const SizedBox(width: 12),
             const Text(
-              'Log-in with Google',
+              'Continue with Google',
               style: TextStyle(
                 color: Color(0xFFF5F5F5),
-                fontSize: 20,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
               ),
             ),
           ],
@@ -497,9 +542,9 @@ class LoginScreen extends State<LoginPage> {
 
   Container buildForgotPassword() {
     return Container(
+        alignment: Alignment.centerRight,
         margin: EdgeInsets.only(
-          top: MediaQuery.of(context).size.height * 0.02,
-          left: MediaQuery.of(context).size.height * 0.003,
+          top: MediaQuery.of(context).size.height * 0.015,
         ),
         child: GestureDetector(
           onTap: () {
@@ -512,9 +557,11 @@ class LoginScreen extends State<LoginPage> {
           child: Text(
             "Forgot Password?",
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Color(0xFFF5F5F5),
+              color: Color(0xFF00CC58),
+              decoration: TextDecoration.underline,
+              decorationColor: Color(0xFF00CC58),
             ),
           ),
         ));
@@ -522,23 +569,43 @@ class LoginScreen extends State<LoginPage> {
 
   Column buildHeader() {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          alignment: Alignment.centerLeft,
+          alignment: Alignment.center,
           margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-          child: SvgPicture.asset('assets/svg/pasadaLogoWithoutText.svg'),
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
+          child: Image.asset(
+            'assets/png/pasada_white_brand.png',
+            height: 60,
+            fit: BoxFit.contain,
+          ),
         ),
         Container(
           margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.05),
           child: const Text(
-            'Log-in to your account',
+            'Welcome Back',
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFFF5F5F5),
-              fontWeight: FontWeight.w700,
-              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              fontSize: 32,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+        Container(
+          margin:
+              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
+          child: const Text(
+            'Sign in na para makapagbook ka ulit.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFFE0E0E0),
+              fontWeight: FontWeight.w400,
+              fontSize: 16,
+              letterSpacing: 0.2,
             ),
           ),
         ),

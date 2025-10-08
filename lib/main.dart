@@ -13,6 +13,7 @@ import 'package:pasada_passenger_app/screens/introductionScreen.dart';
 import 'package:pasada_passenger_app/services/lazy_initialization_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/performance_monitoring_service.dart';
+import 'package:pasada_passenger_app/services/slow_internet_warning_service.dart';
 import 'package:pasada_passenger_app/theme/theme_controller.dart';
 import 'package:pasada_passenger_app/utils/adaptive_memory_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +34,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> _bootstrapCriticalServices() async {
   final performanceMonitor = PerformanceMonitoringService();
   final memoryManager = AdaptiveMemoryManager();
+  final slowInternetService = SlowInternetWarningService();
 
   // Initialize performance monitoring
   performanceMonitor.initialize();
@@ -42,6 +44,11 @@ Future<void> _bootstrapCriticalServices() async {
   // Initialize adaptive memory manager
   await memoryManager.initialize();
   performanceMonitor.recordStartupMilestone('memory_manager_initialized');
+
+  // Initialize slow internet warning service
+  await slowInternetService.initialize();
+  performanceMonitor
+      .recordStartupMilestone('slow_internet_service_initialized');
 
   // Start only absolutely essential services in parallel
   await Future.wait([

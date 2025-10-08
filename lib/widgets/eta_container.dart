@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:location/location.dart';
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../services/eta_service.dart';
-import '../utils/memory_manager.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:location/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/eta_service.dart';
+import '../utils/memory_manager.dart';
 
 class EtaContainer extends StatefulWidget {
   final LatLng? destination;
@@ -40,7 +42,13 @@ class _EtaContainerState extends State<EtaContainer> {
     _initializeEta();
     // Reduce timer frequency and use smart updates
     _timer =
-        Timer.periodic(const Duration(minutes: 1), (_) => _smartUpdateEta());
+        Timer.periodic(const Duration(minutes: 2), (_) => _smartUpdateEta());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   // Fast initialization with cached data
@@ -240,12 +248,6 @@ class _EtaContainerState extends State<EtaContainer> {
 
   double _degreesToRadians(double degrees) {
     return degrees * (math.pi / 180);
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
   }
 
   @override

@@ -60,14 +60,7 @@ class AssetOptimizerService {
 
   // Assets that can be removed (unused or redundant)
   static const Set<String> _unusedAssets = {
-    'assets/svg/Ellipse.svg', // Decorative, not used
-    'assets/svg/lines.svg', // Decorative, not used
-    'assets/svg/otherOptions.svg', // Replaced by otherOptionsOptimized.svg
-    'assets/svg/otherOptionsOptimized.svg', // Not referenced in code
-    'assets/svg/pasadaAppIcon.svg', // Not used, using PNG versions instead
-    'assets/svg/gcash_logo.svg', // Not used in current implementation
-    'assets/svg/maya_logo.svg', // Not used in current implementation
-    'assets/svg/paymongo_svg.svg', // Not used in current implementation
+    // All unused assets have been removed during optimization
   };
 
   /// Check if an asset is actually used in the app
