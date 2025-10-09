@@ -29,7 +29,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     _fetchTrafficReports();
   }
 
-  Future<void> _fetchTrafficReports() async {
+  Future<void> _fetchTrafficReports({bool forceRefresh = false}) async {
     try {
       if (widget.routes.isEmpty) {
         setState(() {
@@ -45,8 +45,10 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       });
 
       // Use the traffic analytics service to fetch data
-      final trafficResponse =
-          await _analyticsService.getTodayTrafficAnalytics();
+      // forceRefresh bypasses cache if set to true
+      final trafficResponse = await _analyticsService.getTodayTrafficAnalytics(
+        forceRefresh: forceRefresh,
+      );
 
       if (mounted) {
         setState(() {
@@ -114,7 +116,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                             color: isDarkMode ? Colors.white : Colors.black87,
                           ),
                         ),
-                        if (_trafficData != null)
+                        if (_trafficData != null) ...[
                           Text(
                             'Today, ${_trafficData!.date.day}/${_trafficData!.date.month}/${_trafficData!.date.year}',
                             style: TextStyle(
@@ -126,6 +128,19 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                                   : Colors.grey[600],
                             ),
                           ),
+                          if (_analyticsService.hasCachedData())
+                            Text(
+                              _getCacheStatusText(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                                fontFamily: 'Inter',
+                                color: isDarkMode
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
+                              ),
+                            ),
+                        ],
                       ],
                     ),
                     IconButton(
@@ -390,7 +405,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               ),
               const SizedBox(height: 16),
               TextButton.icon(
-                onPressed: _fetchTrafficReports,
+                onPressed: () => _fetchTrafficReports(forceRefresh: true),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Refresh'),
                 style: TextButton.styleFrom(
@@ -451,22 +466,26 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     }
 
     return Expanded(
-      child: ListView.separated(
-        itemCount: routesWithData.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final String routeName =
-              routesWithData[index]['route_name']?.toString() ??
-                  'Unknown Route';
-          final RouteTrafficToday? trafficData =
-              _trafficData!.getRouteByName(routeName);
+      child: RefreshIndicator(
+        onRefresh: () => _fetchTrafficReports(forceRefresh: true),
+        color: const Color(0xFF00CC58),
+        child: ListView.separated(
+          itemCount: routesWithData.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final String routeName =
+                routesWithData[index]['route_name']?.toString() ??
+                    'Unknown Route';
+            final RouteTrafficToday? trafficData =
+                _trafficData!.getRouteByName(routeName);
 
-          if (trafficData == null) {
-            return const SizedBox.shrink();
-          }
+            if (trafficData == null) {
+              return const SizedBox.shrink();
+            }
 
-          return _buildTrafficCard(trafficData, isDarkMode);
-        },
+            return _buildTrafficCard(trafficData, isDarkMode);
+          },
+        ),
       ),
     );
   }
@@ -620,6 +639,23 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         ],
       ),
     );
+  }
+
+  /// Get cache status text for display
+  String _getCacheStatusText() {
+    final cacheTime = _analyticsService.getCacheTimeRemaining();
+    if (cacheTime == null) return '';
+
+    final minutes = cacheTime.inMinutes;
+    final seconds = cacheTime.inSeconds % 60;
+
+    if (minutes > 0) {
+      return 'Cached • Updates in ${minutes}m';
+    } else if (seconds > 0) {
+      return 'Cached • Updates in ${seconds}s';
+    } else {
+      return 'Updating...';
+    }
   }
 }
 
