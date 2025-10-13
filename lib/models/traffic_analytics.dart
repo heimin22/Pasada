@@ -141,14 +141,17 @@ class RouteTrafficToday {
 class TodayRouteTrafficResponse {
   final DateTime date;
   final List<RouteTrafficToday> routes;
+  final String? mode; // "db", "fast", or "fast-fallback"
 
   TodayRouteTrafficResponse({
     required this.date,
     required this.routes,
+    this.mode,
   });
 
   factory TodayRouteTrafficResponse.fromJson(Map<String, dynamic> json) {
     final dataMap = json['data'] as Map<String, dynamic>;
+    final metadata = json['metadata'] as Map<String, dynamic>?;
 
     return TodayRouteTrafficResponse(
       date: DateTime.parse(dataMap['date'] as String),
@@ -156,6 +159,7 @@ class TodayRouteTrafficResponse {
           .map((item) =>
               RouteTrafficToday.fromJson(item as Map<String, dynamic>))
           .toList(),
+      mode: metadata != null ? metadata['mode'] as String? : null,
     );
   }
 
@@ -165,6 +169,7 @@ class TodayRouteTrafficResponse {
         'date': date.toIso8601String().split('T')[0],
         'routes': routes.map((route) => route.toJson()).toList(),
       },
+      if (mode != null) 'metadata': {'mode': mode},
     };
   }
 

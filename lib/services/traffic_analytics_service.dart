@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -34,6 +35,7 @@ class TrafficAnalyticsService {
 
   // Cache time-to-live: 5 minutes (traffic data updates frequently)
   static const Duration _cacheTTL = Duration(minutes: 5);
+  static const Duration _backgroundTimeout = Duration(seconds: 10);
 
   /// Get the current cache TTL
   Duration get cacheTTL => _cacheTTL;
@@ -45,6 +47,8 @@ class TrafficAnalyticsService {
   Future<TodayRouteTrafficResponse?> getTodayTrafficAnalytics({
     int? routeId,
     bool forceRefresh = false,
+    bool fast = false,
+    Duration? timeout,
   }) async {
     // Check cache first if not forcing refresh
     if (!forceRefresh) {
@@ -57,16 +61,16 @@ class TrafficAnalyticsService {
     }
 
     try {
-      final String? apiUrl = dotenv.env['API_URL'];
-      if (apiUrl == null || apiUrl.isEmpty) {
-        debugPrint('TrafficAnalyticsService: API_URL not configured');
+      final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
+      if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
+        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
         return null;
       }
 
-      // Build the endpoint URL with optional route ID
-      final endpoint = routeId != null
-          ? '$apiUrl/api/analytics/traffic/today/$routeId'
-          : '$apiUrl/api/analytics/traffic/today';
+      // Always use the all-routes endpoint as per new analytics API usage
+      // Support optional fast mode via query param (?fast=1)
+      final endpointBase = '$analyticsApiUrl/api/analytics/traffic/today';
+      final endpoint = fast ? '$endpointBase?fast=1' : endpointBase;
 
       final uri = Uri.parse(endpoint);
       final headers = {
@@ -75,7 +79,30 @@ class TrafficAnalyticsService {
 
       debugPrint('TrafficAnalyticsService: Fetching from $endpoint');
 
-      final response = await NetworkUtility.fetchUrl(uri, headers: headers);
+      String? response;
+      try {
+        // Default timeouts: foreground 8s if not specified; fast mode 6s
+        final effectiveTimeout = timeout ?? Duration(seconds: fast ? 6 : 8);
+        response = await NetworkUtility.fetchUrlWithTimeout(
+          uri,
+          headers: headers,
+          timeout: effectiveTimeout,
+        );
+      } on TimeoutException {
+        // If normal mode times out, immediately retry with fast mode
+        if (!fast) {
+          debugPrint(
+              'TrafficAnalyticsService: Timed out. Retrying with fast=1');
+          final fastUri = Uri.parse('$endpointBase?fast=1');
+          response = await NetworkUtility.fetchUrlWithTimeout(
+            fastUri,
+            headers: headers,
+            timeout: Duration(seconds: 6),
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       if (response == null) {
         debugPrint('TrafficAnalyticsService: No response from server');
@@ -95,6 +122,13 @@ class TrafficAnalyticsService {
         debugPrint(
             'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
 
+        // If served from fast or fast-fallback, refresh in background (db)
+        if (trafficResponse.mode == 'fast' ||
+            trafficResponse.mode == 'fast-fallback') {
+          _refreshInBackground(endpointBase,
+              headers: headers, routeId: routeId);
+        }
+
         return trafficResponse;
       } else {
         debugPrint(
@@ -105,6 +139,29 @@ class TrafficAnalyticsService {
       debugPrint('TrafficAnalyticsService: Error fetching analytics: $e');
       return null;
     }
+  }
+
+  void _refreshInBackground(String endpointBase,
+      {required Map<String, String> headers, int? routeId}) async {
+    unawaited(() async {
+      try {
+        final uri = Uri.parse(endpointBase);
+        final response = await NetworkUtility.fetchUrlWithTimeout(
+          uri,
+          headers: headers,
+          timeout: _backgroundTimeout,
+        );
+        if (response == null) return;
+        final data = json.decode(response);
+        if (data is! Map<String, dynamic>) return;
+        final fresh = TodayRouteTrafficResponse.fromJson(data);
+        // Only overwrite cache on success
+        _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
+        debugPrint('TrafficAnalyticsService: Background cache refreshed');
+      } catch (e) {
+        debugPrint('TrafficAnalyticsService: Background refresh failed: $e');
+      }
+    }());
   }
 
   /// Fetch traffic analytics for a specific route by ID
