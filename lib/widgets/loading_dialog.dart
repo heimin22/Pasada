@@ -268,7 +268,7 @@ class InitializationService {
 
   static Future<void> _configureNotifications() async {
     // Initialize notification services
-    await NotificationService.initialize();
+    await NotificationService.initializeWithoutPrompt();
 
     // Use the existing method in NotificationService
     await NotificationService.saveTokenAfterInit();
