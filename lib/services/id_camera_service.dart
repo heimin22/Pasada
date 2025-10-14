@@ -18,7 +18,13 @@ class IdCameraService {
     String? bookingId,
   }) async {
     try {
-      // Request camera permission
+      // Show capture instructions first
+      final shouldProceed = await _showCaptureInstructionsDialog(context);
+      if (!shouldProceed) {
+        return null;
+      }
+
+      // Request camera permission after user confirms
       final cameraPermission = await Permission.camera.request();
 
       if (cameraPermission.isDenied) {
@@ -28,12 +34,6 @@ class IdCameraService {
 
       if (cameraPermission.isPermanentlyDenied) {
         _showSettingsDialog(context);
-        return null;
-      }
-
-      // Show capture instructions before opening camera
-      final shouldProceed = await _showCaptureInstructionsDialog(context);
-      if (!shouldProceed) {
         return null;
       }
 
@@ -110,11 +110,16 @@ class IdCameraService {
     }
   }
 
-  /// Legacy method for backward compatibility - captures local image only
-  @deprecated
+  /// Legacy method for backward compatibility - captures local image onlyz
   static Future<File?> captureIdImage(BuildContext context) async {
     try {
-      // Request camera permission
+      // Show capture instructions first
+      final shouldProceed = await _showCaptureInstructionsDialog(context);
+      if (!shouldProceed) {
+        return null;
+      }
+
+      // Request camera permission after user confirms
       final cameraPermission = await Permission.camera.request();
 
       if (cameraPermission.isDenied) {
@@ -124,12 +129,6 @@ class IdCameraService {
 
       if (cameraPermission.isPermanentlyDenied) {
         _showSettingsDialog(context);
-        return null;
-      }
-
-      // Show capture instructions before opening camera
-      final shouldProceed = await _showCaptureInstructionsDialog(context);
-      if (!shouldProceed) {
         return null;
       }
 
@@ -207,6 +206,7 @@ class IdCameraService {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
+                // Retry the capture process
                 captureIdImage(context);
               },
               style: ElevatedButton.styleFrom(
