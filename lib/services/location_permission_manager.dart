@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:location/location.dart';
 
 /// Centralized manager for location permissions and services to prevent multiple prompts
@@ -107,6 +108,25 @@ class LocationPermissionManager {
 
     final permissionStatus = await ensureLocationPermissionGranted();
     return permissionStatus == PermissionStatus.granted;
+  }
+
+  // Non-blocking checks that DO NOT prompt system dialogs
+  Future<bool> isServiceEnabledNoPrompt() async {
+    try {
+      final enabled = await _location.serviceEnabled();
+      return enabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<PermissionStatus> getPermissionStatusNoPrompt() async {
+    try {
+      final status = await _location.hasPermission();
+      return status;
+    } catch (_) {
+      return PermissionStatus.denied;
+    }
   }
 
   /// Get current location if permissions are ready

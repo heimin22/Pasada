@@ -238,16 +238,9 @@ class PriorityInitializationService {
   Future<void> _initializeLocation(BuildContext context) async {
     try {
       final locationManager = LocationPermissionManager.instance;
-
-      // Ensure location permissions (quick operation)
-      final locationReady = await locationManager.ensureLocationReady();
-      if (!locationReady) {
-        debugPrint(
-            'Location permissions not available - using cached location if available');
-        _completedTasks[InitializationPriority.important]!
-            .add('location_permission_failed');
-        return;
-      }
+      // Do NOT prompt yet: check status without system dialogs to avoid blocking
+      final serviceEnabled = await locationManager.isServiceEnabledNoPrompt();
+      final permStatus = await locationManager.getPermissionStatusNoPrompt();
 
       // Check for cached location first
       final prefs = await SharedPreferences.getInstance();
@@ -264,19 +257,20 @@ class PriorityInitializationService {
         return;
       }
 
-      // Try to get fresh location with short timeout to not block startup
+      // If we have service+permission, try fresh location with short timeout; else skip for now
       try {
-        final location = Location();
-        final locationData = await location.getLocation().timeout(
-              const Duration(seconds: 2), // Very short timeout for startup
-            );
+        if (serviceEnabled && permStatus == PermissionStatus.granted) {
+          final location = Location();
+          final locationData = await location.getLocation().timeout(
+                const Duration(seconds: 2), // Very short timeout for startup
+              );
 
-        if (locationData.latitude != null && locationData.longitude != null) {
-          // Cache the fresh location
-          await prefs.setDouble('last_latitude', locationData.latitude!);
-          await prefs.setDouble('last_longitude', locationData.longitude!);
-          _memoryManager.addToCache('location_available', true);
-          debugPrint('Fresh location obtained during initialization');
+          if (locationData.latitude != null && locationData.longitude != null) {
+            await prefs.setDouble('last_latitude', locationData.latitude!);
+            await prefs.setDouble('last_longitude', locationData.longitude!);
+            _memoryManager.addToCache('location_available', true);
+            debugPrint('Fresh location obtained during initialization');
+          }
         }
       } catch (e) {
         debugPrint(
@@ -313,7 +307,8 @@ class PriorityInitializationService {
   }
 
   Future<void> _configureNotifications() async {
-    await NotificationService.initialize();
+    // Initialize channels and handlers without prompting for permissions yet
+    await NotificationService.initializeWithoutPrompt();
     await NotificationService.saveTokenAfterInit();
     _completedTasks[InitializationPriority.important]!.add('notifications');
   }
