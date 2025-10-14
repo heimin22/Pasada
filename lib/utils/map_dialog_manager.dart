@@ -92,6 +92,54 @@ class MapDialogManager {
     );
   }
 
+  /// App-styled pre-prompt BEFORE asking OS for location permission
+  Future<bool> showPrePromptLocationPermission() async {
+    final bool? proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ResponsiveDialog(
+        title: 'Location Access',
+        content: const Text(
+            'We need location access to show nearby buses and calculate routes to your destination.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
+  /// App-styled pre-prompt BEFORE enabling device location services
+  Future<bool> showPrePromptLocationService() async {
+    final bool? proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ResponsiveDialog(
+        title: 'Enable Location Services',
+        content: const Text(
+            'Turn on device location services to enable accurate pickup and route suggestions.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Not now'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    return proceed ?? false;
+  }
+
   /// Show pickup distance warning dialog
   Future<bool> showPickupDistanceWarning(
     LatLng pickupLocation,

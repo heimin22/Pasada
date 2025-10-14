@@ -1,8 +1,9 @@
 import 'dart:async';
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pasada_passenger_app/services/location_permission_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MapLocationManager {
   final Location location = Location();
@@ -10,6 +11,10 @@ class MapLocationManager {
 
   bool isLocationInitialized = false;
   bool isScreenActive = true;
+
+  // Optional pre-prompt callbacks to show app-styled dialogs BEFORE OS prompts
+  Future<bool> Function()? onPrePromptLocationPermission;
+  Future<bool> Function()? onPrePromptLocationService;
 
   // Callbacks
   Function(LatLng)? onLocationUpdated;
@@ -22,6 +27,8 @@ class MapLocationManager {
     this.onError,
     this.onLocationPermissionDenied,
     this.onLocationServiceDisabled,
+    this.onPrePromptLocationPermission,
+    this.onPrePromptLocationService,
   });
 
   /// Initialize location services and start tracking
@@ -30,16 +37,44 @@ class MapLocationManager {
 
     // Use centralized location permission manager to prevent multiple prompts
     final locationManager = LocationPermissionManager.instance;
-    final locationReady = await locationManager.ensureLocationReady();
 
-    if (!locationReady) {
-      // Check specifically what failed to call appropriate callbacks
-      if (!locationManager.isServiceEnabled) {
-        onLocationServiceDisabled?.call();
-      } else if (!locationManager.isPermissionGranted) {
-        onLocationPermissionDenied?.call();
+    // First, check status WITHOUT prompting the OS
+    final serviceEnabled = await locationManager.isServiceEnabledNoPrompt();
+    final permissionStatus =
+        await locationManager.getPermissionStatusNoPrompt();
+
+    // If services are disabled, show an app pre-prompt before requesting OS dialog
+    if (!serviceEnabled) {
+      bool proceed = true;
+      if (onPrePromptLocationService != null) {
+        proceed = await onPrePromptLocationService!.call();
       }
-      return;
+      if (!proceed) {
+        onLocationServiceDisabled?.call();
+        return;
+      }
+      final enabled = await locationManager.ensureLocationServiceEnabled();
+      if (!enabled) {
+        onLocationServiceDisabled?.call();
+        return;
+      }
+    }
+
+    // If permission not granted, show an app pre-prompt before OS permission dialog
+    if (permissionStatus != PermissionStatus.granted) {
+      bool proceed = true;
+      if (onPrePromptLocationPermission != null) {
+        proceed = await onPrePromptLocationPermission!.call();
+      }
+      if (!proceed) {
+        onLocationPermissionDenied?.call();
+        return;
+      }
+      final perm = await locationManager.ensureLocationPermissionGranted();
+      if (perm != PermissionStatus.granted) {
+        onLocationPermissionDenied?.call();
+        return;
+      }
     }
 
     // Fetch updates

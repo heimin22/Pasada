@@ -96,6 +96,10 @@ class MapScreenState extends State<MapScreen>
       onLocationServiceDisabled: () => _dialogManager.showLocationErrorDialog(
         onRetry: () => _locationManager.initializeLocation(),
       ),
+      onPrePromptLocationPermission: () =>
+          _dialogManager.showPrePromptLocationPermission(),
+      onPrePromptLocationService: () =>
+          _dialogManager.showPrePromptLocationService(),
     );
 
     // Initialize camera manager
