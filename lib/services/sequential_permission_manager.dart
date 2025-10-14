@@ -237,19 +237,20 @@ class SequentialPermissionManager {
     }
   }
 
-  /// Custom handler for notification permission (integrates with NotificationService)
+  /// Custom handler for notification permission (use existing explanation dialog only)
   Future<PermissionStatus> _handleNotificationPermission(
       PermissionRequestInfo info) async {
     try {
-      // Use existing notification service logic
-      await NotificationService.initialize();
+      // The sequential flow already showed the app explanation dialog.
+      // Now request OS permissions without another pre-prompt.
+      await NotificationService.requestPermissionsIfNeeded();
 
-      // Check if notifications are enabled
+      // Check if notifications are enabled after the flow
       final areEnabled = await NotificationService.checkPermissions();
       return areEnabled ? PermissionStatus.granted : PermissionStatus.denied;
     } catch (e) {
       debugPrint('Error in notification permission handler: $e');
-      // Fallback to standard permission request
+      // Fallback to standard permission request as last resort
       return await info.permission.request();
     }
   }

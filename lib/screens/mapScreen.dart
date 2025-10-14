@@ -11,6 +11,7 @@ import 'package:pasada_passenger_app/utils/map_driver_tracker.dart';
 import 'package:pasada_passenger_app/utils/map_location_manager.dart';
 import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
 import 'package:pasada_passenger_app/utils/map_route_manager.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 class MapScreen extends StatefulWidget {
   final LatLng? pickUpLocation;
@@ -95,6 +96,10 @@ class MapScreenState extends State<MapScreen>
       onLocationServiceDisabled: () => _dialogManager.showLocationErrorDialog(
         onRetry: () => _locationManager.initializeLocation(),
       ),
+      onPrePromptLocationPermission: () =>
+          _dialogManager.showPrePromptLocationPermission(),
+      onPrePromptLocationService: () =>
+          _dialogManager.showPrePromptLocationService(),
     );
 
     // Initialize camera manager
@@ -574,6 +579,45 @@ class MapScreenState extends State<MapScreen>
               rotateGesturesEnabled: true,
               myLocationEnabled: currentLocation != null,
             ),
+            if (currentLocation == null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    color: Colors.transparent,
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 16,
+                      left: screenWidth * 0.06,
+                      right: screenWidth * 0.06,
+                      bottom: screenHeight * widget.bottomPadding + 16,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            SkeletonCircle(size: 36),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SkeletonLine(
+                                  width: screenWidth * 0.6, height: 18),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SkeletonLine(width: screenWidth * 0.4, height: 14),
+                        const Spacer(),
+                        // Bottom controls placeholder (where pick/drop UI usually sits)
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 90,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

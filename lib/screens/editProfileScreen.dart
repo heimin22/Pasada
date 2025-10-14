@@ -10,6 +10,7 @@ import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/services/image_compression_service.dart';
 import 'package:pasada_passenger_app/services/phoneValidationService.dart';
 import 'package:pasada_passenger_app/widgets/avatar_image.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -27,6 +28,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   File? _imageFile;
   bool isGoogleLinked = false;
   String originalPhoneNumber = '';
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> loadUserData() async {
+    setState(() => isLoading = true);
     final userData = await authService.getCurrentUserData();
     if (userData != null) {
       final isGoogleProvider = authService.isGoogleLinkedAccount();
@@ -91,6 +94,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
       }
     }
+    if (mounted) setState(() => isLoading = false);
   }
 
   Future<void> pickImage() async {
@@ -332,10 +336,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         backgroundColor:
             isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
         body: SafeArea(
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
+          child: isLoading
+              ? SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.all(screenSize.width * 0.04),
                     child: Column(
@@ -343,74 +345,131 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       children: [
                         const SizedBox(height: 24),
                         Center(
-                          child: Stack(
-                            children: [
-                              _imageFile != null
-                                  ? CircleAvatar(
-                                      radius: screenSize.width * 0.12,
-                                      backgroundColor: const Color(0xFF00CC58),
-                                      backgroundImage: FileImage(_imageFile!)
-                                          as ImageProvider,
-                                    )
-                                  : ProfileAvatar(
-                                      avatarPath: profileImageUrl,
-                                      size: screenSize.width * 0.24,
-                                    ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: CircleAvatar(
-                                  backgroundColor: const Color(0xFF00CC58),
-                                  radius: screenSize.width * 0.04,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.camera_alt,
-                                        color: Colors.white),
-                                    onPressed: pickImage,
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          child: SkeletonCircle(size: screenSize.width * 0.24),
                         ),
-                        const SizedBox(height: 48),
-                        buildInputField('Name', nameController, isDarkMode),
-                        buildPhoneNumberField(isDarkMode),
-                        buildEmailField(isDarkMode),
+                        const SizedBox(height: 32),
+                        SkeletonLine(width: screenSize.width * 0.5, height: 18),
+                        const SizedBox(height: 16),
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 56,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         const SizedBox(height: 24),
-                        buildLinkedAccountsSection(
-                            screenSize.width, isDarkMode),
+                        SkeletonLine(width: screenSize.width * 0.5, height: 18),
+                        const SizedBox(height: 16),
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 56,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        const SizedBox(height: 24),
+                        SkeletonLine(width: screenSize.width * 0.5, height: 18),
+                        const SizedBox(height: 16),
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 56,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        const SizedBox(height: 24),
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 72,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        const SizedBox(height: 24),
+                        SkeletonBlock(
+                          width: double.infinity,
+                          height: 50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(screenSize.width * 0.04),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00CC58),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: EdgeInsets.all(screenSize.width * 0.04),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 24),
+                              Center(
+                                child: Stack(
+                                  children: [
+                                    _imageFile != null
+                                        ? CircleAvatar(
+                                            radius: screenSize.width * 0.12,
+                                            backgroundColor:
+                                                const Color(0xFF00CC58),
+                                            backgroundImage:
+                                                FileImage(_imageFile!)
+                                                    as ImageProvider,
+                                          )
+                                        : ProfileAvatar(
+                                            avatarPath: profileImageUrl,
+                                            size: screenSize.width * 0.24,
+                                          ),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: CircleAvatar(
+                                        backgroundColor:
+                                            const Color(0xFF00CC58),
+                                        radius: screenSize.width * 0.04,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.camera_alt,
+                                              color: Colors.white),
+                                          onPressed: pickImage,
+                                          padding: EdgeInsets.zero,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 48),
+                              buildInputField(
+                                  'Name', nameController, isDarkMode),
+                              buildPhoneNumberField(isDarkMode),
+                              buildEmailField(isDarkMode),
+                              const SizedBox(height: 24),
+                              buildLinkedAccountsSection(
+                                  screenSize.width, isDarkMode),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    child: const Text(
-                      'Save Changes',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    Padding(
+                      padding: EdgeInsets.all(screenSize.width * 0.04),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00CC58),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: const Text(
+                            'Save Changes',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
     );

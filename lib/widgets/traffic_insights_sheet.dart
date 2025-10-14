@@ -1,10 +1,8 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/models/traffic_analytics.dart';
+import 'package:pasada_passenger_app/services/traffic_analytics_service.dart';
 
-/// Bottom sheet widget for displaying AI traffic insights
+/// Bottom sheet widget for displaying real-time traffic analytics
 class TrafficInsightsSheet extends StatefulWidget {
   final List<Map<String, dynamic>> routes;
   final List<Map<String, dynamic>> filteredRoutes;
@@ -20,7 +18,8 @@ class TrafficInsightsSheet extends StatefulWidget {
 }
 
 class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
-  Map<String, dynamic> _trafficReports = {};
+  final TrafficAnalyticsService _analyticsService = TrafficAnalyticsService();
+  TodayRouteTrafficResponse? _trafficData;
   bool _isLoadingTraffic = false;
   String? _trafficError;
 
@@ -30,19 +29,11 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     _fetchTrafficReports();
   }
 
-  Future<void> _fetchTrafficReports() async {
+  Future<void> _fetchTrafficReports({bool forceRefresh = false}) async {
     try {
-      final String? apiUrl = dotenv.env['API_URL'];
-      if (apiUrl == null || apiUrl.isEmpty) {
-        setState(() {
-          _trafficError = 'API_URL not configured';
-        });
-        return;
-      }
-
       if (widget.routes.isEmpty) {
         setState(() {
-          _trafficReports = {};
+          _trafficData = null;
           _trafficError = null;
         });
         return;
@@ -53,55 +44,23 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         _trafficError = null;
       });
 
-      final uri = Uri.parse('$apiUrl/api/analytics/summaries');
-      final headers = {
-        'Content-Type': 'application/json',
-      };
-
-      final response = await NetworkUtility.fetchUrl(uri, headers: headers);
-
-      if (response == null) {
-        if (mounted) {
-          setState(() {
-            _isLoadingTraffic = false;
-            _trafficError = 'No response from traffic service';
-          });
-        }
-        return;
-      }
-
-      final dynamic data = json.decode(response);
-
-      Map<String, dynamic> reports = {};
-
-      if (data is List) {
-        for (final item in data) {
-          final String routeName =
-              item['routeName']?.toString() ?? 'Unknown Route';
-          final String summary =
-              item['summary']?.toString() ?? 'No traffic data available';
-          final double density = (item['averageDensity'] ?? 0.0).toDouble();
-
-          final densityPercentage = (density * 100).round();
-          final densityText = densityPercentage > 70
-              ? 'Heavy'
-              : densityPercentage > 40
-                  ? 'Moderate'
-                  : 'Light';
-
-          reports[routeName] =
-              '$densityText traffic ($densityPercentage%). $summary';
-        }
-      }
+      // Use the traffic analytics service to fetch data
+      // forceRefresh bypasses cache if set to true
+      final trafficResponse = await _analyticsService.getTodayTrafficAnalytics(
+        forceRefresh: forceRefresh,
+      );
 
       if (mounted) {
         setState(() {
-          _trafficReports = reports;
+          _trafficData = trafficResponse;
           _isLoadingTraffic = false;
+          if (trafficResponse == null) {
+            _trafficError = 'Unable to load traffic data';
+          }
         });
       }
     } catch (e) {
-      debugPrint('Error fetching AI traffic reports: $e');
+      debugPrint('Error fetching traffic analytics: $e');
       if (mounted) {
         setState(() {
           _isLoadingTraffic = false;
@@ -145,14 +104,56 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'AI Traffic Insights',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Traffic Analytics',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                            color: isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        if (_trafficData != null) ...[
+                          Text(
+                            'Today, ${_trafficData!.date.day}/${_trafficData!.date.month}/${_trafficData!.date.year}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              fontFamily: 'Inter',
+                              color: isDarkMode
+                                  ? Colors.grey[400]
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                          if (_trafficData!.mode != null)
+                            Text(
+                              'Source: ${_trafficData!.mode}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
+                                color: isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                            ),
+                          if (_analyticsService.hasCachedData())
+                            Text(
+                              _getCacheStatusText(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w400,
+                                fontFamily: 'Inter',
+                                color: isDarkMode
+                                    ? Colors.grey[500]
+                                    : Colors.grey[500],
+                              ),
+                            ),
+                        ],
+                      ],
                     ),
                     IconButton(
                       onPressed: () => _showInfoDialog(context, isDarkMode),
@@ -390,7 +391,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       );
     }
 
-    if (_trafficReports.isEmpty) {
+    if (_trafficData == null || _trafficData!.routes.isEmpty) {
       return Expanded(
         child: Container(
           width: double.infinity,
@@ -405,7 +406,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No traffic insights available yet.',
+                'No traffic analytics available yet.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Inter',
@@ -416,7 +417,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               ),
               const SizedBox(height: 16),
               TextButton.icon(
-                onPressed: _fetchTrafficReports,
+                onPressed: () => _fetchTrafficReports(forceRefresh: true),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Refresh'),
                 style: TextButton.styleFrom(
@@ -429,38 +430,127 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       );
     }
 
-    return Expanded(
-      child: ListView.separated(
-        itemCount: widget.filteredRoutes.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final String routeName =
-              widget.filteredRoutes[index]['route_name']?.toString() ??
-                  'Unknown Route';
-          final dynamic reportValue = _trafficReports[routeName] ??
-              _trafficReports[routeName.toLowerCase()] ??
-              _trafficReports[routeName.toUpperCase()];
-          final String reportText =
-              reportValue?.toString() ?? 'No current traffic report.';
+    // Build list of routes that have traffic data using normalized name matching
+    final routesWithData = widget.filteredRoutes.where((route) {
+      final routeName = route['route_name']?.toString() ?? '';
+      return _findAnalyticsRouteByName(routeName) != null;
+    }).toList();
 
-          return _buildTrafficCard(routeName, reportText, isDarkMode);
-        },
+    if (routesWithData.isEmpty) {
+      // Fallback: show all analytics routes to verify data flow
+      final analyticsRoutes = _trafficData!.routes;
+      return Expanded(
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: analyticsRoutes.isEmpty
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.analytics_outlined,
+                      size: 48,
+                      color: textSecondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No analytics data for displayed routes.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Data is being collected.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  itemCount: analyticsRoutes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    return _buildTrafficCard(
+                        analyticsRoutes[index], isDarkMode);
+                  },
+                ),
+        ),
+      );
+    }
+
+    return Expanded(
+      child: RefreshIndicator(
+        onRefresh: () => _fetchTrafficReports(forceRefresh: true),
+        color: const Color(0xFF00CC58),
+        child: ListView.separated(
+          itemCount: routesWithData.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final String routeName =
+                routesWithData[index]['route_name']?.toString() ??
+                    'Unknown Route';
+            final RouteTrafficToday? trafficData =
+                _findAnalyticsRouteByName(routeName);
+
+            if (trafficData == null) {
+              return const SizedBox.shrink();
+            }
+
+            return _buildTrafficCard(trafficData, isDarkMode);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildTrafficCard(
-      String routeName, String reportText, bool isDarkMode) {
-    // Extract traffic density for color coding
-    String densityLevel = 'Light';
-    Color statusColor = const Color(0xFF00CC58); // Green for light traffic
+  // Normalize strings for looser matching between DB route names and analytics route names
+  String _normalizeName(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll(RegExp(r'[-_/]'), '')
+        .trim();
+  }
 
-    if (reportText.toLowerCase().contains('heavy')) {
-      densityLevel = 'Heavy';
-      statusColor = const Color(0xFFFF5722); // Red for heavy traffic
-    } else if (reportText.toLowerCase().contains('moderate')) {
-      densityLevel = 'Moderate';
-      statusColor = const Color(0xFFFF9800); // Orange for moderate traffic
+  RouteTrafficToday? _findAnalyticsRouteByName(String name) {
+    if (_trafficData == null) return null;
+    final normalized = _normalizeName(name);
+    try {
+      return _trafficData!.routes.firstWhere((r) =>
+          _normalizeName(r.routeName) == normalized ||
+          _normalizeName(r.routeName).contains(normalized) ||
+          normalized.contains(_normalizeName(r.routeName)));
+    } catch (_) {
+      return _trafficData!.getRouteByName(name);
+    }
+  }
+
+  Widget _buildTrafficCard(RouteTrafficToday trafficData, bool isDarkMode) {
+    // Map traffic status to color
+    Color statusColor;
+    switch (trafficData.currentStatus) {
+      case TrafficStatus.low:
+        statusColor = const Color(0xFF00CC58); // Green
+        break;
+      case TrafficStatus.moderate:
+        statusColor = const Color(0xFFFF9800); // Orange
+        break;
+      case TrafficStatus.high:
+        statusColor = const Color(0xFFFF5722); // Red
+        break;
+      case TrafficStatus.severe:
+        statusColor = const Color(0xFFD32F2F); // Dark Red
+        break;
     }
 
     return Container(
@@ -493,7 +583,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  routeName,
+                  trafficData.routeName,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
@@ -510,7 +600,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   border: Border.all(color: statusColor.withAlpha(30)),
                 ),
                 child: Text(
-                  densityLevel,
+                  trafficData.currentStatus.displayName,
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
@@ -523,7 +613,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
           ),
           const SizedBox(height: 12),
           Text(
-            reportText,
+            trafficData.summary,
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
@@ -532,9 +622,85 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               height: 1.4,
             ),
           ),
+          const SizedBox(height: 12),
+          // Additional metrics row
+          Row(
+            children: [
+              _buildMetricChip(
+                icon: Icons.speed,
+                label: '${trafficData.avgSpeedKmh.toStringAsFixed(1)} km/h',
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(width: 8),
+              _buildMetricChip(
+                icon: Icons.insert_chart,
+                label: '${trafficData.densityPercentage}% density',
+                isDarkMode: isDarkMode,
+              ),
+              const SizedBox(width: 8),
+              _buildMetricChip(
+                icon: Icons.access_time,
+                label: 'Peak: ${trafficData.peakTrafficTime}',
+                isDarkMode: isDarkMode,
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildMetricChip({
+    required IconData icon,
+    required String label,
+    required bool isDarkMode,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDarkMode
+            ? Colors.grey[700]!.withAlpha(50)
+            : Colors.grey[200]!.withAlpha(100),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 12,
+            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Get cache status text for display
+  String _getCacheStatusText() {
+    final cacheTime = _analyticsService.getCacheTimeRemaining();
+    if (cacheTime == null) return '';
+
+    final minutes = cacheTime.inMinutes;
+    final seconds = cacheTime.inSeconds % 60;
+
+    if (minutes > 0) {
+      return 'Cached • Updates in ${minutes}m';
+    } else if (seconds > 0) {
+      return 'Cached • Updates in ${seconds}s';
+    } else {
+      return 'Updating...';
+    }
   }
 }
 

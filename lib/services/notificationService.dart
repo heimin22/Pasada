@@ -1,12 +1,17 @@
+import 'dart:async';
+import 'dart:collection';
+import 'dart:io';
+
+import 'package:bcrypt/bcrypt.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:io';
-import 'package:bcrypt/bcrypt.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -16,74 +21,248 @@ class NotificationService {
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
 
+  // Serialization primitives
+  static Completer<void>? _initCompleter;
+  static Completer<void>? _permissionRequestCompleter;
+  static final Queue<Future<void> Function()> _notificationQueue = Queue();
+  static bool _isProcessingQueue = false;
+
   static const int rideProgressNotificationId = 1;
 
   static Future<void> initialize() async {
-    await _requestPermissions();
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      return _initCompleter!.future;
+    }
+    _initCompleter = Completer<void>();
+    try {
+      await _requestPermissions();
 
-    // Initialize local notifications
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+      // Initialize local notifications
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final DarwinInitializationSettings initializationSettingsIOS =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+      final DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
-    final InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+      final InitializationSettings initializationSettings =
+          InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
 
-    await _flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        debugPrint('Notification clicked with payload: ${response.payload}');
-        _handleNotificationTap();
-      },
-    );
+      await _flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          debugPrint('Notification clicked with payload: ${response.payload}');
+          _handleNotificationTap();
+        },
+      );
 
-    // Create Android notification channel for ride progress updates
-    if (Platform.isAndroid) {
-      final androidImpl = _flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
-      if (androidImpl != null) {
-        const AndroidNotificationChannel rideProgressChannel =
-            AndroidNotificationChannel(
-          'ride_progress_channel',
-          'Ride Progress',
-          description: 'Shows driver progress towards drop-off',
-          importance: Importance.defaultImportance,
-        );
-        await androidImpl.createNotificationChannel(rideProgressChannel);
+      // Create Android notification channel for ride progress updates
+      if (Platform.isAndroid) {
+        final androidImpl = _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImpl != null) {
+          const AndroidNotificationChannel rideProgressChannel =
+              AndroidNotificationChannel(
+            'ride_progress_channel',
+            'Ride Progress',
+            description: 'Shows driver progress towards drop-off',
+            importance: Importance.defaultImportance,
+          );
+          await androidImpl.createNotificationChannel(rideProgressChannel);
+        }
+      }
+
+      // Set up FCM handlers
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
+
+      // Get FCM token and save it - but only if Supabase is initialized
+      try {
+        final String? fcmToken = await _firebaseMessaging.getToken();
+        if (fcmToken != null) {
+          debugPrint('FCM Token: $fcmToken');
+          // Only save token if Supabase is initialized
+          await saveTokenToDatabase(fcmToken);
+        }
+
+        // Set up token refresh listener
+        _firebaseMessaging.onTokenRefresh.listen((newToken) {
+          debugPrint('FCM Token refreshed');
+          // We'll try to save the token, but it will only work if Supabase is initialized
+          saveTokenToDatabase(newToken);
+        });
+      } catch (e) {
+        debugPrint('Error initializing FCM: $e');
+      }
+    } catch (e) {
+      debugPrint('Error during NotificationService.initialize: $e');
+    } finally {
+      if (!(_initCompleter?.isCompleted ?? true)) {
+        _initCompleter!.complete();
       }
     }
+  }
 
-    // Set up FCM handlers
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
-
-    // Get FCM token and save it - but only if Supabase is initialized
+  /// Initialize notifications without prompting for permissions.
+  /// Use this during app startup to avoid blocking resource loading UI.
+  static Future<void> initializeWithoutPrompt() async {
+    if (_initCompleter != null && !_initCompleter!.isCompleted) {
+      return _initCompleter!.future;
+    }
+    _initCompleter = Completer<void>();
     try {
-      final String? fcmToken = await _firebaseMessaging.getToken();
-      if (fcmToken != null) {
-        debugPrint('FCM Token: $fcmToken');
-        // Only save token if Supabase is initialized
-        await saveTokenToDatabase(fcmToken);
+      // Initialize local notifications only, skip permissions
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      final DarwinInitializationSettings initializationSettingsIOS =
+          DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+
+      final InitializationSettings initializationSettings =
+          InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
+
+      await _flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (NotificationResponse response) {
+          debugPrint('Notification clicked with payload: ${response.payload}');
+          _handleNotificationTap();
+        },
+      );
+
+      if (Platform.isAndroid) {
+        final androidImpl = _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImpl != null) {
+          const AndroidNotificationChannel rideProgressChannel =
+              AndroidNotificationChannel(
+            'ride_progress_channel',
+            'Ride Progress',
+            description: 'Shows driver progress towards drop-off',
+            importance: Importance.defaultImportance,
+          );
+          await androidImpl.createNotificationChannel(rideProgressChannel);
+        }
       }
 
-      // Set up token refresh listener
-      _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        debugPrint('FCM Token refreshed');
-        // We'll try to save the token, but it will only work if Supabase is initialized
-        saveTokenToDatabase(newToken);
-      });
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessageTap);
+
+      try {
+        final String? fcmToken = await _firebaseMessaging.getToken();
+        if (fcmToken != null) {
+          await saveTokenToDatabase(fcmToken);
+        }
+        _firebaseMessaging.onTokenRefresh.listen((newToken) {
+          saveTokenToDatabase(newToken);
+        });
+      } catch (e) {
+        debugPrint('Error initializing FCM (no-prompt): $e');
+      }
     } catch (e) {
-      debugPrint('Error initializing FCM: $e');
+      debugPrint(
+          'Error during NotificationService.initializeWithoutPrompt: $e');
+    } finally {
+      if (!(_initCompleter?.isCompleted ?? true)) {
+        _initCompleter!.complete();
+      }
+    }
+  }
+
+  /// Public method to request permissions later in the flow.
+  static Future<void> requestPermissionsIfNeeded() async {
+    await _requestPermissions();
+  }
+
+  /// Show app-styled pre-prompt before asking the OS for notification permission
+  static Future<void> requestPermissionsWithPrePrompt(
+      BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ResponsiveDialog(
+        title: 'Enable notifications?',
+        contentPadding: const EdgeInsets.all(24),
+        content: Text(
+          'Stay updated with ride confirmations, driver location, and arrival notifications. You can change this anytime in Settings.',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
+            color:
+                isDarkMode ? const Color(0xFFDEDEDE) : const Color(0xFF1E1E1E),
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Color(0xFF00CC58), width: 3),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: Colors.transparent,
+              foregroundColor: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Not now',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: const Color(0xFF00CC58),
+              foregroundColor: const Color(0xFFF5F5F5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Allow',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed == true) {
+      await _requestPermissions();
     }
   }
 
@@ -116,6 +295,20 @@ class NotificationService {
   }
 
   static Future<void> showNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    _notificationQueue.add(() async {
+      await _showNotificationInternal(
+          title: title, body: body, payload: payload);
+    });
+    if (!_isProcessingQueue) {
+      _processNotificationQueue();
+    }
+  }
+
+  static Future<void> _showNotificationInternal({
     required String title,
     required String body,
     String? payload,
@@ -156,6 +349,20 @@ class NotificationService {
       );
     } catch (e) {
       debugPrint('Error showing notification: $e');
+    }
+  }
+
+  static Future<void> _processNotificationQueue() async {
+    if (_isProcessingQueue) return;
+    _isProcessingQueue = true;
+    try {
+      while (_notificationQueue.isNotEmpty) {
+        final task = _notificationQueue.removeFirst();
+        await task();
+        await Future.delayed(const Duration(milliseconds: 150));
+      }
+    } finally {
+      _isProcessingQueue = false;
     }
   }
 
@@ -236,6 +443,11 @@ class NotificationService {
   }
 
   static Future<void> _requestPermissions() async {
+    if (_permissionRequestCompleter != null &&
+        !_permissionRequestCompleter!.isCompleted) {
+      return _permissionRequestCompleter!.future;
+    }
+    _permissionRequestCompleter = Completer<void>();
     try {
       // Request permission for FCM
       final NotificationSettings settings =
@@ -256,10 +468,55 @@ class NotificationService {
 
       if (androidImplementation != null) {
         await androidImplementation.requestNotificationsPermission();
+        // On Android 13+, users can block notifications at OS level. Verify and fallback to settings.
+        final bool notificationsEnabled =
+            (await androidImplementation.areNotificationsEnabled()) ?? false;
+        if (!notificationsEnabled) {
+          // Try requesting via permission_handler for robustness
+          final status = await Permission.notification.request();
+          if (!status.isGranted) {
+            debugPrint(
+                'Notifications disabled; prompting to open app settings');
+            await openAppSettings();
+          }
+        }
       }
     } catch (e) {
       debugPrint('Error requesting permissions: $e');
+    } finally {
+      if (!(_permissionRequestCompleter?.isCompleted ?? true)) {
+        _permissionRequestCompleter!.complete();
+      }
     }
+  }
+
+  /// Call this from UI when a notification action fails due to disabled perms
+  static Future<void> promptOpenSettingsIfDisabled(BuildContext context) async {
+    bool enabled = await checkPermissions();
+    if (enabled) return;
+    if (!context.mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enable notifications'),
+        content: const Text(
+          'Notifications are currently disabled. Enable them in system settings to receive updates.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await openAppSettings();
+            },
+            child: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Save FCM token to your backend (Supabase in this case)

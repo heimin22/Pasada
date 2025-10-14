@@ -1,17 +1,19 @@
-import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
-import 'package:pasada_passenger_app/services/traffic_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/services/traffic_service.dart';
+import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/route_selection_widget.dart';
 import 'package:pasada_passenger_app/widgets/rush_hour_dialog.dart';
-import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:pasada_passenger_app/widgets/traffic_insights_sheet.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RouteSelection extends StatefulWidget {
   const RouteSelection({super.key});
@@ -100,8 +102,6 @@ class _RouteSelectionState extends State<RouteSelection> {
       }
     }
   }
-
-
 
   void _selectRoute(Map<String, dynamic> route) async {
     // Make sure the route has an ID field
@@ -334,15 +334,16 @@ class _RouteSelectionState extends State<RouteSelection> {
           ),
           Expanded(
             child: _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        isDarkMode
-                            ? const Color(0xFFFFCE21)
-                            : const Color(0xFF067837),
-                      ),
-                    ),
+                ? Builder(
+                    builder: (context) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      return ListSkeleton(
+                        itemCount: 10,
+                        screenWidth: screenWidth,
+                        itemPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      );
+                    },
                   )
                 : ListView.builder(
                     itemCount: _filteredRoutes.length,
@@ -358,7 +359,8 @@ class _RouteSelectionState extends State<RouteSelection> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showTrafficInsightsSheet(context, _routes, _filteredRoutes),
+        onPressed: () =>
+            showTrafficInsightsSheet(context, _routes, _filteredRoutes),
         icon: const Icon(Icons.traffic),
         label: const Text('Traffic'),
         backgroundColor:

@@ -23,7 +23,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  await NotificationService.initialize();
+  await NotificationService.initializeWithoutPrompt();
   await NotificationService.showNotification(
     title: message.notification?.title ?? 'Pasada',
     body: message.notification?.body ?? 'You have a new notification',
