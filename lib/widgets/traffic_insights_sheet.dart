@@ -76,7 +76,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.5,
+        maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       child: Container(
         decoration: BoxDecoration(
