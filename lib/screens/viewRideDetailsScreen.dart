@@ -9,6 +9,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -700,9 +701,57 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         centerTitle: false, // Align title to the left
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF00CC58),
+          ? SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28.0, vertical: 16.0),
+                child: Builder(builder: (context) {
+                  final screenWidth = MediaQuery.of(context).size.width;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Driver details skeleton
+                      SkeletonBlock(
+                        width: double.infinity,
+                        height: 130,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      const SizedBox(height: 20),
+                      // Booking meta skeleton
+                      SkeletonBlock(
+                        width: double.infinity,
+                        height: 120,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      const SizedBox(height: 20),
+                      // Payment details skeleton
+                      SkeletonBlock(
+                        width: double.infinity,
+                        height: 160,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      const SizedBox(height: 20),
+                      // Map skeleton
+                      SkeletonBlock(
+                        width: double.infinity,
+                        height: 200,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      const SizedBox(height: 20),
+                      // Pickup/Dropoff lines
+                      ListItemSkeleton(screenWidth: screenWidth),
+                      const SizedBox(height: 8),
+                      ListItemSkeleton(screenWidth: screenWidth),
+                      const SizedBox(height: 20),
+                      // Review skeleton
+                      SkeletonBlock(
+                        width: double.infinity,
+                        height: 140,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ],
+                  );
+                }),
               ),
             )
           : SingleChildScrollView(
