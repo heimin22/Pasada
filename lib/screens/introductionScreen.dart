@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 class IntroductionScreen extends StatefulWidget {
   const IntroductionScreen({super.key});
@@ -13,6 +14,7 @@ class _IntroductionScreenState extends State<IntroductionScreen>
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
+  bool _askedLocationOnce = false;
 
   @override
   void initState() {
@@ -39,12 +41,114 @@ class _IntroductionScreenState extends State<IntroductionScreen>
       statusBarIconBrightness: Brightness.light, // White icons
       statusBarBrightness: Brightness.dark, // Dark background (for iOS)
     ));
+
+    // Ask for location on first frame with an in-app dialog before system prompt
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_askedLocationOnce) {
+        _askedLocationOnce = true;
+        _showLocationPrePrompt();
+      }
+    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _showLocationPrePrompt() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.location_on,
+              color: Theme.of(dialogContext).primaryColor,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Location Access',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'We need location access to show nearby buses and calculate routes to your destination.',
+              style: TextStyle(
+                fontSize: 16,
+                fontFamily: 'Inter',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha(10),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withAlpha(30)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info, color: Colors.orange, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This permission is required for the app to function properly.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.orange,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Allow',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: Color(0xFF00CC58),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed == true) {
+      try {
+        final ready =
+            await LocationPermissionManager.instance.ensureLocationReady();
+        if (!ready && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Location not enabled. You can enable it later in Settings.')),
+          );
+        }
+      } catch (_) {}
+    }
   }
 
   LinearGradient _getTimeBasedGradient() {

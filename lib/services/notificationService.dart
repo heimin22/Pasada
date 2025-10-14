@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:pasada_passenger_app/functions/notification_preferences.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -185,6 +186,84 @@ class NotificationService {
   /// Public method to request permissions later in the flow.
   static Future<void> requestPermissionsIfNeeded() async {
     await _requestPermissions();
+  }
+
+  /// Show app-styled pre-prompt before asking the OS for notification permission
+  static Future<void> requestPermissionsWithPrePrompt(
+      BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final proceed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ResponsiveDialog(
+        title: 'Enable notifications?',
+        contentPadding: const EdgeInsets.all(24),
+        content: Text(
+          'Stay updated with ride confirmations, driver location, and arrival notifications. You can change this anytime in Settings.',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Inter',
+            color:
+                isDarkMode ? const Color(0xFFDEDEDE) : const Color(0xFF1E1E1E),
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: Color(0xFF00CC58), width: 3),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: Colors.transparent,
+              foregroundColor: isDarkMode
+                  ? const Color(0xFFF5F5F5)
+                  : const Color(0xFF121212),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Not now',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              minimumSize: const Size(150, 40),
+              backgroundColor: const Color(0xFF00CC58),
+              foregroundColor: const Color(0xFFF5F5F5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'Allow',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed == true) {
+      await _requestPermissions();
+    }
   }
 
   // This method can be called after Supabase is fully initialized
