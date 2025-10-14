@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
-import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
+import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
+import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -11,7 +13,7 @@ class ActivityScreen extends StatefulWidget {
   @override
   State<ActivityScreen> createState() => _ActivityScreenState();
 }
-  
+
 class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
@@ -50,6 +52,7 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
       setState(() {
         // mark as syncing; UI may show indicator accordingly
         isSynced = false;
+        isLoading = true;
       });
       final currentUser = Supabase.instance.client.auth.currentUser;
       if (currentUser == null) {
@@ -135,16 +138,22 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
                 return Container(
                   width: double.infinity,
                   color: const Color(0x33D7481D),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      const Icon(Icons.sync_problem, color: Color(0xFFD7481D), size: 18),
+                      const Icon(Icons.sync_problem,
+                          color: Color(0xFFD7481D), size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          online ? 'Data may be out of date. Pull to refresh.' : 'Offline. Showing last known data.',
+                          online
+                              ? 'Data may be out of date. Pull to refresh.'
+                              : 'Offline. Showing last known data.',
                           style: TextStyle(
-                            color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+                            color: isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -160,12 +169,14 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
                 onRefresh: fetchBookings,
                 color: const Color(0xFF067837),
                 child: isLoading
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 200),
-                          Center(child: CircularProgressIndicator()),
-                        ],
+                    ? Builder(
+                        builder: (context) {
+                          final screenWidth = MediaQuery.of(context).size.width;
+                          return ListSkeleton(
+                            itemCount: 6,
+                            screenWidth: screenWidth,
+                          );
+                        },
                       )
                     : bookings.isEmpty
                         ? ListView(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/screens/editProfileScreen.dart';
 import 'package:pasada_passenger_app/services/authService.dart';
 import 'package:pasada_passenger_app/widgets/avatar_image.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 class SettingsProfileHeader extends StatefulWidget {
   final AuthService authService;
@@ -61,7 +62,10 @@ class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
           return Text('Error loading profile');
         }
         if (snapshot.connectionState != ConnectionState.done) {
-          return const CircularProgressIndicator();
+          return ProfileHeaderSkeleton(
+            screenWidth: widget.screenWidth,
+            screenHeight: widget.screenHeight,
+          );
         }
         final userData = snapshot.data;
         final userName = sanitizeUserName(userData?['display_name']);
@@ -112,7 +116,7 @@ class SettingsProfileHeaderState extends State<SettingsProfileHeader> {
     return ProfileAvatar(
       avatarPath: avatarUrl,
       size: avatarDiameter,
-      placeholder: const CircularProgressIndicator(),
+      placeholder: SkeletonCircle(size: avatarDiameter),
       errorWidget: buildDefaultAvatar(),
     );
   }
