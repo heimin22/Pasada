@@ -128,6 +128,18 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                                   : Colors.grey[600],
                             ),
                           ),
+                          if (_trafficData!.mode != null)
+                            Text(
+                              'Source: ${_trafficData!.mode}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                fontFamily: 'Inter',
+                                color: isDarkMode
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
+                              ),
+                            ),
                           if (_analyticsService.hasCachedData())
                             Text(
                               _getCacheStatusText(),
@@ -418,49 +430,60 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       );
     }
 
-    // Build list of routes that have traffic data
+    // Build list of routes that have traffic data using normalized name matching
     final routesWithData = widget.filteredRoutes.where((route) {
       final routeName = route['route_name']?.toString() ?? '';
-      return _trafficData!.getRouteByName(routeName) != null;
+      return _findAnalyticsRouteByName(routeName) != null;
     }).toList();
 
     if (routesWithData.isEmpty) {
+      // Fallback: show all analytics routes to verify data flow
+      final analyticsRoutes = _trafficData!.routes;
       return Expanded(
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.analytics_outlined,
-                size: 48,
-                color: textSecondary,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No analytics data for displayed routes.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: textSecondary,
+          child: analyticsRoutes.isEmpty
+              ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.analytics_outlined,
+                      size: 48,
+                      color: textSecondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No analytics data for displayed routes.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Data is being collected.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        color: textSecondary,
+                      ),
+                    ),
+                  ],
+                )
+              : ListView.separated(
+                  itemCount: analyticsRoutes.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    return _buildTrafficCard(
+                        analyticsRoutes[index], isDarkMode);
+                  },
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Data is being collected.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: textSecondary,
-                ),
-              ),
-            ],
-          ),
         ),
       );
     }
@@ -477,7 +500,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 routesWithData[index]['route_name']?.toString() ??
                     'Unknown Route';
             final RouteTrafficToday? trafficData =
-                _trafficData!.getRouteByName(routeName);
+                _findAnalyticsRouteByName(routeName);
 
             if (trafficData == null) {
               return const SizedBox.shrink();
@@ -488,6 +511,28 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         ),
       ),
     );
+  }
+
+  // Normalize strings for looser matching between DB route names and analytics route names
+  String _normalizeName(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '')
+        .replaceAll(RegExp(r'[-_/]'), '')
+        .trim();
+  }
+
+  RouteTrafficToday? _findAnalyticsRouteByName(String name) {
+    if (_trafficData == null) return null;
+    final normalized = _normalizeName(name);
+    try {
+      return _trafficData!.routes.firstWhere((r) =>
+          _normalizeName(r.routeName) == normalized ||
+          _normalizeName(r.routeName).contains(normalized) ||
+          normalized.contains(_normalizeName(r.routeName)));
+    } catch (_) {
+      return _trafficData!.getRouteByName(name);
+    }
   }
 
   Widget _buildTrafficCard(RouteTrafficToday trafficData, bool isDarkMode) {
