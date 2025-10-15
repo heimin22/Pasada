@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_passenger_app/models/traffic_analytics.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Cache entry model for storing traffic analytics with timestamp
 class _CachedTrafficAnalytics {
@@ -54,7 +55,8 @@ class TrafficAnalyticsService {
 
   // Cache time-to-live: 5 minutes (traffic data updates frequently)
   static const Duration _cacheTTL = Duration(minutes: 5);
-  static const Duration _backgroundTimeout = Duration(seconds: 10);
+  // No client-side timeout for analytics endpoints; we prefer fresh results
+  static const String _prefsDailyCacheKey = 'traffic_analytics_daily_cache_v1';
 
   /// Get the current cache TTL
   Duration get cacheTTL => _cacheTTL;
@@ -69,7 +71,17 @@ class TrafficAnalyticsService {
     bool fast = false,
     Duration? timeout,
   }) async {
-    // Check cache first if not forcing refresh
+    // 1) Try persisted daily cache (only for all routes)
+    if (!forceRefresh && routeId == null) {
+      final persisted = await _readDailyCache();
+      if (persisted != null && _isSameDay(persisted.date, DateTime.now())) {
+        debugPrint('TrafficAnalyticsService: Returning persisted daily cache');
+        _cache[null] = _CachedTrafficAnalytics(persisted, DateTime.now());
+        return persisted;
+      }
+    }
+
+    // 2) Fallback to in-memory short TTL cache
     if (!forceRefresh) {
       final cachedEntry = _cache[routeId];
       if (cachedEntry != null && cachedEntry.isValid(_cacheTTL)) {
@@ -86,10 +98,9 @@ class TrafficAnalyticsService {
         return null;
       }
 
-      // Always use the all-routes endpoint as per new analytics API usage
-      // Support optional fast mode via query param (?fast=1)
+      // Always use the all-routes endpoint; no fast-mode retry, no timeouts
       final endpointBase = '$analyticsApiUrl/api/analytics/traffic/today';
-      final endpoint = fast ? '$endpointBase?fast=1' : endpointBase;
+      final endpoint = endpointBase;
 
       final uri = Uri.parse(endpoint);
       final headers = {
@@ -98,30 +109,10 @@ class TrafficAnalyticsService {
 
       debugPrint('TrafficAnalyticsService: Fetching from $endpoint');
 
-      String? response;
-      try {
-        // Default timeouts: foreground 8s if not specified; fast mode 6s
-        final effectiveTimeout = timeout ?? Duration(seconds: fast ? 6 : 8);
-        response = await NetworkUtility.fetchUrlWithTimeout(
-          uri,
-          headers: headers,
-          timeout: effectiveTimeout,
-        );
-      } on TimeoutException {
-        // If normal mode times out, immediately retry with fast mode
-        if (!fast) {
-          debugPrint(
-              'TrafficAnalyticsService: Timed out. Retrying with fast=1');
-          final fastUri = Uri.parse('$endpointBase?fast=1');
-          response = await NetworkUtility.fetchUrlWithTimeout(
-            fastUri,
-            headers: headers,
-            timeout: Duration(seconds: 6),
-          );
-        } else {
-          rethrow;
-        }
-      }
+      final String? response = await NetworkUtility.fetchUrl(
+        uri,
+        headers: headers,
+      );
 
       if (response == null) {
         debugPrint('TrafficAnalyticsService: No response from server');
@@ -131,8 +122,8 @@ class TrafficAnalyticsService {
       final dynamic data = json.decode(response);
 
       if (data is Map<String, dynamic>) {
-        final trafficResponse =
-            _stabilizeRouteNames(TodayRouteTrafficResponse.fromJson(data));
+        final parsed = TodayRouteTrafficResponse.fromJson(data);
+        final trafficResponse = _stabilizeRouteNames(parsed);
         debugPrint(
             'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
 
@@ -142,12 +133,15 @@ class TrafficAnalyticsService {
         debugPrint(
             'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
 
-        // If served from fast or fast-fallback, refresh in background (db)
-        if (trafficResponse.mode == 'fast' ||
-            trafficResponse.mode == 'fast-fallback') {
-          _refreshInBackground(endpointBase,
-              headers: headers, routeId: routeId);
+        // Persist for the day (all routes only)
+        if (routeId == null &&
+            _isSameDay(trafficResponse.date, DateTime.now())) {
+          await _writeDailyCache(trafficResponse);
         }
+
+        // Optionally refresh in background (db) if server indicates mode,
+        // but we will still run background refresh to ensure freshness.
+        _refreshInBackground(endpointBase, headers: headers, routeId: routeId);
 
         return trafficResponse;
       } else {
@@ -166,19 +160,22 @@ class TrafficAnalyticsService {
     unawaited(() async {
       try {
         final uri = Uri.parse(endpointBase);
-        final response = await NetworkUtility.fetchUrlWithTimeout(
+        final response = await NetworkUtility.fetchUrl(
           uri,
           headers: headers,
-          timeout: _backgroundTimeout,
         );
         if (response == null) return;
         final data = json.decode(response);
         if (data is! Map<String, dynamic>) return;
-        final fresh =
-            _stabilizeRouteNames(TodayRouteTrafficResponse.fromJson(data));
+        final parsed = TodayRouteTrafficResponse.fromJson(data);
+        final fresh = _stabilizeRouteNames(parsed);
         // Only overwrite cache on success
         _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
         debugPrint('TrafficAnalyticsService: Background cache refreshed');
+
+        if (routeId == null && _isSameDay(fresh.date, DateTime.now())) {
+          await _writeDailyCache(fresh);
+        }
       } catch (e) {
         debugPrint('TrafficAnalyticsService: Background refresh failed: $e');
       }
@@ -276,6 +273,37 @@ class TrafficAnalyticsService {
         return 0xFFFF5722; // Red
       case TrafficStatus.severe:
         return 0xFFD32F2F; // Dark Red
+    }
+  }
+
+  // -------------------- Daily persistence helpers --------------------
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<TodayRouteTrafficResponse?> _readDailyCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_prefsDailyCacheKey);
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = json.decode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final model = TodayRouteTrafficResponse.fromJson(decoded);
+      return _stabilizeRouteNames(model);
+    } catch (e) {
+      debugPrint('TrafficAnalyticsService: Failed to read daily cache: $e');
+      return null;
+    }
+  }
+
+  Future<void> _writeDailyCache(TodayRouteTrafficResponse response) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = json.encode(response.toJson());
+      await prefs.setString(_prefsDailyCacheKey, raw);
+    } catch (e) {
+      debugPrint('TrafficAnalyticsService: Failed to write daily cache: $e');
     }
   }
 

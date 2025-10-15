@@ -19,7 +19,6 @@ class SkeletonBlock extends StatefulWidget {
 class _SkeletonBlockState extends State<SkeletonBlock>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -28,9 +27,7 @@ class _SkeletonBlockState extends State<SkeletonBlock>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _animation = Tween<double>(begin: .35, end: .65).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    // Controller drives shimmer animation directly via AnimatedBuilder
   }
 
   @override
@@ -45,15 +42,37 @@ class _SkeletonBlockState extends State<SkeletonBlock>
     final baseColor =
         isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE6E6E6);
 
-    return FadeTransition(
-      opacity: _animation,
-      child: Container(
-        width: widget.width,
-        height: widget.height,
-        decoration: BoxDecoration(
-          color: baseColor,
-          borderRadius: widget.borderRadius,
-        ),
+    final highlightColor =
+        isDark ? const Color(0xFF3A3A3A) : const Color(0xFFF2F2F2);
+
+    return ClipRRect(
+      borderRadius: widget.borderRadius,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final double slide = (_controller.value * 2) - 1; // -1..1
+          final gradient = LinearGradient(
+            begin: Alignment(-1.0 - slide, 0.0),
+            end: Alignment(1.0 - slide, 0.0),
+            colors: [
+              baseColor,
+              highlightColor,
+              baseColor,
+            ],
+            stops: const [0.25, 0.5, 0.75],
+          );
+
+          return Container(
+            width: widget.width,
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: baseColor,
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(gradient: gradient),
+            ),
+          );
+        },
       ),
     );
   }
