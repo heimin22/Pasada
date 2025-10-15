@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/models/traffic_analytics.dart';
 import 'package:pasada_passenger_app/services/traffic_analytics_service.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 /// Bottom sheet widget for displaying real-time traffic analytics
 class TrafficInsightsSheet extends StatefulWidget {
@@ -310,32 +311,68 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         isDarkMode ? Colors.grey[300]! : Colors.grey[700]!;
 
     if (_isLoadingTraffic) {
+      final screenWidth = MediaQuery.of(context).size.width;
       return Expanded(
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  isDarkMode
-                      ? const Color(0xFF00CC58)
-                      : const Color(0xFF00CC58),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: ListView.separated(
+            itemCount: 6,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Colors.grey[800]! : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
+                    width: 1,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Fetching live traffic insights...',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: textSecondary,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        SkeletonCircle(size: 20),
+                        const SizedBox(width: 8),
+                        SkeletonLine(width: screenWidth * 0.45, height: 16),
+                        const Spacer(),
+                        SkeletonBlock(
+                            width: 72,
+                            height: 24,
+                            borderRadius: BorderRadius.circular(8)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SkeletonLine(width: screenWidth * 0.80, height: 14),
+                    const SizedBox(height: 8),
+                    SkeletonLine(width: screenWidth * 0.70, height: 14),
+                    const SizedBox(height: 8),
+                    SkeletonLine(width: screenWidth * 0.60, height: 14),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        SkeletonBlock(
+                            width: 110,
+                            height: 28,
+                            borderRadius: BorderRadius.circular(6)),
+                        const SizedBox(width: 8),
+                        SkeletonBlock(
+                            width: 130,
+                            height: 28,
+                            borderRadius: BorderRadius.circular(6)),
+                        const SizedBox(width: 8),
+                        SkeletonBlock(
+                            width: 120,
+                            height: 28,
+                            borderRadius: BorderRadius.circular(6)),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
         ),
       );
