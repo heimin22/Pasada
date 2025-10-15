@@ -19,6 +19,18 @@ class _CachedTrafficAnalytics {
   }
 }
 
+// Generic cache entry for AI responses
+class _CachedAny {
+  final Object data;
+  final DateTime timestamp;
+
+  _CachedAny(this.data, this.timestamp);
+
+  bool isValid(Duration ttl) {
+    return DateTime.now().difference(timestamp) < ttl;
+  }
+}
+
 /// Service for fetching today's route traffic analytics from the backend
 class TrafficAnalyticsService {
   static final TrafficAnalyticsService _instance =
@@ -32,6 +44,13 @@ class TrafficAnalyticsService {
 
   // Cache storage: key is routeId (null for all routes)
   final Map<int?, _CachedTrafficAnalytics> _cache = {};
+
+  // AI response caches (simple in-memory)
+  final Map<String, _CachedAny> _aiExplainTableCache = {};
+  final Map<String, _CachedAny> _aiExplainRoutesCache = {};
+
+  // Persist last known human-friendly names per routeId to avoid regressions
+  final Map<int, String> _lastKnownRouteNames = {};
 
   // Cache time-to-live: 5 minutes (traffic data updates frequently)
   static const Duration _cacheTTL = Duration(minutes: 5);
@@ -112,7 +131,8 @@ class TrafficAnalyticsService {
       final dynamic data = json.decode(response);
 
       if (data is Map<String, dynamic>) {
-        final trafficResponse = TodayRouteTrafficResponse.fromJson(data);
+        final trafficResponse =
+            _stabilizeRouteNames(TodayRouteTrafficResponse.fromJson(data));
         debugPrint(
             'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
 
@@ -154,7 +174,8 @@ class TrafficAnalyticsService {
         if (response == null) return;
         final data = json.decode(response);
         if (data is! Map<String, dynamic>) return;
-        final fresh = TodayRouteTrafficResponse.fromJson(data);
+        final fresh =
+            _stabilizeRouteNames(TodayRouteTrafficResponse.fromJson(data));
         // Only overwrite cache on success
         _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
         debugPrint('TrafficAnalyticsService: Background cache refreshed');
@@ -256,5 +277,166 @@ class TrafficAnalyticsService {
       case TrafficStatus.severe:
         return 0xFFD32F2F; // Dark Red
     }
+  }
+
+  // -------------------- AI Explanation Endpoints --------------------
+
+  /// Stabilize route names using last known friendly names when backend returns
+  /// generic placeholders like "Route 1". Also record new good names.
+  TodayRouteTrafficResponse _stabilizeRouteNames(
+      TodayRouteTrafficResponse input) {
+    final List<RouteTrafficToday> updated = [];
+    for (final route in input.routes) {
+      final isGeneric = _looksGenericRouteName(route.routeName);
+      final lastKnown = _lastKnownRouteNames[route.routeId];
+      final effectiveName =
+          isGeneric && lastKnown != null ? lastKnown : route.routeName;
+
+      // If name looks non-generic, remember it
+      if (!_looksGenericRouteName(effectiveName)) {
+        _lastKnownRouteNames[route.routeId] = effectiveName;
+      }
+
+      if (effectiveName == route.routeName) {
+        updated.add(route);
+      } else {
+        updated.add(RouteTrafficToday(
+          routeId: route.routeId,
+          routeName: effectiveName,
+          currentStatus: route.currentStatus,
+          avgTrafficDensity: route.avgTrafficDensity,
+          avgSpeedKmh: route.avgSpeedKmh,
+          latestUpdate: route.latestUpdate,
+          totalMeasurements: route.totalMeasurements,
+          peakTrafficTime: route.peakTrafficTime,
+          hourlyBreakdown: route.hourlyBreakdown,
+        ));
+      }
+    }
+
+    return TodayRouteTrafficResponse(
+      date: input.date,
+      routes: updated,
+      mode: input.mode,
+    );
+  }
+
+  bool _looksGenericRouteName(String name) {
+    final normalized = name.trim().toLowerCase();
+    if (normalized.isEmpty) return true;
+    if (normalized.startsWith('route ')) return true;
+    if (RegExp(r'^route\s*\d+$').hasMatch(normalized)) return true;
+    return false;
+  }
+
+  /// Explain the traffic analytics table; optionally filter by [routeId].
+  /// Uses last [days] (default 7). Set [includeExamples] to true to include sample rows.
+  Future<AiExplainTableResponse?> explainTrafficTable({
+    int? routeId,
+    int days = 7,
+    bool includeExamples = false,
+    Duration? timeout,
+  }) async {
+    try {
+      final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
+      if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
+        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
+        return null;
+      }
+
+      // Build endpoint and query
+      final base = '$analyticsApiUrl/api/ai/traffic/explain-table';
+      final queryParams = <String, String>{
+        'days': days.toString(),
+      };
+      if (routeId != null) queryParams['routeId'] = routeId.toString();
+      if (includeExamples) queryParams['includeExamples'] = '1';
+      final uri = Uri.parse(base).replace(queryParameters: queryParams);
+
+      final cacheKey = uri.toString();
+      // Reuse traffic cache wrapper to hold timestamps generically
+      final cached = _aiExplainTableCache[cacheKey];
+      if (cached != null && cached.isValid(_cacheTTL)) {
+        final cachedData = cached.data;
+        if (cachedData is AiExplainTableResponse) return cachedData;
+      }
+
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      final effectiveTimeout = timeout ?? Duration(seconds: 12);
+      debugPrint('TrafficAnalyticsService: AI explain-table GET $uri');
+      final response = await NetworkUtility.fetchUrlWithTimeout(
+        uri,
+        headers: headers,
+        timeout: effectiveTimeout,
+      );
+      if (response == null) return null;
+      final decoded = json.decode(response);
+      if (decoded is! Map<String, dynamic>) return null;
+      final ai = AiExplainTableResponse.fromJson(decoded);
+      _aiExplainTableCache[cacheKey] = _CachedAny(ai, DateTime.now());
+      // Immediately return the parsed AI model instead of the wrapper
+      return ai;
+    } catch (e) {
+      debugPrint('TrafficAnalyticsService: Error in explainTrafficTable: $e');
+      return null;
+    }
+  }
+
+  /// Get friendly, per-route summaries including peak hour and best-time tip.
+  /// Uses last [days] (default 7) and limits to [maxRoutes] (default 20).
+  Future<AiExplainRoutesResponse?> explainTrafficRoutes({
+    int days = 7,
+    int maxRoutes = 20,
+    Duration? timeout,
+  }) async {
+    try {
+      final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
+      if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
+        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
+        return null;
+      }
+
+      final base = '$analyticsApiUrl/api/ai/traffic/explain-routes';
+      final queryParams = <String, String>{
+        'days': days.toString(),
+        'maxRoutes': maxRoutes.toString(),
+      };
+      final uri = Uri.parse(base).replace(queryParameters: queryParams);
+
+      final cacheKey = uri.toString();
+      final cached = _aiExplainRoutesCache[cacheKey];
+      if (cached != null && cached.isValid(_cacheTTL)) {
+        final cachedData = cached.data;
+        if (cachedData is AiExplainRoutesResponse) return cachedData;
+      }
+
+      final headers = {
+        'Content-Type': 'application/json',
+      };
+      final effectiveTimeout = timeout ?? Duration(seconds: 12);
+      debugPrint('TrafficAnalyticsService: AI explain-routes GET $uri');
+      final response = await NetworkUtility.fetchUrlWithTimeout(
+        uri,
+        headers: headers,
+        timeout: effectiveTimeout,
+      );
+      if (response == null) return null;
+      final decoded = json.decode(response);
+      if (decoded is! Map<String, dynamic>) return null;
+      final ai = AiExplainRoutesResponse.fromJson(decoded);
+      _aiExplainRoutesCache[cacheKey] = _CachedAny(ai, DateTime.now());
+      return ai;
+    } catch (e) {
+      debugPrint('TrafficAnalyticsService: Error in explainTrafficRoutes: $e');
+      return null;
+    }
+  }
+
+  /// Clear AI explanation caches
+  void clearAiExplanationCaches() {
+    _aiExplainTableCache.clear();
+    _aiExplainRoutesCache.clear();
   }
 }

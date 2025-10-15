@@ -128,18 +128,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                                   : Colors.grey[600],
                             ),
                           ),
-                          if (_trafficData!.mode != null)
-                            Text(
-                              'Source: ${_trafficData!.mode}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Inter',
-                                color: isDarkMode
-                                    ? Colors.grey[400]
-                                    : Colors.grey[600],
-                              ),
-                            ),
+                          // Removed source label
                           if (_analyticsService.hasCachedData())
                             Text(
                               _getCacheStatusText(),
