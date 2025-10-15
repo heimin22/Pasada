@@ -1,23 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
-import 'package:pasada_passenger_app/location/recentSearch.dart';
-import 'package:pasada_passenger_app/location/selectedLocation.dart';
-import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
-import 'package:pasada_passenger_app/services/recentSearchService.dart';
-import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/location/recentSearch.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
-import 'locationListTile.dart';
+import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/services/recentSearchService.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
+import 'package:pasada_passenger_app/widgets/skeleton.dart';
+
+import 'locationListTile.dart';
 
 class SearchLocationScreen extends StatefulWidget {
   final bool isPickup;
@@ -773,9 +776,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final loadingColor = isDarkMode
-        ? const Color(0xFF00E865) // Brighter green for dark mode
-        : const Color(0xFF067837); // Original green for light mode
 
     return Scaffold(
       appBar: AppBar(
@@ -878,28 +878,84 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             color:
                 isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE9E9E9),
           ),
-          if (isLoading) ...[
-            Expanded(
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: loadingColor,
-                ),
-              ),
-            ),
-          ] else ...[
-            Expanded(
-              child: ListView(
-                children: [
-                  // Show recent searches if available and search is empty
-                  if (searchController.text.isEmpty &&
-                      recentSearches.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Recent Searches',
+          Expanded(
+            child: isLoading
+                ? Builder(
+                    builder: (context) {
+                      final screenWidth = MediaQuery.of(context).size.width;
+                      return ListSkeleton(
+                        itemCount: 8,
+                        screenWidth: screenWidth,
+                        itemPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      );
+                    },
+                  )
+                : ListView(
+                    children: [
+                      // Show recent searches if available and search is empty
+                      if (searchController.text.isEmpty &&
+                          recentSearches.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Recent Searches',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                              // Add Clear All button
+                              GestureDetector(
+                                onTap: () async {
+                                  if (widget.routeID != null) {
+                                    // Clear route-specific searches
+                                    await RecentSearchService
+                                        .clearRecentSearchesByRoute(
+                                            widget.routeID!);
+                                  } else {
+                                    // Clear all searches if no specific route
+                                    await RecentSearchService
+                                        .clearRecentSearches();
+                                  }
+                                  setState(() {
+                                    recentSearches = [];
+                                  });
+                                },
+                                child: Text(
+                                  'Clear All',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF067837),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Recent searches list
+                        ...recentSearches.map((search) => LocationListTile(
+                              press: () => onRecentSearchSelected(search),
+                              location: search.address,
+                            )),
+                      ],
+
+                      // Show allowed stops if available
+                      if (searchController.text.isEmpty &&
+                          allowedStops.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            'Available Stops',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 14,
@@ -909,130 +965,78 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                   : const Color(0xFF121212),
                             ),
                           ),
-                          // Add Clear All button
-                          GestureDetector(
-                            onTap: () async {
-                              if (widget.routeID != null) {
-                                // Clear route-specific searches
-                                await RecentSearchService
-                                    .clearRecentSearchesByRoute(
-                                        widget.routeID!);
-                              } else {
-                                // Clear all searches if no specific route
-                                await RecentSearchService.clearRecentSearches();
-                              }
-                              setState(() {
-                                recentSearches = [];
-                              });
-                            },
+                        ),
+                        ...allowedStops.map((stop) => LocationListTile(
+                              press: () => onStopSelected(stop),
+                              location: "${stop.name}\n${stop.address}",
+                            )),
+                      ]
+                      // Show filtered stops if searching
+                      else if (searchController.text.isNotEmpty &&
+                          _filteredStops.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            'Search Results',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                        ),
+                        ..._filteredStops.map((stop) => LocationListTile(
+                              press: () => onStopSelected(stop),
+                              location: "${stop.name}\n${stop.address}",
+                            )),
+                      ]
+                      // Show place predictions if available
+                      else if (placePredictions.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Text(
+                            'Search Results',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDarkMode
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
+                            ),
+                          ),
+                        ),
+                        ...placePredictions
+                            .map((prediction) => LocationListTile(
+                                  press: () => onPlaceSelected(prediction),
+                                  location: prediction.description!,
+                                )),
+                      ]
+                      // Show no locations found message
+                      else if (searchController.text.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Center(
                             child: Text(
-                              'Clear All',
+                              'No locations found',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: const Color(0xFF067837),
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    // Recent searches list
-                    ...recentSearches.map((search) => LocationListTile(
-                          press: () => onRecentSearchSelected(search),
-                          location: search.address,
-                        )),
-                  ],
-
-                  // Show allowed stops if available
-                  if (searchController.text.isEmpty &&
-                      allowedStops.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'Available Stops',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFF121212),
                         ),
-                      ),
-                    ),
-                    ...allowedStops.map((stop) => LocationListTile(
-                          press: () => onStopSelected(stop),
-                          location: "${stop.name}\n${stop.address}",
-                        )),
-                  ]
-                  // Show filtered stops if searching
-                  else if (searchController.text.isNotEmpty &&
-                      _filteredStops.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'Search Results',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFF121212),
-                        ),
-                      ),
-                    ),
-                    ..._filteredStops.map((stop) => LocationListTile(
-                          press: () => onStopSelected(stop),
-                          location: "${stop.name}\n${stop.address}",
-                        )),
-                  ]
-                  // Show place predictions if available
-                  else if (placePredictions.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'Search Results',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFF121212),
-                        ),
-                      ),
-                    ),
-                    ...placePredictions.map((prediction) => LocationListTile(
-                          press: () => onPlaceSelected(prediction),
-                          location: prediction.description!,
-                        )),
-                  ]
-                  // Show no locations found message
-                  else if (searchController.text.isNotEmpty) ...[
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Center(
-                        child: Text(
-                          'No locations found',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: isDarkMode
-                                ? const Color(0xFFF5F5F5)
-                                : const Color(0xFF121212),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
+                      ],
+                    ],
+                  ),
+          ),
         ],
       ),
     );

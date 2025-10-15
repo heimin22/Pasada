@@ -333,28 +333,64 @@ class _RouteSelectionState extends State<RouteSelection> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? Builder(
-                    builder: (context) {
-                      final screenWidth = MediaQuery.of(context).size.width;
-                      return ListSkeleton(
-                        itemCount: 10,
-                        screenWidth: screenWidth,
-                        itemPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                      );
-                    },
-                  )
-                : ListView.builder(
-                    itemCount: _filteredRoutes.length,
-                    itemBuilder: (context, index) {
-                      final route = _filteredRoutes[index];
-                      return RouteSelectionWidget(
-                        routeName: route['route_name'] ?? 'Unknown Route',
-                        onTap: () => _selectRoute(route),
-                      );
-                    },
-                  ),
+            child: RefreshIndicator(
+              color: const Color(0xFF00CC58),
+              onRefresh: _loadRoutes,
+              child: _isLoading
+                  ? Builder(
+                      builder: (context) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+                        return ListSkeleton(
+                          itemCount: 10,
+                          screenWidth: screenWidth,
+                          itemPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 12),
+                        );
+                      },
+                    )
+                  : ListView.builder(
+                      itemCount: _filteredRoutes.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Active Routes',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                  ),
+                                ),
+                                Text(
+                                  '${_filteredRoutes.length}',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDarkMode
+                                        ? const Color(0xFFAAAAAA)
+                                        : const Color(0xFF515151),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        final route = _filteredRoutes[index - 1];
+                        return RouteSelectionWidget(
+                          routeName: route['route_name'] ?? 'Unknown Route',
+                          onTap: () => _selectRoute(route),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),
