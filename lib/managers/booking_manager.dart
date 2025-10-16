@@ -535,6 +535,46 @@ class BookingManager {
           _state.driverName != 'Not Available');
     });
 
+    // Try to extract vehicle capacity details from the same payload if available
+    try {
+      final dynamic vehicle = driver['vehicle'] ?? driver['vehicle_details'];
+      if (vehicle is Map<String, dynamic>) {
+        final total = vehicle['passenger_capacity'];
+        final sit = vehicle['sitting_passenger'];
+        final stand = vehicle['standing_passenger'];
+        _state.setState(() {
+          _state.vehicleTotalCapacity =
+              total == null ? null : int.tryParse(total.toString());
+          _state.vehicleSittingCapacity =
+              sit == null ? null : int.tryParse(sit.toString());
+          _state.vehicleStandingCapacity =
+              stand == null ? null : int.tryParse(stand.toString());
+        });
+        debugPrint(
+            '[BookingManager] Updated capacity from vehicle object: total=$total, sitting=$sit, standing=$stand');
+      }
+
+      // Also support flat fields (as returned by get_driver_details_by_booking RPC)
+      if (_state.vehicleTotalCapacity == null &&
+          (driver.containsKey('passenger_capacity') ||
+              driver.containsKey('sitting_passenger') ||
+              driver.containsKey('standing_passenger'))) {
+        _state.setState(() {
+          _state.vehicleTotalCapacity = driver['passenger_capacity'] == null
+              ? _state.vehicleTotalCapacity
+              : int.tryParse(driver['passenger_capacity'].toString());
+          _state.vehicleSittingCapacity = driver['sitting_passenger'] == null
+              ? _state.vehicleSittingCapacity
+              : int.tryParse(driver['sitting_passenger'].toString());
+          _state.vehicleStandingCapacity = driver['standing_passenger'] == null
+              ? _state.vehicleStandingCapacity
+              : int.tryParse(driver['standing_passenger'].toString());
+        });
+        debugPrint(
+            '[BookingManager] Updated capacity from flat fields: total=${driver['passenger_capacity']}, sitting=${driver['sitting_passenger']}, standing=${driver['standing_passenger']}');
+      }
+    } catch (_) {}
+
     // Extract driver's current_location from driver details RPC
     dynamic currentLoc = driver['current_location'];
     LatLng? driverLatLng;
@@ -704,6 +744,12 @@ class BookingManager {
         }).single() as Map<String, dynamic>?;
         if (result != null) {
           _updateDriverDetails({'driver': result});
+          // If vehicle info is not provided by RPC, fetch via DB join
+          if (_state.vehicleTotalCapacity == null &&
+              _state.vehicleSittingCapacity == null &&
+              _state.vehicleStandingCapacity == null) {
+            await _fetchVehicleCapacityForBooking(bookingId);
+          }
           return;
         }
       } catch (e) {
@@ -729,6 +775,11 @@ class BookingManager {
               debugPrint(
                   "[BookingManager] _loadBookingAfterDriverAssignment: Got driverDetails via getDriverDetailsByBooking for $bookingId: $driverDetails. Calling _updateDriverDetails.");
               _updateDriverDetails(driverDetails);
+              if (_state.vehicleTotalCapacity == null &&
+                  _state.vehicleSittingCapacity == null &&
+                  _state.vehicleStandingCapacity == null) {
+                _fetchVehicleCapacityForBooking(bookingId);
+              }
             } else {
               debugPrint(
                   "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetailsByBooking returned null for $bookingId. Trying getDriverDetails with driverId $driverId.");
@@ -739,6 +790,11 @@ class BookingManager {
                   debugPrint(
                       "[BookingManager] _loadBookingAfterDriverAssignment: Got directDetails for driver $driverId: $directDetails. Calling _updateDriverDetails.");
                   _updateDriverDetails(directDetails);
+                  if (_state.vehicleTotalCapacity == null &&
+                      _state.vehicleSittingCapacity == null &&
+                      _state.vehicleStandingCapacity == null) {
+                    _fetchVehicleCapacityForBooking(bookingId);
+                  }
                 } else {
                   debugPrint(
                       "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetails also returned null for driver $driverId. Fetching directly from DB for booking $bookingId.");
@@ -778,12 +834,24 @@ class BookingManager {
       if (driver.containsKey('vehicle_id') && driver['vehicle_id'] != null) {
         final vehicle = await supabase
             .from('vehicleTable')
-            .select('plate_number')
+            .select(
+                'plate_number, passenger_capacity, sitting_passenger, standing_passenger')
             .eq('vehicle_id', driver['vehicle_id'])
             .single();
         if (vehicle.containsKey('plate_number')) {
           plate = vehicle['plate_number'];
         }
+        _state.setState(() {
+          _state.vehicleTotalCapacity = vehicle['passenger_capacity'] == null
+              ? null
+              : int.tryParse(vehicle['passenger_capacity'].toString());
+          _state.vehicleSittingCapacity = vehicle['sitting_passenger'] == null
+              ? null
+              : int.tryParse(vehicle['sitting_passenger'].toString());
+          _state.vehicleStandingCapacity = vehicle['standing_passenger'] == null
+              ? null
+              : int.tryParse(vehicle['standing_passenger'].toString());
+        });
       }
       _state.setState(() {
         _state.driverName = driver['full_name'] ?? 'Driver';
@@ -799,6 +867,46 @@ class BookingManager {
       }
     } catch (e) {
       debugPrint('DB Query Error: $e');
+    }
+  }
+
+  Future<void> _fetchVehicleCapacityForBooking(int bookingId) async {
+    try {
+      final booking = await supabase
+          .from('bookings')
+          .select('driver_id')
+          .eq('booking_id', bookingId)
+          .single();
+      if (!booking.containsKey('driver_id')) return;
+      final driverId = booking['driver_id'];
+      final driver = await supabase
+          .from('driverTable')
+          .select('vehicle_id')
+          .eq('driver_id', driverId)
+          .single();
+      if (!driver.containsKey('vehicle_id') || driver['vehicle_id'] == null) {
+        return;
+      }
+      final vehicle = await supabase
+          .from('vehicleTable')
+          .select('passenger_capacity, sitting_passenger, standing_passenger')
+          .eq('vehicle_id', driver['vehicle_id'])
+          .single();
+      _state.setState(() {
+        _state.vehicleTotalCapacity = vehicle['passenger_capacity'] == null
+            ? null
+            : int.tryParse(vehicle['passenger_capacity'].toString());
+        _state.vehicleSittingCapacity = vehicle['sitting_passenger'] == null
+            ? null
+            : int.tryParse(vehicle['sitting_passenger'].toString());
+        _state.vehicleStandingCapacity = vehicle['standing_passenger'] == null
+            ? null
+            : int.tryParse(vehicle['standing_passenger'].toString());
+      });
+      debugPrint(
+          '[BookingManager] Updated capacity from DB fallback: total=${vehicle['passenger_capacity']}, sitting=${vehicle['sitting_passenger']}, standing=${vehicle['standing_passenger']}');
+    } catch (e) {
+      debugPrint('Error fetching vehicle capacity: $e');
     }
   }
 
@@ -885,6 +993,32 @@ class BookingManager {
         );
       }
     });
+  }
+
+  // Public method to refresh driver details and vehicle capacity for a booking
+  Future<void> refreshDriverAndCapacity(int bookingId) async {
+    try {
+      debugPrint(
+          '[BookingManager] refreshDriverAndCapacity: Starting refresh for booking $bookingId');
+
+      // First, fetch fresh booking details
+      await _fetchAndUpdateBookingDetails(bookingId);
+
+      // Then fetch fresh driver and vehicle details
+      await _loadBookingAfterDriverAssignment(bookingId);
+
+      // Force a state update to ensure UI rebuilds
+      if (_state.mounted) {
+        _state.setState(() {
+          _state.capacityRefreshTick += 1; // force rebuild of capacity subtree
+        });
+      }
+
+      debugPrint(
+          '[BookingManager] refreshDriverAndCapacity: Completed refresh for booking $bookingId');
+    } catch (e) {
+      debugPrint('[BookingManager] refreshDriverAndCapacity error: $e');
+    }
   }
 
   /// Handles cancellation when no drivers found, retaining route, locations, seating preference, and fare

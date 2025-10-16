@@ -23,6 +23,12 @@ class HomeBookingSheet extends StatelessWidget {
   final String? selectedDiscount;
   final String? capturedImagePath;
   final String? capturedImageUrl;
+  final int? vehicleTotalCapacity;
+  final int? vehicleSittingCapacity;
+  final int? vehicleStandingCapacity;
+  final Future<void> Function()? onRefreshCapacity;
+  // an external tick that changes on capacity updates to force rebuild of subtree
+  final int? capacityRefreshTick;
 
   const HomeBookingSheet({
     super.key,
@@ -43,6 +49,11 @@ class HomeBookingSheet extends StatelessWidget {
     this.selectedDiscount,
     this.capturedImagePath,
     this.capturedImageUrl,
+    this.vehicleTotalCapacity,
+    this.vehicleSittingCapacity,
+    this.vehicleStandingCapacity,
+    this.onRefreshCapacity,
+    this.capacityRefreshTick,
   });
 
   @override
@@ -86,6 +97,7 @@ class HomeBookingSheet extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
+                  // key includes capacity tick to ensure rebuilds when it changes
                   child: BookingStatusManager(
                     key: ValueKey<String>(bookingStatus),
                     pickupLocation: pickupLocation,
@@ -104,6 +116,10 @@ class HomeBookingSheet extends StatelessWidget {
                     selectedDiscount: selectedDiscount,
                     capturedImagePath: capturedImagePath,
                     capturedImageUrl: capturedImageUrl,
+                    vehicleTotalCapacity: vehicleTotalCapacity,
+                    vehicleSittingCapacity: vehicleSittingCapacity,
+                    vehicleStandingCapacity: vehicleStandingCapacity,
+                    onRefreshCapacity: onRefreshCapacity,
                   ),
                 ),
               ),

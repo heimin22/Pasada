@@ -10,6 +10,8 @@ import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
 import 'eta_container.dart';
 import 'payment_details_container.dart';
+import 'skeleton.dart';
+import 'vehicle_capacity_container.dart';
 
 class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
@@ -27,6 +29,10 @@ class BookingStatusManager extends StatefulWidget {
   final int? bookingId;
   final String? selectedDiscount;
   final String? capturedImageUrl;
+  final int? vehicleTotalCapacity;
+  final int? vehicleSittingCapacity;
+  final int? vehicleStandingCapacity;
+  final Future<void> Function()? onRefreshCapacity;
 
   const BookingStatusManager({
     super.key,
@@ -46,6 +52,10 @@ class BookingStatusManager extends StatefulWidget {
     this.selectedDiscount,
     this.capturedImageUrl,
     String? capturedImagePath,
+    this.vehicleTotalCapacity,
+    this.vehicleSittingCapacity,
+    this.vehicleStandingCapacity,
+    this.onRefreshCapacity,
   });
 
   @override
@@ -56,6 +66,8 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   bool _showLoading = false;
   Timer? _debounceTimer;
   final Duration _debounceDuration = const Duration(seconds: 1);
+  Timer? _autoRefreshTimer;
+  bool _isRefreshingCapacity = false;
 
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
@@ -83,6 +95,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -194,9 +207,85 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
           children: [
             if (widget.bookingStatus == 'accepted' ||
                 widget.bookingStatus == 'ongoing') ...[
+              // Start/maintain auto-refresh when driver assigned
+              if (widget.isDriverAssigned)
+                _AutoRefreshBinder(
+                  enabled: widget.isDriverAssigned &&
+                      widget.onRefreshCapacity != null,
+                  start: () {
+                    _autoRefreshTimer?.cancel();
+                    _autoRefreshTimer =
+                        Timer.periodic(const Duration(seconds: 10), (_) {
+                      widget.onRefreshCapacity?.call();
+                    });
+                  },
+                  stop: () {
+                    _autoRefreshTimer?.cancel();
+                  },
+                ),
               // Show plate number above driver details
               DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
+              if (widget.isDriverAssigned)
+                Column(
+                  children: [
+                    if (_isRefreshingCapacity)
+                      _CapacitySkeleton()
+                    else
+                      VehicleCapacityContainer(
+                        totalPassengers: widget.vehicleTotalCapacity,
+                        sittingPassengers: widget.vehicleSittingCapacity,
+                        standingPassengers: widget.vehicleStandingCapacity,
+                      ),
+                    if (widget.onRefreshCapacity != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 16),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton.icon(
+                            onPressed: () async {
+                              if (_isRefreshingCapacity) return;
+                              setState(() => _isRefreshingCapacity = true);
+                              try {
+                                await widget.onRefreshCapacity!.call();
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isRefreshingCapacity = false);
+                                }
+                              }
+                            },
+                            icon: const Icon(
+                              Icons.refresh,
+                              size: 16,
+                              color: Color(0xFFF5F5F5),
+                            ),
+                            label: const Text(
+                              'Refresh capacity',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Inter',
+                                color: Color(0xFFF5F5F5),
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              backgroundColor: const Color(0xFF00CC58),
+                              foregroundColor: const Color(0xFFF5F5F5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              minimumSize: const Size(0, 36),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               // Show ETA based on device location to drop-off (optimized with current location)
               if (widget.dropoffLocation != null)
                 EtaContainer(
@@ -222,6 +311,87 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               _buildCancelledStatusContent(isDarkMode),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AutoRefreshBinder extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback start;
+  final VoidCallback stop;
+  const _AutoRefreshBinder(
+      {required this.enabled, required this.start, required this.stop});
+
+  @override
+  State<_AutoRefreshBinder> createState() => _AutoRefreshBinderState();
+}
+
+class _AutoRefreshBinderState extends State<_AutoRefreshBinder> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enabled) widget.start();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoRefreshBinder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled != widget.enabled) {
+      if (widget.enabled) {
+        widget.start();
+      } else {
+        widget.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.stop();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class _CapacitySkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SkeletonLine(width: 120, height: 16),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              SkeletonBlock(width: 90, height: 36),
+              SizedBox(width: 8),
+              SkeletonBlock(width: 100, height: 36),
+              SizedBox(width: 8),
+              SkeletonBlock(width: 110, height: 36),
+            ],
+          ),
+        ],
       ),
     );
   }
