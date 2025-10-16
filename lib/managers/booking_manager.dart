@@ -10,6 +10,7 @@ import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
@@ -29,6 +30,8 @@ class BookingManager {
   bool _progressNotificationStarted = false;
   double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
+  bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
+  final ApiService _api = ApiService();
 
   BookingManager(this._state);
 
@@ -552,6 +555,7 @@ class BookingManager {
         });
         debugPrint(
             '[BookingManager] Updated capacity from vehicle object: total=$total, sitting=$sit, standing=$stand');
+        _evaluateCapacityAndMaybeReassign();
       }
 
       // Also support flat fields (as returned by get_driver_details_by_booking RPC)
@@ -572,6 +576,7 @@ class BookingManager {
         });
         debugPrint(
             '[BookingManager] Updated capacity from flat fields: total=${driver['passenger_capacity']}, sitting=${driver['sitting_passenger']}, standing=${driver['standing_passenger']}');
+        _evaluateCapacityAndMaybeReassign();
       }
     } catch (_) {}
 
@@ -905,6 +910,7 @@ class BookingManager {
       });
       debugPrint(
           '[BookingManager] Updated capacity from DB fallback: total=${vehicle['passenger_capacity']}, sitting=${vehicle['sitting_passenger']}, standing=${vehicle['standing_passenger']}');
+      _evaluateCapacityAndMaybeReassign();
     } catch (e) {
       debugPrint('Error fetching vehicle capacity: $e');
     }
@@ -1014,10 +1020,67 @@ class BookingManager {
         });
       }
 
+      _evaluateCapacityAndMaybeReassign();
+
       debugPrint(
           '[BookingManager] refreshDriverAndCapacity: Completed refresh for booking $bookingId');
     } catch (e) {
       debugPrint('[BookingManager] refreshDriverAndCapacity error: $e');
+    }
+  }
+
+  void _evaluateCapacityAndMaybeReassign() {
+    if (_reassignmentInProgress) return;
+    final String seatType = _state.seatingPreference.value;
+    final int sitting = _state.vehicleSittingCapacity ?? 0;
+    final int standing = _state.vehicleStandingCapacity ?? 0;
+    const int sittingLimit = 23;
+    const int standingLimit = 3;
+
+    bool exceeded = false;
+    if (seatType == 'Sitting') {
+      exceeded = sitting >= sittingLimit;
+    } else if (seatType == 'Standing') {
+      exceeded = standing >= standingLimit;
+    } else {
+      // Any: exceeded only if both are full
+      exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
+    }
+
+    if (exceeded && _state.activeBookingId != null) {
+      _autoCancelAndReassign(_state.activeBookingId!);
+    }
+  }
+
+  Future<void> _autoCancelAndReassign(int bookingId) async {
+    if (_reassignmentInProgress) return;
+    _reassignmentInProgress = true;
+    try {
+      debugPrint(
+          '[BookingManager] Capacity limit reached. Auto-cancelling booking $bookingId and reassigning...');
+
+      // Cancel booking on backend
+      await _api.put<Map<String, dynamic>>('bookings/$bookingId',
+          body: {'ride_status': 'cancelled'});
+
+      if (_state.mounted) {
+        _state.setState(() {
+          _state.bookingStatus = 'cancelled';
+        });
+      }
+
+      // Preserve selections and reset UI to pre-booking state
+      handleNoDriverFound();
+
+      // Recreate booking automatically with same selections
+      await handleBookingConfirmation();
+
+      Fluttertoast.showToast(
+          msg: 'Capacity reached. Searching for another driver...');
+    } catch (e) {
+      debugPrint('[BookingManager] Auto reassign failed: $e');
+    } finally {
+      _reassignmentInProgress = false;
     }
   }
 
