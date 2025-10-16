@@ -989,6 +989,16 @@ class BookingManager {
     });
   }
 
+  // Public method to refresh driver details and vehicle capacity for a booking
+  Future<void> refreshDriverAndCapacity(int bookingId) async {
+    try {
+      await _fetchAndUpdateBookingDetails(bookingId);
+      await _loadBookingAfterDriverAssignment(bookingId);
+    } catch (e) {
+      debugPrint('[BookingManager] refreshDriverAndCapacity error: $e');
+    }
+  }
+
   /// Handles cancellation when no drivers found, retaining route, locations, seating preference, and fare
   void handleNoDriverFound() {
     // Preserve current selections

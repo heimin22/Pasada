@@ -26,6 +26,7 @@ class HomeBookingSheet extends StatelessWidget {
   final int? vehicleTotalCapacity;
   final int? vehicleSittingCapacity;
   final int? vehicleStandingCapacity;
+  final Future<void> Function()? onRefreshCapacity;
 
   const HomeBookingSheet({
     super.key,
@@ -49,6 +50,7 @@ class HomeBookingSheet extends StatelessWidget {
     this.vehicleTotalCapacity,
     this.vehicleSittingCapacity,
     this.vehicleStandingCapacity,
+    this.onRefreshCapacity,
   });
 
   @override
@@ -113,6 +115,7 @@ class HomeBookingSheet extends StatelessWidget {
                     vehicleTotalCapacity: vehicleTotalCapacity,
                     vehicleSittingCapacity: vehicleSittingCapacity,
                     vehicleStandingCapacity: vehicleStandingCapacity,
+                    onRefreshCapacity: onRefreshCapacity,
                   ),
                 ),
               ),

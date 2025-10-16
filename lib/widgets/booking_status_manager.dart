@@ -31,6 +31,7 @@ class BookingStatusManager extends StatefulWidget {
   final int? vehicleTotalCapacity;
   final int? vehicleSittingCapacity;
   final int? vehicleStandingCapacity;
+  final Future<void> Function()? onRefreshCapacity;
 
   const BookingStatusManager({
     super.key,
@@ -53,6 +54,7 @@ class BookingStatusManager extends StatefulWidget {
     this.vehicleTotalCapacity,
     this.vehicleSittingCapacity,
     this.vehicleStandingCapacity,
+    this.onRefreshCapacity,
   });
 
   @override
@@ -63,6 +65,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   bool _showLoading = false;
   Timer? _debounceTimer;
   final Duration _debounceDuration = const Duration(seconds: 1);
+  Timer? _autoRefreshTimer;
 
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
@@ -90,6 +93,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -201,14 +205,47 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
           children: [
             if (widget.bookingStatus == 'accepted' ||
                 widget.bookingStatus == 'ongoing') ...[
+              // Start/maintain auto-refresh when driver assigned
+              if (widget.isDriverAssigned)
+                _AutoRefreshBinder(
+                  enabled: widget.isDriverAssigned &&
+                      widget.onRefreshCapacity != null,
+                  start: () {
+                    _autoRefreshTimer?.cancel();
+                    _autoRefreshTimer =
+                        Timer.periodic(const Duration(seconds: 20), (_) {
+                      widget.onRefreshCapacity?.call();
+                    });
+                  },
+                  stop: () {
+                    _autoRefreshTimer?.cancel();
+                  },
+                ),
               // Show plate number above driver details
               DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
               if (widget.isDriverAssigned)
-                VehicleCapacityContainer(
-                  totalPassengers: widget.vehicleTotalCapacity,
-                  sittingPassengers: widget.vehicleSittingCapacity,
-                  standingPassengers: widget.vehicleStandingCapacity,
+                Column(
+                  children: [
+                    VehicleCapacityContainer(
+                      totalPassengers: widget.vehicleTotalCapacity,
+                      sittingPassengers: widget.vehicleSittingCapacity,
+                      standingPassengers: widget.vehicleStandingCapacity,
+                    ),
+                    if (widget.onRefreshCapacity != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 16),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: widget.onRefreshCapacity,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Refresh capacity'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               // Show ETA based on device location to drop-off (optimized with current location)
               if (widget.dropoffLocation != null)
@@ -237,5 +274,47 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
         ),
       ),
     );
+  }
+}
+
+class _AutoRefreshBinder extends StatefulWidget {
+  final bool enabled;
+  final VoidCallback start;
+  final VoidCallback stop;
+  const _AutoRefreshBinder(
+      {required this.enabled, required this.start, required this.stop});
+
+  @override
+  State<_AutoRefreshBinder> createState() => _AutoRefreshBinderState();
+}
+
+class _AutoRefreshBinderState extends State<_AutoRefreshBinder> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enabled) widget.start();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoRefreshBinder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled != widget.enabled) {
+      if (widget.enabled) {
+        widget.start();
+      } else {
+        widget.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.stop();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
   }
 }

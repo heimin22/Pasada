@@ -840,6 +840,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     vehicleTotalCapacity: vehicleTotalCapacity,
                     vehicleSittingCapacity: vehicleSittingCapacity,
                     vehicleStandingCapacity: vehicleStandingCapacity,
+                    onRefreshCapacity: activeBookingId == null
+                        ? null
+                        : () => _bookingManager
+                            .refreshDriverAndCapacity(activeBookingId!),
                   ),
               ],
             );
