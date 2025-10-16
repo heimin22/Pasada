@@ -238,10 +238,34 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                             vertical: 4, horizontal: 16),
                         child: Align(
                           alignment: Alignment.centerRight,
-                          child: TextButton.icon(
+                          child: ElevatedButton.icon(
                             onPressed: widget.onRefreshCapacity,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Refresh capacity'),
+                            icon: const Icon(
+                              Icons.refresh,
+                              size: 16,
+                              color: Color(0xFFF5F5F5),
+                            ),
+                            label: const Text(
+                              'Refresh capacity',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'Inter',
+                                color: Color(0xFFF5F5F5),
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              backgroundColor: const Color(0xFF00CC58),
+                              foregroundColor: const Color(0xFFF5F5F5),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              minimumSize: const Size(0, 36),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
                           ),
                         ),
                       ),
