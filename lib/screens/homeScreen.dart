@@ -135,6 +135,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   int? vehicleTotalCapacity;
   int? vehicleSittingCapacity;
   int? vehicleStandingCapacity;
+  int capacityRefreshTick =
+      0; // forces rebuilds on manual/auto capacity refresh
 
   // Add a state variable to track booking status
   String bookingStatus = 'requested';
@@ -844,6 +846,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         ? null
                         : () => _bookingManager
                             .refreshDriverAndCapacity(activeBookingId!),
+                    capacityRefreshTick: capacityRefreshTick,
                   ),
               ],
             );

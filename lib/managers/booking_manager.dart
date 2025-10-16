@@ -550,6 +550,8 @@ class BookingManager {
           _state.vehicleStandingCapacity =
               stand == null ? null : int.tryParse(stand.toString());
         });
+        debugPrint(
+            '[BookingManager] Updated capacity from vehicle object: total=$total, sitting=$sit, standing=$stand');
       }
 
       // Also support flat fields (as returned by get_driver_details_by_booking RPC)
@@ -568,6 +570,8 @@ class BookingManager {
               ? _state.vehicleStandingCapacity
               : int.tryParse(driver['standing_passenger'].toString());
         });
+        debugPrint(
+            '[BookingManager] Updated capacity from flat fields: total=${driver['passenger_capacity']}, sitting=${driver['sitting_passenger']}, standing=${driver['standing_passenger']}');
       }
     } catch (_) {}
 
@@ -899,6 +903,8 @@ class BookingManager {
             ? null
             : int.tryParse(vehicle['standing_passenger'].toString());
       });
+      debugPrint(
+          '[BookingManager] Updated capacity from DB fallback: total=${vehicle['passenger_capacity']}, sitting=${vehicle['sitting_passenger']}, standing=${vehicle['standing_passenger']}');
     } catch (e) {
       debugPrint('Error fetching vehicle capacity: $e');
     }
@@ -992,8 +998,24 @@ class BookingManager {
   // Public method to refresh driver details and vehicle capacity for a booking
   Future<void> refreshDriverAndCapacity(int bookingId) async {
     try {
+      debugPrint(
+          '[BookingManager] refreshDriverAndCapacity: Starting refresh for booking $bookingId');
+
+      // First, fetch fresh booking details
       await _fetchAndUpdateBookingDetails(bookingId);
+
+      // Then fetch fresh driver and vehicle details
       await _loadBookingAfterDriverAssignment(bookingId);
+
+      // Force a state update to ensure UI rebuilds
+      if (_state.mounted) {
+        _state.setState(() {
+          _state.capacityRefreshTick += 1; // force rebuild of capacity subtree
+        });
+      }
+
+      debugPrint(
+          '[BookingManager] refreshDriverAndCapacity: Completed refresh for booking $bookingId');
     } catch (e) {
       debugPrint('[BookingManager] refreshDriverAndCapacity error: $e');
     }

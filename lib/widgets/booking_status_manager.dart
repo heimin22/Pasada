@@ -10,6 +10,7 @@ import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
 import 'eta_container.dart';
 import 'payment_details_container.dart';
+import 'skeleton.dart';
 import 'vehicle_capacity_container.dart';
 
 class BookingStatusManager extends StatefulWidget {
@@ -66,6 +67,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   Timer? _debounceTimer;
   final Duration _debounceDuration = const Duration(seconds: 1);
   Timer? _autoRefreshTimer;
+  bool _isRefreshingCapacity = false;
 
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
@@ -227,11 +229,14 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               if (widget.isDriverAssigned)
                 Column(
                   children: [
-                    VehicleCapacityContainer(
-                      totalPassengers: widget.vehicleTotalCapacity,
-                      sittingPassengers: widget.vehicleSittingCapacity,
-                      standingPassengers: widget.vehicleStandingCapacity,
-                    ),
+                    if (_isRefreshingCapacity)
+                      _CapacitySkeleton()
+                    else
+                      VehicleCapacityContainer(
+                        totalPassengers: widget.vehicleTotalCapacity,
+                        sittingPassengers: widget.vehicleSittingCapacity,
+                        standingPassengers: widget.vehicleStandingCapacity,
+                      ),
                     if (widget.onRefreshCapacity != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -239,7 +244,17 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: ElevatedButton.icon(
-                            onPressed: widget.onRefreshCapacity,
+                            onPressed: () async {
+                              if (_isRefreshingCapacity) return;
+                              setState(() => _isRefreshingCapacity = true);
+                              try {
+                                await widget.onRefreshCapacity!.call();
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isRefreshingCapacity = false);
+                                }
+                              }
+                            },
                             icon: const Icon(
                               Icons.refresh,
                               size: 16,
@@ -340,5 +355,44 @@ class _AutoRefreshBinderState extends State<_AutoRefreshBinder> {
   @override
   Widget build(BuildContext context) {
     return const SizedBox.shrink();
+  }
+}
+
+class _CapacitySkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          SkeletonLine(width: 120, height: 16),
+          SizedBox(height: 16),
+          Row(
+            children: [
+              SkeletonBlock(width: 90, height: 36),
+              SizedBox(width: 8),
+              SkeletonBlock(width: 100, height: 36),
+              SizedBox(width: 8),
+              SkeletonBlock(width: 110, height: 36),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
