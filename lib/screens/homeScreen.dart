@@ -131,6 +131,11 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   String vehicleModel = '';
   String phoneNumber = '';
 
+  // Vehicle capacity from driver's vehicle
+  int? vehicleTotalCapacity;
+  int? vehicleSittingCapacity;
+  int? vehicleStandingCapacity;
+
   // Add a state variable to track booking status
   String bookingStatus = 'requested';
 
@@ -832,6 +837,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                             ? selectedDiscountSpecification.value
                             : null,
                     capturedImageUrl: selectedIdImageUrl.value,
+                    vehicleTotalCapacity: vehicleTotalCapacity,
+                    vehicleSittingCapacity: vehicleSittingCapacity,
+                    vehicleStandingCapacity: vehicleStandingCapacity,
                   ),
               ],
             );

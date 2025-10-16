@@ -10,6 +10,7 @@ import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
 import 'eta_container.dart';
 import 'payment_details_container.dart';
+import 'vehicle_capacity_container.dart';
 
 class BookingStatusManager extends StatefulWidget {
   final SelectedLocation? pickupLocation;
@@ -27,6 +28,9 @@ class BookingStatusManager extends StatefulWidget {
   final int? bookingId;
   final String? selectedDiscount;
   final String? capturedImageUrl;
+  final int? vehicleTotalCapacity;
+  final int? vehicleSittingCapacity;
+  final int? vehicleStandingCapacity;
 
   const BookingStatusManager({
     super.key,
@@ -46,6 +50,9 @@ class BookingStatusManager extends StatefulWidget {
     this.selectedDiscount,
     this.capturedImageUrl,
     String? capturedImagePath,
+    this.vehicleTotalCapacity,
+    this.vehicleSittingCapacity,
+    this.vehicleStandingCapacity,
   });
 
   @override
@@ -197,6 +204,12 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
               // Show plate number above driver details
               DriverPlateNumberContainer(plateNumber: widget.plateNumber),
               _buildAcceptedStatusContent(),
+              if (widget.isDriverAssigned)
+                VehicleCapacityContainer(
+                  totalPassengers: widget.vehicleTotalCapacity,
+                  sittingPassengers: widget.vehicleSittingCapacity,
+                  standingPassengers: widget.vehicleStandingCapacity,
+                ),
               // Show ETA based on device location to drop-off (optimized with current location)
               if (widget.dropoffLocation != null)
                 EtaContainer(

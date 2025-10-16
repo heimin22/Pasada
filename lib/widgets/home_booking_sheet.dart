@@ -23,6 +23,9 @@ class HomeBookingSheet extends StatelessWidget {
   final String? selectedDiscount;
   final String? capturedImagePath;
   final String? capturedImageUrl;
+  final int? vehicleTotalCapacity;
+  final int? vehicleSittingCapacity;
+  final int? vehicleStandingCapacity;
 
   const HomeBookingSheet({
     super.key,
@@ -43,6 +46,9 @@ class HomeBookingSheet extends StatelessWidget {
     this.selectedDiscount,
     this.capturedImagePath,
     this.capturedImageUrl,
+    this.vehicleTotalCapacity,
+    this.vehicleSittingCapacity,
+    this.vehicleStandingCapacity,
   });
 
   @override
@@ -104,6 +110,9 @@ class HomeBookingSheet extends StatelessWidget {
                     selectedDiscount: selectedDiscount,
                     capturedImagePath: capturedImagePath,
                     capturedImageUrl: capturedImageUrl,
+                    vehicleTotalCapacity: vehicleTotalCapacity,
+                    vehicleSittingCapacity: vehicleSittingCapacity,
+                    vehicleStandingCapacity: vehicleStandingCapacity,
                   ),
                 ),
               ),
