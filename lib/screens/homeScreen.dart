@@ -150,10 +150,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     if (result != null && mounted) {
       setState(() {
         selectedRoute = result;
-        // Keep existing locations when switching routes - users can clear them manually if needed
-        // selectedPickUpLocation = null;
-        // selectedDropOffLocation = null;
+        // Clear locations when switching routes
+        selectedPickUpLocation = null;
+        selectedDropOffLocation = null;
       });
+
+      // Clear cached locations so user selects anew for the new route
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('pickup');
+        await prefs.remove('dropoff');
+      } catch (_) {}
 
       // Save the route for persistence
       await RouteService.saveRoute(result);
