@@ -213,7 +213,7 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                   start: () {
                     _autoRefreshTimer?.cancel();
                     _autoRefreshTimer =
-                        Timer.periodic(const Duration(seconds: 20), (_) {
+                        Timer.periodic(const Duration(seconds: 10), (_) {
                       widget.onRefreshCapacity?.call();
                     });
                   },
