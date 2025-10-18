@@ -167,6 +167,19 @@ class LoginScreen extends State<LoginPage> {
       statusBarBrightness: Brightness.dark,
     ));
 
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive values
+    final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+    final horizontalPadding =
+        isSmallScreen ? screenWidth * 0.05 : screenHeight * 0.035;
+    final topPadding =
+        isSmallScreen ? screenHeight * 0.02 : screenHeight * 0.03;
+    final bottomPadding =
+        isSmallScreen ? screenHeight * 0.02 : screenHeight * 0.035;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: SafeArea(
@@ -191,24 +204,24 @@ class LoginScreen extends State<LoginPage> {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).size.height * 0.03,
-                      left: MediaQuery.of(context).size.height * 0.035,
-                      right: MediaQuery.of(context).size.height * 0.035,
-                      bottom: MediaQuery.of(context).size.height * 0.035,
+                      top: topPadding,
+                      left: horizontalPadding,
+                      right: horizontalPadding,
+                      bottom: bottomPadding,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        buildHeader(),
-                        buildPassengerEmailNumberText(),
-                        buildPassengerEmailNumberInput(),
-                        buildPassengerPassText(),
-                        buildPassengerPassInput(),
-                        buildForgotPassword(),
-                        buildLogInButton(),
-                        buildOrDesign(),
-                        buildLoginGoogle(),
+                        buildHeader(isSmallScreen),
+                        buildPassengerEmailNumberText(isSmallScreen),
+                        buildPassengerEmailNumberInput(isSmallScreen),
+                        buildPassengerPassText(isSmallScreen),
+                        buildPassengerPassInput(isSmallScreen),
+                        buildForgotPassword(isSmallScreen),
+                        buildLogInButton(isSmallScreen),
+                        buildOrDesign(isSmallScreen),
+                        buildLoginGoogle(isSmallScreen),
                       ],
                     ),
                   ),
@@ -233,34 +246,41 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildPassengerPassInput() {
+  Container buildPassengerPassInput(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.01 : 0.012;
+    final height = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+    final iconSize = isSmallScreen ? 20.0 : 22.0;
+    final horizontalPadding = isSmallScreen ? 16.0 : 20.0;
+    final verticalPadding = isSmallScreen ? 14.0 : 18.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: height,
         child: TextField(
-          style: const TextStyle(
-            color: Color(0xFFF5F5F5),
+          style: TextStyle(
+            color: const Color(0xFFF5F5F5),
             fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
-            fontSize: 15,
+            fontSize: fontSize,
           ),
           controller: passwordController,
-          cursorColor: Color(0xFF00CC58),
+          cursorColor: const Color(0xFF00CC58),
           obscureText: !isPasswordVisible,
           decoration: InputDecoration(
             hintText: 'Enter your password',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontWeight: FontWeight.w400,
-              fontSize: 15,
+              fontSize: fontSize,
               fontFamily: 'Inter',
-              color: Color(0xFF999999),
+              color: const Color(0xFF999999),
             ),
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.lock_outlined,
-              color: Color(0xFFCCCCCC),
-              size: 22,
+              color: const Color(0xFFCCCCCC),
+              size: iconSize,
             ),
             suffixIcon: IconButton(
               color: const Color(0xFFCCCCCC),
@@ -273,13 +293,13 @@ class LoginScreen extends State<LoginPage> {
                 isPasswordVisible
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                size: 22,
+                size: iconSize,
               ),
             ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.12),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: verticalPadding),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
                 color: Colors.white.withValues(alpha: 0.3),
@@ -300,39 +320,46 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildPassengerEmailNumberInput() {
+  Container buildPassengerEmailNumberInput(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.01 : 0.012;
+    final height = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+    final iconSize = isSmallScreen ? 20.0 : 22.0;
+    final horizontalPadding = isSmallScreen ? 16.0 : 20.0;
+    final verticalPadding = isSmallScreen ? 14.0 : 18.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: height,
         child: TextField(
           controller: emailController,
-          style: const TextStyle(
-            color: Color(0xFFF5F5F5),
+          style: TextStyle(
+            color: const Color(0xFFF5F5F5),
             fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
-            fontSize: 15,
+            fontSize: fontSize,
           ),
-          cursorColor: Color(0xFF00CC58),
+          cursorColor: const Color(0xFF00CC58),
           decoration: InputDecoration(
             hintText: 'Enter your email',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontWeight: FontWeight.w400,
-              fontSize: 15,
+              fontSize: fontSize,
               fontFamily: 'Inter',
-              color: Color(0xFF999999),
+              color: const Color(0xFF999999),
             ),
             errorText: errorMessage.isNotEmpty ? errorMessage : null,
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.email_outlined,
-              color: Color(0xFFCCCCCC),
-              size: 22,
+              color: const Color(0xFFCCCCCC),
+              size: iconSize,
             ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.12),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: verticalPadding),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
                 color: Colors.white.withValues(alpha: 0.3),
@@ -367,18 +394,21 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildPassengerPassText() {
+  Container buildPassengerPassText(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.02 : 0.025;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.025),
-      child: const Row(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
+      child: Row(
         children: [
           Text(
             'Password',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
-              fontSize: 15,
-              color: Color(0xFFF5F5F5),
+              fontSize: fontSize,
+              color: const Color(0xFFF5F5F5),
               letterSpacing: 0.3,
             ),
           ),
@@ -387,18 +417,21 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildPassengerEmailNumberText() {
+  Container buildPassengerEmailNumberText(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.05 : 0.06;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.06),
-      child: const Row(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
+      child: Row(
         children: [
           Text(
             'Email Address',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
-              fontSize: 15,
-              color: Color(0xFFF5F5F5),
+              fontSize: fontSize,
+              color: const Color(0xFFF5F5F5),
               letterSpacing: 0.3,
             ),
           ),
@@ -407,16 +440,21 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildLogInButton() {
+  Container buildLogInButton(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.03 : 0.04;
+    final buttonHeight = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 15.0 : 17.0;
+    final minWidth = isSmallScreen ? 320.0 : 360.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : login,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00CC58),
           foregroundColor: Colors.white,
-          minimumSize: const Size(360, 56),
+          minimumSize: Size(minWidth, buttonHeight),
           elevation: 0,
           shadowColor: Colors.black.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
@@ -424,20 +462,20 @@ class LoginScreen extends State<LoginPage> {
           ),
         ),
         child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
+            ? SizedBox(
+                width: isSmallScreen ? 20 : 22,
+                height: isSmallScreen ? 20 : 22,
+                child: const CircularProgressIndicator(
                   color: Colors.white,
                   strokeWidth: 2.5,
                 ),
               )
-            : const Text(
+            : Text(
                 'Log In',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
-                  fontSize: 17,
+                  fontSize: fontSize,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -445,17 +483,26 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Widget buildOrDesign() {
+  Widget buildOrDesign(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.025 : 0.03;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       width: double.infinity,
       child: SvgPicture.asset('assets/svg/otherOptionsOptimized.svg'),
     );
   }
 
-  Widget buildLoginGoogle() {
+  Widget buildLoginGoogle(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.012 : 0.015;
+    final buttonHeight = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 14.0 : 16.0;
+    final minWidth = isSmallScreen ? 320.0 : 360.0;
+    final iconSize = isSmallScreen ? 20.0 : 22.0;
+    final spacing = isSmallScreen ? 10.0 : 12.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.015),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading
@@ -506,7 +553,7 @@ class LoginScreen extends State<LoginPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white.withValues(alpha: 0.12),
           foregroundColor: const Color(0xFFF5F5F5),
-          minimumSize: const Size(360, 56),
+          minimumSize: Size(minWidth, buttonHeight),
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14.0),
@@ -521,15 +568,15 @@ class LoginScreen extends State<LoginPage> {
           children: [
             SvgPicture.asset(
               'assets/svg/googleIcon.svg',
-              height: 22,
-              width: 22,
+              height: iconSize,
+              width: iconSize,
             ),
-            const SizedBox(width: 12),
-            const Text(
+            SizedBox(width: spacing),
+            Text(
               'Continue with Google',
               style: TextStyle(
-                color: Color(0xFFF5F5F5),
-                fontSize: 16,
+                color: const Color(0xFFF5F5F5),
+                fontSize: fontSize,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
               ),
@@ -540,11 +587,14 @@ class LoginScreen extends State<LoginPage> {
     );
   }
 
-  Container buildForgotPassword() {
+  Container buildForgotPassword(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.012 : 0.015;
+    final fontSize = isSmallScreen ? 13.0 : 14.0;
+
     return Container(
         alignment: Alignment.centerRight,
         margin: EdgeInsets.only(
-          top: MediaQuery.of(context).size.height * 0.015,
+          top: MediaQuery.of(context).size.height * margin,
         ),
         child: GestureDetector(
           onTap: () {
@@ -557,54 +607,61 @@ class LoginScreen extends State<LoginPage> {
           child: Text(
             "Forgot Password?",
             style: TextStyle(
-              fontSize: 14,
+              fontSize: fontSize,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF00CC58),
+              color: const Color(0xFF00CC58),
               decoration: TextDecoration.underline,
-              decorationColor: Color(0xFF00CC58),
+              decorationColor: const Color(0xFF00CC58),
             ),
           ),
         ));
   }
 
-  Column buildHeader() {
+  Column buildHeader(bool isSmallScreen) {
+    final logoHeight = isSmallScreen ? 50.0 : 60.0;
+    final titleFontSize = isSmallScreen ? 28.0 : 32.0;
+    final subtitleFontSize = isSmallScreen ? 14.0 : 16.0;
+    final logoMargin = isSmallScreen ? 0.03 : 0.04;
+    final titleMargin = isSmallScreen ? 0.04 : 0.05;
+    final subtitleMargin = isSmallScreen ? 0.008 : 0.01;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           alignment: Alignment.center,
-          margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
+          margin: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * logoMargin),
           child: Image.asset(
             'assets/png/pasada_white_brand.png',
-            height: 60,
+            height: logoHeight,
             fit: BoxFit.contain,
           ),
         ),
         Container(
-          margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.05),
-          child: const Text(
+          margin: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * titleMargin),
+          child: Text(
             'Welcome Back',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFF5F5F5),
+              color: const Color(0xFFF5F5F5),
               fontWeight: FontWeight.w800,
-              fontSize: 32,
+              fontSize: titleFontSize,
               letterSpacing: -0.5,
             ),
           ),
         ),
         Container(
-          margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-          child: const Text(
+          margin: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * subtitleMargin),
+          child: Text(
             'Sign in na para makapagbook ka ulit.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFE0E0E0),
+              color: const Color(0xFFE0E0E0),
               fontWeight: FontWeight.w400,
-              fontSize: 16,
+              fontSize: subtitleFontSize,
               letterSpacing: 0.2,
             ),
           ),

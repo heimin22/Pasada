@@ -82,6 +82,19 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     final formattedTime = time.format(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive values
+    final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+    final verticalPadding = isSmallScreen ? 8.0 : 12.0;
+    final iconSize = isSmallScreen ? 18.0 : 20.0;
+    final supportIconSize = isSmallScreen ? 16.0 : 18.0;
+    final supportFontSize = isSmallScreen ? 12.0 : 14.0;
+    final buttonPadding = isSmallScreen ? 12.0 : 16.0;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -104,21 +117,23 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
             children: [
               // Custom App Bar
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding, vertical: verticalPadding),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       decoration: BoxDecoration(
-                        color:
-                            isDarkMode ? Color(0xFF1E1E1E) : Color(0xFFF5F5F5),
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, size: 20),
-                        color:
-                            isDarkMode ? Color(0xFFF5F5F5) : Color(0xFF121212),
+                        icon: Icon(Icons.arrow_back_ios, size: iconSize),
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
                         onPressed: () {
                           Navigator.pushReplacement(
                             context,
@@ -130,27 +145,29 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                     ),
                     Container(
                       decoration: BoxDecoration(
-                        color:
-                            isDarkMode ? Color(0xFF1E1E1E) : Color(0xFFF5F5F5),
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: TextButton.icon(
                         onPressed: _launchEmail,
-                        icon: const Icon(Icons.support_agent, size: 18),
-                        label: const Text(
+                        icon: Icon(Icons.support_agent, size: supportIconSize),
+                        label: Text(
                           'Support',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: supportFontSize,
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         style: TextButton.styleFrom(
                           foregroundColor: isDarkMode
-                              ? Color(0xFFF5F5F5)
-                              : Color(0xFF121212),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: buttonPadding,
+                              vertical: verticalPadding),
                         ),
                       ),
                     ),
@@ -165,19 +182,21 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                   children: [
                     // Success Animation Card
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: const EdgeInsets.all(32),
+                      margin: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32),
+                      padding: EdgeInsets.all(isSmallScreen ? 24 : 32),
                       decoration: BoxDecoration(
-                        color:
-                            isDarkMode ? Color(0xFF1E1E1E) : Color(0xFFF5F5F5),
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Column(
                         children: [
                           // Animated Success Icon
                           Container(
-                            width: 140,
-                            height: 140,
+                            width: isSmallScreen ? 120 : 140,
+                            height: isSmallScreen ? 120 : 140,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
@@ -190,6 +209,7 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                             child: AnimatedBuilder(
                               animation: _controller,
                               builder: (_, __) {
+                                final iconSize = isSmallScreen ? 100 : 120;
                                 return Stack(
                                   alignment: Alignment.center,
                                   children: [
@@ -200,8 +220,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                       duration:
                                           const Duration(milliseconds: 100),
                                       child: Container(
-                                        width: 120,
-                                        height: 120,
+                                        width: iconSize.toDouble(),
+                                        height: iconSize.toDouble(),
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
                                           color: const Color(0xFF00CC58)
@@ -211,8 +231,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                     ),
                                     // Circle and check
                                     SizedBox(
-                                      width: 120,
-                                      height: 120,
+                                      width: iconSize.toDouble(),
+                                      height: iconSize.toDouble(),
                                       child: Stack(
                                         alignment: Alignment.center,
                                         children: [
@@ -220,13 +240,15 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                             painter: CirclePainter(
                                                 progress:
                                                     _circleAnimation.value),
-                                            size: const Size(120, 120),
+                                            size: Size(iconSize.toDouble(),
+                                                iconSize.toDouble()),
                                           ),
                                           CustomPaint(
                                             painter: CheckPainter(
                                                 progress:
                                                     _checkAnimation.value),
-                                            size: const Size(120, 120),
+                                            size: Size(iconSize.toDouble(),
+                                                iconSize.toDouble()),
                                           ),
                                         ],
                                       ),
@@ -237,7 +259,7 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                             ),
                           ),
 
-                          const SizedBox(height: 32),
+                          SizedBox(height: isSmallScreen ? 24 : 32),
 
                           // Success Text
                           AnimatedBuilder(
@@ -255,24 +277,24 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 32,
+                                        fontSize: isSmallScreen ? 28 : 32,
                                         color: isDarkMode
-                                            ? Color(0xFFF5F5F5)
-                                            : Color(0xFF121212),
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212),
                                         letterSpacing: -0.5,
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
+                                    SizedBox(height: isSmallScreen ? 6 : 8),
                                     Text(
                                       'You have safely arrived at your destination',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w400,
-                                        fontSize: 16,
+                                        fontSize: isSmallScreen ? 14 : 16,
                                         color: isDarkMode
-                                            ? Color(0xFFF5F5F5)
-                                            : Color(0xFF121212),
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212),
                                         height: 1.4,
                                       ),
                                     ),
@@ -285,15 +307,17 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 32),
+                    SizedBox(height: isSmallScreen ? 24 : 32),
 
                     // Trip Info
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: const EdgeInsets.all(20),
+                      margin: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32),
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                       decoration: BoxDecoration(
-                        color:
-                            isDarkMode ? Color(0xFF1E1E1E) : Color(0xFFF5F5F5),
+                        color: isDarkMode
+                            ? const Color(0xFF1E1E1E)
+                            : const Color(0xFFF5F5F5),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: const Color(0xFF00CC58).withAlpha(20),
@@ -306,35 +330,36 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                           Icon(
                             Icons.schedule,
                             color: const Color(0xFF00CC58),
-                            size: 20,
+                            size: isSmallScreen ? 18 : 20,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
                           Text(
                             'Arrived at $formattedTime',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                              fontSize: isSmallScreen ? 14 : 16,
                               color: isDarkMode
-                                  ? Color(0xFFF5F5F5)
-                                  : Color(0xFF121212),
+                                  ? const Color(0xFFF5F5F5)
+                                  : const Color(0xFF121212),
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    SizedBox(height: isSmallScreen ? 32 : 40),
 
                     // Action Buttons
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32),
                       child: Column(
                         children: [
                           // View Receipt Button
                           Container(
                             width: double.infinity,
-                            height: 56,
+                            height: isSmallScreen ? 50 : 56,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
@@ -352,13 +377,14 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                   ),
                                 );
                               },
-                              icon: const Icon(Icons.receipt_long, size: 20),
-                              label: const Text(
+                              icon: Icon(Icons.receipt_long,
+                                  size: isSmallScreen ? 18 : 20),
+                              label: Text(
                                 'View Trip Receipt',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 16,
+                                  fontSize: isSmallScreen ? 14 : 16,
                                 ),
                               ),
                               style: TextButton.styleFrom(
@@ -370,12 +396,12 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                             ),
                           ),
 
-                          const SizedBox(height: 16),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
 
                           // Home Button
                           Container(
                             width: double.infinity,
-                            height: 56,
+                            height: isSmallScreen ? 50 : 56,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 colors: [Color(0xFF00CC58), Color(0xFF00A047)],
@@ -390,18 +416,19 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
                                       builder: (_) => const selectionScreen()),
                                 );
                               },
-                              icon: const Icon(Icons.home, size: 20),
-                              label: const Text(
+                              icon: Icon(Icons.home,
+                                  size: isSmallScreen ? 18 : 20),
+                              label: Text(
                                 'Back to Home',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 16,
+                                  fontSize: isSmallScreen ? 14 : 16,
                                 ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
-                                foregroundColor: Color(0xFFF5F5F5),
+                                foregroundColor: const Color(0xFFF5F5F5),
                                 shadowColor: Colors.transparent,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),

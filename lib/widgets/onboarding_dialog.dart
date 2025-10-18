@@ -52,18 +52,32 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive values
+    final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+    final dialogPadding = isSmallScreen ? 16.0 : 24.0;
+    final pageViewHeight = isSmallScreen ? screenHeight * 0.4 : 300.0;
+    final spacing = isSmallScreen ? 12.0 : 20.0;
+    final bottomSpacing = isSmallScreen ? 16.0 : 24.0;
 
     return Dialog(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(dialogPadding),
+        constraints: BoxConstraints(
+          maxHeight: screenHeight * 0.8,
+          maxWidth: screenWidth * 0.9,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 300,
+              height: pageViewHeight,
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: _totalPages,
@@ -73,19 +87,19 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                   });
                 },
                 itemBuilder: (context, index) {
-                  return _buildPage(_pages[index], isDarkMode);
+                  return _buildPage(_pages[index], isDarkMode, isSmallScreen);
                 },
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: spacing),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 _totalPages,
-                (index) => _buildDotIndicator(index, isDarkMode),
+                (index) => _buildDotIndicator(index, isDarkMode, isSmallScreen),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: bottomSpacing),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -99,15 +113,16 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                     },
                     child: Text(
                       'Previous',
-                      style: const TextStyle(
-                        color: Color(0xFF00CC58),
+                      style: TextStyle(
+                        color: const Color(0xFF00CC58),
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Inter',
+                        fontSize: isSmallScreen ? 14 : 16,
                       ),
                     ),
                   )
                 else
-                  const SizedBox(width: 80),
+                  SizedBox(width: isSmallScreen ? 60 : 80),
                 ElevatedButton(
                   onPressed: () {
                     if (_currentPage < _totalPages - 1) {
@@ -126,14 +141,15 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 16 : 24,
+                        vertical: isSmallScreen ? 8 : 12),
                   ),
                   child: Text(
                     _currentPage < _totalPages - 1 ? 'Next' : 'Get Started',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      fontSize: isSmallScreen ? 14 : 16,
                       fontFamily: 'Inter',
                     ),
                   ),
@@ -146,33 +162,39 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     );
   }
 
-  Widget _buildPage(OnboardingPage page, bool isDarkMode) {
+  Widget _buildPage(OnboardingPage page, bool isDarkMode, bool isSmallScreen) {
+    final iconSize = isSmallScreen ? 60.0 : 80.0;
+    final titleFontSize = isSmallScreen ? 20.0 : 24.0;
+    final descriptionFontSize = isSmallScreen ? 14.0 : 16.0;
+    final iconSpacing = isSmallScreen ? 16.0 : 24.0;
+    final textSpacing = isSmallScreen ? 12.0 : 16.0;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           page.icon,
-          size: 80,
+          size: iconSize,
           color: const Color(0xFF00CC58),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: iconSpacing),
         Text(
           page.title,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 24,
+            fontSize: titleFontSize,
             fontWeight: FontWeight.w700,
             fontFamily: 'Inter',
             color:
                 isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: textSpacing),
         Text(
           page.description,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: descriptionFontSize,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w500,
             color:
@@ -183,11 +205,14 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     );
   }
 
-  Widget _buildDotIndicator(int index, bool isDarkMode) {
+  Widget _buildDotIndicator(int index, bool isDarkMode, bool isSmallScreen) {
+    final dotSize = isSmallScreen ? 8.0 : 10.0;
+    final dotMargin = isSmallScreen ? 3.0 : 4.0;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: 10,
-      height: 10,
+      margin: EdgeInsets.symmetric(horizontal: dotMargin),
+      width: dotSize,
+      height: dotSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: _currentPage == index
