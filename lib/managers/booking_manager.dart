@@ -101,10 +101,7 @@ class BookingManager {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
-                NotificationService.showNotification(
-                  title: 'Driver Assigned',
-                  body: 'Your driver has accepted your ride and is on the way!',
-                );
+                NotificationService.showDriverFoundNotification();
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -309,10 +306,7 @@ class BookingManager {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
-                NotificationService.showNotification(
-                  title: 'Yun, may driver ka na boss!',
-                  body: 'Your driver has accepted your ride and is on the way!',
-                );
+                NotificationService.showDriverFoundNotification();
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -340,7 +334,7 @@ class BookingManager {
                 title: 'No Drivers Available',
                 contentPadding: const EdgeInsets.all(24),
                 content: Text(
-                  'Yun nga lang, walang driver. Hehe sorry boss.',
+                  NotificationService.getRandomNoDriverMessage(),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -398,7 +392,7 @@ class BookingManager {
               title: 'No Drivers Available',
               contentPadding: const EdgeInsets.all(24),
               content: Text(
-                'Yun nga lang, walang driver. Hehe sorry boss.',
+                NotificationService.getRandomNoDriverMessage(),
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
