@@ -53,6 +53,9 @@ class TrafficAnalyticsService {
   // Persist last known human-friendly names per routeId to avoid regressions
   final Map<int, String> _lastKnownRouteNames = {};
 
+  // Track background refresh to prevent multiple simultaneous refreshes
+  bool _backgroundRefreshInProgress = false;
+
   // Cache time-to-live: 5 minutes (traffic data updates frequently)
   static const Duration _cacheTTL = Duration(minutes: 5);
   // No client-side timeout for analytics endpoints; we prefer fresh results
@@ -127,9 +130,8 @@ class TrafficAnalyticsService {
         debugPrint(
             'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
 
-        // Cache the response
-        _cache[routeId] =
-            _CachedTrafficAnalytics(trafficResponse, DateTime.now());
+        // Cache the response - always cache under null key for all routes
+        _cache[null] = _CachedTrafficAnalytics(trafficResponse, DateTime.now());
         debugPrint(
             'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
 
@@ -139,9 +141,12 @@ class TrafficAnalyticsService {
           await _writeDailyCache(trafficResponse);
         }
 
-        // Optionally refresh in background (db) if server indicates mode,
-        // but we will still run background refresh to ensure freshness.
-        _refreshInBackground(endpointBase, headers: headers, routeId: routeId);
+        // Schedule background refresh with delay to avoid interfering with main fetch
+        // Skip background refresh if this was a force refresh
+        if (!forceRefresh) {
+          _scheduleBackgroundRefresh(endpointBase,
+              headers: headers, routeId: routeId);
+        }
 
         return trafficResponse;
       } else {
@@ -155,31 +160,71 @@ class TrafficAnalyticsService {
     }
   }
 
+  void _scheduleBackgroundRefresh(String endpointBase,
+      {required Map<String, String> headers, int? routeId}) {
+    // Only schedule background refresh if we don't have recent data
+    final currentCache = _cache[null];
+    if (currentCache != null && currentCache.isValid(Duration(minutes: 2))) {
+      debugPrint(
+          'TrafficAnalyticsService: Skipping background refresh - cache is still fresh');
+      return;
+    }
+
+    // Prevent multiple background refreshes
+    if (_backgroundRefreshInProgress) {
+      debugPrint(
+          'TrafficAnalyticsService: Background refresh already in progress');
+      return;
+    }
+
+    // Schedule background refresh with delay to avoid interfering with main fetch
+    Timer(Duration(seconds: 30), () {
+      _refreshInBackground(endpointBase, headers: headers, routeId: routeId);
+    });
+  }
+
   void _refreshInBackground(String endpointBase,
       {required Map<String, String> headers, int? routeId}) async {
-    unawaited(() async {
-      try {
-        final uri = Uri.parse(endpointBase);
-        final response = await NetworkUtility.fetchUrl(
-          uri,
-          headers: headers,
-        );
-        if (response == null) return;
-        final data = json.decode(response);
-        if (data is! Map<String, dynamic>) return;
-        final parsed = TodayRouteTrafficResponse.fromJson(data);
-        final fresh = _stabilizeRouteNames(parsed);
-        // Only overwrite cache on success
-        _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
-        debugPrint('TrafficAnalyticsService: Background cache refreshed');
+    if (_backgroundRefreshInProgress) {
+      debugPrint(
+          'TrafficAnalyticsService: Background refresh already in progress, skipping');
+      return;
+    }
+
+    _backgroundRefreshInProgress = true;
+    try {
+      final uri = Uri.parse(endpointBase);
+      final response = await NetworkUtility.fetchUrl(
+        uri,
+        headers: headers,
+      );
+      if (response == null) return;
+      final data = json.decode(response);
+      if (data is! Map<String, dynamic>) return;
+      final parsed = TodayRouteTrafficResponse.fromJson(data);
+      final fresh = _stabilizeRouteNames(parsed);
+
+      // Only update cache if the new data has more routes or is more recent
+      final currentCache = _cache[null];
+      if (currentCache == null ||
+          fresh.routes.length >= currentCache.data.routes.length ||
+          fresh.date.isAfter(currentCache.data.date)) {
+        _cache[null] = _CachedTrafficAnalytics(fresh, DateTime.now());
+        debugPrint(
+            'TrafficAnalyticsService: Background cache refreshed with ${fresh.routes.length} routes');
 
         if (routeId == null && _isSameDay(fresh.date, DateTime.now())) {
           await _writeDailyCache(fresh);
         }
-      } catch (e) {
-        debugPrint('TrafficAnalyticsService: Background refresh failed: $e');
+      } else {
+        debugPrint(
+            'TrafficAnalyticsService: Background refresh skipped - current data is better');
       }
-    }());
+    } catch (e) {
+      debugPrint('TrafficAnalyticsService: Background refresh failed: $e');
+    } finally {
+      _backgroundRefreshInProgress = false;
+    }
   }
 
   /// Fetch traffic analytics for a specific route by ID
