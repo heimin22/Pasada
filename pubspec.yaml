@@ -84,7 +84,7 @@ dev_dependencies:
   build_runner: ^2.4.14
   coverage: ^1.11.1
   flutter_gen_runner: ^5.8.0
-  flutter_launcher_icons: ^0.14.2
+  flutter_launcher_icons: ^0.14.4
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
@@ -95,17 +95,11 @@ dev_dependencies:
   mockito: ^5.4.5
   test: ^1.25.8
 
-flutter_native_splash:
-  image: "assets/png/pasada_main_app_icon.png"
-  android: true
-  ios: true
-  web: false
-
 flutter_launcher_icons:
   android: true
   remove_alpha_ios: true
   ios: true
-  image_path: "assets/png/pasada_app_icon_text_colored.png"
+  image_path: "assets/png/pasada_app_icon_store.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
