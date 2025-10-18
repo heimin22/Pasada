@@ -155,6 +155,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         selectedDropOffLocation = null;
       });
 
+      // Clear map pins and overlays when switching routes
+      mapScreenKey.currentState?.clearAll();
+
       // Clear cached locations so user selects anew for the new route
       try {
         final prefs = await SharedPreferences.getInstance();

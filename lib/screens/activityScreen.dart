@@ -185,8 +185,11 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
                               const SizedBox(height: 120),
                               Center(
                                 child: Text(
-                                  'No booking history found',
+                                  'Empty history mo, boss. Try mo naman magbook!',
                                   style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    fontFamily: 'Inter',
                                     color: isDarkMode
                                         ? const Color(0xFFF5F5F5)
                                         : const Color(0xFF121212),

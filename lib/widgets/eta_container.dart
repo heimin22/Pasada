@@ -321,6 +321,7 @@ class _EtaContainerState extends State<EtaContainer> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
                           color: _isUpdating
                               ? (isDarkMode
                                   ? const Color(0xFFF5F5F5)

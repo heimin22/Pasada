@@ -7,22 +7,31 @@ class RushHourDialogContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+    final screenSize = MediaQuery.of(context).size;
+
+    // Calculate responsive values
+    final iconSize = screenSize.width * 0.2; // 20% of screen width
+    final titleFontSize = screenSize.width * 0.06; // 6% of screen width
+    final descriptionFontSize = screenSize.width * 0.04; // 4% of screen width
+    final padding = screenSize.width * 0.06; // 6% of screen width
+    final spacing = screenSize.height * 0.02; // 2% of screen height
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(padding),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.access_time,
-            size: 80,
+            size: iconSize,
             color: const Color(0xFF00CC58),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: spacing),
           Text(
             'Heavy Traffic Alert',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: titleFontSize,
               fontWeight: FontWeight.w700,
               fontFamily: 'Inter',
               color: isDarkMode
@@ -30,12 +39,12 @@ class RushHourDialogContent extends StatelessWidget {
                   : const Color(0xFF121212),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: spacing * 0.8),
           Text(
             'Heavy traffic on your route, please expect delays!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: descriptionFontSize,
               fontWeight: FontWeight.w500,
               fontFamily: 'Inter',
               color: isDarkMode

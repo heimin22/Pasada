@@ -254,6 +254,7 @@ class LocationInfoRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
+                  fontFamily: 'Inter',
                   color: enabled
                       ? (isDarkMode
                           ? const Color(0xFFF5F5F5)
@@ -268,6 +269,7 @@ class LocationInfoRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
                     color: enabled
                         ? (isDarkMode
                             ? const Color(0xFFAAAAAA)
