@@ -21,7 +21,6 @@ class TrafficInsightsSheet extends StatefulWidget {
 class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
   final TrafficAnalyticsService _analyticsService = TrafficAnalyticsService();
   TodayRouteTrafficResponse? _trafficData;
-  AiExplainRoutesResponse? _aiExplanations;
   bool _isLoadingTraffic = false;
   String? _trafficError;
 
@@ -36,7 +35,6 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       if (widget.routes.isEmpty) {
         setState(() {
           _trafficData = null;
-          _aiExplanations = null;
           _trafficError = null;
         });
         return;
@@ -47,24 +45,15 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         _trafficError = null;
       });
 
-      // Clear AI cache if force refresh
-      if (forceRefresh) {
-        _analyticsService.clearAiExplanationCaches();
-      }
-
-      // Fetch traffic data and AI explanations in parallel
-      final futures = await Future.wait([
-        _analyticsService.getTodayTrafficAnalytics(forceRefresh: forceRefresh),
-        _analyticsService.explainTrafficRoutes(),
-      ]);
-
-      final trafficResponse = futures[0] as TodayRouteTrafficResponse?;
-      final aiResponse = futures[1] as AiExplainRoutesResponse?;
+      // Use the traffic analytics service to fetch data
+      // forceRefresh bypasses cache if set to true
+      final trafficResponse = await _analyticsService.getTodayTrafficAnalytics(
+        forceRefresh: forceRefresh,
+      );
 
       if (mounted) {
         setState(() {
           _trafficData = trafficResponse;
-          _aiExplanations = aiResponse;
           _isLoadingTraffic = false;
           if (trafficResponse == null) {
             _trafficError = 'Unable to load traffic data';
@@ -572,30 +561,6 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     }
   }
 
-  /// Get enhanced summary that includes AI explanations if available
-  String _getEnhancedSummary(RouteTrafficToday trafficData) {
-    final baseSummary = trafficData.summary;
-
-    if (_aiExplanations == null) {
-      return baseSummary;
-    }
-
-    // Find AI explanation for this route
-    final aiExplanation = _aiExplanations!.routes.firstWhere(
-      (aiRoute) =>
-          _normalizeName(aiRoute.routeName) ==
-          _normalizeName(trafficData.routeName),
-      orElse: () => AiExplainRouteItem(routeName: '', summary: ''),
-    );
-
-    if (aiExplanation.summary.isEmpty) {
-      return baseSummary;
-    }
-
-    // Combine base summary with AI explanation
-    return '$baseSummary ${aiExplanation.summary}';
-  }
-
   Widget _buildTrafficCard(RouteTrafficToday trafficData, bool isDarkMode) {
     // Map traffic status to color
     Color statusColor;
@@ -674,7 +639,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
           ),
           const SizedBox(height: 12),
           Text(
-            _getEnhancedSummary(trafficData),
+            trafficData.summary,
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
