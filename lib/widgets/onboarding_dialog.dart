@@ -13,7 +13,7 @@ class OnboardingDialog extends StatefulWidget {
 class _OnboardingDialogState extends State<OnboardingDialog> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 5;
+  final int _totalPages = 4;
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
@@ -31,11 +31,11 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
       icon: Icons.event_seat,
       description: 'Choose if sitting or standing.',
     ),
-    OnboardingPage(
-      title: 'Select your preferred payment method',
-      icon: Icons.payment,
-      description: 'Choose if cash or cashless.',
-    ),
+    // OnboardingPage(
+    //   title: 'Select your preferred payment method',
+    //   icon: Icons.payment,
+    //   description: 'Choose if cash or cashless.',
+    // ),
     OnboardingPage(
       title: 'Then you\'re ready to go!',
       icon: Icons.check_circle,
