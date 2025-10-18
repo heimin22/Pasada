@@ -14,30 +14,42 @@ class RouteSelectionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 400;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 12 : 16,
+            vertical: isSmallScreen ? 6 : 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 16 : 20,
+          vertical: isSmallScreen ? 12 : 16,
+        ),
         decoration: BoxDecoration(
           color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
           boxShadow: [
             BoxShadow(
               color: Colors.black12,
-              blurRadius: screenWidth * 0.03,
+              blurRadius:
+                  isSmallScreen ? screenWidth * 0.02 : screenWidth * 0.03,
             ),
           ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.route, color: Color(0xFF00CC58)),
-            const SizedBox(width: 16),
+            Icon(
+              Icons.route,
+              color: Color(0xFF00CC58),
+              size: isSmallScreen ? 18 : 20,
+            ),
+            SizedBox(width: isSmallScreen ? 12 : 16),
             Expanded(
               child: Text(
                 routeName,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 12 : 14,
                   fontWeight: FontWeight.w600,
                   color: isDarkMode ? Color(0xFFF5F5F5) : Color(0xFF1E1E1E),
                 ),
@@ -45,7 +57,7 @@ class RouteSelectionWidget extends StatelessWidget {
             ),
             Icon(
               Icons.arrow_forward_ios,
-              size: 16,
+              size: isSmallScreen ? 14 : 16,
               color: isDarkMode ? Color(0xFFF5F5F5) : Color(0xFF1E1E1E),
             ),
           ],

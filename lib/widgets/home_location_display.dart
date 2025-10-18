@@ -66,7 +66,7 @@ class HomeLocationDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSmallScreen = screenWidth < 400;
     final containerPadding =
-        isSmallScreen ? responsivePadding * 0.8 : responsivePadding;
+        isSmallScreen ? responsivePadding * 1.2 : responsivePadding * 1.4;
     final borderRadius =
         isSmallScreen ? screenWidth * 0.03 : screenWidth * 0.04;
 
