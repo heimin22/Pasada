@@ -42,9 +42,9 @@ class HomeHeaderSection extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: weatherIconSize * 0.5),
         HomeWeatherWidget(size: weatherIconSize),
-        const SizedBox(height: 16),
+        SizedBox(height: weatherIconSize * 0.5),
         if (onCalendarTap != null)
           GestureDetector(
             onTap: onCalendarTap,
@@ -52,7 +52,7 @@ class HomeHeaderSection extends StatelessWidget {
               message: 'View calendar and holiday discount info',
               child: Icon(
                 Icons.calendar_today,
-                size: 30,
+                size: weatherIconSize * 0.6,
                 color: const Color(0xFF00CC58),
               ),
             ),

@@ -680,11 +680,18 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         body: LayoutBuilder(
           builder: (context, constraints) {
             final screenWidth = constraints.maxWidth;
-            final responsivePadding = screenWidth * 0.05;
-            final fabIconSize = screenWidth * 0.06;
-            final bottomNavBarHeight = 20.0;
-            final fabVerticalSpacing = 10.0;
-            final weatherIconSize = screenWidth * 0.08;
+            final screenHeight = constraints.maxHeight;
+            final isSmallScreen = screenWidth < 400 || screenHeight < 700;
+
+            // Responsive sizing based on screen size
+            final responsivePadding =
+                isSmallScreen ? screenWidth * 0.03 : screenWidth * 0.05;
+            final fabIconSize =
+                isSmallScreen ? screenWidth * 0.05 : screenWidth * 0.06;
+            final bottomNavBarHeight = isSmallScreen ? 15.0 : 20.0;
+            final fabVerticalSpacing = isSmallScreen ? 8.0 : 10.0;
+            final weatherIconSize =
+                isSmallScreen ? screenWidth * 0.06 : screenWidth * 0.08;
 
             return Stack(
               children: [
