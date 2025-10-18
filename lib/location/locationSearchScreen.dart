@@ -838,28 +838,100 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                       final bool? confirm =
                                           await showDialog<bool>(
                                         context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: const Text(
-                                              'Clear Recent Searches'),
-                                          content: const Text(
-                                            'Are you sure you want to clear all recent searches?',
+                                        builder: (context) => ResponsiveDialog(
+                                          title: 'Clear Recent Searches',
+                                          content: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.clear_all,
+                                                size: 48,
+                                                color: const Color(0xFFD7481D),
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                'Are you sure you want to clear all recent searches?',
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontFamily: 'Inter',
+                                                  color: isDarkMode
+                                                      ? const Color(0xFFF5F5F5)
+                                                      : const Color(0xFF121212),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                           actions: [
-                                            TextButton(
+                                            ElevatedButton(
                                               onPressed: () =>
                                                   Navigator.pop(context, false),
-                                              child: const Text('Cancel'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              style: TextButton.styleFrom(
+                                              style: ElevatedButton.styleFrom(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  side: BorderSide(
+                                                    color:
+                                                        const Color(0xFFD7481D),
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                                elevation: 0,
+                                                shadowColor: Colors.transparent,
+                                                minimumSize:
+                                                    const Size(120, 44),
+                                                backgroundColor:
+                                                    Colors.transparent,
                                                 foregroundColor:
                                                     const Color(0xFFD7481D),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 24,
+                                                        vertical: 12),
                                               ),
-                                              child: const Text('Clear All'),
+                                              child: const Text(
+                                                'Cancel',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              style: ElevatedButton.styleFrom(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                elevation: 0,
+                                                shadowColor: Colors.transparent,
+                                                minimumSize:
+                                                    const Size(120, 44),
+                                                backgroundColor:
+                                                    const Color(0xFFD7481D),
+                                                foregroundColor:
+                                                    const Color(0xFFF5F5F5),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 24,
+                                                        vertical: 12),
+                                              ),
+                                              child: const Text(
+                                                'Clear All',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 16,
+                                                ),
+                                              ),
                                             ),
                                           ],
+                                          actionsAlignment:
+                                              MainAxisAlignment.spaceEvenly,
                                         ),
                                       );
 

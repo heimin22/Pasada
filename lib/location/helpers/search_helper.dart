@@ -10,11 +10,8 @@ import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
 
-import 'distance_helper.dart';
-
 /// Helper class for search functionality
 class SearchHelper {
-  final DistanceHelper _distanceHelper = DistanceHelper();
   Timer? _debounce;
 
   /// Initialize search with debounce
