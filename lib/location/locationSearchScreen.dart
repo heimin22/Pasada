@@ -8,7 +8,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
-import 'package:pasada_passenger_app/location/pinLocationMap.dart';
 import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'package:pasada_passenger_app/location/recentSearch.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
@@ -58,6 +57,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   HomeScreenPageState? homeScreenPageState;
   LatLng? currentLocation;
   StopsService _stopsService = StopsService();
+  String _selectedFilter = 'all';
+  final List<String> _filterOptions = ['all', 'nearby'];
 
   @override
   void initState() {
@@ -849,7 +850,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                       : const Color(0xFFF5F5F5),
                   filled: true,
                   border: InputBorder.none,
-                  hintText: 'Search Location',
+                  hintText: 'Search stops or locations...',
                   hintStyle: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -896,13 +897,167 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                       // Show recent searches if available and search is empty
                       if (searchController.text.isEmpty &&
                           recentSearches.isNotEmpty) ...[
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDarkMode
+                                ? const Color(0xFF1E1E1E)
+                                : const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDarkMode
+                                  ? const Color(0xFF333333)
+                                  : const Color(0xFFE0E0E0),
+                              width: 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        size: 18,
+                                        color: const Color(0xFF00CC58),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Recent Searches (${recentSearches.length})',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Add Clear All button with better styling
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final bool? confirm =
+                                          await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text(
+                                              'Clear Recent Searches'),
+                                          content: const Text(
+                                            'Are you sure you want to clear all recent searches?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    const Color(0xFFD7481D),
+                                              ),
+                                              child: const Text('Clear All'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+
+                                      if (confirm == true) {
+                                        if (widget.routeID != null) {
+                                          await RecentSearchService
+                                              .clearRecentSearchesByRoute(
+                                                  widget.routeID!);
+                                        } else {
+                                          await RecentSearchService
+                                              .clearRecentSearches();
+                                        }
+                                        setState(() {
+                                          recentSearches = [];
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFD7481D)
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFD7481D)
+                                              .withValues(alpha: 0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.clear_all,
+                                            size: 14,
+                                            color: const Color(0xFFD7481D),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Clear All',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFFD7481D),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              // Recent searches list with improved styling
+                              ...recentSearches.take(5).map((search) =>
+                                  _buildRecentSearchTile(search, isDarkMode)),
+                              if (recentSearches.length > 5) ...[
+                                const SizedBox(height: 8),
+                                Center(
+                                  child: Text(
+                                    '${recentSearches.length - 5} more searches...',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 12,
+                                      color: isDarkMode
+                                          ? const Color(0xFFAAAAAA)
+                                          : const Color(0xFF666666),
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // Show allowed stops if available
+                      if (searchController.text.isEmpty &&
+                          allowedStops.isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Recent Searches',
+                                'Available Stops (${allowedStops.length})',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,
@@ -912,64 +1067,112 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                       : const Color(0xFF121212),
                                 ),
                               ),
-                              // Add Clear All button
-                              GestureDetector(
-                                onTap: () async {
-                                  if (widget.routeID != null) {
-                                    // Clear route-specific searches
-                                    await RecentSearchService
-                                        .clearRecentSearchesByRoute(
-                                            widget.routeID!);
-                                  } else {
-                                    // Clear all searches if no specific route
-                                    await RecentSearchService
-                                        .clearRecentSearches();
-                                  }
+                              // Add sort/filter button
+                              PopupMenuButton<String>(
+                                icon: Icon(
+                                  Icons.sort,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                  size: 20,
+                                ),
+                                onSelected: (String value) {
                                   setState(() {
-                                    recentSearches = [];
+                                    switch (value) {
+                                      case 'name':
+                                        allowedStops.sort(
+                                            (a, b) => a.name.compareTo(b.name));
+                                        break;
+                                      case 'order':
+                                        allowedStops.sort((a, b) =>
+                                            a.order.compareTo(b.order));
+                                        break;
+                                      case 'distance':
+                                        // Sort by distance from current location if available
+                                        if (currentLocation != null) {
+                                          allowedStops.sort((a, b) {
+                                            final distanceA = calculateDistance(
+                                                currentLocation!,
+                                                a.coordinates);
+                                            final distanceB = calculateDistance(
+                                                currentLocation!,
+                                                b.coordinates);
+                                            return distanceA
+                                                .compareTo(distanceB);
+                                          });
+                                        }
+                                        break;
+                                    }
                                   });
                                 },
-                                child: Text(
-                                  'Clear All',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF067837),
+                                itemBuilder: (BuildContext context) => [
+                                  const PopupMenuItem<String>(
+                                    value: 'order',
+                                    child: Text('Sort by Route Order'),
                                   ),
-                                ),
+                                  const PopupMenuItem<String>(
+                                    value: 'name',
+                                    child: Text('Sort by Name'),
+                                  ),
+                                  if (currentLocation != null)
+                                    const PopupMenuItem<String>(
+                                      value: 'distance',
+                                      child: Text('Sort by Distance'),
+                                    ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                        // Recent searches list
-                        ...recentSearches.map((search) => LocationListTile(
-                              press: () => onRecentSearchSelected(search),
-                              location: search.address,
-                            )),
-                      ],
-
-                      // Show allowed stops if available
-                      if (searchController.text.isEmpty &&
-                          allowedStops.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            'Available Stops',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
+                        // Add filter chips
+                        if (allowedStops.length > 5) ...[
+                          Container(
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _filterOptions.length,
+                              itemBuilder: (context, index) {
+                                final filter = _filterOptions[index];
+                                final isSelected = _selectedFilter == filter;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: FilterChip(
+                                    label: Text(_getFilterLabel(filter)),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        _selectedFilter = filter;
+                                        _applyFilter();
+                                      });
+                                    },
+                                    backgroundColor: isDarkMode
+                                        ? const Color(0xFF1E1E1E)
+                                        : const Color(0xFFF5F5F5),
+                                    selectedColor: const Color(0xFF00CC58)
+                                        .withValues(alpha: 0.2),
+                                    checkmarkColor: const Color(0xFF00CC58),
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? const Color(0xFF00CC58)
+                                          : (isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212)),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
-                        ),
-                        ...allowedStops.map((stop) => LocationListTile(
-                              press: () => onStopSelected(stop),
-                              location: "${stop.name}\n${stop.address}",
-                            )),
+                          const SizedBox(height: 8),
+                        ],
+                        // Show stops with improved layout and lazy loading
+                        if (_getFilteredStops().length > 20)
+                          _buildLazyStopList(_getFilteredStops(), isDarkMode)
+                        else
+                          ..._getFilteredStops()
+                              .map((stop) => _buildStopTile(stop, isDarkMode)),
                       ]
                       // Show filtered stops if searching
                       else if (searchController.text.isNotEmpty &&
@@ -1172,64 +1375,214 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     }
   }
 
-  // Reinsert the pinFromTheMaps helper method
-  Widget pinFromTheMaps() {
+  // Helper methods for filtering
+  String _getFilterLabel(String filter) {
+    switch (filter) {
+      case 'all':
+        return 'All Stops';
+      case 'nearby':
+        return 'Nearby';
+      default:
+        return 'All';
+    }
+  }
+
+  List<Stop> _getFilteredStops() {
+    switch (_selectedFilter) {
+      case 'nearby':
+        if (currentLocation == null) return allowedStops;
+        return allowedStops.where((stop) {
+          final distance =
+              calculateDistance(currentLocation!, stop.coordinates);
+          return distance <= 2000; // Within 2km
+        }).toList();
+      default:
+        return allowedStops;
+    }
+  }
+
+  void _applyFilter() {
+    setState(() {
+      // Filter is applied in _getFilteredStops()
+    });
+  }
+
+  // Build lazy loading list for performance with large datasets
+  Widget _buildLazyStopList(List<Stop> stops, bool isDarkMode) {
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: stops.length,
+      itemBuilder: (context, index) {
+        return _buildStopTile(stops[index], isDarkMode);
+      },
+    );
+  }
+
+  // Build improved recent search tile
+  Widget _buildRecentSearchTile(RecentSearch search, bool isDarkMode) {
+    final distance = currentLocation != null
+        ? calculateDistance(currentLocation!, search.coordinates)
+        : null;
+
     return Container(
-      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFFD2D2D2),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
+        color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDarkMode ? const Color(0xFF333333) : const Color(0xFFE0E0E0),
+          width: 1,
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => PinLocationStateful(
-                locationType: widget.isPickup ? 'pickup' : 'dropoff',
-                routePolyline: widget.routePolyline,
-                onLocationSelected: (SelectedLocation selectedLocation) {
-                  Navigator.pop(context, selectedLocation);
-                }, // Pass the polyline
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00CC58).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Icon(
+            Icons.history,
+            size: 16,
+            color: Color(0xFF00CC58),
+          ),
+        ),
+        title: Text(
+          search.address,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: distance != null
+            ? Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 12,
+                    color: const Color(0xFF00CC58),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${(distance / 1000).toStringAsFixed(1)} km away',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: Color(0xFF00CC58),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              )
+            : null,
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 14,
+          color: isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+        ),
+        onTap: () => onRecentSearchSelected(search),
+      ),
+    );
+  }
+
+  // Build improved stop tile with more information
+  Widget _buildStopTile(Stop stop, bool isDarkMode) {
+    final distance = currentLocation != null
+        ? calculateDistance(currentLocation!, stop.coordinates)
+        : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode ? const Color(0xFF333333) : const Color(0xFFE0E0E0),
+          width: 1,
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF00CC58).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Text(
+              '${stop.order}',
+              style: const TextStyle(
+                color: Color(0xFF00CC58),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
               ),
             ),
-          ).then((result) {
-            if (result != null && result is SelectedLocation) {
-              Navigator.pop(context, result);
-            }
-          });
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Color(0xFFF5F5F5),
-          foregroundColor: const Color(0xFF121212),
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        title: Text(
+          stop.name,
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.map, size: 20),
-            const SizedBox(width: 8),
+            const SizedBox(height: 4),
             Text(
-              "Pin on Maps",
+              stop.address,
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-                color: Color(0xFF121212),
+                fontSize: 13,
+                color: isDarkMode
+                    ? const Color(0xFFAAAAAA)
+                    : const Color(0xFF666666),
               ),
             ),
+            if (distance != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(
+                    Icons.location_on,
+                    size: 14,
+                    color: const Color(0xFF00CC58),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${(distance / 1000).toStringAsFixed(1)} km away',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Color(0xFF00CC58),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
+        ),
+        onTap: () => onStopSelected(stop),
       ),
     );
   }

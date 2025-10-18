@@ -220,7 +220,7 @@ class selectionState extends State<selectionScreen> {
             },
             animationCurve: Curves.fastOutSlowIn,
             animationDuration: const Duration(milliseconds: 400),
-            height: 75.0,
+            height: MediaQuery.of(context).size.width < 400 ? 65.0 : 75.0,
           ),
         ),
         onRetry: () {

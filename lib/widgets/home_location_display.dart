@@ -64,19 +64,26 @@ class HomeLocationDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = screenWidth < 400;
+    final containerPadding =
+        isSmallScreen ? responsivePadding * 1.2 : responsivePadding * 1.4;
+    final borderRadius =
+        isSmallScreen ? screenWidth * 0.03 : screenWidth * 0.04;
+
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(responsivePadding),
+      padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1E1E1E)
             : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(screenWidth * 0.04),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
             color: Colors.black12,
-            blurRadius: screenWidth * 0.03,
-            spreadRadius: screenWidth * 0.005,
+            blurRadius: isSmallScreen ? screenWidth * 0.02 : screenWidth * 0.03,
+            spreadRadius:
+                isSmallScreen ? screenWidth * 0.003 : screenWidth * 0.005,
           ),
         ],
       ),
@@ -114,7 +121,7 @@ class HomeLocationDisplay extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w700,
-                      fontSize: 16,
+                      fontSize: isSmallScreen ? 14 : 16,
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFFF5F5F5)
                           : const Color(0xFF121212),
@@ -134,31 +141,31 @@ class HomeLocationDisplay extends StatelessWidget {
                                   children: [
                                     Text(
                                       "₱${originalFare.toStringAsFixed(2)}",
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,
-                                        fontSize: 14,
+                                        fontSize: isSmallScreen ? 12 : 14,
                                         color: Colors.grey,
                                         decoration: TextDecoration.lineThrough,
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
+                                    SizedBox(height: isSmallScreen ? 1 : 2),
                                     Text(
                                       "₱${currentFare.toStringAsFixed(2)}",
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w700,
-                                        fontSize: 16,
+                                        fontSize: isSmallScreen ? 14 : 16,
                                         color: Color(0xFF00CC58),
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    const Text(
+                                    SizedBox(height: isSmallScreen ? 1 : 2),
+                                    Text(
                                       "20% Discount",
                                       style: TextStyle(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w600,
-                                        fontSize: 12,
+                                        fontSize: isSmallScreen ? 10 : 12,
                                         color: Color(0xFF00CC58),
                                       ),
                                     ),
@@ -167,10 +174,10 @@ class HomeLocationDisplay extends StatelessWidget {
                               } else {
                                 return Text(
                                   "₱${currentFare.toStringAsFixed(2)}",
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w700,
-                                    fontSize: 16,
+                                    fontSize: isSmallScreen ? 14 : 16,
                                     color: Color(0xFF00CC58),
                                   ),
                                 );
@@ -190,7 +197,9 @@ class HomeLocationDisplay extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: screenWidth * 0.06),
+              SizedBox(
+                  height:
+                      isSmallScreen ? screenWidth * 0.04 : screenWidth * 0.06),
             ] else ...[
               // Just the arrow when no route is selected
               Row(
@@ -204,7 +213,7 @@ class HomeLocationDisplay extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isSmallScreen ? 6 : 8),
             ],
 
             // Pickup Location with Icon
@@ -212,10 +221,13 @@ class HomeLocationDisplay extends StatelessWidget {
               children: [
                 SvgPicture.asset(
                   'assets/svg/pinpickup.svg',
-                  height: 15,
-                  width: 15,
+                  height: isSmallScreen ? 12 : 15,
+                  width: isSmallScreen ? 12 : 15,
                 ),
-                SizedBox(width: screenWidth * 0.03),
+                SizedBox(
+                    width: isSmallScreen
+                        ? screenWidth * 0.02
+                        : screenWidth * 0.03),
                 Expanded(
                   child: selectedPickUpLocation != null
                       ? _buildLocationDisplay(
@@ -223,7 +235,7 @@ class HomeLocationDisplay extends StatelessWidget {
                       : Text(
                           'Pick-up location',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w700,
                             color:
                                 Theme.of(context).brightness == Brightness.dark
@@ -237,8 +249,9 @@ class HomeLocationDisplay extends StatelessWidget {
 
             // Divider and Drop-off Location
             if (selectedDropOffLocation != null) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
+              Padding(
+                padding:
+                    EdgeInsets.symmetric(vertical: isSmallScreen ? 6.0 : 8.0),
                 child: Divider(),
               ),
 
@@ -247,10 +260,13 @@ class HomeLocationDisplay extends StatelessWidget {
                 children: [
                   SvgPicture.asset(
                     'assets/svg/pindropoff.svg',
-                    height: 15,
-                    width: 15,
+                    height: isSmallScreen ? 12 : 15,
+                    width: isSmallScreen ? 12 : 15,
                   ),
-                  SizedBox(width: screenWidth * 0.03),
+                  SizedBox(
+                      width: isSmallScreen
+                          ? screenWidth * 0.02
+                          : screenWidth * 0.03),
                   Expanded(
                     child: _buildLocationDisplay(
                         selectedDropOffLocation!.address, context),
@@ -266,6 +282,8 @@ class HomeLocationDisplay extends StatelessWidget {
 
   Widget _buildLocationDisplay(String address, BuildContext context) {
     final locationParts = _splitLocation(address);
+    final isSmallScreen = screenWidth < 400;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -273,7 +291,7 @@ class HomeLocationDisplay extends StatelessWidget {
         Text(
           locationParts[0],
           style: TextStyle(
-            fontSize: 16,
+            fontSize: isSmallScreen ? 14 : 16,
             fontWeight: FontWeight.w700,
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFFF5F5F5)
@@ -285,7 +303,7 @@ class HomeLocationDisplay extends StatelessWidget {
             locationParts[1],
             maxLines: 1,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: isSmallScreen ? 10 : 12,
               fontWeight: FontWeight.w500,
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFFAAAAAA)

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:bcrypt/bcrypt.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -608,5 +609,45 @@ class NotificationService {
   /// Cancels the ride progress notification.
   static Future<void> cancelRideProgressNotification() async {
     await _flutterLocalNotificationsPlugin.cancel(rideProgressNotificationId);
+  }
+
+  /// Gets a random dialogue message when a driver is found
+  static String getRandomDriverFoundMessage() {
+    final messages = [
+      'May driver ka na, boss! Punta ka na sa pick-up location.',
+      'Yown, nakahanap na rin ng driver sa wakas!',
+      'Ayan, may driver ka na raw po. Punta na agad sa pick-up location!',
+    ];
+    final random = Random();
+    return messages[random.nextInt(messages.length)];
+  }
+
+  /// Gets a random dialogue message when no driver is found
+  static String getRandomNoDriverMessage() {
+    final messages = [
+      'Pasensiya na boss, wala talagang mahanap e.',
+      'Palya pre, try mo ulit baka makahanap pa.',
+      'Wala talaga, boss. Sorry huhu.',
+    ];
+    final random = Random();
+    return messages[random.nextInt(messages.length)];
+  }
+
+  /// Shows a notification with random driver found message
+  static Future<void> showDriverFoundNotification() async {
+    final message = getRandomDriverFoundMessage();
+    await showNotification(
+      title: 'Driver Found!',
+      body: message,
+    );
+  }
+
+  /// Shows a notification with random no driver message
+  static Future<void> showNoDriverNotification() async {
+    final message = getRandomNoDriverMessage();
+    await showNotification(
+      title: 'No Driver Available',
+      body: message,
+    );
   }
 }
