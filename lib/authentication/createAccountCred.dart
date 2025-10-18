@@ -72,6 +72,19 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
       statusBarBrightness: Brightness.dark,
     ));
 
+    final screenSize = MediaQuery.of(context).size;
+    final screenHeight = screenSize.height;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive values
+    final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+    final horizontalPadding =
+        isSmallScreen ? screenWidth * 0.05 : screenHeight * 0.035;
+    final topPadding =
+        isSmallScreen ? screenHeight * 0.03 : screenHeight * 0.06;
+    final bottomPadding =
+        isSmallScreen ? screenHeight * 0.02 : screenHeight * 0.035;
+
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: SafeArea(
@@ -96,22 +109,22 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
-                      top: MediaQuery.of(context).size.height * 0.06,
-                      left: MediaQuery.of(context).size.height * 0.035,
-                      right: MediaQuery.of(context).size.height * 0.035,
-                      bottom: MediaQuery.of(context).size.height * 0.035,
+                      top: topPadding,
+                      left: horizontalPadding,
+                      right: horizontalPadding,
+                      bottom: bottomPadding,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        buildHeader(),
-                        buildPassengerDisplayNameText(),
-                        buildPassengerDisplayNameInput(),
-                        buildPassengerContactNumberText(),
-                        buildPassengerContactNumberInput(),
-                        buildTermsCheckbox(),
-                        buildCreateAccountButton(),
+                        buildHeader(isSmallScreen),
+                        buildPassengerDisplayNameText(isSmallScreen),
+                        buildPassengerDisplayNameInput(isSmallScreen),
+                        buildPassengerContactNumberText(isSmallScreen),
+                        buildPassengerContactNumberInput(isSmallScreen),
+                        buildTermsCheckbox(isSmallScreen),
+                        buildCreateAccountButton(isSmallScreen),
                       ],
                     ),
                   ),
@@ -137,7 +150,14 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Column buildHeader() {
+  Column buildHeader(bool isSmallScreen) {
+    final logoHeight = isSmallScreen ? 50.0 : 60.0;
+    final titleFontSize = isSmallScreen ? 28.0 : 32.0;
+    final subtitleFontSize = isSmallScreen ? 14.0 : 16.0;
+    final logoMargin = isSmallScreen ? 0.015 : 0.02;
+    final titleMargin = isSmallScreen ? 0.03 : 0.04;
+    final subtitleMargin = isSmallScreen ? 0.008 : 0.01;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -145,26 +165,26 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
         Container(
           alignment: Alignment.center,
           margin: EdgeInsets.only(
-            top: MediaQuery.of(context).size.height * 0.02,
+            top: MediaQuery.of(context).size.height * logoMargin,
           ),
           child: Image.asset(
             'assets/png/pasada_white_brand.png',
-            height: 60,
+            height: logoHeight,
             fit: BoxFit.contain,
           ),
         ),
 
         /// Create your account text
         Container(
-          margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
-          child: const Text(
+          margin: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * titleMargin),
+          child: Text(
             'Almost There!',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFF5F5F5),
+              color: const Color(0xFFF5F5F5),
               fontWeight: FontWeight.w800,
-              fontSize: 32,
+              fontSize: titleFontSize,
               letterSpacing: -0.5,
             ),
           ),
@@ -172,15 +192,15 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
 
         /// Join the Pasada... text
         Container(
-          margin:
-              EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.01),
-          child: const Text(
+          margin: EdgeInsets.only(
+              top: MediaQuery.of(context).size.height * subtitleMargin),
+          child: Text(
             'Kaunti na lang, bossing. Hehehe.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFFE0E0E0),
+              color: const Color(0xFFE0E0E0),
               fontWeight: FontWeight.w400,
-              fontSize: 16,
+              fontSize: subtitleFontSize,
               letterSpacing: 0.2,
             ),
           ),
@@ -189,53 +209,63 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Container buildPassengerDisplayNameText() {
+  Container buildPassengerDisplayNameText(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.03 : 0.04;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.04),
-      child: const Text(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
+      child: Text(
         'Full Name',
         style: TextStyle(
-          color: Color(0xFFF5F5F5),
+          color: const Color(0xFFF5F5F5),
           fontWeight: FontWeight.w700,
-          fontSize: 15,
+          fontSize: fontSize,
           letterSpacing: 0.3,
         ),
       ),
     );
   }
 
-  Container buildPassengerDisplayNameInput() {
+  Container buildPassengerDisplayNameInput(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.01 : 0.012;
+    final height = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+    final iconSize = isSmallScreen ? 20.0 : 22.0;
+    final horizontalPadding = isSmallScreen ? 16.0 : 20.0;
+    final verticalPadding = isSmallScreen ? 14.0 : 18.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: height,
         child: TextField(
           controller: firstNameController,
-          cursorColor: Color(0xFF00CC58),
-          style: const TextStyle(
-            color: Color(0xFFF5F5F5),
+          cursorColor: const Color(0xFF00CC58),
+          style: TextStyle(
+            color: const Color(0xFFF5F5F5),
             fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
-            fontSize: 15,
+            fontSize: fontSize,
           ),
           decoration: InputDecoration(
             hintText: 'Enter your full name',
-            hintStyle: const TextStyle(
-              fontSize: 15,
+            hintStyle: TextStyle(
+              fontSize: fontSize,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w400,
-              color: Color(0xFF999999),
+              color: const Color(0xFF999999),
             ),
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.person_outline,
-              color: Color(0xFFCCCCCC),
-              size: 22,
+              color: const Color(0xFFCCCCCC),
+              size: iconSize,
             ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.12),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: verticalPadding),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
                 color: Colors.white.withValues(alpha: 0.3),
@@ -256,84 +286,95 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Container buildPassengerContactNumberText() {
+  Container buildPassengerContactNumberText(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.02 : 0.025;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.025),
-      child: const Text(
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
+      child: Text(
         'Contact Number',
         style: TextStyle(
-          color: Color(0xFFF5F5F5),
+          color: const Color(0xFFF5F5F5),
           fontWeight: FontWeight.w700,
           fontFamily: 'Inter',
-          fontSize: 15,
+          fontSize: fontSize,
           letterSpacing: 0.3,
         ),
       ),
     );
   }
 
-  Container buildPassengerContactNumberInput() {
+  Container buildPassengerContactNumberInput(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.01 : 0.012;
+    final height = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 14.0 : 15.0;
+    final flagSize = isSmallScreen ? 20.0 : 22.0;
+    final horizontalPadding = isSmallScreen ? 16.0 : 20.0;
+    final verticalPadding = isSmallScreen ? 14.0 : 18.0;
+    final prefixPadding = isSmallScreen ? 12.0 : 16.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.012),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: height,
         child: TextField(
           controller: contactController,
-          cursorColor: Color(0xFF00CC58),
+          cursorColor: const Color(0xFF00CC58),
           keyboardType: TextInputType.phone,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(10),
           ],
-          style: const TextStyle(
-            color: Color(0xFFF5F5F5),
-            fontSize: 15,
+          style: TextStyle(
+            color: const Color(0xFFF5F5F5),
+            fontSize: fontSize,
             fontWeight: FontWeight.w500,
             fontFamily: 'Inter',
           ),
           decoration: InputDecoration(
             prefixIcon: Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 8.0),
+              padding: EdgeInsets.only(left: prefixPadding, right: 8.0),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   SvgPicture.asset(
                     'assets/svg/phFlag.svg',
-                    width: 22,
-                    height: 22,
+                    width: flagSize,
+                    height: flagSize,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     '+63',
                     style: TextStyle(
-                      color: Color(0xFFF5F5F5),
+                      color: const Color(0xFFF5F5F5),
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Inter',
-                      fontSize: 15,
+                      fontSize: fontSize,
                     ),
                   ),
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                     width: 1,
-                    height: 24,
+                    height: isSmallScreen ? 20 : 24,
                     color: Colors.white.withValues(alpha: 0.3),
                   ),
                 ],
               ),
             ),
             hintText: '9123456789',
-            hintStyle: const TextStyle(
-              fontSize: 15,
+            hintStyle: TextStyle(
+              fontSize: fontSize,
               fontFamily: 'Inter',
               fontWeight: FontWeight.w400,
-              color: Color(0xFF999999),
+              color: const Color(0xFF999999),
             ),
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.12),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding, vertical: verticalPadding),
             enabledBorder: OutlineInputBorder(
               borderSide: BorderSide(
                 color: Colors.white.withValues(alpha: 0.3),
@@ -354,19 +395,24 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Container buildTermsCheckbox() {
+  Container buildTermsCheckbox(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.025 : 0.03;
+    final fontSize = isSmallScreen ? 12.0 : 13.0;
+    final scale = isSmallScreen ? 1.0 : 1.15;
+    final topPadding = isSmallScreen ? 8.0 : 12.0;
+
     return Container(
       alignment: Alignment.centerLeft,
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Transform.scale(
-            scale: 1.15,
+            scale: scale,
             child: Checkbox(
               value: isChecked,
               checkColor: Colors.white,
-              activeColor: Color(0xFF00CC58),
+              activeColor: const Color(0xFF00CC58),
               side: BorderSide(
                 color: Colors.white.withValues(alpha: 0.5),
                 width: 1.5,
@@ -384,14 +430,14 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           const SizedBox(width: 4),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(top: 12.0),
+              padding: EdgeInsets.only(top: topPadding),
               child: RichText(
                 text: TextSpan(
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: TextStyle(
+                    fontSize: fontSize,
                     height: 1.4,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFFE0E0E0),
+                    color: const Color(0xFFE0E0E0),
                     fontFamily: 'Inter',
                   ),
                   children: [
@@ -438,16 +484,21 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
     );
   }
 
-  Container buildCreateAccountButton() {
+  Container buildCreateAccountButton(bool isSmallScreen) {
+    final margin = isSmallScreen ? 0.025 : 0.03;
+    final buttonHeight = isSmallScreen ? 50.0 : 56.0;
+    final fontSize = isSmallScreen ? 15.0 : 17.0;
+    final minWidth = isSmallScreen ? 320.0 : 360.0;
+
     return Container(
-      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.03),
+      margin: EdgeInsets.only(top: MediaQuery.of(context).size.height * margin),
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isLoading ? null : () => handleSignUp(),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00CC58),
           foregroundColor: Colors.white,
-          minimumSize: const Size(360, 56),
+          minimumSize: Size(minWidth, buttonHeight),
           elevation: 0,
           shadowColor: Colors.black.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
@@ -455,20 +506,20 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
           ),
         ),
         child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
+            ? SizedBox(
+                width: isSmallScreen ? 20 : 22,
+                height: isSmallScreen ? 20 : 22,
+                child: const CircularProgressIndicator(
                   color: Colors.white,
                   strokeWidth: 2.5,
                 ),
               )
-            : const Text(
+            : Text(
                 'Create Account',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
-                  fontSize: 17,
+                  fontSize: fontSize,
                   letterSpacing: 0.5,
                 ),
               ),
