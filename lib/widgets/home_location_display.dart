@@ -293,6 +293,7 @@ class HomeLocationDisplay extends StatelessWidget {
           style: TextStyle(
             fontSize: isSmallScreen ? 14 : 16,
             fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFFF5F5F5)
                 : const Color(0xFF121212),
@@ -305,6 +306,7 @@ class HomeLocationDisplay extends StatelessWidget {
             style: TextStyle(
               fontSize: isSmallScreen ? 10 : 12,
               fontWeight: FontWeight.w500,
+              fontFamily: 'Inter',
               color: Theme.of(context).brightness == Brightness.dark
                   ? const Color(0xFFAAAAAA)
                   : const Color(0xFF515151),

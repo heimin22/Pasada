@@ -398,7 +398,13 @@ class _RouteSelectionState extends State<RouteSelection> {
         onPressed: () =>
             showTrafficInsightsSheet(context, _routes, _filteredRoutes),
         icon: const Icon(Icons.traffic),
-        label: const Text('Traffic'),
+        label: const Text(
+          'Traffic',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor:
             isDarkMode ? const Color(0xFFFFCE21) : const Color(0xFF067837),
         foregroundColor:
@@ -432,6 +438,7 @@ class _RouteSelectionState extends State<RouteSelection> {
           color: isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           fontSize: 18,
           fontWeight: FontWeight.w600,
+          fontFamily: 'Inter',
         ),
       ),
       actions: [
