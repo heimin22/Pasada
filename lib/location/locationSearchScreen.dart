@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,7 +7,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
-import 'package:pasada_passenger_app/location/placeAutocompleteResponse.dart';
 import 'package:pasada_passenger_app/location/recentSearch.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
@@ -19,6 +17,11 @@ import 'package:pasada_passenger_app/services/recentSearchService.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
+import 'helpers/distance_helper.dart';
+import 'helpers/location_validation_helper.dart';
+import 'helpers/search_helper.dart';
+import 'helpers/sorting_helper.dart';
+import 'helpers/ui_components_helper.dart';
 import 'locationListTile.dart';
 
 class SearchLocationScreen extends StatefulWidget {
@@ -52,18 +55,22 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   List<Stop> allowedStops = [];
   List<Stop> _filteredStops = [];
   HomeScreenPageState? homeScreenState;
-  Timer? _debounce;
   bool isLoading = false;
   HomeScreenPageState? homeScreenPageState;
   LatLng? currentLocation;
   StopsService _stopsService = StopsService();
-  String _selectedFilter = 'all';
-  final List<String> _filterOptions = ['all', 'nearby'];
+
+  // Helper classes
+  final DistanceHelper _distanceHelper = DistanceHelper();
+  final SortingHelper _sortingHelper = SortingHelper();
+  final UIComponentsHelper _uiComponentsHelper = UIComponentsHelper();
+  final LocationValidationHelper _validationHelper = LocationValidationHelper();
+  final SearchHelper _searchHelper = SearchHelper();
 
   @override
   void initState() {
     super.initState();
-    searchController.addListener(onSearchChanged);
+    _searchHelper.initializeSearch(searchController, onSearchChanged);
     _stopsService = StopsService();
 
     // Initialize location service
@@ -76,18 +83,17 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   // Helper method to check if a location is already selected
   bool _isLocationAlreadySelected(LatLng coordinates) {
-    // Get the already selected location (the opposite of what we're currently selecting)
-    SelectedLocation? alreadySelected = widget.isPickup
-        ? widget.selectedDropOffLocation
-        : widget.selectedPickUpLocation;
+    return _validationHelper.isLocationAlreadySelected(
+      coordinates,
+      widget.isPickup,
+      widget.selectedPickUpLocation,
+      widget.selectedDropOffLocation,
+    );
+  }
 
-    if (alreadySelected == null) return false;
-
-    // Check if coordinates are within 50 meters of the already selected location
-    const double thresholdMeters = 50.0;
-    final distance =
-        calculateDistance(coordinates, alreadySelected.coordinates);
-    return distance < thresholdMeters;
+  // Clear distance cache when location changes
+  void _clearDistanceCache() {
+    _distanceHelper.clearCache();
   }
 
   Future<void> loadStops() async {
@@ -172,8 +178,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             const double exclusionRadiusMeters = 100.0;
 
             searches = searches.where((recent) {
-              final distance =
-                  calculateDistance(recent.coordinates, lastStop!.coordinates);
+              final distance = _distanceHelper.calculateDistance(
+                  recent.coordinates, lastStop!.coordinates);
               return distance > exclusionRadiusMeters;
             }).toList();
           }
@@ -208,6 +214,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     searches = searches
         .where((search) => !_isLocationAlreadySelected(search.coordinates))
         .toList();
+
+    // Sort recent searches by distance if current location is available
+    searches =
+        _sortingHelper.sortRecentSearchesByDistance(searches, currentLocation);
 
     if (mounted) {
       setState(() {
@@ -437,45 +447,27 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _searchHelper.dispose();
     searchController.dispose();
     super.dispose();
   }
 
   void onSearchChanged() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    setState(() => isLoading = true);
-
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (searchController.text.isEmpty) {
-        setState(() {
-          placePredictions = [];
-          _filteredStops = allowedStops;
-          isLoading = false;
-        });
-        return;
-      }
-
-      // If we have stops, search them first
-      if (allowedStops.isNotEmpty) {
-        searchAllowedStops(searchController.text);
-      } else {
-        placeAutocomplete(searchController.text);
-      }
-    });
+    _searchHelper.onSearchChanged(
+      searchController,
+      () => setState(() => isLoading = true),
+      (query) => searchAllowedStops(query),
+      (query) => placeAutocomplete(query),
+    );
   }
 
   Future<void> searchAllowedStops(String query) async {
     try {
-      // Filter stops locally since we can't modify the database
-      final filteredStops = allowedStops.where((stop) {
-        final matchesQuery =
-            stop.name.toLowerCase().contains(query.toLowerCase()) ||
-                stop.address.toLowerCase().contains(query.toLowerCase());
-        final notAlreadySelected =
-            !_isLocationAlreadySelected(stop.coordinates);
-        return matchesQuery && notAlreadySelected;
-      }).toList();
+      final filteredStops = await _searchHelper.searchAllowedStops(
+        query,
+        allowedStops,
+        _isLocationAlreadySelected,
+      );
 
       if (filteredStops.isNotEmpty) {
         setState(() {
@@ -501,34 +493,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       return;
     }
 
-    final String apiKey = dotenv.env["ANDROID_MAPS_API_KEY"] ?? '';
-    if (apiKey.isEmpty) {
-      setState(() => isLoading = false);
-      return;
-    }
-
-    Uri uri = Uri.https(
-      "maps.googleapis.com",
-      "maps/api/place/autocomplete/json",
-      {
-        "input": query,
-        "key": apiKey,
-        "components": "country:PH",
-      },
-    );
-
     try {
-      final response = await NetworkUtility.fetchUrl(uri);
-      if (response != null) {
-        final result =
-            PlaceAutocompleteResponse.parseAutocompleteResult(response);
-        setState(() {
-          placePredictions = result.prediction ?? [];
-          isLoading = false;
-        });
-      } else {
-        setState(() => isLoading = false);
-      }
+      final predictions = await _searchHelper.placeAutocomplete(query);
+      setState(() {
+        placePredictions = predictions;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() => isLoading = false);
     }
@@ -670,91 +640,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   }
 
   Future<bool> checkPickupDistance(LatLng pickupLocation) async {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    if (currentLocation == null) return true;
-
-    final selectedLoc = SelectedLocation("", pickupLocation);
-    final distance = selectedLoc.distanceFrom(currentLocation!);
-
-    if (distance > 1.0) {
-      final bool? proceed = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) => ResponsiveDialog(
-          title: 'Distance Warning',
-          contentPadding:
-              EdgeInsets.all(MediaQuery.of(context).size.width * 0.05),
-          content: Text(
-            'The selected pick-up location is quite far from your current location',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Inter',
-              fontSize: 13,
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-            ),
-          ),
-          actionsAlignment: MainAxisAlignment.spaceEvenly,
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: BorderSide(
-                    color: const Color(0xFFD7481D),
-                    width: 3,
-                  ),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 40),
-                backgroundColor: Colors.transparent,
-                foregroundColor: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                minimumSize: const Size(150, 40),
-                backgroundColor: const Color(0xFFD7481D),
-                foregroundColor: const Color(0xFFF5F5F5),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                'Continue',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontFamily: 'Inter',
-                  fontSize: 15,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-      return proceed ?? false;
-    }
-    return true;
+    return _validationHelper.checkPickupDistance(
+        pickupLocation, currentLocation, context);
   }
 
   Future<void> _initializeLocation() async {
@@ -768,6 +655,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
             locationData.longitude!,
           );
         });
+        // Clear distance cache when location changes
+        _clearDistanceCache();
+        // Refresh sorting to update distances
+        _refreshSorting();
       }
     } catch (e) {
       debugPrint("Error getting current location: $e");
@@ -1026,7 +917,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               const SizedBox(height: 12),
                               // Recent searches list with improved styling
                               ...recentSearches.take(5).map((search) =>
-                                  _buildRecentSearchTile(search, isDarkMode)),
+                                  _uiComponentsHelper.buildRecentSearchTile(
+                                    search,
+                                    isDarkMode,
+                                    currentLocation,
+                                    () => onRecentSearchSelected(search),
+                                  )),
                               if (recentSearches.length > 5) ...[
                                 const SizedBox(height: 8),
                                 Center(
@@ -1078,48 +974,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                 ),
                                 onSelected: (String value) {
                                   setState(() {
-                                    switch (value) {
-                                      case 'name':
-                                        allowedStops.sort(
-                                            (a, b) => a.name.compareTo(b.name));
-                                        break;
-                                      case 'order':
-                                        allowedStops.sort((a, b) =>
-                                            a.order.compareTo(b.order));
-                                        break;
-                                      case 'distance':
-                                        // Sort by distance from current location if available
-                                        if (currentLocation != null) {
-                                          allowedStops.sort((a, b) {
-                                            final distanceA = calculateDistance(
-                                                currentLocation!,
-                                                a.coordinates);
-                                            final distanceB = calculateDistance(
-                                                currentLocation!,
-                                                b.coordinates);
-                                            return distanceA
-                                                .compareTo(distanceB);
-                                          });
-                                        }
-                                        break;
-                                    }
+                                    _sortingHelper.setSortOption(value);
                                   });
                                 },
-                                itemBuilder: (BuildContext context) => [
-                                  const PopupMenuItem<String>(
-                                    value: 'order',
-                                    child: Text('Sort by Route Order'),
-                                  ),
-                                  const PopupMenuItem<String>(
-                                    value: 'name',
-                                    child: Text('Sort by Name'),
-                                  ),
-                                  if (currentLocation != null)
-                                    const PopupMenuItem<String>(
-                                      value: 'distance',
-                                      child: Text('Sort by Distance'),
-                                    ),
-                                ],
+                                itemBuilder: (BuildContext context) =>
+                                    _uiComponentsHelper.buildSortMenuItems(
+                                        _sortingHelper.currentSortOption),
                               ),
                             ],
                           ),
@@ -1131,10 +991,13 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
-                              itemCount: _filterOptions.length,
+                              itemCount:
+                                  _sortingHelper.getFilterOptions().length,
                               itemBuilder: (context, index) {
-                                final filter = _filterOptions[index];
-                                final isSelected = _selectedFilter == filter;
+                                final filter =
+                                    _sortingHelper.getFilterOptions()[index];
+                                final isSelected =
+                                    _sortingHelper.selectedFilter == filter;
                                 return Padding(
                                   padding: const EdgeInsets.only(right: 8),
                                   child: FilterChip(
@@ -1142,7 +1005,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                     selected: isSelected,
                                     onSelected: (selected) {
                                       setState(() {
-                                        _selectedFilter = filter;
+                                        _sortingHelper.setFilter(filter);
                                         _applyFilter();
                                       });
                                     },
@@ -1169,10 +1032,20 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                         ],
                         // Show stops with improved layout and lazy loading
                         if (_getFilteredStops().length > 20)
-                          _buildLazyStopList(_getFilteredStops(), isDarkMode)
+                          _uiComponentsHelper.buildLazyStopList(
+                            _getFilteredStops(),
+                            isDarkMode,
+                            currentLocation,
+                            onStopSelected,
+                          )
                         else
                           ..._getFilteredStops()
-                              .map((stop) => _buildStopTile(stop, isDarkMode)),
+                              .map((stop) => _uiComponentsHelper.buildStopTile(
+                                    stop,
+                                    isDarkMode,
+                                    currentLocation,
+                                    () => onStopSelected(stop),
+                                  )),
                       ]
                       // Show filtered stops if searching
                       else if (searchController.text.isNotEmpty &&
@@ -1273,132 +1146,19 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     return null;
   }
 
-  // Add this method to check if a point is close to the polyline
-  bool isPointNearPolyline(LatLng point, double threshold) {
-    if (widget.routePolyline == null || widget.routePolyline!.isEmpty) {
-      return true; // If no polyline, allow all points
-    }
-
-    // Find the minimum distance from the point to any segment of the polyline
-    double minDistance = double.infinity;
-
-    for (int i = 0; i < widget.routePolyline!.length - 1; i++) {
-      final LatLng start = widget.routePolyline![i];
-      final LatLng end = widget.routePolyline![i + 1];
-
-      // Calculate distance from point to line segment
-      final double distance = distanceToLineSegment(point, start, end);
-      if (distance < minDistance) {
-        minDistance = distance;
-      }
-
-      // Early exit if we found a close enough point
-      if (minDistance <= threshold) {
-        return true;
-      }
-    }
-
-    return minDistance <= threshold;
-  }
-
-  // Helper method to calculate distance from point to line segment
-  double distanceToLineSegment(LatLng p, LatLng v, LatLng w) {
-    // Calculate squared length of line segment
-    final double l2 = calculateSquaredDistance(v, w);
-    if (l2 == 0.0) return calculateDistance(p, v); // v == w case
-
-    final double t = max(0, min(1, dotProduct(p, v, w) / l2));
-    final LatLng projection = LatLng(
-      v.latitude + t * (w.latitude - v.latitude),
-      v.longitude + t * (w.longitude - v.longitude),
-    );
-
-    return calculateDistance(p, projection);
-  }
-
-  // Calculate squared distance between two points
-  double calculateSquaredDistance(LatLng p1, LatLng p2) {
-    final double dx = p1.latitude - p2.latitude;
-    final double dy = p1.longitude - p2.longitude;
-    return dx * dx + dy * dy;
-  }
-
-  // Calculate actual distance between two points in meters
-  double calculateDistance(LatLng p1, LatLng p2) {
-    // Using the Haversine formula to calculate distance
-    const double earthRadius = 6371000; // Earth radius in meters
-    final double lat1 = p1.latitude * pi / 180;
-    final double lat2 = p2.latitude * pi / 180;
-    final double dLat = (p2.latitude - p1.latitude) * pi / 180;
-    final double dLon = (p2.longitude - p1.longitude) * pi / 180;
-
-    final double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return earthRadius * c;
-  }
-
-  // Calculate dot product for projection calculation
-  double dotProduct(LatLng p, LatLng v, LatLng w) {
-    return (p.latitude - v.latitude) * (w.latitude - v.latitude) +
-        (p.longitude - v.longitude) * (w.longitude - v.longitude);
-  }
-
   // Helper method to check if selected location is too close to the final stop
   Future<bool> isLocationNearFinalStop(LatLng location) async {
-    if (widget.routeID == null) return false;
-
-    try {
-      // Get all stops for the route
-      final stops = await _stopsService.getStopsForRoute(widget.routeID!);
-
-      // Find the stop with the highest order (the final stop)
-      Stop? finalStop;
-      int highestOrder = -1;
-
-      for (var stop in stops) {
-        if (stop.order > highestOrder) {
-          highestOrder = stop.order;
-          finalStop = stop;
-        }
-      }
-
-      if (finalStop == null) return false;
-
-      // Check if the location is within X meters of the final stop (using 300m as threshold)
-      final distance = calculateDistance(location, finalStop.coordinates);
-
-      return distance < 300; // Return true if within 300 meters of final stop
-    } catch (e) {
-      debugPrint('Error checking distance to final stop: $e');
-      return false;
-    }
+    return _validationHelper.isLocationNearFinalStop(location, widget.routeID);
   }
 
   // Helper methods for filtering
   String _getFilterLabel(String filter) {
-    switch (filter) {
-      case 'all':
-        return 'All Stops';
-      case 'nearby':
-        return 'Nearby';
-      default:
-        return 'All';
-    }
+    return _sortingHelper.getFilterLabel(filter);
   }
 
   List<Stop> _getFilteredStops() {
-    switch (_selectedFilter) {
-      case 'nearby':
-        if (currentLocation == null) return allowedStops;
-        return allowedStops.where((stop) {
-          final distance =
-              calculateDistance(currentLocation!, stop.coordinates);
-          return distance <= 2000; // Within 2km
-        }).toList();
-      default:
-        return allowedStops;
-    }
+    return _sortingHelper.getFilteredAndSortedStops(
+        allowedStops, currentLocation);
   }
 
   void _applyFilter() {
@@ -1407,183 +1167,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     });
   }
 
-  // Build lazy loading list for performance with large datasets
-  Widget _buildLazyStopList(List<Stop> stops, bool isDarkMode) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: stops.length,
-      itemBuilder: (context, index) {
-        return _buildStopTile(stops[index], isDarkMode);
-      },
-    );
-  }
-
-  // Build improved recent search tile
-  Widget _buildRecentSearchTile(RecentSearch search, bool isDarkMode) {
-    final distance = currentLocation != null
-        ? calculateDistance(currentLocation!, search.coordinates)
-        : null;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF121212) : const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isDarkMode ? const Color(0xFF333333) : const Color(0xFFE0E0E0),
-          width: 1,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: const Color(0xFF00CC58).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Icon(
-            Icons.history,
-            size: 16,
-            color: Color(0xFF00CC58),
-          ),
-        ),
-        title: Text(
-          search.address,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color:
-                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: distance != null
-            ? Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 12,
-                    color: const Color(0xFF00CC58),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${(distance / 1000).toStringAsFixed(1)} km away',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      color: Color(0xFF00CC58),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              )
-            : null,
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 14,
-          color: isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-        ),
-        onTap: () => onRecentSearchSelected(search),
-      ),
-    );
-  }
-
-  // Build improved stop tile with more information
-  Widget _buildStopTile(Stop stop, bool isDarkMode) {
-    final distance = currentLocation != null
-        ? calculateDistance(currentLocation!, stop.coordinates)
-        : null;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDarkMode ? const Color(0xFF333333) : const Color(0xFFE0E0E0),
-          width: 1,
-        ),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF00CC58).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Center(
-            child: Text(
-              '${stop.order}',
-              style: const TextStyle(
-                color: Color(0xFF00CC58),
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          stop.name,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color:
-                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              stop.address,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: isDarkMode
-                    ? const Color(0xFFAAAAAA)
-                    : const Color(0xFF666666),
-              ),
-            ),
-            if (distance != null) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(
-                    Icons.location_on,
-                    size: 14,
-                    color: const Color(0xFF00CC58),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${(distance / 1000).toStringAsFixed(1)} km away',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: Color(0xFF00CC58),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-        trailing: Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-        ),
-        onTap: () => onStopSelected(stop),
-      ),
-    );
+  // Refresh sorting when location changes
+  void _refreshSorting() {
+    if (mounted) {
+      setState(() {
+        // This will trigger a rebuild with updated distances
+      });
+    }
   }
 }
