@@ -289,13 +289,12 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (segment.isNotEmpty) {
-          // Use polyline state manager for consistent rendering
-          _polylineStateManager.updatePolyline(
+          // Use stable state manager for consistent rendering
+          _stableStateManager.updatePolyline(
             const PolylineId('route'),
             segment,
             color: const Color(0xFFFFCE21),
             width: 4,
-            animate: true,
           );
 
           // Zoom camera to the segment bounds
@@ -312,13 +311,12 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          // Use polyline state manager for consistent rendering
-          _polylineStateManager.updatePolyline(
+          // Use stable state manager for consistent rendering
+          _stableStateManager.updatePolyline(
             const PolylineId('route'),
             route,
             color: const Color.fromARGB(255, 4, 197, 88),
             width: 4,
-            animate: true,
           );
 
           await _cameraManager.moveCameraToRoute(
@@ -394,12 +392,11 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          _polylineStateManager.updatePolyline(
+          _stableStateManager.updatePolyline(
             const PolylineId('route'),
             route,
             color: const Color(0xFFFFCE21),
             width: 4,
-            animate: true,
           );
         }
       } else {
@@ -410,12 +407,11 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          _polylineStateManager.updatePolyline(
+          _stableStateManager.updatePolyline(
             const PolylineId('route'),
             route,
             color: const Color.fromARGB(255, 4, 197, 88),
             width: 4,
-            animate: true,
           );
         }
       }
@@ -443,6 +439,13 @@ class MapScreenState extends State<MapScreen>
   Future<void> _renderRouteBetween(LatLng start, LatLng destination) async {
     final route = await _routeManager.renderRouteBetween(start, destination);
     if (route.isNotEmpty) {
+      // Update polyline in stable state manager
+      _stableStateManager.updatePolyline(
+        const PolylineId('route'),
+        route,
+        color: const Color.fromARGB(255, 4, 197, 88),
+        width: 4,
+      );
       await _cameraManager.moveCameraToRoute(route, start, destination);
     }
   }
