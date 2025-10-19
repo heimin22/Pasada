@@ -7,10 +7,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/utils/map_camera_manager.dart';
 import 'package:pasada_passenger_app/utils/map_dialog_manager.dart';
+import 'package:pasada_passenger_app/utils/map_directional_bus_manager.dart';
+import 'package:pasada_passenger_app/utils/map_driver_animation_manager.dart';
 import 'package:pasada_passenger_app/utils/map_driver_tracker.dart';
 import 'package:pasada_passenger_app/utils/map_location_manager.dart';
 import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
+import 'package:pasada_passenger_app/utils/map_polyline_state_manager.dart';
 import 'package:pasada_passenger_app/utils/map_route_manager.dart';
+import 'package:pasada_passenger_app/utils/map_stable_state_manager.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 class MapScreen extends StatefulWidget {
@@ -55,6 +59,10 @@ class MapScreenState extends State<MapScreen>
   late MapMarkerManager _markerManager;
   late MapDialogManager _dialogManager;
   late MapDriverTracker _driverTracker;
+  late MapPolylineStateManager _polylineStateManager;
+  late MapDriverAnimationManager _driverAnimationManager;
+  late MapDirectionalBusManager _directionalBusManager;
+  late MapStableStateManager _stableStateManager;
 
   // State variables
   LatLng? selectedPickupLatLng;
@@ -133,14 +141,49 @@ class MapScreenState extends State<MapScreen>
     // Initialize dialog manager
     _dialogManager = MapDialogManager(context);
 
+    // Initialize polyline state manager
+    _polylineStateManager = MapPolylineStateManager(
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
+    // Initialize driver animation manager
+    _driverAnimationManager = MapDriverAnimationManager(
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
+    // Initialize directional bus manager
+    _directionalBusManager = MapDirectionalBusManager(
+      onStateChanged: () {
+        debugPrint(
+            'MapScreen: Directional bus manager state changed, triggering rebuild');
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
+    // Initialize stable state manager
+    _stableStateManager = MapStableStateManager(
+      onStateChanged: () {
+        // Don't call setState - use ValueListenableBuilder instead
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
     // Initialize driver tracker
     _driverTracker = MapDriverTracker(
       onDriverRouteUpdated: (driverLocation, route) {
-        _routeManager.animateRouteDrawing(
+        // Use stable state manager to prevent flickering
+        _stableStateManager.updatePolyline(
           const PolylineId('driver_route_live'),
           route,
-          const Color.fromARGB(255, 10, 179, 83),
-          4,
+          color: const Color.fromARGB(255, 10, 179, 83),
+          width: 4,
         );
       },
       onError: (error) => _dialogManager.showError(error),
@@ -151,6 +194,26 @@ class MapScreenState extends State<MapScreen>
   Future<void> _initializeMapComponents() async {
     // Initialize marker icons
     await _markerManager.initializeIcons();
+
+    // Initialize driver animation manager
+    await _driverAnimationManager.initializeBusIcon();
+
+    // Initialize directional bus manager
+    await _directionalBusManager.initializeBusIcons();
+
+    // Test: Create a marker at a default location to verify icons are working
+    if (currentLocation != null) {
+      debugPrint(
+          'MapScreen: Testing directional bus marker creation at current location');
+      _directionalBusManager.updateDriverPosition(currentLocation!,
+          rideStatus: 'test');
+    }
+
+    // Remove any existing driver markers from stable state manager
+    _stableStateManager.removeDriverMarker();
+
+    // Remove any existing driver markers from marker manager
+    _markerManager.removeDriverMarker();
 
     // Initialize camera manager with map controller
     _cameraManager.initialize(mapController);
@@ -179,6 +242,10 @@ class MapScreenState extends State<MapScreen>
     _routeManager.dispose();
     _markerManager.dispose();
     _driverTracker.dispose();
+    _polylineStateManager.dispose();
+    _driverAnimationManager.dispose();
+    _directionalBusManager.dispose();
+    _stableStateManager.dispose();
     super.dispose();
   }
 
@@ -229,6 +296,15 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (segment.isNotEmpty) {
+          // Use polyline state manager for consistent rendering
+          _polylineStateManager.updatePolyline(
+            const PolylineId('route'),
+            segment,
+            color: const Color(0xFFFFCE21),
+            width: 4,
+            animate: true,
+          );
+
           // Zoom camera to the segment bounds
           await _cameraManager.moveCameraToRoute(
             segment,
@@ -244,6 +320,15 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
+          // Use polyline state manager for consistent rendering
+          _polylineStateManager.updatePolyline(
+            const PolylineId('route'),
+            route,
+            color: const Color.fromARGB(255, 4, 197, 88),
+            width: 4,
+            animate: true,
+          );
+
           await _cameraManager.moveCameraToRoute(
             route,
             widget.pickUpLocation!,
@@ -317,12 +402,32 @@ class MapScreenState extends State<MapScreen>
           selectedDropOffLatLng!,
           widget.routePolyline!,
         );
+
+        if (route.isNotEmpty) {
+          _polylineStateManager.updatePolyline(
+            const PolylineId('route'),
+            route,
+            color: const Color(0xFFFFCE21),
+            width: 4,
+            animate: true,
+          );
+        }
       } else {
         // Direct route fallback
         route = await _routeManager.renderRouteBetween(
           selectedPickupLatLng!,
           selectedDropOffLatLng!,
         );
+
+        if (route.isNotEmpty) {
+          _polylineStateManager.updatePolyline(
+            const PolylineId('route'),
+            route,
+            color: const Color.fromARGB(255, 4, 197, 88),
+            width: 4,
+            animate: true,
+          );
+        }
       }
 
       if (route.isNotEmpty) {
@@ -373,26 +478,40 @@ class MapScreenState extends State<MapScreen>
   }
 
   // Update driver marker and draw road-following polyline to pickup/dropoff
-  Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
+  Future<void> updateDriverLocation(LatLng location, String rideStatus,
+      {double? heading}) async {
     if (!mounted) return;
 
-    // Update driver marker
-    setState(() {
-      driverLocation = location;
-      _markerManager.updateDriverMarker(location);
+    // Update driver location using stable state manager (prevents flickering)
+    _stableStateManager.updateDriverLocation(location, rideStatus);
+
+    // Remove any existing driver markers from stable state manager
+    _stableStateManager.removeDriverMarker();
+
+    // Remove any existing driver markers from marker manager
+    _markerManager.removeDriverMarker();
+
+    // Update directional bus marker with heading
+    debugPrint(
+        'MapScreen: Calling directional bus manager with location: $location, heading: $heading, rideStatus: $rideStatus');
+    _directionalBusManager.updateDriverPosition(location,
+        heading: heading, rideStatus: rideStatus);
+
+    // Update local state for other components
+    driverLocation = location;
+
+    // Handle status-specific UI changes
+    if (rideStatus == 'accepted') {
+      _markerManager.removeMarker('route_destination');
+      showRouteEndIndicator = false;
 
       // Remove any existing pickup->dropoff polylines
       _routeManager.removePolyline(const PolylineId('route'));
       _routeManager.removePolyline(const PolylineId('route_path'));
-
-      // When accepted, remove end-of-route pin and indicator
-      if (rideStatus == 'accepted') {
-        _markerManager.removeMarker('route_destination');
-        showRouteEndIndicator = false;
-      }
-    });
+    }
 
     // Use driver tracker to handle route generation and caching
+    // This will update polylines through the stable state manager
     await _driverTracker.updateDriverLocation(
       location,
       rideStatus,
@@ -405,11 +524,27 @@ class MapScreenState extends State<MapScreen>
   // Driver route generation is handled by RideService; remove inline implementation.
 
   Set<Marker> buildMarkers() {
-    return _markerManager.buildMarkers(
+    final markers = _markerManager.buildMarkers(
       pickupLocation: widget.pickUpLocation,
       dropoffLocation: widget.dropOffLocation,
-      driverLocation: driverLocation,
+      driverLocation: null, // Don't use regular driver marker
     );
+
+    // Add directional bus marker if available
+    final busMarker = _directionalBusManager.driverMarker;
+    debugPrint('MapScreen: buildMarkers - busMarker: $busMarker');
+    if (busMarker != null) {
+      markers.add(busMarker);
+      debugPrint('MapScreen: Added directional bus marker to markers set');
+    } else {
+      debugPrint('MapScreen: No directional bus marker available');
+    }
+
+    // Add markers from stable state manager
+    markers.addAll(_stableStateManager.markers);
+    debugPrint('MapScreen: Total markers count: ${markers.length}');
+
+    return markers;
   }
 
   // Public interface methods for external access
@@ -468,13 +603,33 @@ class MapScreenState extends State<MapScreen>
       body: RepaintBoundary(
         child: Stack(
           children: [
-            GoogleMap(
-              onMapCreated: (controller) {
-                _mapController = controller;
-                mapController.complete(controller);
-              },
-              style: isDarkMode
-                  ? '''[
+            ValueListenableBuilder<Set<Polyline>>(
+              valueListenable: _stableStateManager.polylinesNotifier,
+              builder: (context, polylines, child) {
+                return ValueListenableBuilder<Set<Marker>>(
+                  valueListenable: _stableStateManager.markersNotifier,
+                  builder: (context, stableMarkers, child) {
+                    // Combine regular markers with stable markers
+                    final allMarkers = <Marker>{};
+                    allMarkers.addAll(_markerManager.buildMarkers(
+                      pickupLocation: widget.pickUpLocation,
+                      dropoffLocation: widget.dropOffLocation,
+                      driverLocation: null, // Don't use regular driver marker
+                    ));
+                    allMarkers.addAll(stableMarkers);
+
+                    // Add directional bus marker if available
+                    final busMarker = _directionalBusManager.driverMarker;
+                    if (busMarker != null) {
+                      allMarkers.add(busMarker);
+                    }
+                    return GoogleMap(
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                        mapController.complete(controller);
+                      },
+                      style: isDarkMode
+                          ? '''[
         {
           "elementType": "geometry",
           "stylers": [{"color": "#1f2c4d"}]
@@ -558,26 +713,31 @@ class MapScreenState extends State<MapScreen>
           "stylers": [{"color": "#17263c"}]
         }
       ]'''
-                  : '',
-              initialCameraPosition: CameraPosition(
-                target: currentLocation ?? const LatLng(14.5995, 120.9842),
-                zoom: currentLocation != null ? 15.0 : 10.0,
-              ),
-              markers: buildMarkers(),
-              polylines: _routeManager.allPolylines,
-              padding: EdgeInsets.only(
-                bottom: screenHeight * widget.bottomPadding,
-                left: screenWidth * 0.04,
-              ),
-              mapType: MapType.normal,
-              buildingsEnabled: false,
-              myLocationButtonEnabled: false,
-              indoorViewEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: true,
-              trafficEnabled: false,
-              rotateGesturesEnabled: true,
-              myLocationEnabled: currentLocation != null,
+                          : '',
+                      initialCameraPosition: CameraPosition(
+                        target:
+                            currentLocation ?? const LatLng(14.5995, 120.9842),
+                        zoom: currentLocation != null ? 15.0 : 10.0,
+                      ),
+                      markers: allMarkers,
+                      polylines: polylines,
+                      padding: EdgeInsets.only(
+                        bottom: screenHeight * widget.bottomPadding,
+                        left: screenWidth * 0.04,
+                      ),
+                      mapType: MapType.normal,
+                      buildingsEnabled: false,
+                      myLocationButtonEnabled: false,
+                      indoorViewEnabled: false,
+                      zoomControlsEnabled: false,
+                      mapToolbarEnabled: true,
+                      trafficEnabled: false,
+                      rotateGesturesEnabled: true,
+                      myLocationEnabled: currentLocation != null,
+                    );
+                  },
+                );
+              },
             ),
             if (currentLocation == null)
               Positioned.fill(
@@ -630,7 +790,11 @@ class MapScreenState extends State<MapScreen>
       selectedPickupLatLng = null;
       selectedDropOffLatLng = null;
       _routeManager.clearAllPolylines();
+      _polylineStateManager.clearAllPolylines();
+      _stableStateManager.clearAll();
       _markerManager.clearAllMarkers();
+      _driverAnimationManager.dispose();
+      _directionalBusManager.dispose();
       fareAmount = 0.0;
       etaText = null;
     });

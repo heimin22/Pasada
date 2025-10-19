@@ -2,20 +2,21 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:pasada_passenger_app/services/landmarkService.dart';
-import 'package:pasada_passenger_app/location/locationButton.dart';
-import 'package:pasada_passenger_app/screens/mapScreen.dart';
-import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:pasada_passenger_app/network/networkUtilities.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:pasada_passenger_app/utils/memory_manager.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/location/locationButton.dart';
+import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
+import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/screens/mapScreen.dart';
+import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/services/landmarkService.dart';
+import 'package:pasada_passenger_app/utils/memory_manager.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 class PinLocationStateless extends StatelessWidget {
   const PinLocationStateless({super.key});
@@ -369,32 +370,8 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-          return AlertDialog(
-            contentPadding: const EdgeInsets.all(24),
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Distance Warning',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'Inter',
-                    fontSize: 24,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  height: 1,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? const Color(0xFFF5F5F5)
-                      : const Color(0xFF121212),
-                  width: double.infinity,
-                ),
-              ],
-            ),
+          return ResponsiveDialog(
+            title: 'Distance Warning',
             content: Text(
               'The selected ${widget.locationType == 'pickup' ? 'pick-up' : 'drop-off'} location is quite far from your current location. Do you want to continue?',
               style: TextStyle(
@@ -412,19 +389,15 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
-                    side: BorderSide(
-                      color: const Color(0xFFD7481D),
-                      width: 3,
-                    ),
+                    side: const BorderSide(color: Color(0xFFD7481D), width: 3),
                   ),
                   elevation: 0,
                   shadowColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
+                  minimumSize: const Size(150, 40),
                   backgroundColor: Colors.transparent,
-                  foregroundColor:
-                      Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFF5F5F5)
-                          : const Color(0xFF121212),
+                  foregroundColor: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
@@ -433,11 +406,10 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
-                    fontSize: 18,
+                    fontSize: 15,
                   ),
                 ),
               ),
-              const SizedBox(width: 13),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: ElevatedButton.styleFrom(
@@ -446,7 +418,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                   ),
                   elevation: 0,
                   shadowColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
+                  minimumSize: const Size(150, 40),
                   backgroundColor: const Color(0xFFD7481D),
                   foregroundColor: const Color(0xFFF5F5F5),
                   padding:
@@ -457,7 +429,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Inter',
-                    fontSize: 18,
+                    fontSize: 15,
                   ),
                 ),
               ),
