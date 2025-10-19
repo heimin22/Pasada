@@ -553,10 +553,9 @@ class BookingManager {
       }
 
       // Also support flat fields (as returned by get_driver_details_by_booking RPC)
-      if (_state.vehicleTotalCapacity == null &&
-          (driver.containsKey('passenger_capacity') ||
-              driver.containsKey('sitting_passenger') ||
-              driver.containsKey('standing_passenger'))) {
+      if (driver.containsKey('passenger_capacity') ||
+          driver.containsKey('sitting_passenger') ||
+          driver.containsKey('standing_passenger')) {
         _state.setState(() {
           _state.vehicleTotalCapacity = driver['passenger_capacity'] == null
               ? _state.vehicleTotalCapacity
