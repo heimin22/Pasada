@@ -99,7 +99,8 @@ class HomeBookingSheet extends StatelessWidget {
                   controller: scrollController,
                   // key includes capacity tick to ensure rebuilds when it changes
                   child: BookingStatusManager(
-                    key: ValueKey<String>(bookingStatus),
+                    key: ValueKey<String>(
+                        '${bookingStatus}_${capacityRefreshTick ?? 0}'),
                     pickupLocation: pickupLocation,
                     dropoffLocation: dropoffLocation,
                     paymentMethod: paymentMethod,
