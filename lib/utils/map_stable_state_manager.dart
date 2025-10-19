@@ -58,8 +58,8 @@ class MapStableStateManager {
     _lastDriverLocation = location;
     _lastRideStatus = rideStatus;
 
-    // Update driver marker
-    _updateDriverMarker(location);
+    // Don't update driver marker here - use directional bus manager instead
+    // _updateDriverMarker(location);
 
     // Notify changes
     _notifyChanges();
@@ -70,17 +70,6 @@ class MapStableStateManager {
     const double threshold = 0.0001; // ~10 meters
     return (loc1.latitude - loc2.latitude).abs() < threshold &&
         (loc1.longitude - loc2.longitude).abs() < threshold;
-  }
-
-  /// Update driver marker
-  void _updateDriverMarker(LatLng location) {
-    final driverMarkerId = MarkerId('driver');
-    _stableMarkers[driverMarkerId] = Marker(
-      markerId: driverMarkerId,
-      position: location,
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-    );
-    _markersChanged = true;
   }
 
   /// Update polyline with change detection
@@ -191,6 +180,17 @@ class MapStableStateManager {
       _stableMarkers.clear();
       _markersChanged = true;
       _notifyChanges();
+    }
+  }
+
+  /// Remove driver marker specifically
+  void removeDriverMarker() {
+    final driverMarkerId = MarkerId('driver');
+    if (_stableMarkers.containsKey(driverMarkerId)) {
+      _stableMarkers.remove(driverMarkerId);
+      _markersChanged = true;
+      _notifyChanges();
+      debugPrint('MapStableStateManager: Removed driver marker');
     }
   }
 

@@ -160,6 +160,8 @@ class MapScreenState extends State<MapScreen>
     // Initialize directional bus manager
     _directionalBusManager = MapDirectionalBusManager(
       onStateChanged: () {
+        debugPrint(
+            'MapScreen: Directional bus manager state changed, triggering rebuild');
         if (mounted) setState(() {});
       },
       onError: (error) => _dialogManager.showError(error),
@@ -198,6 +200,20 @@ class MapScreenState extends State<MapScreen>
 
     // Initialize directional bus manager
     await _directionalBusManager.initializeBusIcons();
+
+    // Test: Create a marker at a default location to verify icons are working
+    if (currentLocation != null) {
+      debugPrint(
+          'MapScreen: Testing directional bus marker creation at current location');
+      _directionalBusManager.updateDriverPosition(currentLocation!,
+          rideStatus: 'test');
+    }
+
+    // Remove any existing driver markers from stable state manager
+    _stableStateManager.removeDriverMarker();
+
+    // Remove any existing driver markers from marker manager
+    _markerManager.removeDriverMarker();
 
     // Initialize camera manager with map controller
     _cameraManager.initialize(mapController);
@@ -469,7 +485,15 @@ class MapScreenState extends State<MapScreen>
     // Update driver location using stable state manager (prevents flickering)
     _stableStateManager.updateDriverLocation(location, rideStatus);
 
+    // Remove any existing driver markers from stable state manager
+    _stableStateManager.removeDriverMarker();
+
+    // Remove any existing driver markers from marker manager
+    _markerManager.removeDriverMarker();
+
     // Update directional bus marker with heading
+    debugPrint(
+        'MapScreen: Calling directional bus manager with location: $location, heading: $heading, rideStatus: $rideStatus');
     _directionalBusManager.updateDriverPosition(location,
         heading: heading, rideStatus: rideStatus);
 
@@ -508,12 +532,17 @@ class MapScreenState extends State<MapScreen>
 
     // Add directional bus marker if available
     final busMarker = _directionalBusManager.driverMarker;
+    debugPrint('MapScreen: buildMarkers - busMarker: $busMarker');
     if (busMarker != null) {
       markers.add(busMarker);
+      debugPrint('MapScreen: Added directional bus marker to markers set');
+    } else {
+      debugPrint('MapScreen: No directional bus marker available');
     }
 
     // Add markers from stable state manager
     markers.addAll(_stableStateManager.markers);
+    debugPrint('MapScreen: Total markers count: ${markers.length}');
 
     return markers;
   }
@@ -589,6 +618,11 @@ class MapScreenState extends State<MapScreen>
                     ));
                     allMarkers.addAll(stableMarkers);
 
+                    // Add directional bus marker if available
+                    final busMarker = _directionalBusManager.driverMarker;
+                    if (busMarker != null) {
+                      allMarkers.add(busMarker);
+                    }
                     return GoogleMap(
                       onMapCreated: (controller) {
                         _mapController = controller;
