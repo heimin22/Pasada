@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 
 class BookingListItem extends StatelessWidget {
   final Map<String, dynamic> booking;
@@ -9,7 +10,8 @@ class BookingListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final createdAt = DateTime.parse(booking['created_at']);
+    final createdAt =
+        TimezoneUtils.parseToPhilippinesTime(booking['created_at']);
     final formattedDate = DateFormat('MMM d, yyyy').format(createdAt);
     final formattedTime = DateFormat('h:mm a').format(createdAt);
 

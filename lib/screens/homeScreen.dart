@@ -14,11 +14,13 @@ import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/calendar_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
+import 'package:pasada_passenger_app/services/error_logging_service.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/home_screen_init_service.dart';
 import 'package:pasada_passenger_app/services/location_weather_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
@@ -168,9 +170,6 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       // Save the route for persistence
       await RouteService.saveRoute(result);
 
-      debugPrint('Selected route:  ${result['route_name']}');
-      debugPrint('Route details: $result');
-
       // Make sure we have the route ID
       if (result['officialroute_id'] == null) {
         try {
@@ -184,10 +183,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             selectedRoute!['officialroute_id'] =
                 routeResponse['officialroute_id'];
           });
-          debugPrint(
-              'Retrieved route ID: ${selectedRoute!['officialroute_id']}');
         } catch (e) {
-          debugPrint('Error retrieving route ID: $e');
+          ExceptionHandler.handleDatabaseException(
+            e,
+            'HomeScreen.loadRoute',
+            userMessage: 'Failed to retrieve route ID',
+            showToast: false,
+          );
+          ErrorLoggingService.logError(
+            error: e.toString(),
+            context: 'HomeScreen.loadRoute',
+          );
         }
       }
 

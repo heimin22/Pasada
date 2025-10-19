@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/error_logging_service.dart';
+import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Centralized manager for location permissions and services to prevent multiple prompts
@@ -56,6 +58,16 @@ class LocationPermissionManager {
 
       return serviceEnabled;
     } catch (e) {
+      ExceptionHandler.handleLocationException(
+        e,
+        'LocationPermissionManager.ensureLocationServiceEnabled',
+        userMessage: 'Failed to enable location services',
+        showToast: false,
+      );
+      ErrorLoggingService.logLocationError(
+        error: e.toString(),
+        context: 'LocationPermissionManager.ensureLocationServiceEnabled',
+      );
       _lastServiceEnabledState = false;
       _lastServiceCheck = DateTime.now();
       return false;
@@ -95,6 +107,16 @@ class LocationPermissionManager {
 
       return status;
     } catch (e) {
+      ExceptionHandler.handlePermissionException(
+        e,
+        'LocationPermissionManager.ensureLocationPermissionGranted',
+        userMessage: 'Failed to request location permissions',
+        showToast: false,
+      );
+      ErrorLoggingService.logLocationError(
+        error: e.toString(),
+        context: 'LocationPermissionManager.ensureLocationPermissionGranted',
+      );
       _lastPermissionState = PermissionStatus.denied;
       _lastPermissionCheck = DateTime.now();
       return PermissionStatus.denied;

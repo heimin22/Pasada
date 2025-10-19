@@ -9,6 +9,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -90,7 +91,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
       if (response['created_at'] != null) {
         try {
           passed12h = DateTime.now()
-                  .difference(DateTime.parse(response['created_at'].toString()))
+                  .difference(TimezoneUtils.parseToPhilippinesTime(
+                      response['created_at'].toString()))
                   .inHours >
               12;
         } catch (_) {}
@@ -947,7 +949,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               ),
                               Text(
                                 bookingDetails['created_at'] != null
-                                    ? DateTime.parse(
+                                    ? TimezoneUtils.parseToPhilippinesTime(
                                             bookingDetails['created_at'])
                                         .toString()
                                         .substring(0, 16)

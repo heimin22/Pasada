@@ -21,8 +21,7 @@ class SlowInternetWarningBanner extends StatefulWidget {
       _SlowInternetWarningBannerState();
 }
 
-class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
-    with TickerProviderStateMixin {
+class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner> {
   final SlowInternetWarningService _warningService =
       SlowInternetWarningService();
 
@@ -31,44 +30,10 @@ class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
   ConnectionQuality _connectionQuality = ConnectionQuality.good;
   bool _isDismissed = false;
 
-  late AnimationController _slideController;
-  late AnimationController _pulseController;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _pulseAnimation;
-
   @override
   void initState() {
     super.initState();
-    _initializeAnimations();
     _initializeMonitoring();
-  }
-
-  void _initializeAnimations() {
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOut,
-    ));
-
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.1,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
   }
 
   void _initializeMonitoring() {
@@ -103,15 +68,8 @@ class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
   }
 
   void _updateBannerVisibility() {
-    if (!widget.showBanner || _isDismissed) return;
-
-    if (_isSlowConnection && _isOnline) {
-      _slideController.forward();
-      _pulseController.repeat(reverse: true);
-    } else {
-      _slideController.reverse();
-      _pulseController.stop();
-    }
+    // No animation needed - just update the state
+    setState(() {});
   }
 
   void _handleRetry() {
@@ -123,8 +81,6 @@ class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
     setState(() {
       _isDismissed = true;
     });
-    _slideController.reverse();
-    _pulseController.stop();
     widget.onDismiss?.call();
   }
 
@@ -180,18 +136,7 @@ class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
             top: 0,
             left: 0,
             right: 0,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: AnimatedBuilder(
-                animation: _pulseAnimation,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: _buildBanner(),
-                  );
-                },
-              ),
-            ),
+            child: _buildBanner(),
           ),
       ],
     );
@@ -287,8 +232,6 @@ class _SlowInternetWarningBannerState extends State<SlowInternetWarningBanner>
 
   @override
   void dispose() {
-    _slideController.dispose();
-    _pulseController.dispose();
     super.dispose();
   }
 }

@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/services/error_logging_service.dart';
 import 'package:pasada_passenger_app/services/location_permission_manager.dart';
+import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class MapLocationManager {
@@ -46,8 +47,6 @@ class MapLocationManager {
 
     // If both service and permission are already granted, skip all dialogs and proceed
     if (serviceEnabled && permissionStatus == PermissionStatus.granted) {
-      debugPrint(
-          'Location permissions already granted, skipping pre-prompt dialogs');
       await getLocationUpdates();
       isLocationInitialized = true;
       return;
@@ -57,8 +56,6 @@ class MapLocationManager {
     final hasBeenPrompted =
         await locationManager.hasUserBeenPromptedForLocation();
     if (hasBeenPrompted) {
-      debugPrint(
-          'User has already been prompted for location permissions, skipping pre-prompt dialogs');
       // Still try to get location updates even if previously prompted
       await getLocationUpdates();
       isLocationInitialized = true;
@@ -126,6 +123,16 @@ class MapLocationManager {
       // Start listening for location changes
       startLocationTracking();
     } catch (e) {
+      ExceptionHandler.handleLocationException(
+        e,
+        'MapLocationManager.getLocationUpdates',
+        userMessage: 'Failed to get location updates',
+        showToast: false,
+      );
+      ErrorLoggingService.logLocationError(
+        error: e.toString(),
+        context: 'MapLocationManager.getLocationUpdates',
+      );
       onError?.call('Location Error: ${e.toString()}');
     }
   }
@@ -183,6 +190,16 @@ class MapLocationManager {
         return LatLng(lat, lng);
       }
     } catch (e) {
+      ExceptionHandler.handleGenericException(
+        e,
+        'MapLocationManager.getCachedLocation',
+        userMessage: 'Failed to load cached location',
+        showToast: false,
+      );
+      ErrorLoggingService.logError(
+        error: e.toString(),
+        context: 'MapLocationManager.getCachedLocation',
+      );
       onError?.call('Failed to load cached location: ${e.toString()}');
     }
     return null;
@@ -195,6 +212,16 @@ class MapLocationManager {
       await prefs.setDouble('last_latitude', locationData.latitude!);
       await prefs.setDouble('last_longitude', locationData.longitude!);
     } catch (e) {
+      ExceptionHandler.handleGenericException(
+        e,
+        'MapLocationManager._cacheLocation',
+        userMessage: 'Failed to cache location',
+        showToast: false,
+      );
+      ErrorLoggingService.logError(
+        error: e.toString(),
+        context: 'MapLocationManager._cacheLocation',
+      );
       onError?.call('Failed to cache location: ${e.toString()}');
     }
   }

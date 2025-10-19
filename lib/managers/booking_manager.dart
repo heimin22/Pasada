@@ -14,6 +14,7 @@ import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
+import 'package:pasada_passenger_app/services/error_logging_service.dart';
 import 'package:pasada_passenger_app/services/eta_service.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
@@ -21,6 +22,7 @@ import 'package:pasada_passenger_app/services/map_location_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -180,7 +182,16 @@ class BookingManager {
         );
         _state.setState(() => _state.selectedRoute = routeMap);
       } catch (e) {
-        debugPrint('Error restoring route: $e');
+        ExceptionHandler.handleGenericException(
+          e,
+          'BookingManager._restoreRoute',
+          userMessage: 'Failed to restore route',
+          showToast: false,
+        );
+        ErrorLoggingService.logError(
+          error: e.toString(),
+          context: 'BookingManager._restoreRoute',
+        );
       }
       MapLocationService().initialize((pos) {
         _state.mapScreenKey.currentState
@@ -494,8 +505,6 @@ class BookingManager {
     if (driver is List && driver.isNotEmpty) {
       driver = driver[0];
     } else if (driver is List && driver.isEmpty) {
-      debugPrint(
-          "BookingManager: _updateDriverDetails received an empty list for driverData['driver']");
       _state.setState(() {
         _state.isDriverAssigned = false;
       });
@@ -503,17 +512,11 @@ class BookingManager {
     }
 
     if (driver is! Map<String, dynamic>) {
-      debugPrint(
-          "BookingManager: _updateDriverDetails - 'driver' variable is not a Map. Actual type: \${driver.runtimeType}, Value: \$driver");
       _state.setState(() {
         _state.isDriverAssigned = false;
       });
       return;
     }
-
-    debugPrint(
-        "BookingManager: Processing driver map in _updateDriverDetails: \\$driver");
-    debugPrint("BookingManager: driver keys: \\${driver.keys}");
 
     _state.setState(() {
       _state.driverName =
@@ -864,7 +867,16 @@ class BookingManager {
         _startCompletionPolling(bookingId);
       }
     } catch (e) {
-      debugPrint('DB Query Error: $e');
+      ExceptionHandler.handleDatabaseException(
+        e,
+        'BookingManager._fetchDriverDetailsDirectlyFromDB',
+        userMessage: 'Failed to fetch driver details',
+        showToast: false,
+      );
+      ErrorLoggingService.logError(
+        error: e.toString(),
+        context: 'BookingManager._fetchDriverDetailsDirectlyFromDB',
+      );
     }
   }
 
@@ -905,7 +917,16 @@ class BookingManager {
           '[BookingManager] Updated capacity from DB fallback: total=${vehicle['passenger_capacity']}, sitting=${vehicle['sitting_passenger']}, standing=${vehicle['standing_passenger']}');
       _evaluateCapacityAndMaybeReassign();
     } catch (e) {
-      debugPrint('Error fetching vehicle capacity: $e');
+      ExceptionHandler.handleDatabaseException(
+        e,
+        'BookingManager._fetchVehicleCapacityForBooking',
+        userMessage: 'Failed to fetch vehicle capacity',
+        showToast: false,
+      );
+      ErrorLoggingService.logError(
+        error: e.toString(),
+        context: 'BookingManager._fetchVehicleCapacityForBooking',
+      );
     }
   }
 
