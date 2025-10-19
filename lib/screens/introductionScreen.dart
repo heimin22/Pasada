@@ -67,7 +67,6 @@ class _IntroductionScreenState extends State<IntroductionScreen>
 
     // If both service and permission are already granted, skip the dialog
     if (serviceEnabled && permissionStatus == PermissionStatus.granted) {
-      debugPrint('Location permissions already granted, skipping pre-prompt');
       return;
     }
 
@@ -75,8 +74,6 @@ class _IntroductionScreenState extends State<IntroductionScreen>
     final hasBeenPrompted =
         await locationManager.hasUserBeenPromptedForLocation();
     if (hasBeenPrompted) {
-      debugPrint(
-          'User has already been prompted for location permissions, skipping pre-prompt');
       return;
     }
 

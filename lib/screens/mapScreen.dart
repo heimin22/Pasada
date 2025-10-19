@@ -160,8 +160,6 @@ class MapScreenState extends State<MapScreen>
     // Initialize directional bus manager
     _directionalBusManager = MapDirectionalBusManager(
       onStateChanged: () {
-        debugPrint(
-            'MapScreen: Directional bus manager state changed, triggering rebuild');
         if (mounted) setState(() {});
       },
       onError: (error) => _dialogManager.showError(error),
@@ -203,8 +201,6 @@ class MapScreenState extends State<MapScreen>
 
     // Test: Create a marker at a default location to verify icons are working
     if (currentLocation != null) {
-      debugPrint(
-          'MapScreen: Testing directional bus marker creation at current location');
       _directionalBusManager.updateDriverPosition(currentLocation!,
           rideStatus: 'test');
     }
@@ -285,10 +281,7 @@ class MapScreenState extends State<MapScreen>
   // handle yung location updates for the previous widget to generate polylines
   Future<void> handleLocationUpdates() async {
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
-      debugPrint('MapScreen - Both pickup and dropoff locations are set');
-
       if (widget.routePolyline?.isNotEmpty == true) {
-        debugPrint('MapScreen - Rendering official route segment');
         final segment = await _routeManager.renderRouteAlongPolyline(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
@@ -313,7 +306,6 @@ class MapScreenState extends State<MapScreen>
           );
         }
       } else {
-        debugPrint('MapScreen - Rendering direct route');
         final route = await _routeManager.renderRouteBetween(
           widget.pickUpLocation!,
           widget.dropOffLocation!,
@@ -336,8 +328,6 @@ class MapScreenState extends State<MapScreen>
           );
         }
       }
-    } else {
-      debugPrint('MapScreen - Missing pickup or dropoff location');
     }
   }
 
@@ -532,17 +522,12 @@ class MapScreenState extends State<MapScreen>
 
     // Add directional bus marker if available
     final busMarker = _directionalBusManager.driverMarker;
-    debugPrint('MapScreen: buildMarkers - busMarker: $busMarker');
     if (busMarker != null) {
       markers.add(busMarker);
-      debugPrint('MapScreen: Added directional bus marker to markers set');
-    } else {
-      debugPrint('MapScreen: No directional bus marker available');
     }
 
     // Add markers from stable state manager
     markers.addAll(_stableStateManager.markers);
-    debugPrint('MapScreen: Total markers count: ${markers.length}');
 
     return markers;
   }
