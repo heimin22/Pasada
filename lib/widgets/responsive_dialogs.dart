@@ -26,8 +26,14 @@ class ResponsiveDialog extends StatelessWidget {
     final padding = contentPadding ?? EdgeInsets.all(screenSize.width * 0.05);
 
     return Dialog(
+      backgroundColor:
+          isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(screenSize.width * 0.03),
+        side: BorderSide(
+          color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0),
+          width: 1,
+        ),
       ),
       insetPadding: EdgeInsets.symmetric(
         horizontal: screenSize.width * 0.05,

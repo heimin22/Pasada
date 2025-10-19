@@ -75,11 +75,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor:
+          isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
-        foregroundColor: const Color(0xFFF5F5F5),
+        backgroundColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        foregroundColor:
+            isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
         title: const Text(
           'Calendar',
           style: TextStyle(
@@ -97,18 +102,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
             // Calendar Widget
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: isDarkMode
+                    ? const Color(0xFF1A1A1A)
+                    : const Color(0xFFFFFFFF),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
+                border: Border.all(
+                    color: isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFE0E0E0),
+                    width: 1),
               ),
               child: Theme(
                 data: Theme.of(context).copyWith(
-                  colorScheme: const ColorScheme.dark(
-                    primary: Color(0xFF00CC58),
-                    onPrimary: Color(0xFF121212),
-                    surface: Color(0xFF1E1E1E),
-                    onSurface: Color(0xFFF5F5F5),
-                  ),
+                  colorScheme: isDarkMode
+                      ? const ColorScheme.dark(
+                          primary: Color(0xFF00CC58),
+                          onPrimary: Color(0xFF121212),
+                          surface: Color(0xFF1E1E1E),
+                          onSurface: Color(0xFFF5F5F5),
+                        )
+                      : const ColorScheme.light(
+                          primary: Color(0xFF00CC58),
+                          onPrimary: Color(0xFFFFFFFF),
+                          surface: Color(0xFFFFFFFF),
+                          onSurface: Color(0xFF121212),
+                        ),
                   textButtonTheme: TextButtonThemeData(
                     style: TextButton.styleFrom(
                       shape: const CircleBorder(),
@@ -116,7 +134,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     ),
                   ),
                 ),
-                child: _buildCustomCalendar(),
+                child: _buildCustomCalendar(isDarkMode),
               ),
             ),
             const SizedBox(height: 24),
@@ -126,9 +144,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: isDarkMode
+                    ? const Color(0xFF1A1A1A)
+                    : const Color(0xFFFFFFFF),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
+                border: Border.all(
+                    color: isDarkMode
+                        ? const Color(0xFF2A2A2A)
+                        : const Color(0xFFE0E0E0),
+                    width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,11 +175,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                       ? 'Philippine Holiday'
                                       : 'Philippine Holiday — ${_holidayName!}'
                                   : 'Regular Day',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFFF5F5F5),
+                            color: isDarkMode
+                                ? const Color(0xFFF5F5F5)
+                                : const Color(0xFF121212),
                           ),
                         ),
                       ),
@@ -180,40 +206,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
               padding: const EdgeInsets.all(20),
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
+                color: isDarkMode
+                    ? const Color(0xFF1E1E1E)
+                    : const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFF00CC58), width: 1),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.info_outline,
                         color: Color(0xFF00CC58),
                         size: 24,
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Text(
                         'Student Discount Rules',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFFF5F5F5),
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'How the calendar affects your student discount:',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFFF5F5F5),
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -223,6 +255,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     description:
                         'Student discount (20%) is available on all regular school days.',
                     isActive: _isHoliday != true,
+                    isDarkMode: isDarkMode,
                   ),
                   const SizedBox(height: 14),
                   _buildRuleItem(
@@ -231,6 +264,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     description:
                         'No student discount on official Philippine holidays when classes are suspended.',
                     isActive: _isHoliday == true,
+                    isDarkMode: isDarkMode,
                   ),
                   const SizedBox(height: 14),
                   _buildRuleItem(
@@ -239,20 +273,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     description:
                         'Senior Citizen and PWD discounts are always available regardless of holidays.',
                     isActive: false,
+                    isDarkMode: isDarkMode,
                   ),
                   const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A1A1A),
+                      color: isDarkMode
+                          ? const Color(0xFF1A1A1A)
+                          : const Color(0xFFE8E8E8),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Note: This calendar uses official Philippine holidays from Google Calendar. The discount rules are automatically applied when you select "Student" as your passenger type.',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
-                        color: Color(0xFFCCCCCC),
+                        color: isDarkMode
+                            ? const Color(0xFFCCCCCC)
+                            : const Color(0xFF666666),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -266,7 +305,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCustomCalendar() {
+  Widget _buildCustomCalendar(bool isDarkMode) {
     final now = DateTime.now();
     final currentMonth = DateTime(_selectedDate.year, _selectedDate.month);
     final firstDayOfMonth = currentMonth;
@@ -314,11 +353,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               Text(
                 '${_getMonthName(_selectedDate.month)} ${_selectedDate.year}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFFF5F5F5),
+                  color: isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212),
                 ),
               ),
               IconButton(
@@ -336,45 +377,66 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
 
         // Weekday headers
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
               Expanded(
                   child: Center(
                       child: Text('S',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('M',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('T',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('W',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('T',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('F',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
               Expanded(
                   child: Center(
                       child: Text('S',
                           style: TextStyle(
-                              color: Color(0xFF999999), fontSize: 12)))),
+                              color: isDarkMode
+                                  ? const Color(0xFF999999)
+                                  : const Color(0xFF666666),
+                              fontSize: 12)))),
             ],
           ),
         ),
@@ -435,8 +497,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           color: isToday
                               ? const Color(0xFF00CC58)
                               : isCurrentMonth
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF666666),
+                                  ? (isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212))
+                                  : (isDarkMode
+                                      ? const Color(0xFF666666)
+                                      : const Color(0xFF999999)),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -469,8 +535,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               fontFamily: 'Inter',
                               fontSize: 9,
                               color: isCurrentMonth
-                                  ? const Color(0xFFCCCCCC)
-                                  : const Color(0xFF555555),
+                                  ? (isDarkMode
+                                      ? const Color(0xFFCCCCCC)
+                                      : const Color(0xFF666666))
+                                  : (isDarkMode
+                                      ? const Color(0xFF555555)
+                                      : const Color(0xFF999999)),
                             ),
                           ),
                         );
@@ -511,14 +581,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required String title,
     required String description,
     required bool isActive,
+    required bool isDarkMode,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF1A4D2E) : const Color(0xFF1A1A1A),
+        color: isActive
+            ? const Color(0xFF1A4D2E)
+            : (isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFF0F0F0)),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isActive ? const Color(0xFF00CC58) : const Color(0xFF333333),
+          color: isActive
+              ? const Color(0xFF00CC58)
+              : (isDarkMode
+                  ? const Color(0xFF333333)
+                  : const Color(0xFFCCCCCC)),
           width: 1,
         ),
       ),
@@ -527,7 +604,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         children: [
           Icon(
             icon,
-            color: isActive ? const Color(0xFF00CC58) : const Color(0xFF666666),
+            color: isActive
+                ? const Color(0xFF00CC58)
+                : (isDarkMode
+                    ? const Color(0xFF666666)
+                    : const Color(0xFF888888)),
             size: 20,
           ),
           const SizedBox(width: 12),
@@ -543,7 +624,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     fontWeight: FontWeight.w600,
                     color: isActive
                         ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF999999),
+                        : (isDarkMode
+                            ? const Color(0xFF999999)
+                            : const Color(0xFF666666)),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -554,7 +637,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     fontSize: 13,
                     color: isActive
                         ? const Color(0xFFCCCCCC)
-                        : const Color(0xFF666666),
+                        : (isDarkMode
+                            ? const Color(0xFF666666)
+                            : const Color(0xFF888888)),
                   ),
                 ),
               ],

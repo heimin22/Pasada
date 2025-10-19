@@ -37,7 +37,6 @@ class _AlertSequenceDialogState extends State<AlertSequenceDialog> {
       vertical: screenSize.height * 0.015, // 1.5% of screen height
     );
     final buttonFontSize = screenSize.width * 0.04; // 4% of screen width
-    final indicatorSize = screenSize.width * 0.03; // 3% of screen width
     final spacing = screenSize.height * 0.02; // 2% of screen height
 
     return Dialog(
@@ -69,30 +68,6 @@ class _AlertSequenceDialogState extends State<AlertSequenceDialog> {
                     });
                   },
                   children: widget.pages,
-                ),
-              ),
-              SizedBox(height: spacing),
-              // Page indicators
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.pages.length,
-                  (index) => Container(
-                    margin:
-                        EdgeInsets.symmetric(horizontal: indicatorSize * 0.3),
-                    width: _currentPage == index
-                        ? indicatorSize * 1.5
-                        : indicatorSize,
-                    height: _currentPage == index
-                        ? indicatorSize * 1.5
-                        : indicatorSize,
-                    decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? const Color(0xFF00CC58)
-                          : Colors.grey,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
                 ),
               ),
               SizedBox(height: spacing * 1.2),

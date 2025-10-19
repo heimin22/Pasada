@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 
 import 'distance_helper.dart';
 
@@ -78,8 +79,8 @@ class LocationValidationHelper {
       final bool? proceed = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Distance Warning'),
+        builder: (BuildContext context) => ResponsiveDialog(
+          title: 'Distance Warning',
           content: Text(
             'The selected pick-up location is quite far from your current location',
             style: TextStyle(
