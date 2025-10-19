@@ -93,13 +93,54 @@ class LocationValidationHelper {
             ),
           ),
           actions: [
-            TextButton(
+            ElevatedButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Color(0xFF00CC58), width: 3),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 40),
+                backgroundColor: Colors.transparent,
+                foregroundColor: isDarkMode
+                    ? const Color(0xFFF5F5F5)
+                    : const Color(0xFF121212),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Continue'),
+              style: ElevatedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                minimumSize: const Size(150, 40),
+                backgroundColor: const Color(0xFF00CC58),
+                foregroundColor: const Color(0xFFF5F5F5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                ),
+              ),
             ),
           ],
         ),
