@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 
 class BookingDetails {
   final int bookingId;
@@ -50,10 +51,10 @@ class BookingDetails {
       'dropoff_lat': dropoffCoordinates.latitude,
       'dropoff_lng': dropoffCoordinates.longitude,
       'start_time': '${startTime.hour}:${startTime.minute}',
-      'created_at': createdAt.toIso8601String(),
+      'created_at': TimezoneUtils.toPhilippinesIso8601String(createdAt),
       'fare': fare,
       'seat_type': seatType,
-      'assigned_at': assignedAt.toIso8601String(),
+      'assigned_at': TimezoneUtils.toPhilippinesIso8601String(assignedAt),
       'end_time': '${endTime.hour}:${endTime.minute}',
     };
   }
@@ -104,10 +105,12 @@ class BookingDetails {
       dropoffAddress: map['dropoff_address'] as String,
       dropoffCoordinates: parseCoordinates('dropoff_lat', 'dropoff_lng'),
       startTime: parseTime(map['start_time']),
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt:
+          TimezoneUtils.parseToPhilippinesTime(map['created_at'] as String),
       fare: (map['fare'] as num).toDouble(),
       seatType: map['seat_type'] as String,
-      assignedAt: DateTime.parse(map['assigned_at'] as String),
+      assignedAt:
+          TimezoneUtils.parseToPhilippinesTime(map['assigned_at'] as String),
       endTime: parseTime(map['end_time']),
     );
   }

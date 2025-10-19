@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/services/id_image_upload_service.dart';
+import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'apiService.dart';
@@ -223,7 +224,7 @@ class BookingService {
                   createdAt: bookingDetails.createdAt,
                   fare: bookingDetails.fare,
                   seatType: bookingDetails.seatType,
-                  assignedAt: DateTime.now(),
+                  assignedAt: TimezoneUtils.nowInPhilippines(),
                   endTime: bookingDetails.endTime,
                 );
 
@@ -332,12 +333,12 @@ class BookingService {
             (apiBooking['dropoff_lat'] as num? ?? 0.0).toDouble(),
             (apiBooking['dropoff_lng'] as num? ?? 0.0).toDouble(),
           ),
-          startTime: TimeOfDay.now(),
-          createdAt: DateTime.now(),
+          startTime: TimeOfDay.fromDateTime(TimezoneUtils.nowInPhilippines()),
+          createdAt: TimezoneUtils.nowInPhilippines(),
           fare: (apiBooking['fare'] as num? ?? 0.0).toDouble(),
           seatType: apiBooking['seat_type'] ?? 'Any',
-          assignedAt: DateTime.now(),
-          endTime: TimeOfDay.now(),
+          assignedAt: TimezoneUtils.nowInPhilippines(),
+          endTime: TimeOfDay.fromDateTime(TimezoneUtils.nowInPhilippines()),
         );
 
         // Save to local database for future reference
