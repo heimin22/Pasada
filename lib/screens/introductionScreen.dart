@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:location/location.dart';
 import 'package:pasada_passenger_app/services/location_permission_manager.dart';
 
 class IntroductionScreen extends StatefulWidget {
@@ -58,6 +59,27 @@ class _IntroductionScreenState extends State<IntroductionScreen>
   }
 
   Future<void> _showLocationPrePrompt() async {
+    // First check if permissions are already granted
+    final locationManager = LocationPermissionManager.instance;
+    final serviceEnabled = await locationManager.isServiceEnabledNoPrompt();
+    final permissionStatus =
+        await locationManager.getPermissionStatusNoPrompt();
+
+    // If both service and permission are already granted, skip the dialog
+    if (serviceEnabled && permissionStatus == PermissionStatus.granted) {
+      debugPrint('Location permissions already granted, skipping pre-prompt');
+      return;
+    }
+
+    // Check if user has already been prompted for location permissions
+    final hasBeenPrompted =
+        await locationManager.hasUserBeenPromptedForLocation();
+    if (hasBeenPrompted) {
+      debugPrint(
+          'User has already been prompted for location permissions, skipping pre-prompt');
+      return;
+    }
+
     final proceed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -135,6 +157,9 @@ class _IntroductionScreenState extends State<IntroductionScreen>
         ],
       ),
     );
+
+    // Mark that user has been prompted for location permissions
+    await locationManager.markLocationPermissionPrompted();
 
     if (proceed == true) {
       try {

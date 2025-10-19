@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/services/location_permission_manager.dart';
@@ -42,6 +43,30 @@ class MapLocationManager {
     final serviceEnabled = await locationManager.isServiceEnabledNoPrompt();
     final permissionStatus =
         await locationManager.getPermissionStatusNoPrompt();
+
+    // If both service and permission are already granted, skip all dialogs and proceed
+    if (serviceEnabled && permissionStatus == PermissionStatus.granted) {
+      debugPrint(
+          'Location permissions already granted, skipping pre-prompt dialogs');
+      await getLocationUpdates();
+      isLocationInitialized = true;
+      return;
+    }
+
+    // Check if user has already been prompted for location permissions
+    final hasBeenPrompted =
+        await locationManager.hasUserBeenPromptedForLocation();
+    if (hasBeenPrompted) {
+      debugPrint(
+          'User has already been prompted for location permissions, skipping pre-prompt dialogs');
+      // Still try to get location updates even if previously prompted
+      await getLocationUpdates();
+      isLocationInitialized = true;
+      return;
+    }
+
+    // Mark that user has been prompted for location permissions
+    await locationManager.markLocationPermissionPrompted();
 
     // If services are disabled, show an app pre-prompt before requesting OS dialog
     if (!serviceEnabled) {

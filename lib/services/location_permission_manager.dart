@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:location/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Centralized manager for location permissions and services to prevent multiple prompts
 class LocationPermissionManager {
@@ -147,6 +148,36 @@ class LocationPermissionManager {
     _lastPermissionState = null;
     _lastServiceCheck = null;
     _lastPermissionCheck = null;
+  }
+
+  /// Check if user has already been prompted for location permissions
+  Future<bool> hasUserBeenPromptedForLocation() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('location_permission_prompted') ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Mark that user has been prompted for location permissions
+  Future<void> markLocationPermissionPrompted() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('location_permission_prompted', true);
+    } catch (e) {
+      // Ignore errors
+    }
+  }
+
+  /// Reset permission prompt state (useful for testing or if user changes settings)
+  Future<void> resetPermissionPromptState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('location_permission_prompted');
+    } catch (e) {
+      // Ignore errors
+    }
   }
 
   /// Check if location services are currently enabled (cached)
