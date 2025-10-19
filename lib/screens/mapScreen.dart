@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/utils/map_camera_manager.dart';
 import 'package:pasada_passenger_app/utils/map_dialog_manager.dart';
+import 'package:pasada_passenger_app/utils/map_directional_bus_manager.dart';
 import 'package:pasada_passenger_app/utils/map_driver_animation_manager.dart';
 import 'package:pasada_passenger_app/utils/map_driver_tracker.dart';
 import 'package:pasada_passenger_app/utils/map_location_manager.dart';
@@ -60,6 +61,7 @@ class MapScreenState extends State<MapScreen>
   late MapDriverTracker _driverTracker;
   late MapPolylineStateManager _polylineStateManager;
   late MapDriverAnimationManager _driverAnimationManager;
+  late MapDirectionalBusManager _directionalBusManager;
   late MapStableStateManager _stableStateManager;
 
   // State variables
@@ -155,6 +157,14 @@ class MapScreenState extends State<MapScreen>
       onError: (error) => _dialogManager.showError(error),
     );
 
+    // Initialize directional bus manager
+    _directionalBusManager = MapDirectionalBusManager(
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
     // Initialize stable state manager
     _stableStateManager = MapStableStateManager(
       onStateChanged: () {
@@ -186,6 +196,9 @@ class MapScreenState extends State<MapScreen>
     // Initialize driver animation manager
     await _driverAnimationManager.initializeBusIcon();
 
+    // Initialize directional bus manager
+    await _directionalBusManager.initializeBusIcons();
+
     // Initialize camera manager with map controller
     _cameraManager.initialize(mapController);
 
@@ -215,6 +228,7 @@ class MapScreenState extends State<MapScreen>
     _driverTracker.dispose();
     _polylineStateManager.dispose();
     _driverAnimationManager.dispose();
+    _directionalBusManager.dispose();
     _stableStateManager.dispose();
     super.dispose();
   }
@@ -448,11 +462,16 @@ class MapScreenState extends State<MapScreen>
   }
 
   // Update driver marker and draw road-following polyline to pickup/dropoff
-  Future<void> updateDriverLocation(LatLng location, String rideStatus) async {
+  Future<void> updateDriverLocation(LatLng location, String rideStatus,
+      {double? heading}) async {
     if (!mounted) return;
 
     // Update driver location using stable state manager (prevents flickering)
     _stableStateManager.updateDriverLocation(location, rideStatus);
+
+    // Update directional bus marker with heading
+    _directionalBusManager.updateDriverPosition(location,
+        heading: heading, rideStatus: rideStatus);
 
     // Update local state for other components
     driverLocation = location;
@@ -486,6 +505,12 @@ class MapScreenState extends State<MapScreen>
       dropoffLocation: widget.dropOffLocation,
       driverLocation: null, // Don't use regular driver marker
     );
+
+    // Add directional bus marker if available
+    final busMarker = _directionalBusManager.driverMarker;
+    if (busMarker != null) {
+      markers.add(busMarker);
+    }
 
     // Add markers from stable state manager
     markers.addAll(_stableStateManager.markers);
@@ -735,6 +760,7 @@ class MapScreenState extends State<MapScreen>
       _stableStateManager.clearAll();
       _markerManager.clearAllMarkers();
       _driverAnimationManager.dispose();
+      _directionalBusManager.dispose();
       fareAmount = 0.0;
       etaText = null;
     });
