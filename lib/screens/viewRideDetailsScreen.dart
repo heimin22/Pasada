@@ -9,6 +9,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/encryptionService.dart';
+import 'package:pasada_passenger_app/utils/booking_id_utils.dart';
 import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -904,8 +905,9 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               Row(
                                 children: [
                                   Text(
-                                    bookingDetails['booking_id']?.toString() ??
-                                        'N/A',
+                                    BookingIdUtils.formatBookingId(
+                                      bookingDetails['booking_id'] as int? ?? 0,
+                                    ),
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 16,
@@ -918,9 +920,9 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                   IconButton(
                                     icon: const Icon(Icons.copy, size: 18),
                                     onPressed: () => _copyToClipboard(
-                                        bookingDetails['booking_id']
-                                                ?.toString() ??
-                                            ''),
+                                        BookingIdUtils.formatBookingId(
+                                      bookingDetails['booking_id'] as int? ?? 0,
+                                    )),
                                     color: isDarkMode
                                         ? Colors.grey[300]
                                         : Colors.grey[700],

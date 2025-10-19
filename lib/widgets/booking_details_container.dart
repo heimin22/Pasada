@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../location/selectedLocation.dart';
+import '../utils/booking_id_utils.dart';
 
 class BookingDetailsContainer extends StatelessWidget {
   final SelectedLocation? pickupLocation;
@@ -85,7 +86,7 @@ class BookingDetailsContainer extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '#$bookingId',
+                    '#${BookingIdUtils.formatBookingId(bookingId!)}',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
