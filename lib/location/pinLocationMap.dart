@@ -840,44 +840,46 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            style: _currentMapStyle,
-            padding: EdgeInsets.only(
-              bottom: bottomContainerHeight +
-                  MediaQuery.of(context).size.height * 0.01,
+          RepaintBoundary(
+            child: GoogleMap(
+              style: _currentMapStyle,
+              padding: EdgeInsets.only(
+                bottom: bottomContainerHeight +
+                    MediaQuery.of(context).size.height * 0.01,
+              ),
+              onMapCreated: onMapCreated,
+              onTap: (position) {
+                mapController.animateCamera(
+                  CameraUpdate.newLatLng(position),
+                );
+              },
+              initialCameraPosition: CameraPosition(
+                target: currentLocation ?? const LatLng(14.617494, 120.971770),
+                zoom: 15,
+              ),
+              myLocationEnabled: false,
+              zoomControlsEnabled: false,
+              indoorViewEnabled: false,
+              myLocationButtonEnabled: true,
+              onCameraMove: (position) {
+                if (isFindingLandmark) {
+                  setState(() => isFindingLandmark = false);
+                }
+              },
+              onCameraIdle: () {
+                fetchLocationAtCenter();
+              },
+              polylines: widget.routePolyline != null
+                  ? {
+                      Polyline(
+                        polylineId: const PolylineId('route_polyline'),
+                        points: widget.routePolyline!,
+                        color: const Color(0xFF067837),
+                        width: 5,
+                      )
+                    }
+                  : <Polyline>{},
             ),
-            onMapCreated: onMapCreated,
-            onTap: (position) {
-              mapController.animateCamera(
-                CameraUpdate.newLatLng(position),
-              );
-            },
-            initialCameraPosition: CameraPosition(
-              target: currentLocation ?? const LatLng(14.617494, 120.971770),
-              zoom: 15,
-            ),
-            myLocationEnabled: false,
-            zoomControlsEnabled: false,
-            indoorViewEnabled: false,
-            myLocationButtonEnabled: true,
-            onCameraMove: (position) {
-              if (isFindingLandmark) {
-                setState(() => isFindingLandmark = false);
-              }
-            },
-            onCameraIdle: () {
-              fetchLocationAtCenter();
-            },
-            polylines: widget.routePolyline != null
-                ? {
-                    Polyline(
-                      polylineId: const PolylineId('route_polyline'),
-                      points: widget.routePolyline!,
-                      color: const Color(0xFF067837),
-                      width: 5,
-                    )
-                  }
-                : <Polyline>{},
           ),
           Center(
             child: Container(
