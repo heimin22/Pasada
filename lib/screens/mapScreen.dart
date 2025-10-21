@@ -319,7 +319,7 @@ class MapScreenState extends State<MapScreen>
           _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             segment,
-            color: const Color(0xFFFFCE21),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
 
@@ -341,7 +341,7 @@ class MapScreenState extends State<MapScreen>
           _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color.fromARGB(255, 4, 197, 88),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
 
@@ -421,7 +421,7 @@ class MapScreenState extends State<MapScreen>
           _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color(0xFFFFCE21),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
         }
@@ -436,7 +436,7 @@ class MapScreenState extends State<MapScreen>
           _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color.fromARGB(255, 4, 197, 88),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
         }
@@ -469,7 +469,7 @@ class MapScreenState extends State<MapScreen>
       _optimizedPolylineManager.updatePolyline(
         const PolylineId('route'),
         route,
-        color: const Color.fromARGB(255, 4, 197, 88),
+        color: const Color(0xFF00CC58),
         width: 4,
       );
       await _cameraManager.moveCameraToRoute(route, start, destination);

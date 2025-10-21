@@ -57,7 +57,7 @@ class MapRouteManager {
       animateRouteDrawing(
         const PolylineId('route'),
         polylineCoordinates,
-        polylineColor ?? const Color.fromARGB(255, 4, 197, 88),
+        polylineColor ?? const Color(0xFF00CC58),
         polylineWidth,
       );
 
@@ -97,7 +97,7 @@ class MapRouteManager {
       animateRouteDrawing(
         const PolylineId('route'),
         segment,
-        polylineColor ?? const Color(0xFFFFCE21),
+        polylineColor ?? const Color(0xFF00CC58),
         polylineWidth,
       );
 
