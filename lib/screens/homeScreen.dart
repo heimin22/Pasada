@@ -31,7 +31,7 @@ import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
-import 'package:pasada_passenger_app/widgets/location_input_container.dart';
+import 'package:pasada_passenger_app/widgets/refreshable_bottom_sheet.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
@@ -84,6 +84,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Debounce timer for bottom sheet reopening
   Timer? _bottomSheetDebounce;
+  // Refreshable bottom sheet state for content refresh
+  RefreshableBottomSheetState? _refreshableBottomSheetState;
   // keep state alive
   @override
   bool get wantKeepAlive => true;
@@ -537,6 +539,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedIdImageUrl: selectedIdImageUrl,
       onFareUpdated: _updateFareForDiscount, // Pass the fare update callback
       onReopenMainBottomSheet: _reopenBottomSheetAfterLocationUpdate,
+      refreshableBottomSheetState:
+          _refreshableBottomSheetState, // Pass refreshable state
     );
   }
 
@@ -618,25 +622,33 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Set up debounced bottom sheet reopening
     _bottomSheetDebounce = Timer(const Duration(milliseconds: 500), () {
       if (mounted) {
-        LocationInputContainer.showBottomSheet(
-          context: context,
-          isRouteSelected: isRouteSelected,
-          selectedPickUpLocation: selectedPickUpLocation,
-          selectedDropOffLocation: selectedDropOffLocation,
-          currentFare: currentFare,
-          originalFare: originalFare,
-          selectedPaymentMethod: selectedPaymentMethod,
-          selectedDiscountSpecification: selectedDiscountSpecification,
-          seatingPreference: seatingPreference,
-          selectedIdImageUrl: selectedIdImageUrl,
-          onNavigateToLocationSearch: _navigateToLocationSearch,
-          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
-          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
-          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-          onFareUpdated: _updateFareForDiscount,
-        );
+        _showRefreshableBottomSheet();
       }
     });
+  }
+
+  /// Shows the refreshable bottom sheet
+  Future<void> _showRefreshableBottomSheet() async {
+    final result = await RefreshableBottomSheet.showRefreshableBottomSheet(
+      context: context,
+      isRouteSelected: isRouteSelected,
+      selectedPickUpLocation: selectedPickUpLocation,
+      selectedDropOffLocation: selectedDropOffLocation,
+      currentFare: currentFare,
+      originalFare: originalFare,
+      selectedPaymentMethod: selectedPaymentMethod,
+      selectedDiscountSpecification: selectedDiscountSpecification,
+      seatingPreference: seatingPreference,
+      selectedIdImageUrl: selectedIdImageUrl,
+      onNavigateToLocationSearch: _navigateToLocationSearch,
+      onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+      onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+      onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+      onFareUpdated: _updateFareForDiscount,
+    );
+
+    // Store the state for content refresh
+    _refreshableBottomSheetState = result;
   }
 
   void saveLocation() async {

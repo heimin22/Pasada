@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/services/id_camera_service.dart';
-import 'package:pasada_passenger_app/widgets/discount_loading_screen.dart';
+import 'package:pasada_passenger_app/widgets/refreshable_bottom_sheet.dart';
 
 class DiscountSelectionDialog {
+  /// Shows skeleton loading in the current bottom sheet
+  static void showSkeletonLoading(BuildContext context) {
+    // Show a simple loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  /// Hides skeleton loading
+  static void hideSkeletonLoading(BuildContext context) {
+    Navigator.of(context).pop();
+  }
+
   /// Shows the discount selection dialog as a modal bottom sheet
   static Future<void> show({
     required BuildContext context,
     required ValueNotifier<String> selectedDiscountSpecification,
     required ValueNotifier<String?> selectedIdImageUrl,
-    // Optional parameters to automatically reopen main bottom sheet after discount is applied
+    // Optional parameters to automatically refresh content after discount is applied
     bool? isRouteSelected,
     SelectedLocation? selectedPickUpLocation,
     SelectedLocation? selectedDropOffLocation,
@@ -23,6 +40,8 @@ class DiscountSelectionDialog {
     VoidCallback? onConfirmBooking,
     Function? onReopenMainBottomSheet,
     VoidCallback? onFareUpdated, // New callback for fare update
+    RefreshableBottomSheetState?
+        refreshableBottomSheetState, // For content refresh
   }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final discountOptions = [
@@ -125,36 +144,15 @@ class DiscountSelectionDialog {
                                 // Immediately update fare after discount is applied
                                 onFareUpdated?.call();
 
-                                // Show loading screen as a dialog
-                                if (context.mounted) {
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (BuildContext context) {
-                                      return DiscountLoadingScreen(
-                                          discountType: discountType);
-                                    },
-                                  );
-                                }
-
-                                // Simulate processing time and then show the updated bottom sheet
-                                if (onReopenMainBottomSheet != null) {
-                                  // Show loading for 1 second (reduced from 2 seconds)
+                                // Refresh content in the current bottom sheet
+                                if (refreshableBottomSheetState != null) {
+                                  await refreshableBottomSheetState
+                                      .refreshContent();
+                                } else if (onReopenMainBottomSheet != null) {
+                                  // Fallback to reopening if refreshable state not available
                                   await Future.delayed(
-                                      const Duration(seconds: 1));
-
-                                  // Close loading screen and reopen bottom sheet with discount
-                                  if (context.mounted) {
-                                    Navigator.of(context)
-                                        .pop(); // Close loading dialog
-
-                                    // Small delay to ensure smooth transition
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 200));
-
-                                    // Reopen the main bottom sheet with updated discount
-                                    onReopenMainBottomSheet();
-                                  }
+                                      const Duration(milliseconds: 500));
+                                  onReopenMainBottomSheet();
                                 }
                               }
                               // If image capture fails or is cancelled, don't update discount
