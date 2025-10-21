@@ -14,7 +14,7 @@ class HomeBottomSection extends StatelessWidget {
   final bool isRouteSelected;
   final SelectedLocation? selectedPickUpLocation;
   final SelectedLocation? selectedDropOffLocation;
-  final double currentFare;
+  final ValueNotifier<double> currentFareNotifier;
   final double originalFare;
   final String? selectedPaymentMethod;
   final ValueNotifier<String> selectedDiscountSpecification;
@@ -39,7 +39,7 @@ class HomeBottomSection extends StatelessWidget {
     required this.isRouteSelected,
     required this.selectedPickUpLocation,
     required this.selectedDropOffLocation,
-    required this.currentFare,
+    required this.currentFareNotifier,
     required this.originalFare,
     required this.selectedPaymentMethod,
     required this.selectedDiscountSpecification,
@@ -76,23 +76,31 @@ class HomeBottomSection extends StatelessWidget {
                     },
                   ),
                 const SizedBox(height: 10),
-                HomeLocationDisplay(
-                  isRouteSelected: isRouteSelected,
-                  selectedPickUpLocation: selectedPickUpLocation,
-                  selectedDropOffLocation: selectedDropOffLocation,
-                  currentFare: currentFare,
-                  originalFare: originalFare,
-                  selectedPaymentMethod: selectedPaymentMethod,
-                  selectedDiscountSpecification: selectedDiscountSpecification,
-                  seatingPreference: seatingPreference,
-                  selectedIdImageUrl: selectedIdImageUrl,
-                  screenWidth: screenWidth,
-                  responsivePadding: responsivePadding,
-                  onNavigateToLocationSearch: onNavigateToLocationSearch,
-                  onShowSeatingPreferenceDialog: onShowSeatingPreferenceDialog,
-                  onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
-                  onConfirmBooking: onConfirmBooking,
-                  onFareUpdated: onFareUpdated,
+                ValueListenableBuilder<double>(
+                  valueListenable: currentFareNotifier,
+                  builder: (context, currentFare, child) {
+                    return HomeLocationDisplay(
+                      isRouteSelected: isRouteSelected,
+                      selectedPickUpLocation: selectedPickUpLocation,
+                      selectedDropOffLocation: selectedDropOffLocation,
+                      currentFare: currentFare,
+                      originalFare: originalFare,
+                      selectedPaymentMethod: selectedPaymentMethod,
+                      selectedDiscountSpecification:
+                          selectedDiscountSpecification,
+                      seatingPreference: seatingPreference,
+                      selectedIdImageUrl: selectedIdImageUrl,
+                      screenWidth: screenWidth,
+                      responsivePadding: responsivePadding,
+                      onNavigateToLocationSearch: onNavigateToLocationSearch,
+                      onShowSeatingPreferenceDialog:
+                          onShowSeatingPreferenceDialog,
+                      onShowDiscountSelectionDialog:
+                          onShowDiscountSelectionDialog,
+                      onConfirmBooking: onConfirmBooking,
+                      onFareUpdated: onFareUpdated,
+                    );
+                  },
                 ),
               ],
             ),

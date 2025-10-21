@@ -139,9 +139,9 @@ class DiscountSelectionDialog {
 
                                 // Simulate processing time and then show the updated bottom sheet
                                 if (onReopenMainBottomSheet != null) {
-                                  // Show loading for 2 seconds
+                                  // Show loading for 1 second (reduced from 2 seconds)
                                   await Future.delayed(
-                                      const Duration(seconds: 2));
+                                      const Duration(seconds: 1));
 
                                   // Close loading screen and reopen bottom sheet with discount
                                   if (context.mounted) {
@@ -150,7 +150,7 @@ class DiscountSelectionDialog {
 
                                     // Small delay to ensure smooth transition
                                     await Future.delayed(
-                                        const Duration(milliseconds: 300));
+                                        const Duration(milliseconds: 200));
 
                                     // Reopen the main bottom sheet with updated discount
                                     onReopenMainBottomSheet();

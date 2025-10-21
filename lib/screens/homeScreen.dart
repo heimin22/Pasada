@@ -499,14 +499,20 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   // Method to update fare when discount changes
-  void _updateFareForDiscount() {
+  void _updateFareForDiscount() async {
     if (!mounted) return;
     final String discount = selectedDiscountSpecification.value;
     // Update holiday banner visibility asynchronously
     _updateHolidayBannerVisibility(discount);
-    currentFare = FareService.calculateDiscountedFare(
+
+    // Use holiday-aware fare calculation
+    final discountedFare = await FareService.calculateDiscountedFareWithHoliday(
         originalFare, selectedDiscountSpecification.value);
-    _fareNotifier.value = currentFare;
+
+    if (mounted) {
+      currentFare = discountedFare;
+      _fareNotifier.value = currentFare;
+    }
   }
 
   Future<void> _updateHolidayBannerVisibility(String discount) async {
@@ -867,7 +873,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                                     selectedPickUpLocation,
                                                 selectedDropOffLocation:
                                                     selectedDropOffLocation,
-                                                currentFare: currentFare,
+                                                currentFareNotifier:
+                                                    _fareNotifier,
                                                 originalFare: originalFare,
                                                 selectedPaymentMethod:
                                                     selectedPaymentMethod,
