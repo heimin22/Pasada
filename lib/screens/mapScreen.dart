@@ -123,20 +123,6 @@ class MapScreenState extends State<MapScreen>
         if (mounted) setState(() {});
       },
     );
-
-    // Initialize route manager
-    _routeManager = MapRouteManager(
-      onFareUpdated: (fare) {
-        fareAmount = fare;
-        widget.onFareUpdated?.call(fare);
-        if (mounted) setState(() {});
-      },
-      onError: (error) => _dialogManager.showError(error),
-      onStateChanged: () {
-        if (mounted) setState(() {});
-      },
-    );
-
     // Initialize marker manager
     _markerManager = MapMarkerManager(
       onStateChanged: () {
@@ -192,6 +178,20 @@ class MapScreenState extends State<MapScreen>
         // Don't call setState - use ValueListenableBuilder instead
       },
       onError: (error) => _dialogManager.showError(error),
+    );
+
+    // Initialize route manager with optimized polyline manager
+    _routeManager = MapRouteManager(
+      onFareUpdated: (fare) {
+        fareAmount = fare;
+        widget.onFareUpdated?.call(fare);
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+      optimizedPolylineManager: _optimizedPolylineManager,
     );
 
     // Initialize driver tracker

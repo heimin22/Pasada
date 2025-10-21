@@ -6,10 +6,14 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/utils/map_utils.dart';
+import 'package:pasada_passenger_app/utils/optimized_polyline_manager.dart';
 
 class MapRouteManager {
-  // Polylines storage
+  // Polylines storage (kept for backward compatibility)
   Map<PolylineId, Polyline> polylines = {};
+
+  // Optimized polyline manager for better performance
+  final OptimizedPolylineManager? _optimizedPolylineManager;
 
   // Callbacks
   Function(double)? onFareUpdated;
@@ -20,7 +24,8 @@ class MapRouteManager {
     this.onFareUpdated,
     this.onError,
     this.onStateChanged,
-  });
+    OptimizedPolylineManager? optimizedPolylineManager,
+  }) : _optimizedPolylineManager = optimizedPolylineManager;
 
   /// Render route between two locations
   Future<List<LatLng>> renderRouteBetween(
@@ -110,6 +115,19 @@ class MapRouteManager {
     Color color,
     int width,
   ) {
+    // Use optimized polyline manager if available
+    if (_optimizedPolylineManager != null) {
+      _optimizedPolylineManager.updatePolyline(
+        id,
+        fullRoute,
+        color: color,
+        width: width,
+        animate: true,
+      );
+      return;
+    }
+
+    // Fallback to legacy method
     // Cancel any existing polyline with this id
     polylines.remove(id);
 
@@ -146,6 +164,19 @@ class MapRouteManager {
     Color color,
     int width,
   ) {
+    // Use optimized polyline manager if available
+    if (_optimizedPolylineManager != null) {
+      _optimizedPolylineManager.updatePolyline(
+        id,
+        points,
+        color: color,
+        width: width,
+        animate: false,
+      );
+      return;
+    }
+
+    // Fallback to legacy method
     polylines[id] = Polyline(
       polylineId: id,
       points: points,
@@ -160,12 +191,26 @@ class MapRouteManager {
 
   /// Remove specific polyline
   void removePolyline(PolylineId id) {
+    // Use optimized polyline manager if available
+    if (_optimizedPolylineManager != null) {
+      _optimizedPolylineManager.removePolyline(id);
+      return;
+    }
+
+    // Fallback to legacy method
     polylines.remove(id);
     onStateChanged?.call();
   }
 
   /// Clear all polylines
   void clearAllPolylines() {
+    // Use optimized polyline manager if available
+    if (_optimizedPolylineManager != null) {
+      _optimizedPolylineManager.clearAllPolylines();
+      return;
+    }
+
+    // Fallback to legacy method
     polylines.clear();
     onStateChanged?.call();
   }
