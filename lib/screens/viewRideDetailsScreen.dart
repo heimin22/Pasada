@@ -1173,9 +1173,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       ],
                                     ),
                                   )
-                                : GoogleMap(
-                                    style: isDarkMode
-                                        ? '''[
+                                : RepaintBoundary(
+                                    child: GoogleMap(
+                                      style: isDarkMode
+                                          ? '''[
                                       {
                                         "elementType": "geometry",
                                         "stylers": [{"color": "#242f3e"}]
@@ -1204,29 +1205,30 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         "stylers": [{"color": "#9ca5b3"}]
                                       }
                                     ]'''
-                                        : '',
-                                    initialCameraPosition: CameraPosition(
-                                      target: _getCenterPosition(),
-                                      zoom: 13,
+                                          : '',
+                                      initialCameraPosition: CameraPosition(
+                                        target: _getCenterPosition(),
+                                        zoom: 13,
+                                      ),
+                                      markers: markers,
+                                      polylines:
+                                          Set<Polyline>.of(polylines.values),
+                                      onMapCreated:
+                                          (GoogleMapController controller) {
+                                        mapController = controller;
+                                        // Fit the map to show both markers and the polyline
+                                        _fitMapToBounds();
+                                      },
+                                      zoomControlsEnabled: false,
+                                      scrollGesturesEnabled: false,
+                                      zoomGesturesEnabled: false,
+                                      rotateGesturesEnabled: false,
+                                      tiltGesturesEnabled: false,
+                                      mapToolbarEnabled: false,
+                                      myLocationEnabled: false,
+                                      myLocationButtonEnabled: false,
+                                      compassEnabled: false,
                                     ),
-                                    markers: markers,
-                                    polylines:
-                                        Set<Polyline>.of(polylines.values),
-                                    onMapCreated:
-                                        (GoogleMapController controller) {
-                                      mapController = controller;
-                                      // Fit the map to show both markers and the polyline
-                                      _fitMapToBounds();
-                                    },
-                                    zoomControlsEnabled: false,
-                                    scrollGesturesEnabled: false,
-                                    zoomGesturesEnabled: false,
-                                    rotateGesturesEnabled: false,
-                                    tiltGesturesEnabled: false,
-                                    mapToolbarEnabled: false,
-                                    myLocationEnabled: false,
-                                    myLocationButtonEnabled: false,
-                                    compassEnabled: false,
                                   ),
                           ),
 

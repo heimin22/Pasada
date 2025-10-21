@@ -31,7 +31,7 @@ import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
 import 'package:pasada_passenger_app/widgets/home_bottom_section.dart';
 import 'package:pasada_passenger_app/widgets/home_header_section.dart';
 import 'package:pasada_passenger_app/widgets/home_screen_fab.dart';
-import 'package:pasada_passenger_app/widgets/location_input_container.dart';
+import 'package:pasada_passenger_app/widgets/refreshable_bottom_sheet.dart';
 import 'package:pasada_passenger_app/widgets/seating_preference_sheet.dart';
 import 'package:pasada_passenger_app/widgets/weather_alert_dialog.dart';
 import 'package:provider/provider.dart';
@@ -84,6 +84,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   // Debounce timer for bottom sheet reopening
   Timer? _bottomSheetDebounce;
+  // Refreshable bottom sheet state for content refresh
+  RefreshableBottomSheetState? _refreshableBottomSheetState;
   // keep state alive
   @override
   bool get wantKeepAlive => true;
@@ -102,6 +104,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   double currentFare = 0.0;
   double originalFare = 0.0; // Store original fare before discount
+
+  // ValueNotifiers for optimized rebuilds
+  final ValueNotifier<SelectedLocation?> _pickupLocationNotifier =
+      ValueNotifier(null);
+  final ValueNotifier<SelectedLocation?> _dropoffLocationNotifier =
+      ValueNotifier(null);
+  final ValueNotifier<double> _fareNotifier = ValueNotifier(0.0);
+  final ValueNotifier<String?> _paymentMethodNotifier = ValueNotifier(null);
+  final ValueNotifier<Map<String, dynamic>?> _routeNotifier =
+      ValueNotifier(null);
+  final ValueNotifier<bool> _notificationVisibilityNotifier =
+      ValueNotifier(true);
+  final ValueNotifier<bool> _holidayBannerNotifier = ValueNotifier(false);
   // Controller and current extent for booking bottom sheet
   final DraggableScrollableController _bookingSheetController =
       DraggableScrollableController();
@@ -150,12 +165,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final result = await navigateToRouteSelection(context);
 
     if (result != null && mounted) {
-      setState(() {
-        selectedRoute = result;
-        // Clear locations when switching routes
-        selectedPickUpLocation = null;
-        selectedDropOffLocation = null;
-      });
+      _routeNotifier.value = result;
+      _pickupLocationNotifier.value = null;
+      _dropoffLocationNotifier.value = null;
+
+      // Update the actual variables for backward compatibility
+      selectedRoute = result;
+      selectedPickUpLocation = null;
+      selectedDropOffLocation = null;
 
       // Clear map pins and overlays when switching routes
       mapScreenKey.currentState?.clearAll();
@@ -179,10 +196,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
               .eq('route_name', result['route_name'])
               .single();
 
-          setState(() {
-            selectedRoute!['officialroute_id'] =
-                routeResponse['officialroute_id'];
-          });
+          selectedRoute!['officialroute_id'] =
+              routeResponse['officialroute_id'];
+          _routeNotifier.value = selectedRoute;
         } catch (e) {
           ExceptionHandler.handleDatabaseException(
             e,
@@ -238,13 +254,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
   /// Update yung proper location base duon sa search type
   void updateLocation(SelectedLocation location, bool isPickup) {
-    setState(() {
-      if (isPickup) {
-        selectedPickUpLocation = location;
-      } else {
-        selectedDropOffLocation = location;
-      }
-    });
+    if (isPickup) {
+      selectedPickUpLocation = location;
+      _pickupLocationNotifier.value = location;
+    } else {
+      selectedDropOffLocation = location;
+      _dropoffLocationNotifier.value = location;
+    }
     saveLocation();
     WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
   }
@@ -282,10 +298,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     bookingAnimationController.addStatusListener((status) {
       // Use public field
       if (status == AnimationStatus.completed) {
-        setState(() {
-          isNotificationVisible = false;
-          measureContainers();
-        });
+        _notificationVisibilityNotifier.value = false;
+        measureContainers();
       }
     });
 
@@ -367,10 +381,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final prefs = await SharedPreferences.getInstance();
     final savedMethod = prefs.getString('selectedPaymentMethod');
     if (mounted) {
-      setState(() {
-        // Set Cash as default payment method
-        selectedPaymentMethod = savedMethod ?? 'Cash';
-      });
+      selectedPaymentMethod = savedMethod ?? 'Cash';
+      _paymentMethodNotifier.value = selectedPaymentMethod;
     }
   }
 
@@ -378,9 +390,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     try {
       final route = await RouteService.loadRoute();
       if (route != null && mounted) {
-        setState(() {
-          selectedRoute = route;
-        });
+        selectedRoute = route;
+        _routeNotifier.value = route;
 
         debugPrint('Loaded route: ${route['route_name']}');
 
@@ -425,6 +436,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     _bottomSheetDebounce?.cancel();
     bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+
+    // Dispose ValueNotifiers
+    _pickupLocationNotifier.dispose();
+    _dropoffLocationNotifier.dispose();
+    _fareNotifier.dispose();
+    _paymentMethodNotifier.dispose();
+    _routeNotifier.dispose();
+    _notificationVisibilityNotifier.dispose();
+    _holidayBannerNotifier.dispose();
+
     super.dispose();
   }
 
@@ -480,15 +501,20 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   }
 
   // Method to update fare when discount changes
-  void _updateFareForDiscount() {
+  void _updateFareForDiscount() async {
     if (!mounted) return;
     final String discount = selectedDiscountSpecification.value;
     // Update holiday banner visibility asynchronously
     _updateHolidayBannerVisibility(discount);
-    setState(() {
-      currentFare = FareService.calculateDiscountedFare(
-          originalFare, selectedDiscountSpecification.value);
-    });
+
+    // Use holiday-aware fare calculation
+    final discountedFare = await FareService.calculateDiscountedFareWithHoliday(
+        originalFare, selectedDiscountSpecification.value);
+
+    if (mounted) {
+      currentFare = discountedFare;
+      _fareNotifier.value = currentFare;
+    }
   }
 
   Future<void> _updateHolidayBannerVisibility(String discount) async {
@@ -496,14 +522,12 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       final bool isHoliday =
           await CalendarService.instance.isPhilippineHoliday(DateTime.now());
       if (!mounted) return;
-      setState(() {
-        showHolidayBanner = isHoliday;
-      });
+      showHolidayBanner = isHoliday;
+      _holidayBannerNotifier.value = isHoliday;
     } else {
       if (!mounted) return;
-      setState(() {
-        showHolidayBanner = false;
-      });
+      showHolidayBanner = false;
+      _holidayBannerNotifier.value = false;
     }
   }
 
@@ -515,6 +539,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedIdImageUrl: selectedIdImageUrl,
       onFareUpdated: _updateFareForDiscount, // Pass the fare update callback
       onReopenMainBottomSheet: _reopenBottomSheetAfterLocationUpdate,
+      refreshableBottomSheetState:
+          _refreshableBottomSheetState, // Pass refreshable state
     );
   }
 
@@ -566,13 +592,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     );
 
     if (result != null) {
-      setState(() {
-        if (isPickup) {
-          selectedPickUpLocation = result;
-        } else {
-          selectedDropOffLocation = result;
-        }
-      });
+      if (isPickup) {
+        selectedPickUpLocation = result;
+        _pickupLocationNotifier.value = result;
+      } else {
+        selectedDropOffLocation = result;
+        _dropoffLocationNotifier.value = result;
+      }
       // Save the updated location to cache
       saveLocation();
       WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
@@ -596,25 +622,33 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Set up debounced bottom sheet reopening
     _bottomSheetDebounce = Timer(const Duration(milliseconds: 500), () {
       if (mounted) {
-        LocationInputContainer.showBottomSheet(
-          context: context,
-          isRouteSelected: isRouteSelected,
-          selectedPickUpLocation: selectedPickUpLocation,
-          selectedDropOffLocation: selectedDropOffLocation,
-          currentFare: currentFare,
-          originalFare: originalFare,
-          selectedPaymentMethod: selectedPaymentMethod,
-          selectedDiscountSpecification: selectedDiscountSpecification,
-          seatingPreference: seatingPreference,
-          selectedIdImageUrl: selectedIdImageUrl,
-          onNavigateToLocationSearch: _navigateToLocationSearch,
-          onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
-          onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
-          onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
-          onFareUpdated: _updateFareForDiscount,
-        );
+        _showRefreshableBottomSheet();
       }
     });
+  }
+
+  /// Shows the refreshable bottom sheet
+  Future<void> _showRefreshableBottomSheet() async {
+    final result = await RefreshableBottomSheet.showRefreshableBottomSheet(
+      context: context,
+      isRouteSelected: isRouteSelected,
+      selectedPickUpLocation: selectedPickUpLocation,
+      selectedDropOffLocation: selectedDropOffLocation,
+      currentFare: currentFare,
+      originalFare: originalFare,
+      selectedPaymentMethod: selectedPaymentMethod,
+      selectedDiscountSpecification: selectedDiscountSpecification,
+      seatingPreference: seatingPreference,
+      selectedIdImageUrl: selectedIdImageUrl,
+      onNavigateToLocationSearch: _navigateToLocationSearch,
+      onShowSeatingPreferenceDialog: _showSeatingPreferenceSheet,
+      onShowDiscountSelectionDialog: _showDiscountSelectionSheet,
+      onConfirmBooking: () => _bookingManager.handleBookingConfirmation(),
+      onFareUpdated: _updateFareForDiscount,
+    );
+
+    // Store the state for content refresh
+    _refreshableBottomSheetState = result;
   }
 
   void saveLocation() async {
@@ -632,27 +666,27 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('pickup');
     await prefs.remove('dropoff');
-    setState(() {
-      selectedPickUpLocation = null;
-      selectedDropOffLocation = null;
-    });
+    selectedPickUpLocation = null;
+    selectedDropOffLocation = null;
+    _pickupLocationNotifier.value = null;
+    _dropoffLocationNotifier.value = null;
     debugPrint('Cached locations cleared');
   }
 
   void loadLocation() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      final pickupJson = prefs.getString('pickup');
-      if (pickupJson != null) {
-        selectedPickUpLocation =
-            SelectedLocation.fromJson(jsonDecode(pickupJson));
-      }
-      final dropoffJson = prefs.getString('dropoff');
-      if (dropoffJson != null) {
-        selectedDropOffLocation =
-            SelectedLocation.fromJson(jsonDecode(dropoffJson));
-      }
-    });
+    final pickupJson = prefs.getString('pickup');
+    if (pickupJson != null) {
+      selectedPickUpLocation =
+          SelectedLocation.fromJson(jsonDecode(pickupJson));
+      _pickupLocationNotifier.value = selectedPickUpLocation;
+    }
+    final dropoffJson = prefs.getString('dropoff');
+    if (dropoffJson != null) {
+      selectedDropOffLocation =
+          SelectedLocation.fromJson(jsonDecode(dropoffJson));
+      _dropoffLocationNotifier.value = selectedDropOffLocation;
+    }
     if (selectedPickUpLocation != null && selectedDropOffLocation != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         mapScreenKey.currentState?.updateLocations(
@@ -713,9 +747,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       message:
                           'Holiday today: Student discounts are not available.',
                       onClose: () {
-                        setState(() {
-                          showHolidayBanner = false;
-                        });
+                        showHolidayBanner = false;
+                        _holidayBannerNotifier.value = false;
                       },
                     ),
                   ),
@@ -745,10 +778,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         await FareService.calculateDiscountedFareWithHoliday(
                             fare, discount);
                     if (!mounted) return;
-                    setState(() {
-                      originalFare = fare;
-                      currentFare = discounted;
-                    });
+                    originalFare = fare;
+                    currentFare = discounted;
+                    _fareNotifier.value = currentFare;
                   },
                   selectedRoute: selectedRoute,
                   routePolyline:
@@ -807,36 +839,88 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     child: Container(
                       key:
                           locationInputContainerKey, // Assign key here for measurements
-                      child: HomeBottomSection(
-                        bookingAnimationController: bookingAnimationController,
-                        downwardAnimation: _downwardAnimation,
-                        isNotificationVisible: isNotificationVisible,
-                        notificationHeight: notificationHeight,
-                        onNotificationClose: () {
-                          setState(() {
-                            isNotificationVisible = false;
-                          });
+                      child: ValueListenableBuilder<bool>(
+                        valueListenable: _notificationVisibilityNotifier,
+                        builder: (context, isNotificationVisible, child) {
+                          return ValueListenableBuilder<SelectedLocation?>(
+                            valueListenable: _pickupLocationNotifier,
+                            builder: (context, selectedPickUpLocation, child) {
+                              return ValueListenableBuilder<SelectedLocation?>(
+                                valueListenable: _dropoffLocationNotifier,
+                                builder:
+                                    (context, selectedDropOffLocation, child) {
+                                  return ValueListenableBuilder<double>(
+                                    valueListenable: _fareNotifier,
+                                    builder: (context, currentFare, child) {
+                                      return ValueListenableBuilder<String?>(
+                                        valueListenable: _paymentMethodNotifier,
+                                        builder: (context,
+                                            selectedPaymentMethod, child) {
+                                          return ValueListenableBuilder<
+                                              Map<String, dynamic>?>(
+                                            valueListenable: _routeNotifier,
+                                            builder: (context, selectedRoute,
+                                                child) {
+                                              return HomeBottomSection(
+                                                bookingAnimationController:
+                                                    bookingAnimationController,
+                                                downwardAnimation:
+                                                    _downwardAnimation,
+                                                isNotificationVisible:
+                                                    isNotificationVisible,
+                                                notificationHeight:
+                                                    notificationHeight,
+                                                onNotificationClose: () {
+                                                  _notificationVisibilityNotifier
+                                                      .value = false;
+                                                },
+                                                onMeasureContainers:
+                                                    measureContainers,
+                                                isRouteSelected:
+                                                    selectedRoute != null &&
+                                                        selectedRoute[
+                                                                'route_name'] !=
+                                                            'Select Route',
+                                                selectedPickUpLocation:
+                                                    selectedPickUpLocation,
+                                                selectedDropOffLocation:
+                                                    selectedDropOffLocation,
+                                                currentFareNotifier:
+                                                    _fareNotifier,
+                                                originalFare: originalFare,
+                                                selectedPaymentMethod:
+                                                    selectedPaymentMethod,
+                                                selectedDiscountSpecification:
+                                                    selectedDiscountSpecification,
+                                                seatingPreference:
+                                                    seatingPreference,
+                                                selectedIdImageUrl:
+                                                    selectedIdImageUrl,
+                                                screenWidth: screenWidth,
+                                                responsivePadding:
+                                                    responsivePadding,
+                                                onNavigateToLocationSearch:
+                                                    _navigateToLocationSearch,
+                                                onShowSeatingPreferenceDialog:
+                                                    _showSeatingPreferenceSheet,
+                                                onShowDiscountSelectionDialog:
+                                                    _showDiscountSelectionSheet,
+                                                onConfirmBooking:
+                                                    _showBookingConfirmationDialog,
+                                                onFareUpdated:
+                                                    _updateFareForDiscount,
+                                              );
+                                            },
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
                         },
-                        onMeasureContainers: measureContainers,
-                        isRouteSelected: isRouteSelected,
-                        selectedPickUpLocation: selectedPickUpLocation,
-                        selectedDropOffLocation: selectedDropOffLocation,
-                        currentFare: currentFare,
-                        originalFare: originalFare,
-                        selectedPaymentMethod: selectedPaymentMethod,
-                        selectedDiscountSpecification:
-                            selectedDiscountSpecification,
-                        seatingPreference: seatingPreference,
-                        selectedIdImageUrl: selectedIdImageUrl,
-                        screenWidth: screenWidth,
-                        responsivePadding: responsivePadding,
-                        onNavigateToLocationSearch: _navigateToLocationSearch,
-                        onShowSeatingPreferenceDialog:
-                            _showSeatingPreferenceSheet,
-                        onShowDiscountSelectionDialog:
-                            _showDiscountSelectionSheet,
-                        onConfirmBooking: _showBookingConfirmationDialog,
-                        onFareUpdated: _updateFareForDiscount,
                       ),
                     ),
                   ),

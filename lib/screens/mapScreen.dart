@@ -15,6 +15,8 @@ import 'package:pasada_passenger_app/utils/map_marker_manager.dart';
 import 'package:pasada_passenger_app/utils/map_polyline_state_manager.dart';
 import 'package:pasada_passenger_app/utils/map_route_manager.dart';
 import 'package:pasada_passenger_app/utils/map_stable_state_manager.dart';
+import 'package:pasada_passenger_app/utils/optimized_marker_manager.dart';
+import 'package:pasada_passenger_app/utils/optimized_polyline_manager.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 
 class MapScreen extends StatefulWidget {
@@ -63,6 +65,10 @@ class MapScreenState extends State<MapScreen>
   late MapDriverAnimationManager _driverAnimationManager;
   late MapDirectionalBusManager _directionalBusManager;
   late MapStableStateManager _stableStateManager;
+
+  // Optimized managers for better performance
+  late OptimizedMarkerManager _optimizedMarkerManager;
+  late OptimizedPolylineManager _optimizedPolylineManager;
 
   // State variables
   LatLng? selectedPickupLatLng;
@@ -117,20 +123,6 @@ class MapScreenState extends State<MapScreen>
         if (mounted) setState(() {});
       },
     );
-
-    // Initialize route manager
-    _routeManager = MapRouteManager(
-      onFareUpdated: (fare) {
-        fareAmount = fare;
-        widget.onFareUpdated?.call(fare);
-        if (mounted) setState(() {});
-      },
-      onError: (error) => _dialogManager.showError(error),
-      onStateChanged: () {
-        if (mounted) setState(() {});
-      },
-    );
-
     // Initialize marker manager
     _markerManager = MapMarkerManager(
       onStateChanged: () {
@@ -173,11 +165,40 @@ class MapScreenState extends State<MapScreen>
       onError: (error) => _dialogManager.showError(error),
     );
 
+    // Initialize optimized managers
+    _optimizedMarkerManager = OptimizedMarkerManager(
+      onStateChanged: () {
+        // Don't call setState - use ValueListenableBuilder instead
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
+    _optimizedPolylineManager = OptimizedPolylineManager(
+      onStateChanged: () {
+        // Don't call setState - use ValueListenableBuilder instead
+      },
+      onError: (error) => _dialogManager.showError(error),
+    );
+
+    // Initialize route manager with optimized polyline manager
+    _routeManager = MapRouteManager(
+      onFareUpdated: (fare) {
+        fareAmount = fare;
+        widget.onFareUpdated?.call(fare);
+        if (mounted) setState(() {});
+      },
+      onError: (error) => _dialogManager.showError(error),
+      onStateChanged: () {
+        if (mounted) setState(() {});
+      },
+      optimizedPolylineManager: _optimizedPolylineManager,
+    );
+
     // Initialize driver tracker
     _driverTracker = MapDriverTracker(
       onDriverRouteUpdated: (driverLocation, route) {
-        // Use stable state manager to prevent flickering
-        _stableStateManager.updatePolyline(
+        // Use optimized polyline manager for better performance
+        _optimizedPolylineManager.updatePolyline(
           const PolylineId('driver_route_live'),
           route,
           color: const Color.fromARGB(255, 10, 179, 83),
@@ -242,6 +263,11 @@ class MapScreenState extends State<MapScreen>
     _driverAnimationManager.dispose();
     _directionalBusManager.dispose();
     _stableStateManager.dispose();
+
+    // Dispose optimized managers
+    _optimizedMarkerManager.dispose();
+    _optimizedPolylineManager.dispose();
+
     super.dispose();
   }
 
@@ -289,11 +315,11 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (segment.isNotEmpty) {
-          // Use stable state manager for consistent rendering
-          _stableStateManager.updatePolyline(
+          // Use optimized polyline manager for better performance
+          _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             segment,
-            color: const Color(0xFFFFCE21),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
 
@@ -311,11 +337,11 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          // Use stable state manager for consistent rendering
-          _stableStateManager.updatePolyline(
+          // Use optimized polyline manager for better performance
+          _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color.fromARGB(255, 4, 197, 88),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
 
@@ -392,10 +418,10 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          _stableStateManager.updatePolyline(
+          _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color(0xFFFFCE21),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
         }
@@ -407,10 +433,10 @@ class MapScreenState extends State<MapScreen>
         );
 
         if (route.isNotEmpty) {
-          _stableStateManager.updatePolyline(
+          _optimizedPolylineManager.updatePolyline(
             const PolylineId('route'),
             route,
-            color: const Color.fromARGB(255, 4, 197, 88),
+            color: const Color(0xFF00CC58),
             width: 4,
           );
         }
@@ -439,11 +465,11 @@ class MapScreenState extends State<MapScreen>
   Future<void> _renderRouteBetween(LatLng start, LatLng destination) async {
     final route = await _routeManager.renderRouteBetween(start, destination);
     if (route.isNotEmpty) {
-      // Update polyline in stable state manager
-      _stableStateManager.updatePolyline(
+      // Update polyline in optimized manager
+      _optimizedPolylineManager.updatePolyline(
         const PolylineId('route'),
         route,
-        color: const Color.fromARGB(255, 4, 197, 88),
+        color: const Color(0xFF00CC58),
         width: 4,
       );
       await _cameraManager.moveCameraToRoute(route, start, destination);
@@ -592,19 +618,21 @@ class MapScreenState extends State<MapScreen>
         child: Stack(
           children: [
             ValueListenableBuilder<Set<Polyline>>(
-              valueListenable: _stableStateManager.polylinesNotifier,
+              valueListenable: _optimizedPolylineManager.polylinesNotifier,
               builder: (context, polylines, child) {
                 return ValueListenableBuilder<Set<Marker>>(
-                  valueListenable: _stableStateManager.markersNotifier,
-                  builder: (context, stableMarkers, child) {
-                    // Combine regular markers with stable markers
+                  valueListenable: _optimizedMarkerManager.markersNotifier,
+                  builder: (context, optimizedMarkers, child) {
+                    // Combine optimized markers with stable markers
                     final allMarkers = <Marker>{};
+                    allMarkers.addAll(optimizedMarkers);
+
+                    // Add regular markers for pickup/dropoff
                     allMarkers.addAll(_markerManager.buildMarkers(
                       pickupLocation: widget.pickUpLocation,
                       dropoffLocation: widget.dropOffLocation,
                       driverLocation: null, // Don't use regular driver marker
                     ));
-                    allMarkers.addAll(stableMarkers);
 
                     // Add directional bus marker if available
                     final busMarker = _directionalBusManager.driverMarker;
@@ -780,6 +808,8 @@ class MapScreenState extends State<MapScreen>
       _routeManager.clearAllPolylines();
       _polylineStateManager.clearAllPolylines();
       _stableStateManager.clearAll();
+      _optimizedPolylineManager.clearAllPolylines();
+      _optimizedMarkerManager.clearAllMarkers();
       _markerManager.clearAllMarkers();
       _driverAnimationManager.dispose();
       _directionalBusManager.dispose();

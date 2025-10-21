@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/widgets/bottom_sheet_skeleton.dart';
 import 'package:pasada_passenger_app/widgets/id_image_container.dart';
 import 'package:pasada_passenger_app/widgets/location_row_widget.dart';
 
@@ -21,6 +22,7 @@ class LocationInputContainer extends StatelessWidget {
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
   final VoidCallback? onFareUpdated; // New callback for fare update
+  final bool isLoading; // Loading state for skeleton
 
   const LocationInputContainer({
     super.key,
@@ -41,6 +43,7 @@ class LocationInputContainer extends StatelessWidget {
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
     this.onFareUpdated,
+    this.isLoading = false,
   });
 
   /// Shows the LocationInputContainer as a modal bottom sheet
@@ -60,6 +63,7 @@ class LocationInputContainer extends StatelessWidget {
     required VoidCallback onShowDiscountSelectionDialog,
     required VoidCallback onConfirmBooking,
     VoidCallback? onFareUpdated,
+    bool isLoading = false,
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final responsivePadding = screenWidth * 0.04;
@@ -88,6 +92,7 @@ class LocationInputContainer extends StatelessWidget {
           onShowDiscountSelectionDialog: onShowDiscountSelectionDialog,
           onConfirmBooking: onConfirmBooking,
           onFareUpdated: onFareUpdated,
+          isLoading: isLoading,
         );
       },
     );
@@ -95,6 +100,15 @@ class LocationInputContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Show skeleton loading if isLoading is true
+    if (isLoading) {
+      return BottomSheetSkeleton(
+        screenWidth: screenWidth,
+        responsivePadding: responsivePadding,
+        iconSize: iconSize,
+      );
+    }
+
     String svgAssetPickup = 'assets/svg/pinpickup.svg';
     String svgAssetDropOff = 'assets/svg/pindropoff.svg';
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
