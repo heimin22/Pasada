@@ -15,10 +15,15 @@ class VehicleCapacityContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Use icon-only layout for screens smaller than 400px
+    final bool isSmallScreen = screenWidth < 400;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding:
+          isSmallScreen ? const EdgeInsets.all(16) : const EdgeInsets.all(24),
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
@@ -31,43 +36,110 @@ class VehicleCapacityContainer extends StatelessWidget {
           ),
         ],
       ),
+      child: isSmallScreen
+          ? _buildIconOnlyLayout(context, isDarkMode)
+          : _buildFullLayout(context, isDarkMode),
+    );
+  }
+
+  Widget _buildIconOnlyLayout(BuildContext context, bool isDarkMode) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildIconChip(
+          context,
+          icon: Icons.people,
+          value: totalPassengers,
+          color: const Color(0xFF00CC58),
+        ),
+        _buildIconChip(
+          context,
+          icon: Icons.event_seat,
+          value: sittingPassengers,
+          color: Colors.blue,
+        ),
+        _buildIconChip(
+          context,
+          icon: Icons.directions_walk,
+          value: standingPassengers,
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFullLayout(BuildContext context, bool isDarkMode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Vehicle Capacity',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color:
+                isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            _buildInfoChip(
+              context,
+              label: 'Total',
+              value: totalPassengers,
+              color: const Color(0xFF00CC58),
+            ),
+            const SizedBox(width: 8),
+            _buildInfoChip(
+              context,
+              label: 'Sitting',
+              value: sittingPassengers,
+              color: Colors.blue,
+            ),
+            const SizedBox(width: 8),
+            _buildInfoChip(
+              context,
+              label: 'Standing',
+              value: standingPassengers,
+              color: Colors.orange,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIconChip(BuildContext context,
+      {required IconData icon, required int? value, required Color color}) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final display = value == null ? '—' : value.toString();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF2A2A2A) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(height: 4),
           Text(
-            'Vehicle Capacity',
+            display,
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
               color: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildInfoChip(
-                context,
-                label: 'Total',
-                value: totalPassengers,
-                color: const Color(0xFF00CC58),
-              ),
-              const SizedBox(width: 8),
-              _buildInfoChip(
-                context,
-                label: 'Sitting',
-                value: sittingPassengers,
-                color: Colors.blue,
-              ),
-              const SizedBox(width: 8),
-              _buildInfoChip(
-                context,
-                label: 'Standing',
-                value: standingPassengers,
-                color: Colors.orange,
-              ),
-            ],
           ),
         ],
       ),
