@@ -77,6 +77,7 @@ class VehicleCapacityContainer extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
+            fontFamily: 'Inter',
             color:
                 isDarkMode ? const Color(0xFFF5F5F5) : const Color(0xFF121212),
           ),
@@ -136,6 +137,7 @@ class VehicleCapacityContainer extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
               color: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
@@ -172,6 +174,7 @@ class VehicleCapacityContainer extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
+              fontFamily: 'Inter',
               color: isDarkMode
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),

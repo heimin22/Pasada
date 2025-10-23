@@ -681,6 +681,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                   ? const Color(0xFFF5F5F5)
                   : const Color(0xFF121212),
               fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
             ),
           ),
         ),
@@ -696,6 +697,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                       ? const Color(0xFFF5F5F5)
                       : const Color(0xFF121212),
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Inter',
                 ),
               ),
             ),
@@ -827,6 +829,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        fontFamily: 'Inter',
                                         color: isDarkMode
                                             ? const Color(0xFFF5F5F5)
                                             : const Color(0xFF121212),
@@ -841,6 +844,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                               'N/A',
                                           style: TextStyle(
                                             fontSize: 14,
+                                            fontFamily: 'Inter',
                                             color: isDarkMode
                                                 ? Colors.grey[300]
                                                 : Colors.grey[700],
