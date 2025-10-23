@@ -858,6 +858,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                           'Plate Number',
                                       style: TextStyle(
                                         fontSize: 14,
+                                        fontFamily: 'Inter',
                                         color: isDarkMode
                                             ? Colors.grey[300]
                                             : Colors.grey[700],
@@ -1016,6 +1017,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? const Color(0xFFF5F5F5)
                                       : const Color(0xFF121212),
@@ -1025,6 +1027,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 '₱${(bookingDetails['fare'] is num ? bookingDetails['fare'].toDouble() : double.tryParse(bookingDetails['fare']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2)}',
                                 style: TextStyle(
                                   fontSize: 16,
+                                  fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? Colors.grey[300]
                                       : Colors.grey[700],
@@ -1044,6 +1047,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? const Color(0xFFF5F5F5)
                                       : const Color(0xFF121212),
@@ -1054,6 +1058,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     'Any',
                                 style: TextStyle(
                                   fontSize: 16,
+                                  fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? Colors.grey[300]
                                       : Colors.grey[700],
@@ -1073,6 +1078,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? const Color(0xFFF5F5F5)
                                       : const Color(0xFF121212),
@@ -1092,6 +1098,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         'Cash',
                                     style: TextStyle(
                                       fontSize: 16,
+                                      fontFamily: 'Inter',
                                       color: isDarkMode
                                           ? Colors.grey[300]
                                           : Colors.grey[700],
@@ -1169,6 +1176,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                           'Loading route map...',
                                           style: TextStyle(
                                             fontSize: 14,
+                                            fontFamily: 'Inter',
                                             color: isDarkMode
                                                 ? Colors.grey[300]
                                                 : Colors.grey[700],
@@ -1410,6 +1418,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        fontFamily: 'Inter',
                                       ),
                                     ),
                                   ),
@@ -1446,6 +1455,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
+              fontFamily: 'Inter',
             ),
           ),
         ),
