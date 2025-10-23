@@ -299,6 +299,7 @@ class DiscountSelectionButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
                     color: isRouteSelected
                         ? (isDarkMode
                             ? const Color(0xFFF5F5F5)
@@ -317,6 +318,7 @@ class DiscountSelectionButton extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
                       color: isRouteSelected
                           ? (isDarkMode
                               ? const Color(0xFFF5F5F5)
@@ -380,6 +382,7 @@ class SeatingPreferenceButton extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
                     color: isRouteSelected
                         ? (isDarkMode
                             ? const Color(0xFFF5F5F5)
@@ -398,6 +401,7 @@ class SeatingPreferenceButton extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
+                      fontFamily: 'Inter',
                       color: isRouteSelected
                           ? (isDarkMode
                               ? const Color(0xFFF5F5F5)
