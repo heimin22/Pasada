@@ -5,7 +5,7 @@ import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 class BookingDetails {
   final int bookingId;
   final String passengerId;
-  final int driverId;
+  final String driverId;
   final int routeId;
   final String rideStatus;
   final String pickupAddress;
@@ -97,7 +97,7 @@ class BookingDetails {
     return BookingDetails(
       bookingId: map['booking_id'] as int,
       passengerId: map['passenger_id'] as String,
-      driverId: map['driver_id'] as int,
+      driverId: map['driver_id']?.toString() ?? '',
       routeId: map['route_id'] as int,
       rideStatus: map['ride_status'] as String,
       pickupAddress: map['pickup_address'] as String,

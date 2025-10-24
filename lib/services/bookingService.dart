@@ -154,7 +154,7 @@ class BookingService {
         final bookingId = bookingData['booking_id'] as int;
         final backendPassengerId = bookingData['passenger_id'] as String? ??
             passengerId; // Prefer backend's if available
-        final driverId = bookingData['driver_id'] as int?;
+        final driverId = bookingData['driver_id'] as String? ?? '';
         final rideStatus = bookingData['ride_status'] as String;
         final backendRouteId = bookingData['route_id'] as int;
         final backendPickupAddress = bookingData['pickup_address'] as String;
@@ -180,7 +180,7 @@ class BookingService {
         final bookingDetails = BookingDetails(
           bookingId: bookingId,
           passengerId: backendPassengerId,
-          driverId: driverId ?? 0,
+          driverId: driverId,
           routeId: backendRouteId,
           rideStatus: rideStatus,
           pickupAddress: backendPickupAddress,
@@ -213,7 +213,7 @@ class BookingService {
                 final updatedBookingDetails = BookingDetails(
                   bookingId: bookingDetails.bookingId,
                   passengerId: bookingDetails.passengerId,
-                  driverId: driverData['driver']['driver_id'] ?? 0,
+                  driverId: driverData['driver']['driver_id']?.toString() ?? '',
                   routeId: bookingDetails.routeId,
                   rideStatus: 'accepted',
                   pickupAddress: bookingDetails.pickupAddress,
@@ -320,7 +320,7 @@ class BookingService {
         booking = BookingDetails(
           bookingId: bookingId,
           passengerId: apiBooking['passenger_id'] ?? '',
-          driverId: apiBooking['driver_id'] ?? 0,
+          driverId: apiBooking['driver_id']?.toString() ?? '',
           routeId: apiBooking['route_id'] ?? 0,
           rideStatus: apiBooking['ride_status'] ?? 'requested',
           pickupAddress: apiBooking['pickup_address'] ?? '',
