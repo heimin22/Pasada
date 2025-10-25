@@ -12,6 +12,7 @@ import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
+import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/error_logging_service.dart';
@@ -23,6 +24,7 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
+import 'package:pasada_passenger_app/widgets/capacity_warning_dialog.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +36,7 @@ class BookingManager {
   Timer? _completionTimer; // Polling for ride completion
   bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
   final ApiService _api = ApiService();
+  final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
 
@@ -1048,22 +1051,109 @@ class BookingManager {
     final String seatType = _state.seatingPreference.value;
     final int sitting = _state.vehicleSittingCapacity ?? 0;
     final int standing = _state.vehicleStandingCapacity ?? 0;
-    const int sittingLimit = 23;
+    const int sittingLimit = 27; // Updated limit as per requirements
     const int standingLimit = 3;
 
     bool exceeded = false;
+    String alternativeSeatType = '';
+
     if (seatType == 'Sitting') {
       exceeded = sitting >= sittingLimit;
+      alternativeSeatType = 'Standing';
     } else if (seatType == 'Standing') {
       exceeded = standing >= standingLimit;
+      alternativeSeatType = 'Sitting';
     } else {
       // Any: exceeded only if both are full
       exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
+      alternativeSeatType =
+          'Standing'; // Default to standing for 'Any' preference
     }
 
     if (exceeded && _state.activeBookingId != null) {
-      _autoCancelAndReassign(_state.activeBookingId!);
+      _showCapacityWarningDialog(
+          _state.activeBookingId!, seatType, alternativeSeatType);
     }
+  }
+
+  /// Shows the capacity warning dialog to the user
+  Future<void> _showCapacityWarningDialog(
+      int bookingId, String currentSeatType, String alternativeSeatType) async {
+    if (_reassignmentInProgress) return;
+
+    // Check if booking is still in 'assigned' status (not 'ongoing')
+    final canChange =
+        await _capacityService.canChangeSeatingPreference(bookingId);
+    if (!canChange) {
+      debugPrint(
+          '[BookingManager] Cannot show capacity dialog - booking not in assigned status');
+      return;
+    }
+
+    if (!_state.mounted) return;
+
+    await showDialog(
+      context: _state.context,
+      barrierDismissible: false,
+      builder: (context) => CapacityWarningDialog(
+        currentSeatType: currentSeatType,
+        alternativeSeatType: alternativeSeatType,
+        onAccept: () async {
+          Navigator.of(context).pop();
+          await _handleCapacityChangeAccept(bookingId, alternativeSeatType);
+        },
+        onDecline: () async {
+          Navigator.of(context).pop();
+          await _handleCapacityChangeDecline(bookingId);
+        },
+      ),
+    );
+  }
+
+  /// Handles when user accepts the capacity change
+  Future<void> _handleCapacityChangeAccept(
+      int bookingId, String newSeatType) async {
+    try {
+      debugPrint(
+          '[BookingManager] User accepted capacity change to $newSeatType');
+
+      // Update seating preference in database
+      final success = await _capacityService.updateSeatingPreference(
+        bookingId: bookingId,
+        newSeatType: newSeatType,
+      );
+
+      if (success) {
+        // Update local state
+        _state.setState(() {
+          _state.seatingPreference.value = newSeatType;
+        });
+
+        Fluttertoast.showToast(
+          msg: 'Seating preference updated to $newSeatType',
+          toastLength: Toast.LENGTH_SHORT,
+        );
+
+        // Refresh capacity data
+        await refreshDriverAndCapacity(bookingId);
+      } else {
+        Fluttertoast.showToast(
+          msg: 'Failed to update seating preference. Please try again.',
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
+    } catch (e) {
+      debugPrint('[BookingManager] Error handling capacity change accept: $e');
+      Fluttertoast.showToast(
+        msg: 'An error occurred. Please try again.',
+        toastLength: Toast.LENGTH_LONG,
+      );
+    }
+  }
+
+  /// Handles when user declines the capacity change
+  Future<void> _handleCapacityChangeDecline(int bookingId) async {
+    await _autoCancelAndReassign(bookingId);
   }
 
   Future<void> _autoCancelAndReassign(int bookingId) async {
