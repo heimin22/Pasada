@@ -95,20 +95,13 @@ class BackgroundRideService : Service(), LocationListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build notification with simple layout first
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Pasada - Ride in Progress")
-            .setContentText("You will arrive at 05:17 AM\nDra Evelyn B Reyes Clinic")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("You will arrive at 05:17 AM\nDra Evelyn B Reyes Clinic\n\nOn the way - 60% complete"))
-            .build()
+        // Create beautiful notification with rich formatting
+        val notification = createBeautifulRideNotification(
+            eta = "05:17 AM",
+            destination = "Dra Evelyn B Reyes Clinic",
+            progress = 60,
+            pendingIntent = pendingIntent
+        )
 
         // Start foreground service
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -218,10 +211,47 @@ class BackgroundRideService : Service(), LocationListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build updated notification with simple layout
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText(content)
+        // Create beautiful notification with updated data
+        val notification = createBeautifulRideNotification(
+            eta = eta ?: "05:17 AM",
+            destination = destination ?: "Destination",
+            progress = progress,
+            pendingIntent = pendingIntent
+        )
+
+        // Update notification
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun createBeautifulRideNotification(eta: String, destination: String, progress: Int, pendingIntent: PendingIntent): Notification {
+        // Create progress status with emojis
+        val progressStatus = when {
+            progress < 25 -> "🚗 Driver found"
+            progress < 60 -> "🛣️ On the way"
+            progress < 100 -> "📍 Almost there"
+            else -> "✅ Arrived"
+        }
+        
+        // Create visual progress bar
+        val progressBar = "█".repeat(progress / 5) + "░".repeat(20 - progress / 5)
+        
+        // Create beautiful notification content
+        val bigText = """
+            🚌 PASADA - Ride in Progress
+            
+            ⏰ You will arrive at $eta
+            📍 $destination
+            
+            $progressStatus
+            Progress: $progressBar $progress%
+            
+            🎯 Your ride is being tracked in the background
+        """.trimIndent()
+        
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("🚌 PASADA")
+            .setContentText("Ride in progress - $progress% complete")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -230,12 +260,9 @@ class BackgroundRideService : Service(), LocationListener {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("${eta ?: "05:17 AM"}\n${destination ?: "Destination"}\n\nProgress: $progress%"))
+                .bigText(bigText)
+                .setSummaryText("Ride tracking active"))
             .build()
-
-        // Update notification
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, notification)
     }
 
 }
