@@ -25,7 +25,6 @@ class BackgroundRideService : Service(), LocationListener {
         private const val CHANNEL_ID = "ride_tracking_service"
         private const val CHANNEL_NAME = "Ride Tracking Service"
         private const val NOTIFICATION_ID = 9999
-        private const val ARRIVING_NOTIFICATION_ID = 9998
     }
     
     private val binder = LocalBinder()
@@ -265,66 +264,4 @@ class BackgroundRideService : Service(), LocationListener {
                 .setSummaryText("Ride tracking active"))
             .build()
     }
-
-    // Native Kotlin notification for "Arriving at x mins" status
-    fun showArrivingNotification(etaMinutes: Int, destination: String, driverName: String? = null) {
-        val notificationIntent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent, 
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Create the "Arriving at x mins" notification
-        val notification = createArrivingNotification(
-            etaMinutes = etaMinutes,
-            destination = destination,
-            driverName = driverName,
-            pendingIntent = pendingIntent
-        )
-
-        // Show the notification
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(ARRIVING_NOTIFICATION_ID, notification)
-    }
-
-    private fun createArrivingNotification(etaMinutes: Int, destination: String, driverName: String?, pendingIntent: PendingIntent): Notification {
-        val etaText = if (etaMinutes <= 1) "Arriving now" else "Arriving at $etaMinutes min"
-        
-        // Calculate progress percentage (simplified - you can make this more sophisticated)
-        val progressPercentage = when {
-            etaMinutes <= 1 -> 95
-            etaMinutes <= 5 -> 80
-            etaMinutes <= 10 -> 60
-            etaMinutes <= 20 -> 40
-            else -> 20
-        }
-        
-        // Create progress bar visual
-        val progressBar = "█".repeat(progressPercentage / 5) + "░".repeat(20 - progressPercentage / 5)
-        
-        // Create the exact notification format from your image
-        val bigText = """
-            $etaText
-            
-            $progressBar
-            
-            $progressPercentage% to drop-off
-        """.trimIndent()
-        
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(etaText)
-            .setContentText("$progressPercentage% to drop-off")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText(bigText)
-                .setSummaryText("$progressPercentage% to drop-off"))
-            .build()
-    }
-
 }

@@ -404,25 +404,6 @@ class BackgroundRideService {
     }
   }
 
-  /// Show native "Arriving at x mins" notification
-  static Future<void> showArrivingNotification({
-    required int etaMinutes,
-    required String destination,
-    String? driverName,
-  }) async {
-    try {
-      await _platform.invokeMethod('showArrivingNotification', {
-        'etaMinutes': etaMinutes,
-        'destination': destination,
-        'driverName': driverName,
-      });
-      debugPrint(
-          'Arriving notification sent: $etaMinutes mins to $destination');
-    } catch (e) {
-      debugPrint('Error showing arriving notification: $e');
-    }
-  }
-
   /// Test method to show custom notification (for debugging)
   static Future<void> testCustomNotification() async {
     try {
@@ -436,20 +417,6 @@ class BackgroundRideService {
       debugPrint('Test custom notification sent');
     } catch (e) {
       debugPrint('Error testing custom notification: $e');
-    }
-  }
-
-  /// Test method to show native arriving notification (for debugging)
-  static Future<void> testArrivingNotification() async {
-    try {
-      await showArrivingNotification(
-        etaMinutes: 5,
-        destination: 'Test Destination',
-        driverName: 'Test Driver',
-      );
-      debugPrint('Test arriving notification sent');
-    } catch (e) {
-      debugPrint('Error testing arriving notification: $e');
     }
   }
 }
