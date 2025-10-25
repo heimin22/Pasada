@@ -1221,6 +1221,9 @@ class BookingManager {
           await _capacityService.resetBookingForReassignment(bookingId);
 
       if (success) {
+        // Reset all booking-related state
+        _resetBookingState();
+
         // Update local state to reflect the status change
         _state.setState(() {
           _state.bookingStatus = 'requested';
@@ -1261,6 +1264,58 @@ class BookingManager {
         msg: 'An error occurred. Please try again.',
         toastLength: Toast.LENGTH_LONG,
       );
+    }
+  }
+
+  /// Resets all booking-related state when reassigning driver
+  void _resetBookingState() {
+    debugPrint(
+        '[BookingManager] Resetting all booking state for driver reassignment');
+
+    // Reset driver-related state
+    _state.driverName = '';
+    _state.plateNumber = '';
+    _state.vehicleModel = '';
+    _state.phoneNumber = '';
+
+    // Reset vehicle capacity state
+    _state.vehicleTotalCapacity = null;
+    _state.vehicleSittingCapacity = null;
+    _state.vehicleStandingCapacity = null;
+    _state.capacityRefreshTick = 0;
+
+    // Reset driver assignment service
+    if (_state.driverAssignmentService != null) {
+      _state.driverAssignmentService!.stopPolling();
+      _state.driverAssignmentService = null;
+    }
+
+    // Reset completion timer
+    if (_completionTimer != null) {
+      _completionTimer!.cancel();
+      _completionTimer = null;
+    }
+
+    // Reset progress tracking
+    _progressNotificationStarted = false;
+    _acceptedNotified = false;
+
+    // Reset capacity dialog flag
+    _capacityDialogShown = false;
+
+    // Clear map polylines and markers
+    _clearMapState();
+
+    debugPrint('[BookingManager] All booking state reset successfully');
+  }
+
+  /// Clears all map-related state (polylines, markers, driver location)
+  void _clearMapState() {
+    debugPrint('[BookingManager] Clearing map state');
+
+    // Clear all map overlays and reset state
+    if (_state.mapScreenKey.currentState != null) {
+      _state.mapScreenKey.currentState!.clearAll();
     }
   }
 
