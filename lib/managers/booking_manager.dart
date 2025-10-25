@@ -1431,6 +1431,7 @@ class BookingManager {
         rideStatus: rideStatus,
         driverName: _state.driverName.isNotEmpty ? _state.driverName : null,
         estimatedArrival: null, // Not available in current implementation
+        dropoffAddress: _state.selectedDropOffLocation?.address,
       );
       debugPrint(
           'Background service updated for booking $bookingId with status $rideStatus');

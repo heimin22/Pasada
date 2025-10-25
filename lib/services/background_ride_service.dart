@@ -119,6 +119,7 @@ class BackgroundRideService {
     required String rideStatus,
     String? driverName,
     String? estimatedArrival,
+    String? dropoffAddress,
   }) async {
     if (!_isServiceRunning) return;
 
@@ -139,11 +140,13 @@ class BackgroundRideService {
         estimatedArrival: estimatedArrival,
       );
 
-      // Update native service notification
+      // Update native service notification with structured data
       await _platform.invokeMethod('updateServiceNotification', {
-        'title': 'Pasada - Ride $rideStatus',
-        'content':
-            'Your ride is $rideStatus${driverName != null ? ' • Driver: $driverName' : ''}${estimatedArrival != null ? ' • ETA: $estimatedArrival' : ''}',
+        'title': 'Pasada',
+        'content': 'Ride in progress',
+        'eta': estimatedArrival,
+        'destination': dropoffAddress,
+        'progress': _getProgressForStatus(rideStatus),
       });
     } catch (e) {
       debugPrint('Error updating service notification: $e');
@@ -385,5 +388,35 @@ class BackgroundRideService {
     await prefs.remove('pickupAddress');
     await prefs.remove('dropoffAddress');
     await prefs.setBool('isBackgroundServiceRunning', false);
+  }
+
+  /// Get progress percentage based on ride status
+  static int _getProgressForStatus(String rideStatus) {
+    switch (rideStatus) {
+      case 'accepted':
+        return 25; // Driver found, starting journey
+      case 'ongoing':
+        return 60; // Ride in progress
+      case 'completed':
+        return 100; // Ride completed
+      default:
+        return 0;
+    }
+  }
+
+  /// Test method to show custom notification (for debugging)
+  static Future<void> testCustomNotification() async {
+    try {
+      await _platform.invokeMethod('updateServiceNotification', {
+        'title': 'Pasada',
+        'content': 'Ride in progress',
+        'eta': '05:17 AM',
+        'destination': 'Dra Evelyn B Reyes Clinic',
+        'progress': 60,
+      });
+      debugPrint('Test custom notification sent');
+    } catch (e) {
+      debugPrint('Error testing custom notification: $e');
+    }
   }
 }

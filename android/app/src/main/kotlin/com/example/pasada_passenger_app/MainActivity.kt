@@ -26,7 +26,10 @@ class MainActivity: FlutterActivity() {
                 "updateServiceNotification" -> {
                     val title = call.argument<String>("title") ?: "Pasada - Ride in Progress"
                     val content = call.argument<String>("content") ?: "Your ride is being tracked"
-                    updateServiceNotification(title, content)
+                    val eta = call.argument<String>("eta")
+                    val destination = call.argument<String>("destination")
+                    val progress = call.argument<Int>("progress") ?: 0
+                    updateServiceNotification(title, content, eta, destination, progress)
                     result.success(null)
                 }
                 else -> {
@@ -50,7 +53,8 @@ class MainActivity: FlutterActivity() {
         stopService(intent)
     }
 
-    private fun updateServiceNotification(title: String, content: String) {
+    private fun updateServiceNotification(title: String, content: String, eta: String?, destination: String?, progress: Int) {
         // This will be handled by the service itself
+        // The service will receive these parameters and update the custom notification layout
     }
 }

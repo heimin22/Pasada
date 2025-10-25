@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification Colors -->
+    <color name="notification_background">#1A1A1A</color>
+    <color name="notification_text_primary">#FFFFFF</color>
+    <color name="notification_text_secondary">#CCCCCC</color>
+    <color name="notification_accent">#00CC58</color>
+    
+    <!-- Progress Bar Colors -->
+    <color name="progress_background">#333333</color>
+    <color name="progress_gradient_start">#00CC58</color>
+    <color name="progress_gradient_end">#FFCE21</color>
+    
+    <!-- Standard Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>

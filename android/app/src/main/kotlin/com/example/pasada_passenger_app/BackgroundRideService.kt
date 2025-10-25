@@ -95,10 +95,10 @@ class BackgroundRideService : Service(), LocationListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build notification
+        // Build notification with simple layout first
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Pasada - Ride in Progress")
-            .setContentText("Your ride is being tracked in the background")
+            .setContentText("You will arrive at 05:17 AM\nDra Evelyn B Reyes Clinic")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -106,6 +106,8 @@ class BackgroundRideService : Service(), LocationListener {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("You will arrive at 05:17 AM\nDra Evelyn B Reyes Clinic\n\nOn the way - 60% complete"))
             .build()
 
         // Start foreground service
@@ -208,7 +210,7 @@ class BackgroundRideService : Service(), LocationListener {
         this.methodChannel = channel
     }
 
-    fun updateNotification(title: String, content: String) {
+    fun updateNotification(title: String, content: String, eta: String? = null, destination: String? = null, progress: Int = 0) {
         // Create intent for notification tap
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
@@ -216,7 +218,7 @@ class BackgroundRideService : Service(), LocationListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Build updated notification
+        // Build updated notification with simple layout
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(content)
@@ -227,10 +229,13 @@ class BackgroundRideService : Service(), LocationListener {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("${eta ?: "05:17 AM"}\n${destination ?: "Destination"}\n\nProgress: $progress%"))
             .build()
 
         // Update notification
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, notification)
     }
+
 }
