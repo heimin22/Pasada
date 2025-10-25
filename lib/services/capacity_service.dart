@@ -96,7 +96,7 @@ class CapacityService {
   }
 
   /// Checks if a booking is in a state where capacity changes are allowed
-  /// Only allows changes for 'assigned' status, not 'ongoing'
+  /// Allows changes for 'assigned' and 'accepted' status, not 'ongoing' or 'completed'
   Future<bool> canChangeSeatingPreference(int bookingId) async {
     try {
       final response = await supabase
@@ -108,8 +108,8 @@ class CapacityService {
       final status = response['ride_status'] as String?;
       debugPrint('[CapacityService] Booking $bookingId status: $status');
 
-      // Only allow changes for 'assigned' status
-      return status == 'assigned';
+      // Allow changes for 'assigned' and 'accepted' status, but not 'ongoing' or 'completed'
+      return status == 'assigned' || status == 'accepted';
     } catch (e) {
       debugPrint('[CapacityService] Error checking booking status: $e');
       return false;

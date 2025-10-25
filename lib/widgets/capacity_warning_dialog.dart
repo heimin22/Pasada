@@ -19,59 +19,69 @@ class CapacityWarningDialog extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final screenSize = MediaQuery.of(context).size;
 
+    // Calculate responsive values following the pattern from other dialogs
+    final iconSize = screenSize.width * 0.12; // 12% of screen width
+    final titleFontSize = screenSize.width * 0.045; // 4.5% of screen width
+    final descriptionFontSize =
+        screenSize.width * 0.035; // 3.5% of screen width
+    final buttonFontSize = 12.0; // Fixed 12px as requested
+    final padding = screenSize.width * 0.05; // 5% of screen width
+    final spacing = screenSize.height * 0.015; // 1.5% of screen height
+    final buttonHeight = screenSize.height * 0.045; // 4.5% of screen height
+
     return Dialog(
       backgroundColor:
           isDarkMode ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(screenSize.width * 0.03),
+        borderRadius: BorderRadius.circular(screenSize.width * 0.025),
         side: BorderSide(
           color: isDarkMode ? const Color(0xFF2A2A2A) : const Color(0xFFE0E0E0),
           width: 1,
         ),
       ),
       insetPadding: EdgeInsets.symmetric(
-        horizontal: screenSize.width * 0.05,
-        vertical: screenSize.height * 0.03,
+        horizontal: screenSize.width * 0.08,
+        vertical: screenSize.height * 0.1,
       ),
       child: Container(
-        padding: EdgeInsets.all(screenSize.width * 0.06),
+        padding: EdgeInsets.all(padding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Warning Icon
             Container(
-              width: screenSize.width * 0.15,
-              height: screenSize.width * 0.15,
+              width: iconSize,
+              height: iconSize,
               decoration: BoxDecoration(
                 color: Colors.orange.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.warning_amber_rounded,
-                size: screenSize.width * 0.08,
+                size: iconSize * 0.6,
                 color: Colors.orange,
               ),
             ),
-            SizedBox(height: screenSize.height * 0.02),
+            SizedBox(height: spacing),
 
             // Title
             Text(
               'Capacity Limit Reached',
               style: TextStyle(
-                fontSize: screenSize.width * 0.055,
+                fontSize: titleFontSize,
                 fontWeight: FontWeight.w700,
                 fontFamily: 'Inter',
                 color: isDarkMode ? Colors.white : Colors.black87,
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: screenSize.height * 0.015),
+            SizedBox(height: spacing * 0.8),
 
             // Description
             Text(
-              'The vehicle has reached its ${currentSeatType.toLowerCase()} capacity. Would you like to change to ${alternativeSeatType.toLowerCase()} instead?',
+              'Boss, puno na yung ${currentSeatType.toLowerCase()} capacity. Gusto mo bang palitan ng ${alternativeSeatType.toLowerCase()}?',
               style: TextStyle(
-                fontSize: screenSize.width * 0.04,
+                fontSize: descriptionFontSize,
                 fontWeight: FontWeight.w400,
                 fontFamily: 'Inter',
                 color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
@@ -79,7 +89,7 @@ class CapacityWarningDialog extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: screenSize.height * 0.025),
+            SizedBox(height: spacing * 1.5),
 
             // Action Buttons
             Row(
@@ -87,7 +97,7 @@ class CapacityWarningDialog extends StatelessWidget {
                 // Decline Button
                 Expanded(
                   child: Container(
-                    height: screenSize.height * 0.055,
+                    height: buttonHeight,
                     decoration: BoxDecoration(
                       border: Border.all(
                         color:
@@ -95,20 +105,20 @@ class CapacityWarningDialog extends StatelessWidget {
                         width: 1.5,
                       ),
                       borderRadius:
-                          BorderRadius.circular(screenSize.width * 0.02),
+                          BorderRadius.circular(screenSize.width * 0.015),
                     ),
                     child: TextButton(
                       onPressed: onDecline,
                       style: TextButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(screenSize.width * 0.02),
+                              BorderRadius.circular(screenSize.width * 0.015),
                         ),
                       ),
                       child: Text(
                         'Find Another Driver',
                         style: TextStyle(
-                          fontSize: screenSize.width * 0.04,
+                          fontSize: buttonFontSize,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Inter',
                           color:
@@ -118,12 +128,12 @@ class CapacityWarningDialog extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: screenSize.width * 0.03),
+                SizedBox(width: screenSize.width * 0.025),
 
                 // Accept Button
                 Expanded(
                   child: Container(
-                    height: screenSize.height * 0.055,
+                    height: buttonHeight,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF00CC58), Color(0xFF00A047)],
@@ -131,20 +141,20 @@ class CapacityWarningDialog extends StatelessWidget {
                         end: Alignment.bottomRight,
                       ),
                       borderRadius:
-                          BorderRadius.circular(screenSize.width * 0.02),
+                          BorderRadius.circular(screenSize.width * 0.015),
                     ),
                     child: TextButton(
                       onPressed: onAccept,
                       style: TextButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius:
-                              BorderRadius.circular(screenSize.width * 0.02),
+                              BorderRadius.circular(screenSize.width * 0.015),
                         ),
                       ),
                       child: Text(
                         'Change to $alternativeSeatType',
                         style: TextStyle(
-                          fontSize: screenSize.width * 0.04,
+                          fontSize: buttonFontSize,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'Inter',
                           color: Colors.white,
