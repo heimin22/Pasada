@@ -132,4 +132,31 @@ class CapacityService {
       return null;
     }
   }
+
+  /// Resets booking status to 'requested' for driver reassignment
+  /// Returns true if successful, false otherwise
+  Future<bool> resetBookingForReassignment(int bookingId) async {
+    try {
+      debugPrint(
+          '[CapacityService] Resetting booking $bookingId for reassignment');
+
+      final response =
+          await supabase.rpc('reset_booking_for_reassignment', params: {
+        'booking_id': bookingId,
+      });
+
+      if (response != null) {
+        debugPrint(
+            '[CapacityService] Successfully reset booking for reassignment');
+        return true;
+      } else {
+        debugPrint('[CapacityService] Failed to reset booking - null response');
+        return false;
+      }
+    } catch (e) {
+      debugPrint(
+          '[CapacityService] Error resetting booking for reassignment: $e');
+      return false;
+    }
+  }
 }

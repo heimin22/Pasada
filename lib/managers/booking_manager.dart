@@ -10,7 +10,6 @@ import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
@@ -34,10 +33,9 @@ class BookingManager {
   bool _progressNotificationStarted = false;
   double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
-  bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
+  final bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
   bool _capacityDialogShown =
       false; // Prevent dialog from showing multiple times
-  final ApiService _api = ApiService();
   final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
@@ -1211,40 +1209,58 @@ class BookingManager {
 
   /// Handles when user declines the capacity change
   Future<void> _handleCapacityChangeDecline(int bookingId) async {
-    // Reset the dialog flag since user made a decision
-    _capacityDialogShown = false;
-    await _autoCancelAndReassign(bookingId);
-  }
-
-  Future<void> _autoCancelAndReassign(int bookingId) async {
-    if (_reassignmentInProgress) return;
-    _reassignmentInProgress = true;
     try {
       debugPrint(
-          '[BookingManager] Capacity limit reached. Auto-cancelling booking $bookingId and reassigning...');
+          '[BookingManager] User declined capacity change, resetting booking for reassignment');
 
-      // Cancel booking on backend
-      await _api.put<Map<String, dynamic>>('bookings/$bookingId',
-          body: {'ride_status': 'cancelled'});
+      // Reset the dialog flag since user made a decision
+      _capacityDialogShown = false;
 
-      if (_state.mounted) {
+      // Reset booking status to 'requested' for driver reassignment
+      final success =
+          await _capacityService.resetBookingForReassignment(bookingId);
+
+      if (success) {
+        // Update local state to reflect the status change
         _state.setState(() {
-          _state.bookingStatus = 'cancelled';
+          _state.bookingStatus = 'requested';
+          _state.isDriverAssigned = false;
         });
+
+        Fluttertoast.showToast(
+          msg: 'Looking for another driver...',
+          toastLength: Toast.LENGTH_SHORT,
+        );
+
+        // Start polling for new driver assignment
+        _state.driverAssignmentService = DriverAssignmentService();
+        _state.driverAssignmentService!.pollForDriverAssignment(
+          bookingId,
+          (driverData) {
+            _loadBookingAfterDriverAssignment(bookingId);
+          },
+          onError: () {},
+          onStatusChange: (newStatus) {
+            if (_state.mounted) {
+              _state.setState(() => _state.bookingStatus = newStatus);
+              if (newStatus == 'accepted' || newStatus == 'ongoing') {
+                _fetchAndUpdateBookingDetails(bookingId);
+              }
+            }
+          },
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: 'Failed to reset booking. Please try again.',
+          toastLength: Toast.LENGTH_LONG,
+        );
       }
-
-      // Preserve selections and reset UI to pre-booking state
-      handleNoDriverFound();
-
-      // Recreate booking automatically with same selections
-      await handleBookingConfirmation();
-
-      Fluttertoast.showToast(
-          msg: 'Capacity reached. Searching for another driver...');
     } catch (e) {
-      debugPrint('[BookingManager] Auto reassign failed: $e');
-    } finally {
-      _reassignmentInProgress = false;
+      debugPrint('[BookingManager] Error handling capacity change decline: $e');
+      Fluttertoast.showToast(
+        msg: 'An error occurred. Please try again.',
+        toastLength: Toast.LENGTH_LONG,
+      );
     }
   }
 
