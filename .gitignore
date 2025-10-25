@@ -193,3 +193,4 @@ coverage/
 # Local configuration
 local.properties
 key.properties
+supabase_functions/update_booking_seating_preference.sql

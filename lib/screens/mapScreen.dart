@@ -800,6 +800,17 @@ class MapScreenState extends State<MapScreen>
     );
   }
 
+  // Clears pickup-to-dropoff polylines when ride is ongoing
+  void clearPickupToDropoffPolylines() {
+    setState(() {
+      // Remove the main route polyline (pickup to dropoff)
+      _routeManager.removePolyline(const PolylineId('route'));
+      _polylineStateManager.removePolyline(const PolylineId('route'));
+      _stableStateManager.removePolyline(const PolylineId('route'));
+      _optimizedPolylineManager.removePolyline(const PolylineId('route'));
+    });
+  }
+
   // Clears all map overlays and selected locations
   void clearAll() {
     setState(() {

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#1A1A1A"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Header with Pasada branding -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:id="@+id/tv_pasada_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PASADA"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tv_ride_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ride in progress"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- ETA Information -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="You will arrive at"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_eta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="05:17 AM"
+            android:textColor="#00CC58"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Destination -->
+    <TextView
+        android:id="@+id/tv_destination"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dra Evelyn B Reyes Clinic"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Progress Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Progress Status Text -->
+        <TextView
+            android:id="@+id/tv_progress_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="On the way"
+            android:textColor="#CCCCCC"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Progress Bar Container -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp">
+
+            <!-- Background Progress Bar -->
+            <ProgressBar
+                android:id="@+id/progress_bar_background"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:progress="100"
+                android:progressTint="#333333"
+                android:progressBackgroundTint="#333333" />
+
+            <!-- Gradient Progress Bar -->
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:progress="60"
+                android:progressTint="#00CC58"
+                android:progressBackgroundTint="@android:color/transparent" />
+
+            <!-- Car Icon -->
+            <ImageView
+                android:id="@+id/iv_car_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_car"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="8dp" />
+
+            <!-- Destination Pin -->
+            <ImageView
+                android:id="@+id/iv_destination_pin"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_destination_pin"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp" />
+
+        </RelativeLayout>
+
+        <!-- Progress Percentage -->
+        <TextView
+            android:id="@+id/tv_progress_percentage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="60%"
+            android:textColor="#CCCCCC"
+            android:textSize="10sp"
+            android:layout_gravity="end" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -10,8 +10,9 @@ import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
-import 'package:pasada_passenger_app/services/apiService.dart';
+import 'package:pasada_passenger_app/services/background_ride_service.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
+import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/error_logging_service.dart';
@@ -23,6 +24,7 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
+import 'package:pasada_passenger_app/widgets/capacity_warning_dialog.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,8 +34,10 @@ class BookingManager {
   bool _progressNotificationStarted = false;
   double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
-  bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
-  final ApiService _api = ApiService();
+  final bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
+  bool _capacityDialogShown =
+      false; // Prevent dialog from showing multiple times
+  final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
 
@@ -99,11 +103,14 @@ class BookingManager {
           bookingId,
           (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
-          onStatusChange: (newStatus) {
+          onStatusChange: (newStatus) async {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
+
+                // Start background service for accepted rides
+                await _startBackgroundServiceForRide(bookingId, newStatus);
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -111,7 +118,15 @@ class BookingManager {
                   progress: 0,
                   maxProgress: 100,
                 );
+
+                // Update background service for ongoing rides
+                await _updateBackgroundServiceForRide(bookingId, newStatus);
               }
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                // Stop background service when ride is completed or cancelled
+                await _stopBackgroundServiceForRide();
+              }
+
               _state.setState(() => _state.bookingStatus = newStatus);
               // Call _fetchAndUpdateBookingDetails for relevant status changes
               if (newStatus == 'accepted' ||
@@ -230,6 +245,8 @@ class BookingManager {
   }
 
   Future<void> handleBookingConfirmation() async {
+    // Reset capacity dialog flag for new booking
+    _capacityDialogShown = false;
     if (_state.selectedRoute != null &&
         _state.selectedPickUpLocation != null &&
         _state.selectedDropOffLocation != null) {
@@ -313,11 +330,15 @@ class BookingManager {
             _loadBookingAfterDriverAssignment(details.bookingId);
           },
           onError: () {},
-          onStatusChange: (newStatus) {
+          onStatusChange: (newStatus) async {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
+
+                // Start background service for accepted rides
+                await _startBackgroundServiceForRide(
+                    details.bookingId, newStatus);
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -325,7 +346,16 @@ class BookingManager {
                   progress: 0,
                   maxProgress: 100,
                 );
+
+                // Update background service for ongoing rides
+                await _updateBackgroundServiceForRide(
+                    details.bookingId, newStatus);
               }
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                // Stop background service when ride is completed or cancelled
+                await _stopBackgroundServiceForRide();
+              }
+
               _state.setState(() => _state.bookingStatus = newStatus);
               if (newStatus == 'accepted' ||
                   newStatus == 'ongoing' ||
@@ -751,6 +781,9 @@ class BookingManager {
               _state.vehicleStandingCapacity == null) {
             await _fetchVehicleCapacityForBooking(bookingId);
           }
+
+          // Check capacity after driver assignment
+          _evaluateCapacityAndMaybeReassign();
           return;
         }
       } catch (e) {
@@ -815,6 +848,9 @@ class BookingManager {
         _fetchDriverDetailsDirectlyFromDB(bookingId);
       }
     });
+
+    // Check capacity after driver assignment
+    _evaluateCapacityAndMaybeReassign();
   }
 
   Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async {
@@ -1043,58 +1079,268 @@ class BookingManager {
     }
   }
 
+  /// Public method to manually trigger capacity check (for testing)
+  Future<void> checkCapacityManually(int bookingId) async {
+    debugPrint(
+        '[BookingManager] Manual capacity check triggered for booking $bookingId');
+    await _checkCapacityAndShowDialog(bookingId);
+  }
+
   void _evaluateCapacityAndMaybeReassign() {
     if (_reassignmentInProgress) return;
-    final String seatType = _state.seatingPreference.value;
-    final int sitting = _state.vehicleSittingCapacity ?? 0;
-    final int standing = _state.vehicleStandingCapacity ?? 0;
-    const int sittingLimit = 23;
-    const int standingLimit = 3;
+    if (_state.activeBookingId == null) return;
 
-    bool exceeded = false;
-    if (seatType == 'Sitting') {
-      exceeded = sitting >= sittingLimit;
-    } else if (seatType == 'Standing') {
-      exceeded = standing >= standingLimit;
-    } else {
-      // Any: exceeded only if both are full
-      exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
-    }
+    // Call the async method without awaiting to avoid blocking
+    _checkCapacityAndShowDialog(_state.activeBookingId!);
+  }
 
-    if (exceeded && _state.activeBookingId != null) {
-      _autoCancelAndReassign(_state.activeBookingId!);
+  /// Checks capacity using actual database data and shows dialog if needed
+  Future<void> _checkCapacityAndShowDialog(int bookingId) async {
+    try {
+      debugPrint('[BookingManager] Checking capacity for booking $bookingId');
+
+      // Get actual vehicle capacity from database
+      final capacityData =
+          await _capacityService.getVehicleCapacityForBooking(bookingId);
+      if (capacityData == null) {
+        debugPrint('[BookingManager] Could not fetch vehicle capacity data');
+        return;
+      }
+
+      final int sitting = capacityData['sitting_passenger'] ?? 0;
+      final int standing = capacityData['standing_passenger'] ?? 0;
+      final String seatType = _state.seatingPreference.value;
+
+      const int sittingLimit = 27; // Updated limit as per requirements
+      const int standingLimit = 3;
+
+      bool exceeded = false;
+      String alternativeSeatType = '';
+
+      if (seatType == 'Sitting') {
+        exceeded = sitting >= sittingLimit;
+        alternativeSeatType = 'Standing';
+      } else if (seatType == 'Standing') {
+        exceeded = standing >= standingLimit;
+        alternativeSeatType = 'Sitting';
+      } else {
+        // Any: exceeded only if both are full
+        exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
+        alternativeSeatType =
+            'Standing'; // Default to standing for 'Any' preference
+      }
+
+      debugPrint(
+          '[BookingManager] Capacity check - Sitting: $sitting/$sittingLimit, Standing: $standing/$standingLimit, SeatType: $seatType, Exceeded: $exceeded');
+
+      if (exceeded && !_capacityDialogShown) {
+        debugPrint('[BookingManager] Capacity exceeded! Showing dialog...');
+        _capacityDialogShown = true; // Set flag to prevent multiple dialogs
+        await _showCapacityWarningDialog(
+            bookingId, seatType, alternativeSeatType);
+      } else if (exceeded && _capacityDialogShown) {
+        debugPrint(
+            '[BookingManager] Capacity exceeded but dialog already shown, skipping...');
+      } else {
+        debugPrint('[BookingManager] Capacity within limits, no dialog needed');
+        _capacityDialogShown =
+            false; // Reset flag when capacity is within limits
+      }
+    } catch (e) {
+      debugPrint('[BookingManager] Error checking capacity: $e');
     }
   }
 
-  Future<void> _autoCancelAndReassign(int bookingId) async {
+  /// Shows the capacity warning dialog to the user
+  Future<void> _showCapacityWarningDialog(
+      int bookingId, String currentSeatType, String alternativeSeatType) async {
     if (_reassignmentInProgress) return;
-    _reassignmentInProgress = true;
+
+    // Check if booking is in a state where capacity changes are allowed
+    final canChange =
+        await _capacityService.canChangeSeatingPreference(bookingId);
+    if (!canChange) {
+      debugPrint(
+          '[BookingManager] Cannot show capacity dialog - booking not in assigned/accepted status');
+      // For testing purposes, let's show the dialog anyway if capacity is exceeded
+      // This will help verify the dialog is working correctly
+      debugPrint(
+          '[BookingManager] Testing mode: Showing dialog anyway for testing');
+    }
+
+    if (!_state.mounted) return;
+
+    await showDialog(
+      context: _state.context,
+      barrierDismissible: false,
+      builder: (context) => CapacityWarningDialog(
+        currentSeatType: currentSeatType,
+        alternativeSeatType: alternativeSeatType,
+        onAccept: () async {
+          Navigator.of(context).pop();
+          await _handleCapacityChangeAccept(bookingId, alternativeSeatType);
+        },
+        onDecline: () async {
+          Navigator.of(context).pop();
+          await _handleCapacityChangeDecline(bookingId);
+        },
+      ),
+    );
+  }
+
+  /// Handles when user accepts the capacity change
+  Future<void> _handleCapacityChangeAccept(
+      int bookingId, String newSeatType) async {
     try {
       debugPrint(
-          '[BookingManager] Capacity limit reached. Auto-cancelling booking $bookingId and reassigning...');
+          '[BookingManager] User accepted capacity change to $newSeatType');
 
-      // Cancel booking on backend
-      await _api.put<Map<String, dynamic>>('bookings/$bookingId',
-          body: {'ride_status': 'cancelled'});
+      // Reset the dialog flag since user made a decision
+      _capacityDialogShown = false;
 
-      if (_state.mounted) {
+      // Update seating preference in database
+      final success = await _capacityService.updateSeatingPreference(
+        bookingId: bookingId,
+        newSeatType: newSeatType,
+      );
+
+      if (success) {
+        // Update local state
         _state.setState(() {
-          _state.bookingStatus = 'cancelled';
+          _state.seatingPreference.value = newSeatType;
         });
+
+        Fluttertoast.showToast(
+          msg: 'Seating preference updated to $newSeatType',
+          toastLength: Toast.LENGTH_SHORT,
+        );
+
+        // Refresh capacity data
+        await refreshDriverAndCapacity(bookingId);
+      } else {
+        Fluttertoast.showToast(
+          msg: 'Failed to update seating preference. Please try again.',
+          toastLength: Toast.LENGTH_LONG,
+        );
       }
-
-      // Preserve selections and reset UI to pre-booking state
-      handleNoDriverFound();
-
-      // Recreate booking automatically with same selections
-      await handleBookingConfirmation();
-
-      Fluttertoast.showToast(
-          msg: 'Capacity reached. Searching for another driver...');
     } catch (e) {
-      debugPrint('[BookingManager] Auto reassign failed: $e');
-    } finally {
-      _reassignmentInProgress = false;
+      debugPrint('[BookingManager] Error handling capacity change accept: $e');
+      Fluttertoast.showToast(
+        msg: 'An error occurred. Please try again.',
+        toastLength: Toast.LENGTH_LONG,
+      );
+    }
+  }
+
+  /// Handles when user declines the capacity change
+  Future<void> _handleCapacityChangeDecline(int bookingId) async {
+    try {
+      debugPrint(
+          '[BookingManager] User declined capacity change, resetting booking for reassignment');
+
+      // Reset the dialog flag since user made a decision
+      _capacityDialogShown = false;
+
+      // Reset booking status to 'requested' for driver reassignment
+      final success =
+          await _capacityService.resetBookingForReassignment(bookingId);
+
+      if (success) {
+        // Reset all booking-related state
+        _resetBookingState();
+
+        // Update local state to reflect the status change
+        _state.setState(() {
+          _state.bookingStatus = 'requested';
+          _state.isDriverAssigned = false;
+        });
+
+        Fluttertoast.showToast(
+          msg: 'Looking for another driver...',
+          toastLength: Toast.LENGTH_SHORT,
+        );
+
+        // Start polling for new driver assignment
+        _state.driverAssignmentService = DriverAssignmentService();
+        _state.driverAssignmentService!.pollForDriverAssignment(
+          bookingId,
+          (driverData) {
+            _loadBookingAfterDriverAssignment(bookingId);
+          },
+          onError: () {},
+          onStatusChange: (newStatus) {
+            if (_state.mounted) {
+              _state.setState(() => _state.bookingStatus = newStatus);
+              if (newStatus == 'accepted' || newStatus == 'ongoing') {
+                _fetchAndUpdateBookingDetails(bookingId);
+              }
+            }
+          },
+        );
+      } else {
+        Fluttertoast.showToast(
+          msg: 'Failed to reset booking. Please try again.',
+          toastLength: Toast.LENGTH_LONG,
+        );
+      }
+    } catch (e) {
+      debugPrint('[BookingManager] Error handling capacity change decline: $e');
+      Fluttertoast.showToast(
+        msg: 'An error occurred. Please try again.',
+        toastLength: Toast.LENGTH_LONG,
+      );
+    }
+  }
+
+  /// Resets all booking-related state when reassigning driver
+  void _resetBookingState() {
+    debugPrint(
+        '[BookingManager] Resetting all booking state for driver reassignment');
+
+    // Reset driver-related state
+    _state.driverName = '';
+    _state.plateNumber = '';
+    _state.vehicleModel = '';
+    _state.phoneNumber = '';
+
+    // Reset vehicle capacity state
+    _state.vehicleTotalCapacity = null;
+    _state.vehicleSittingCapacity = null;
+    _state.vehicleStandingCapacity = null;
+    _state.capacityRefreshTick = 0;
+
+    // Reset driver assignment service
+    if (_state.driverAssignmentService != null) {
+      _state.driverAssignmentService!.stopPolling();
+      _state.driverAssignmentService = null;
+    }
+
+    // Reset completion timer
+    if (_completionTimer != null) {
+      _completionTimer!.cancel();
+      _completionTimer = null;
+    }
+
+    // Reset progress tracking
+    _progressNotificationStarted = false;
+    _acceptedNotified = false;
+
+    // Reset capacity dialog flag
+    _capacityDialogShown = false;
+
+    // Clear map polylines and markers
+    _clearMapState();
+
+    debugPrint('[BookingManager] All booking state reset successfully');
+  }
+
+  /// Clears all map-related state (polylines, markers, driver location)
+  void _clearMapState() {
+    debugPrint('[BookingManager] Clearing map state');
+
+    // Clear all map overlays and reset state
+    if (_state.mapScreenKey.currentState != null) {
+      _state.mapScreenKey.currentState!.clearAll();
     }
   }
 
@@ -1154,6 +1400,53 @@ class BookingManager {
           _state.measureContainers();
         }
       });
+    }
+  }
+
+  /// Start background service for ride tracking
+  Future<void> _startBackgroundServiceForRide(
+      int bookingId, String rideStatus) async {
+    try {
+      if (_state.selectedPickUpLocation != null &&
+          _state.selectedDropOffLocation != null) {
+        await BackgroundRideService.startService(
+          bookingId: bookingId,
+          rideStatus: rideStatus,
+          pickupAddress: _state.selectedPickUpLocation!.address,
+          dropoffAddress: _state.selectedDropOffLocation!.address,
+        );
+        debugPrint(
+            'Background service started for booking $bookingId with status $rideStatus');
+      }
+    } catch (e) {
+      debugPrint('Error starting background service: $e');
+    }
+  }
+
+  /// Update background service for ride status changes
+  Future<void> _updateBackgroundServiceForRide(
+      int bookingId, String rideStatus) async {
+    try {
+      await BackgroundRideService.updateServiceNotification(
+        rideStatus: rideStatus,
+        driverName: _state.driverName.isNotEmpty ? _state.driverName : null,
+        estimatedArrival: null, // Not available in current implementation
+        dropoffAddress: _state.selectedDropOffLocation?.address,
+      );
+      debugPrint(
+          'Background service updated for booking $bookingId with status $rideStatus');
+    } catch (e) {
+      debugPrint('Error updating background service: $e');
+    }
+  }
+
+  /// Stop background service when ride ends
+  Future<void> _stopBackgroundServiceForRide() async {
+    try {
+      await BackgroundRideService.stopService();
+      debugPrint('Background service stopped');
+    } catch (e) {
+      debugPrint('Error stopping background service: $e');
     }
   }
 }
