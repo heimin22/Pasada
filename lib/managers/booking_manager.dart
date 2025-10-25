@@ -10,6 +10,7 @@ import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
+import 'package:pasada_passenger_app/services/background_ride_service.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
@@ -102,11 +103,14 @@ class BookingManager {
           bookingId,
           (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
-          onStatusChange: (newStatus) {
+          onStatusChange: (newStatus) async {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
+
+                // Start background service for accepted rides
+                await _startBackgroundServiceForRide(bookingId, newStatus);
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -114,7 +118,15 @@ class BookingManager {
                   progress: 0,
                   maxProgress: 100,
                 );
+
+                // Update background service for ongoing rides
+                await _updateBackgroundServiceForRide(bookingId, newStatus);
               }
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                // Stop background service when ride is completed or cancelled
+                await _stopBackgroundServiceForRide();
+              }
+
               _state.setState(() => _state.bookingStatus = newStatus);
               // Call _fetchAndUpdateBookingDetails for relevant status changes
               if (newStatus == 'accepted' ||
@@ -318,11 +330,15 @@ class BookingManager {
             _loadBookingAfterDriverAssignment(details.bookingId);
           },
           onError: () {},
-          onStatusChange: (newStatus) {
+          onStatusChange: (newStatus) async {
             if (_state.mounted) {
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
+
+                // Start background service for accepted rides
+                await _startBackgroundServiceForRide(
+                    details.bookingId, newStatus);
               }
               if (newStatus == 'ongoing' && !_progressNotificationStarted) {
                 _progressNotificationStarted = true;
@@ -330,7 +346,16 @@ class BookingManager {
                   progress: 0,
                   maxProgress: 100,
                 );
+
+                // Update background service for ongoing rides
+                await _updateBackgroundServiceForRide(
+                    details.bookingId, newStatus);
               }
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                // Stop background service when ride is completed or cancelled
+                await _stopBackgroundServiceForRide();
+              }
+
               _state.setState(() => _state.bookingStatus = newStatus);
               if (newStatus == 'accepted' ||
                   newStatus == 'ongoing' ||
@@ -1375,6 +1400,52 @@ class BookingManager {
           _state.measureContainers();
         }
       });
+    }
+  }
+
+  /// Start background service for ride tracking
+  Future<void> _startBackgroundServiceForRide(
+      int bookingId, String rideStatus) async {
+    try {
+      if (_state.selectedPickUpLocation != null &&
+          _state.selectedDropOffLocation != null) {
+        await BackgroundRideService.startService(
+          bookingId: bookingId,
+          rideStatus: rideStatus,
+          pickupAddress: _state.selectedPickUpLocation!.address,
+          dropoffAddress: _state.selectedDropOffLocation!.address,
+        );
+        debugPrint(
+            'Background service started for booking $bookingId with status $rideStatus');
+      }
+    } catch (e) {
+      debugPrint('Error starting background service: $e');
+    }
+  }
+
+  /// Update background service for ride status changes
+  Future<void> _updateBackgroundServiceForRide(
+      int bookingId, String rideStatus) async {
+    try {
+      await BackgroundRideService.updateServiceNotification(
+        rideStatus: rideStatus,
+        driverName: _state.driverName.isNotEmpty ? _state.driverName : null,
+        estimatedArrival: null, // Not available in current implementation
+      );
+      debugPrint(
+          'Background service updated for booking $bookingId with status $rideStatus');
+    } catch (e) {
+      debugPrint('Error updating background service: $e');
+    }
+  }
+
+  /// Stop background service when ride ends
+  Future<void> _stopBackgroundServiceForRide() async {
+    try {
+      await BackgroundRideService.stopService();
+      debugPrint('Background service stopped');
+    } catch (e) {
+      debugPrint('Error stopping background service: $e');
     }
   }
 }

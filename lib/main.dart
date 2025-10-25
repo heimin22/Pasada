@@ -10,6 +10,7 @@ import 'package:pasada_passenger_app/authentication/createAccount.dart';
 import 'package:pasada_passenger_app/authentication/createAccountCred.dart';
 import 'package:pasada_passenger_app/authentication/loginAccount.dart';
 import 'package:pasada_passenger_app/screens/introductionScreen.dart';
+import 'package:pasada_passenger_app/services/background_ride_service.dart';
 import 'package:pasada_passenger_app/services/lazy_initialization_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/performance_monitoring_service.dart';
@@ -49,6 +50,16 @@ Future<void> _bootstrapCriticalServices() async {
   await slowInternetService.initialize();
   performanceMonitor
       .recordStartupMilestone('slow_internet_service_initialized');
+
+  // Initialize background ride service
+  await BackgroundRideService.initialize();
+  performanceMonitor
+      .recordStartupMilestone('background_ride_service_initialized');
+
+  // Check if there's an active ride that needs background service
+  await BackgroundRideService.restoreServiceIfNeeded();
+  performanceMonitor
+      .recordStartupMilestone('background_service_restoration_checked');
 
   // Start only absolutely essential services in parallel
   await Future.wait([

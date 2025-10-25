@@ -9,6 +9,10 @@
         android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <!-- Camera Permissions -->
     <uses-permission
         android:name="android.permission.CAMERA"/>
@@ -86,6 +90,13 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${mapsApiKey}"/>
+        
+        <!-- Background Ride Tracking Service -->
+        <service
+            android:name="com.example.pasada_passenger_app.BackgroundRideService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location|dataSync" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
