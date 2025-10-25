@@ -754,6 +754,9 @@ class BookingManager {
               _state.vehicleStandingCapacity == null) {
             await _fetchVehicleCapacityForBooking(bookingId);
           }
+
+          // Check capacity after driver assignment
+          _evaluateCapacityAndMaybeReassign();
           return;
         }
       } catch (e) {
@@ -818,6 +821,9 @@ class BookingManager {
         _fetchDriverDetailsDirectlyFromDB(bookingId);
       }
     });
+
+    // Check capacity after driver assignment
+    _evaluateCapacityAndMaybeReassign();
   }
 
   Future<void> _fetchDriverDetailsDirectlyFromDB(int bookingId) async {
@@ -1046,33 +1052,65 @@ class BookingManager {
     }
   }
 
+  /// Public method to manually trigger capacity check (for testing)
+  Future<void> checkCapacityManually(int bookingId) async {
+    debugPrint(
+        '[BookingManager] Manual capacity check triggered for booking $bookingId');
+    await _checkCapacityAndShowDialog(bookingId);
+  }
+
   void _evaluateCapacityAndMaybeReassign() {
     if (_reassignmentInProgress) return;
-    final String seatType = _state.seatingPreference.value;
-    final int sitting = _state.vehicleSittingCapacity ?? 0;
-    final int standing = _state.vehicleStandingCapacity ?? 0;
-    const int sittingLimit = 27; // Updated limit as per requirements
-    const int standingLimit = 3;
+    if (_state.activeBookingId == null) return;
 
-    bool exceeded = false;
-    String alternativeSeatType = '';
+    _checkCapacityAndShowDialog(_state.activeBookingId!);
+  }
 
-    if (seatType == 'Sitting') {
-      exceeded = sitting >= sittingLimit;
-      alternativeSeatType = 'Standing';
-    } else if (seatType == 'Standing') {
-      exceeded = standing >= standingLimit;
-      alternativeSeatType = 'Sitting';
-    } else {
-      // Any: exceeded only if both are full
-      exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
-      alternativeSeatType =
-          'Standing'; // Default to standing for 'Any' preference
-    }
+  /// Checks capacity using actual database data and shows dialog if needed
+  Future<void> _checkCapacityAndShowDialog(int bookingId) async {
+    try {
+      debugPrint('[BookingManager] Checking capacity for booking $bookingId');
 
-    if (exceeded && _state.activeBookingId != null) {
-      _showCapacityWarningDialog(
-          _state.activeBookingId!, seatType, alternativeSeatType);
+      // Get actual vehicle capacity from database
+      final capacityData =
+          await _capacityService.getVehicleCapacityForBooking(bookingId);
+      if (capacityData == null) {
+        debugPrint('[BookingManager] Could not fetch vehicle capacity data');
+        return;
+      }
+
+      final int sitting = capacityData['sitting_passenger'] ?? 0;
+      final int standing = capacityData['standing_passenger'] ?? 0;
+      final String seatType = _state.seatingPreference.value;
+
+      const int sittingLimit = 27; // Updated limit as per requirements
+      const int standingLimit = 3;
+
+      bool exceeded = false;
+      String alternativeSeatType = '';
+
+      if (seatType == 'Sitting') {
+        exceeded = sitting >= sittingLimit;
+        alternativeSeatType = 'Standing';
+      } else if (seatType == 'Standing') {
+        exceeded = standing >= standingLimit;
+        alternativeSeatType = 'Sitting';
+      } else {
+        // Any: exceeded only if both are full
+        exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
+        alternativeSeatType =
+            'Standing'; // Default to standing for 'Any' preference
+      }
+
+      debugPrint(
+          '[BookingManager] Capacity check - Sitting: $sitting/$sittingLimit, Standing: $standing/$standingLimit, Exceeded: $exceeded');
+
+      if (exceeded) {
+        await _showCapacityWarningDialog(
+            bookingId, seatType, alternativeSeatType);
+      }
+    } catch (e) {
+      debugPrint('[BookingManager] Error checking capacity: $e');
     }
   }
 

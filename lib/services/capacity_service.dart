@@ -4,6 +4,67 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class CapacityService {
   final supabase = Supabase.instance.client;
 
+  /// Gets the current vehicle capacity for a booking
+  /// Returns a map with sitting_passenger and standing_passenger counts
+  Future<Map<String, int>?> getVehicleCapacityForBooking(int bookingId) async {
+    try {
+      debugPrint(
+          '[CapacityService] Fetching vehicle capacity for booking $bookingId');
+
+      // Get the driver_id from the booking
+      final bookingResponse = await supabase
+          .from('bookings')
+          .select('driver_id')
+          .eq('booking_id', bookingId)
+          .single();
+
+      if (bookingResponse['driver_id'] == null) {
+        debugPrint(
+            '[CapacityService] No driver assigned to booking $bookingId');
+        return null;
+      }
+
+      final driverId = bookingResponse['driver_id'];
+
+      // Get the vehicle_id from the driver
+      final driverResponse = await supabase
+          .from('driverTable')
+          .select('vehicle_id')
+          .eq('driver_id', driverId)
+          .single();
+
+      if (driverResponse['vehicle_id'] == null) {
+        debugPrint('[CapacityService] No vehicle assigned to driver $driverId');
+        return null;
+      }
+
+      final vehicleId = driverResponse['vehicle_id'];
+
+      // Get the vehicle capacity
+      final vehicleResponse = await supabase
+          .from('vehicleTable')
+          .select('sitting_passenger, standing_passenger')
+          .eq('vehicle_id', vehicleId)
+          .single();
+
+      final sittingPassengers =
+          vehicleResponse['sitting_passenger'] as int? ?? 0;
+      final standingPassengers =
+          vehicleResponse['standing_passenger'] as int? ?? 0;
+
+      debugPrint(
+          '[CapacityService] Vehicle capacity - Sitting: $sittingPassengers, Standing: $standingPassengers');
+
+      return {
+        'sitting_passenger': sittingPassengers,
+        'standing_passenger': standingPassengers,
+      };
+    } catch (e) {
+      debugPrint('[CapacityService] Error fetching vehicle capacity: $e');
+      return null;
+    }
+  }
+
   /// Updates the seating preference for a booking
   /// Returns true if successful, false otherwise
   Future<bool> updateSeatingPreference({
