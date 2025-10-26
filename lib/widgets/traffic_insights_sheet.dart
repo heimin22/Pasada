@@ -658,13 +658,13 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isDarkMode
-                    ? Colors.blue[900]!.withAlpha(30)
-                    : Colors.blue[50]!,
+                    ? const Color(0xFF00CC58).withAlpha(30)
+                    : const Color(0xFF00CC58).withAlpha(20),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: isDarkMode
-                      ? Colors.blue[700]!.withAlpha(50)
-                      : Colors.blue[200]!,
+                      ? const Color(0xFF00CC58).withAlpha(50)
+                      : const Color(0xFF00CC58).withAlpha(40),
                   width: 1,
                 ),
               ),
@@ -674,7 +674,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   Icon(
                     Icons.psychology,
                     size: 16,
-                    color: isDarkMode ? Colors.blue[300] : Colors.blue[600],
+                    color: isDarkMode
+                        ? const Color(0xFF00CC58).withAlpha(200)
+                        : const Color(0xFF00CC58),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -684,7 +686,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                         fontFamily: 'Inter',
                         fontSize: 13,
                         fontWeight: FontWeight.w400,
-                        color: isDarkMode ? Colors.blue[200] : Colors.blue[800],
+                        color: isDarkMode
+                            ? const Color(0xFF00CC58).withAlpha(200)
+                            : const Color(0xFF00CC58),
                         height: 1.3,
                       ),
                     ),
@@ -755,13 +759,14 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:
-            isDarkMode ? Colors.purple[900]!.withAlpha(30) : Colors.purple[50]!,
+        color: isDarkMode
+            ? const Color(0xFF00CC58).withAlpha(30)
+            : const Color(0xFF00CC58).withAlpha(20),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDarkMode
-              ? Colors.purple[700]!.withAlpha(50)
-              : Colors.purple[200]!,
+              ? const Color(0xFF00CC58).withAlpha(50)
+              : const Color(0xFF00CC58).withAlpha(40),
           width: 1,
         ),
       ),
@@ -773,7 +778,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               Icon(
                 Icons.auto_awesome,
                 size: 18,
-                color: isDarkMode ? Colors.purple[300] : Colors.purple[600],
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(200)
+                    : const Color(0xFF00CC58),
               ),
               const SizedBox(width: 8),
               Text(
@@ -782,7 +789,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   fontFamily: 'Inter',
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                  color: isDarkMode
+                      ? const Color(0xFF00CC58).withAlpha(200)
+                      : const Color(0xFF00CC58),
                 ),
               ),
             ],
@@ -795,7 +804,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 fontFamily: 'Inter',
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
-                color: isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(200)
+                    : const Color(0xFF00CC58),
                 height: 1.4,
               ),
             ),
@@ -809,7 +820,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 fontFamily: 'Inter',
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: isDarkMode ? Colors.purple[300] : Colors.purple[700],
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(180)
+                    : const Color(0xFF00CC58).withAlpha(180),
                 height: 1.3,
                 fontStyle: FontStyle.italic,
               ),
