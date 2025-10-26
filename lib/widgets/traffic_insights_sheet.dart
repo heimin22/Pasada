@@ -27,7 +27,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
   @override
   void initState() {
     super.initState();
-    _fetchTrafficReports();
+    // Clear cache to ensure we get fresh data with proper route names
+    _analyticsService.clearAllCaches();
+    _fetchTrafficReports(forceRefresh: true);
   }
 
   Future<void> _fetchTrafficReports({bool forceRefresh = false}) async {
@@ -75,9 +77,13 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenHeight < 600 || screenWidth < 400;
+
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.7,
+        maxHeight: isSmallScreen ? screenHeight * 0.85 : screenHeight * 0.7,
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -87,7 +93,11 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         child: SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 16 : 20,
+                isSmallScreen ? 8 : 12,
+                isSmallScreen ? 16 : 20,
+                isSmallScreen ? 16 : 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -105,65 +115,78 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Traffic Analytics',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Inter',
-                            color: isDarkMode ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        if (_trafficData != null) ...[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            'Today, ${_trafficData!.date.day}/${_trafficData!.date.month}/${_trafficData!.date.year}',
+                            'Traffic Analytics',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
+                              fontSize: isSmallScreen ? 18 : 20,
+                              fontWeight: FontWeight.w600,
                               fontFamily: 'Inter',
-                              color: isDarkMode
-                                  ? Colors.grey[400]
-                                  : Colors.grey[600],
+                              color: isDarkMode ? Colors.white : Colors.black87,
                             ),
                           ),
-                          // Removed source label
-                          if (_analyticsService.hasCachedData())
+                          if (_trafficData != null) ...[
+                            const SizedBox(height: 2),
                             Text(
-                              _getCacheStatusText(),
+                              'Today, ${_trafficData!.date.day}/${_trafficData!.date.month}/${_trafficData!.date.year}',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: isSmallScreen ? 11 : 12,
                                 fontWeight: FontWeight.w400,
                                 fontFamily: 'Inter',
                                 color: isDarkMode
-                                    ? Colors.grey[500]
-                                    : Colors.grey[500],
+                                    ? Colors.grey[400]
+                                    : Colors.grey[600],
                               ),
                             ),
+                            if (_analyticsService.hasCachedData()) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                _getCacheStatusText(),
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 9 : 10,
+                                  fontWeight: FontWeight.w400,
+                                  fontFamily: 'Inter',
+                                  color: isDarkMode
+                                      ? Colors.grey[500]
+                                      : Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                     IconButton(
                       onPressed: () => _showInfoDialog(context, isDarkMode),
                       icon: Icon(
                         Icons.info_outline,
                         color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                        size: 24,
+                        size: isSmallScreen ? 20 : 24,
                       ),
                       tooltip: 'How it works',
                       padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                      constraints: BoxConstraints(
+                        minWidth: isSmallScreen ? 28 : 32,
+                        minHeight: isSmallScreen ? 28 : 32,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: isSmallScreen ? 12 : 18),
+                // Overall AI Analysis and AI Explanation
+                if (_trafficData != null &&
+                    (_trafficData!.overallAiAnalysis != null ||
+                        _trafficData!.aiExplanation != null)) ...[
+                  _buildOverallAiAnalysis(isDarkMode, isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 8 : 12),
+                ],
                 // Content
-                Flexible(child: _buildTrafficInsightsContent(isDarkMode)),
+                Flexible(
+                    child: _buildTrafficInsightsContent(
+                        isDarkMode, isSmallScreen)),
               ],
             ),
           ),
@@ -306,7 +329,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     );
   }
 
-  Widget _buildTrafficInsightsContent(bool isDarkMode) {
+  Widget _buildTrafficInsightsContent(bool isDarkMode, bool isSmallScreen) {
     final Color textSecondary =
         isDarkMode ? Colors.grey[300]! : Colors.grey[700]!;
 
@@ -314,13 +337,14 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       final screenWidth = MediaQuery.of(context).size.width;
       return Expanded(
         child: Padding(
-          padding: const EdgeInsets.only(top: 8),
+          padding: EdgeInsets.only(top: isSmallScreen ? 4 : 8),
           child: ListView.separated(
-            itemCount: 6,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemCount: isSmallScreen ? 4 : 6,
+            separatorBuilder: (_, __) =>
+                SizedBox(height: isSmallScreen ? 8 : 12),
             itemBuilder: (context, index) {
               return Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                 decoration: BoxDecoration(
                   color: isDarkMode ? Colors.grey[800]! : Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -334,39 +358,48 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   children: [
                     Row(
                       children: [
-                        SkeletonCircle(size: 20),
-                        const SizedBox(width: 8),
-                        SkeletonLine(width: screenWidth * 0.45, height: 16),
+                        SkeletonCircle(size: isSmallScreen ? 16 : 20),
+                        SizedBox(width: isSmallScreen ? 6 : 8),
+                        SkeletonLine(
+                            width: screenWidth * (isSmallScreen ? 0.4 : 0.45),
+                            height: isSmallScreen ? 14 : 16),
                         const Spacer(),
                         SkeletonBlock(
-                            width: 72,
-                            height: 24,
+                            width: isSmallScreen ? 60 : 72,
+                            height: isSmallScreen ? 20 : 24,
                             borderRadius: BorderRadius.circular(8)),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    SkeletonLine(width: screenWidth * 0.80, height: 14),
-                    const SizedBox(height: 8),
-                    SkeletonLine(width: screenWidth * 0.70, height: 14),
-                    const SizedBox(height: 8),
-                    SkeletonLine(width: screenWidth * 0.60, height: 14),
-                    const SizedBox(height: 12),
-                    Row(
+                    SizedBox(height: isSmallScreen ? 8 : 12),
+                    SkeletonLine(
+                        width: screenWidth * (isSmallScreen ? 0.75 : 0.80),
+                        height: isSmallScreen ? 12 : 14),
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+                    SkeletonLine(
+                        width: screenWidth * (isSmallScreen ? 0.65 : 0.70),
+                        height: isSmallScreen ? 12 : 14),
+                    if (!isSmallScreen) ...[
+                      const SizedBox(height: 8),
+                      SkeletonLine(width: screenWidth * 0.60, height: 14),
+                    ],
+                    SizedBox(height: isSmallScreen ? 8 : 12),
+                    Wrap(
+                      spacing: isSmallScreen ? 6 : 8,
+                      runSpacing: isSmallScreen ? 6 : 8,
                       children: [
                         SkeletonBlock(
-                            width: 110,
-                            height: 28,
+                            width: isSmallScreen ? 80 : 110,
+                            height: isSmallScreen ? 24 : 28,
                             borderRadius: BorderRadius.circular(6)),
-                        const SizedBox(width: 8),
                         SkeletonBlock(
-                            width: 130,
-                            height: 28,
+                            width: isSmallScreen ? 100 : 130,
+                            height: isSmallScreen ? 24 : 28,
                             borderRadius: BorderRadius.circular(6)),
-                        const SizedBox(width: 8),
-                        SkeletonBlock(
-                            width: 120,
-                            height: 28,
-                            borderRadius: BorderRadius.circular(6)),
+                        if (!isSmallScreen)
+                          SkeletonBlock(
+                              width: 120,
+                              height: 28,
+                              borderRadius: BorderRadius.circular(6)),
                       ],
                     ),
                   ],
@@ -382,33 +415,40 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       return Expanded(
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40),
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 30 : 40,
+            horizontal: isSmallScreen ? 16 : 0,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.error_outline,
-                size: 48,
+                size: isSmallScreen ? 40 : 48,
                 color: textSecondary,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
                 _trafficError!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 13 : 14,
                   fontWeight: FontWeight.w500,
                   color: textSecondary,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               TextButton.icon(
                 onPressed: _fetchTrafficReports,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh, size: isSmallScreen ? 16 : 20),
                 label: const Text('Retry'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF00CC58),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 16 : 20,
+                    vertical: isSmallScreen ? 8 : 12,
+                  ),
                 ),
               ),
             ],
@@ -421,33 +461,40 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       return Expanded(
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40),
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 30 : 40,
+            horizontal: isSmallScreen ? 16 : 0,
+          ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 Icons.info_outline,
-                size: 48,
+                size: isSmallScreen ? 40 : 48,
                 color: textSecondary,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
                 'No traffic analytics available yet.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Inter',
-                  fontSize: 14,
+                  fontSize: isSmallScreen ? 13 : 14,
                   fontWeight: FontWeight.w500,
                   color: textSecondary,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               TextButton.icon(
                 onPressed: () => _fetchTrafficReports(forceRefresh: true),
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh, size: isSmallScreen ? 16 : 20),
                 label: const Text('Refresh'),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF00CC58),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 16 : 20,
+                    vertical: isSmallScreen ? 8 : 12,
+                  ),
                 ),
               ),
             ],
@@ -456,60 +503,62 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       );
     }
 
-    // Build list of routes that have traffic data using normalized name matching
-    final routesWithData = widget.filteredRoutes.where((route) {
-      final routeName = route['route_name']?.toString() ?? '';
-      return _findAnalyticsRouteByName(routeName) != null;
-    }).toList();
+    // Display analytics routes directly using their route names
+    final analyticsRoutes = _trafficData!.routes;
 
-    if (routesWithData.isEmpty) {
-      // Fallback: show all analytics routes to verify data flow
-      final analyticsRoutes = _trafficData!.routes;
+    if (analyticsRoutes.isEmpty) {
       return Expanded(
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: analyticsRoutes.isEmpty
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.analytics_outlined,
-                      size: 48,
-                      color: textSecondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No analytics data for displayed routes.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Data is being collected.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  itemCount: analyticsRoutes.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _buildTrafficCard(
-                        analyticsRoutes[index], isDarkMode);
-                  },
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 30 : 40,
+            horizontal: isSmallScreen ? 16 : 0,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: isSmallScreen ? 40 : 48,
+                color: textSecondary,
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              Text(
+                'No analytics data available.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: isSmallScreen ? 13 : 14,
+                  fontWeight: FontWeight.w500,
+                  color: textSecondary,
                 ),
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+              Text(
+                'Try refreshing or check back later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: isSmallScreen ? 11 : 12,
+                  fontWeight: FontWeight.w400,
+                  color: textSecondary,
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              TextButton.icon(
+                onPressed: () => _fetchTrafficReports(forceRefresh: true),
+                icon: Icon(Icons.refresh, size: isSmallScreen ? 16 : 20),
+                label: const Text('Refresh'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF00CC58),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 16 : 20,
+                    vertical: isSmallScreen ? 8 : 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -519,49 +568,19 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         onRefresh: () => _fetchTrafficReports(forceRefresh: true),
         color: const Color(0xFF00CC58),
         child: ListView.separated(
-          itemCount: routesWithData.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemCount: analyticsRoutes.length,
+          separatorBuilder: (_, __) => SizedBox(height: isSmallScreen ? 8 : 12),
           itemBuilder: (context, index) {
-            final String routeName =
-                routesWithData[index]['route_name']?.toString() ??
-                    'Unknown Route';
-            final RouteTrafficToday? trafficData =
-                _findAnalyticsRouteByName(routeName);
-
-            if (trafficData == null) {
-              return const SizedBox.shrink();
-            }
-
-            return _buildTrafficCard(trafficData, isDarkMode);
+            final RouteTrafficToday trafficData = analyticsRoutes[index];
+            return _buildTrafficCard(trafficData, isDarkMode, isSmallScreen);
           },
         ),
       ),
     );
   }
 
-  // Normalize strings for looser matching between DB route names and analytics route names
-  String _normalizeName(String input) {
-    return input
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), '')
-        .replaceAll(RegExp(r'[-_/]'), '')
-        .trim();
-  }
-
-  RouteTrafficToday? _findAnalyticsRouteByName(String name) {
-    if (_trafficData == null) return null;
-    final normalized = _normalizeName(name);
-    try {
-      return _trafficData!.routes.firstWhere((r) =>
-          _normalizeName(r.routeName) == normalized ||
-          _normalizeName(r.routeName).contains(normalized) ||
-          normalized.contains(_normalizeName(r.routeName)));
-    } catch (_) {
-      return _trafficData!.getRouteByName(name);
-    }
-  }
-
-  Widget _buildTrafficCard(RouteTrafficToday trafficData, bool isDarkMode) {
+  Widget _buildTrafficCard(
+      RouteTrafficToday trafficData, bool isDarkMode, bool isSmallScreen) {
     // Map traffic status to color
     Color statusColor;
     switch (trafficData.currentStatus) {
@@ -580,7 +599,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: isDarkMode ? Colors.grey[800]! : Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -603,23 +622,25 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
             children: [
               Icon(
                 Icons.route,
-                size: 20,
+                size: isSmallScreen ? 16 : 20,
                 color: const Color(0xFF00CC58),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isSmallScreen ? 6 : 8),
               Expanded(
                 child: Text(
                   trafficData.routeName,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 16,
+                    fontSize: isSmallScreen ? 14 : 16,
                     fontWeight: FontWeight.w600,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 6 : 8,
+                    vertical: isSmallScreen ? 3 : 4),
                 decoration: BoxDecoration(
                   color: statusColor.withAlpha(10),
                   borderRadius: BorderRadius.circular(8),
@@ -629,7 +650,7 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   trafficData.currentStatus.displayName,
                   style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 10 : 12,
                     fontWeight: FontWeight.w600,
                     color: statusColor,
                   ),
@@ -637,40 +658,116 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 8 : 12),
           Text(
             trafficData.summary,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 14,
+              fontSize: isSmallScreen ? 13 : 14,
               fontWeight: FontWeight.w400,
               color: isDarkMode ? Colors.grey[300]! : Colors.grey[700]!,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 12),
-          // Additional metrics row
-          Row(
-            children: [
-              _buildMetricChip(
-                icon: Icons.speed,
-                label: '${trafficData.avgSpeedKmh.toStringAsFixed(1)} km/h',
-                isDarkMode: isDarkMode,
+          SizedBox(height: isSmallScreen ? 8 : 12),
+          // Additional metrics row - responsive layout
+          isSmallScreen
+              ? Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _buildMetricChip(
+                      icon: Icons.speed,
+                      label:
+                          '${trafficData.avgSpeedKmh.toStringAsFixed(1)} km/h',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                    _buildMetricChip(
+                      icon: Icons.insert_chart,
+                      label: '${trafficData.densityPercentage}% density',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                    _buildMetricChip(
+                      icon: Icons.access_time,
+                      label: 'Peak: ${trafficData.peakTrafficTime}',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    _buildMetricChip(
+                      icon: Icons.speed,
+                      label:
+                          '${trafficData.avgSpeedKmh.toStringAsFixed(1)} km/h',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetricChip(
+                      icon: Icons.insert_chart,
+                      label: '${trafficData.densityPercentage}% density',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetricChip(
+                      icon: Icons.access_time,
+                      label: 'Peak: ${trafficData.peakTrafficTime}',
+                      isDarkMode: isDarkMode,
+                      isSmallScreen: isSmallScreen,
+                    ),
+                  ],
+                ),
+          // AI Insights section
+          if (trafficData.aiInsights.isNotEmpty) ...[
+            SizedBox(height: isSmallScreen ? 8 : 12),
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(30)
+                    : const Color(0xFF00CC58).withAlpha(20),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDarkMode
+                      ? const Color(0xFF00CC58).withAlpha(50)
+                      : const Color(0xFF00CC58).withAlpha(40),
+                  width: 1,
+                ),
               ),
-              const SizedBox(width: 8),
-              _buildMetricChip(
-                icon: Icons.insert_chart,
-                label: '${trafficData.densityPercentage}% density',
-                isDarkMode: isDarkMode,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.psychology,
+                    size: isSmallScreen ? 14 : 16,
+                    color: isDarkMode
+                        ? const Color(0xFF00CC58).withAlpha(200)
+                        : const Color(0xFF00CC58),
+                  ),
+                  SizedBox(width: isSmallScreen ? 6 : 8),
+                  Expanded(
+                    child: Text(
+                      trafficData.aiInsights,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: isSmallScreen ? 12 : 13,
+                        fontWeight: FontWeight.w400,
+                        color: isDarkMode
+                            ? const Color(0xFF00CC58).withAlpha(200)
+                            : const Color(0xFF00CC58),
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              _buildMetricChip(
-                icon: Icons.access_time,
-                label: 'Peak: ${trafficData.peakTrafficTime}',
-                isDarkMode: isDarkMode,
-              ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -680,9 +777,11 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     required IconData icon,
     required String label,
     required bool isDarkMode,
+    required bool isSmallScreen,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 5 : 6, vertical: isSmallScreen ? 3 : 4),
       decoration: BoxDecoration(
         color: isDarkMode
             ? Colors.grey[700]!.withAlpha(50)
@@ -694,15 +793,15 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         children: [
           Icon(
             icon,
-            size: 12,
+            size: isSmallScreen ? 10 : 12,
             color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: isSmallScreen ? 3 : 4),
           Text(
             label,
             style: TextStyle(
               fontFamily: 'Inter',
-              fontSize: 11,
+              fontSize: isSmallScreen ? 10 : 11,
               fontWeight: FontWeight.w500,
               color: isDarkMode ? Colors.grey[300] : Colors.grey[700],
             ),
@@ -727,6 +826,84 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     } else {
       return 'Updating...';
     }
+  }
+
+  Widget _buildOverallAiAnalysis(bool isDarkMode, bool isSmallScreen) {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      decoration: BoxDecoration(
+        color: isDarkMode
+            ? const Color(0xFF00CC58).withAlpha(30)
+            : const Color(0xFF00CC58).withAlpha(20),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode
+              ? const Color(0xFF00CC58).withAlpha(50)
+              : const Color(0xFF00CC58).withAlpha(40),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: isSmallScreen ? 16 : 18,
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(200)
+                    : const Color(0xFF00CC58),
+              ),
+              SizedBox(width: isSmallScreen ? 6 : 8),
+              Text(
+                'AI Analysis',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: isSmallScreen ? 13 : 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode
+                      ? const Color(0xFF00CC58).withAlpha(200)
+                      : const Color(0xFF00CC58),
+                ),
+              ),
+            ],
+          ),
+          if (_trafficData!.overallAiAnalysis != null) ...[
+            SizedBox(height: isSmallScreen ? 6 : 8),
+            Text(
+              _trafficData!.overallAiAnalysis!,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w400,
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(200)
+                    : const Color(0xFF00CC58),
+                height: 1.4,
+              ),
+            ),
+          ],
+          if (_trafficData!.aiExplanation != null) ...[
+            if (_trafficData!.overallAiAnalysis != null)
+              SizedBox(height: isSmallScreen ? 6 : 8),
+            Text(
+              _trafficData!.aiExplanation!,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: isSmallScreen ? 11 : 12,
+                fontWeight: FontWeight.w400,
+                color: isDarkMode
+                    ? const Color(0xFF00CC58).withAlpha(180)
+                    : const Color(0xFF00CC58).withAlpha(180),
+                height: 1.3,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

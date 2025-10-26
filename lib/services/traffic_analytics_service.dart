@@ -98,16 +98,23 @@ class TrafficAnalyticsService {
         return null;
       }
 
-      // Always use the all-routes endpoint; no fast-mode retry, no timeouts
+      // Build endpoint with routeId parameter and query parameters
       final endpointBase = '$analyticsApiUrl/api/analytics/traffic/today';
-      final endpoint = endpointBase;
+      final endpoint =
+          routeId != null ? '$endpointBase/$routeId' : endpointBase;
 
-      final uri = Uri.parse(endpoint);
+      final queryParams = <String, String>{};
+      if (fast) {
+        queryParams['fast'] = '1';
+        queryParams['mode'] = 'fast';
+      }
+
+      final uri = Uri.parse(endpoint).replace(queryParameters: queryParams);
       final headers = {
         'Content-Type': 'application/json',
       };
 
-      debugPrint('TrafficAnalyticsService: Fetching from $endpoint');
+      debugPrint('TrafficAnalyticsService: Fetching from $uri');
 
       final String? response = await NetworkUtility.fetchUrl(
         uri,
@@ -119,34 +126,69 @@ class TrafficAnalyticsService {
         return null;
       }
 
-      final dynamic data = json.decode(response);
+      final dynamic responseData = json.decode(response);
 
-      if (data is Map<String, dynamic>) {
-        final parsed = TodayRouteTrafficResponse.fromJson(data);
-        final trafficResponse = _stabilizeRouteNames(parsed);
-        debugPrint(
-            'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
+      if (responseData is Map<String, dynamic>) {
+        // Check if response has success field (new API format)
+        if (responseData.containsKey('success') &&
+            responseData.containsKey('data')) {
+          final success = responseData['success'] as bool;
+          if (!success) {
+            debugPrint('TrafficAnalyticsService: API returned success=false');
+            return null;
+          }
+          final parsed = TodayRouteTrafficResponse.fromJson(responseData);
+          final trafficResponse = _stabilizeRouteNames(parsed);
+          debugPrint(
+              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
 
-        // Cache the response
-        _cache[routeId] =
-            _CachedTrafficAnalytics(trafficResponse, DateTime.now());
-        debugPrint(
-            'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
+          // Cache the response
+          _cache[routeId] =
+              _CachedTrafficAnalytics(trafficResponse, DateTime.now());
+          debugPrint(
+              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
 
-        // Persist for the day (all routes only)
-        if (routeId == null &&
-            _isSameDay(trafficResponse.date, DateTime.now())) {
-          await _writeDailyCache(trafficResponse);
+          // Persist for the day (all routes only)
+          if (routeId == null &&
+              _isSameDay(trafficResponse.date, DateTime.now())) {
+            await _writeDailyCache(trafficResponse);
+          }
+
+          // Optionally refresh in background (db) if server indicates mode,
+          // but we will still run background refresh to ensure freshness.
+          _refreshInBackground(endpointBase,
+              headers: headers, routeId: routeId);
+
+          return trafficResponse;
+        } else {
+          // Fallback to old format for backward compatibility
+          final parsed = TodayRouteTrafficResponse.fromJson(responseData);
+          final trafficResponse = _stabilizeRouteNames(parsed);
+          debugPrint(
+              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes (legacy format)');
+
+          // Cache the response
+          _cache[routeId] =
+              _CachedTrafficAnalytics(trafficResponse, DateTime.now());
+          debugPrint(
+              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
+
+          // Persist for the day (all routes only)
+          if (routeId == null &&
+              _isSameDay(trafficResponse.date, DateTime.now())) {
+            await _writeDailyCache(trafficResponse);
+          }
+
+          // Optionally refresh in background (db) if server indicates mode,
+          // but we will still run background refresh to ensure freshness.
+          _refreshInBackground(endpointBase,
+              headers: headers, routeId: routeId);
+
+          return trafficResponse;
         }
-
-        // Optionally refresh in background (db) if server indicates mode,
-        // but we will still run background refresh to ensure freshness.
-        _refreshInBackground(endpointBase, headers: headers, routeId: routeId);
-
-        return trafficResponse;
       } else {
         debugPrint(
-            'TrafficAnalyticsService: Unexpected response format: ${data.runtimeType}');
+            'TrafficAnalyticsService: Unexpected response format: ${responseData.runtimeType}');
         return null;
       }
     } catch (e) {
@@ -159,15 +201,26 @@ class TrafficAnalyticsService {
       {required Map<String, String> headers, int? routeId}) async {
     unawaited(() async {
       try {
-        final uri = Uri.parse(endpointBase);
+        // Build endpoint with routeId parameter
+        final endpoint =
+            routeId != null ? '$endpointBase/$routeId' : endpointBase;
+        final uri = Uri.parse(endpoint);
         final response = await NetworkUtility.fetchUrl(
           uri,
           headers: headers,
         );
         if (response == null) return;
-        final data = json.decode(response);
-        if (data is! Map<String, dynamic>) return;
-        final parsed = TodayRouteTrafficResponse.fromJson(data);
+        final responseData = json.decode(response);
+        if (responseData is! Map<String, dynamic>) return;
+
+        // Handle new API format with success/data wrapper
+        if (responseData.containsKey('success') &&
+            responseData.containsKey('data')) {
+          final success = responseData['success'] as bool;
+          if (!success) return;
+        }
+
+        final parsed = TodayRouteTrafficResponse.fromJson(responseData);
         final fresh = _stabilizeRouteNames(parsed);
         // Only overwrite cache on success
         _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
@@ -317,8 +370,12 @@ class TrafficAnalyticsService {
     for (final route in input.routes) {
       final isGeneric = _looksGenericRouteName(route.routeName);
       final lastKnown = _lastKnownRouteNames[route.routeId];
+
+      // Only use last known name if current name is generic AND last known name is not generic
       final effectiveName =
-          isGeneric && lastKnown != null ? lastKnown : route.routeName;
+          isGeneric && lastKnown != null && !_looksGenericRouteName(lastKnown)
+              ? lastKnown
+              : route.routeName;
 
       // If name looks non-generic, remember it
       if (!_looksGenericRouteName(effectiveName)) {
@@ -338,6 +395,8 @@ class TrafficAnalyticsService {
           totalMeasurements: route.totalMeasurements,
           peakTrafficTime: route.peakTrafficTime,
           hourlyBreakdown: route.hourlyBreakdown,
+          confidenceScore: route.confidenceScore,
+          aiInsights: route.aiInsights,
         ));
       }
     }
@@ -466,5 +525,13 @@ class TrafficAnalyticsService {
   void clearAiExplanationCaches() {
     _aiExplainTableCache.clear();
     _aiExplainRoutesCache.clear();
+  }
+
+  /// Clear all caches including route names
+  void clearAllCaches() {
+    _cache.clear();
+    _aiExplainTableCache.clear();
+    _aiExplainRoutesCache.clear();
+    _lastKnownRouteNames.clear();
   }
 }

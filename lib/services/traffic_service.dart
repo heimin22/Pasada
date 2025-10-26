@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -16,9 +17,12 @@ class _CachedTraffic {
 class TrafficService {
   // In-memory cache to reduce API calls
   static final Map<String, _CachedTraffic> _trafficCache = {};
-  // Time-to-live for cached entries
-  static const Duration _cacheTTL = Duration(minutes: 5);
+  // Time-to-live for cached entries - increased to 10 minutes to reduce API calls
+  static const Duration _cacheTTL = Duration(minutes: 10);
   final _apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+
+  // Request deduplication - prevent multiple identical requests
+  static final Map<String, Future<bool>> _pendingRequests = {};
 
   /// Returns true if the average speed for the route between [start] and [end]
   /// is below the specified [speedThresholdKmph], indicating heavy traffic.
@@ -27,15 +31,39 @@ class TrafficService {
     LatLng end, {
     double speedThresholdKmph = 20.0,
   }) async {
-    // Construct cache key based on start/end coordinates
-    final cacheKey =
-        '${start.latitude}_${start.longitude}_${end.latitude}_${end.longitude}';
+    // Construct cache key with rounded coordinates to reduce cache misses
+    final cacheKey = _createCacheKey(start, end);
+
     // Return cached result if not expired
     final cacheEntry = _trafficCache[cacheKey];
     if (cacheEntry != null &&
         DateTime.now().difference(cacheEntry.timestamp) < _cacheTTL) {
+      debugPrint('TrafficService: Returning cached result for $cacheKey');
       return cacheEntry.isHeavy;
     }
+
+    // Check if there's already a pending request for this route
+    if (_pendingRequests.containsKey(cacheKey)) {
+      debugPrint('TrafficService: Waiting for pending request for $cacheKey');
+      return await _pendingRequests[cacheKey]!;
+    }
+
+    // Create new request and store it
+    final request =
+        _fetchTrafficFromAPI(start, end, speedThresholdKmph, cacheKey);
+    _pendingRequests[cacheKey] = request;
+
+    try {
+      final result = await request;
+      return result;
+    } finally {
+      // Remove from pending requests
+      _pendingRequests.remove(cacheKey);
+    }
+  }
+
+  Future<bool> _fetchTrafficFromAPI(LatLng start, LatLng end,
+      double speedThresholdKmph, String cacheKey) async {
     try {
       final polyService = PolylineService();
       final distanceKm = await polyService.calculateRouteDistanceKm(start, end);
@@ -65,8 +93,8 @@ class TrafficService {
       final resp =
           await NetworkUtility.postUrl(uri, headers: headers, body: body);
       if (resp == null) return false;
-      // Debug raw API response
-      debugPrint('Traffic raw response: $resp');
+
+      debugPrint('TrafficService: API response for $cacheKey');
       // Ensure decoded response is a JSON object
       final decoded = json.decode(resp);
       if (decoded is! Map<String, dynamic>) {
@@ -139,12 +167,47 @@ class TrafficService {
       final durationHours = secs / 3600.0;
       final avgSpeed = distanceKm / durationHours;
       final isHeavyTraffic = avgSpeed < speedThresholdKmph;
+
       // Cache the computed traffic result
       _trafficCache[cacheKey] = _CachedTraffic(isHeavyTraffic, DateTime.now());
+      debugPrint(
+          'TrafficService: Cached result for $cacheKey: $isHeavyTraffic');
       return isHeavyTraffic;
     } catch (e) {
       debugPrint('Error checking traffic density: $e');
+      // Try to return cached data even if expired
+      final cached = _trafficCache[cacheKey];
+      if (cached != null) {
+        debugPrint('TrafficService: Returning expired cache due to API error');
+        return cached.isHeavy;
+      }
       return false;
     }
+  }
+
+  String _createCacheKey(LatLng start, LatLng end) {
+    // Round coordinates to reduce cache misses for nearby locations
+    // Round to 4 decimal places (~11m precision)
+    final roundedStartLat = (start.latitude * 10000).round() / 10000;
+    final roundedStartLng = (start.longitude * 10000).round() / 10000;
+    final roundedEndLat = (end.latitude * 10000).round() / 10000;
+    final roundedEndLng = (end.longitude * 10000).round() / 10000;
+
+    return 'traffic_${roundedStartLat}_${roundedStartLng}_${roundedEndLat}_$roundedEndLng';
+  }
+
+  /// Clear all cached traffic data
+  static void clearCache() {
+    _trafficCache.clear();
+    _pendingRequests.clear();
+  }
+
+  /// Get cache statistics for debugging
+  static Map<String, dynamic> getCacheStats() {
+    return {
+      'cached_traffic': _trafficCache.length,
+      'pending_requests': _pendingRequests.length,
+      'cache_ttl_minutes': _cacheTTL.inMinutes,
+    };
   }
 }

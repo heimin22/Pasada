@@ -7,18 +7,20 @@ import 'package:intl/intl.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/eta_service.dart';
+import '../services/optimized_eta_service.dart';
 import '../utils/memory_manager.dart';
 
 class EtaContainer extends StatefulWidget {
   final LatLng? destination;
   final LatLng?
       currentLocation; // Allow passing current location to avoid fetching
+  final String bookingStatus; // Add booking status for optimized API usage
 
   const EtaContainer({
     super.key,
     required this.destination,
     this.currentLocation,
+    this.bookingStatus = 'requested', // Default to requested for new bookings
   });
 
   @override
@@ -33,16 +35,16 @@ class _EtaContainerState extends State<EtaContainer> {
   LatLng? _cachedLocation;
   LatLng? _lastEtaLocation;
 
-  // Distance threshold for ETA updates (100 meters)
-  static const double _ETA_UPDATE_THRESHOLD = 100.0;
+  // Distance threshold for ETA updates (500 meters) - increased to reduce API calls
+  static const double _ETA_UPDATE_THRESHOLD = 500.0;
 
   @override
   void initState() {
     super.initState();
     _initializeEta();
-    // Reduce timer frequency and use smart updates
+    // Reduce timer frequency to 5 minutes to significantly reduce API calls
     _timer =
-        Timer.periodic(const Duration(minutes: 2), (_) => _smartUpdateEta());
+        Timer.periodic(const Duration(minutes: 5), (_) => _smartUpdateEta());
   }
 
   @override
@@ -189,19 +191,21 @@ class _EtaContainerState extends State<EtaContainer> {
         }
       }
 
-      // Make API call
-      final features = {
-        'origin': {
+      // Use optimized ETA service based on booking status
+      final optimizedEtaService = OptimizedETAService();
+      final resp = await optimizedEtaService.getETA(
+        origin: {
           'lat': origin.latitude,
           'lng': origin.longitude,
         },
-        'destination': {
+        destination: {
           'lat': destination.latitude,
           'lng': destination.longitude,
         },
-      };
-
-      final resp = await ETAService().getETA(features);
+        bookingStatus: widget.bookingStatus,
+        driverLocation:
+            origin, // Use current location as driver location for accepted/ongoing rides
+      );
       final seconds = resp['eta_seconds'] as int? ?? 0;
       final arrival = DateTime.now().add(Duration(seconds: seconds));
       final formatted = DateFormat('h:mma').format(arrival);

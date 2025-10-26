@@ -16,11 +16,11 @@ import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
 import 'package:pasada_passenger_app/services/error_logging_service.dart';
-import 'package:pasada_passenger_app/services/eta_service.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
 import 'package:pasada_passenger_app/services/localDatabaseService.dart';
 import 'package:pasada_passenger_app/services/map_location_service.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
+import 'package:pasada_passenger_app/services/optimized_eta_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
@@ -639,19 +639,21 @@ class BookingManager {
                 100)
             .clamp(0, 100)
             .round();
-        // Compute ETA using external service
+        // Compute ETA using optimized service based on booking status
         try {
-          final etaService = ETAService();
-          final etaResp = await etaService.getETA({
-            'origin': {
+          final optimizedEtaService = OptimizedETAService();
+          final etaResp = await optimizedEtaService.getETA(
+            origin: {
               'lat': driverLatLng.latitude,
               'lng': driverLatLng.longitude,
             },
-            'destination': {
+            destination: {
               'lat': dropoff.latitude,
               'lng': dropoff.longitude,
             },
-          });
+            bookingStatus: _state.bookingStatus,
+            driverLocation: driverLatLng,
+          );
           final int etaSec = (etaResp['eta_seconds'] as int?) ?? 0;
           final int etaMin = (etaSec / 60).ceil();
           final String etaTitle =
