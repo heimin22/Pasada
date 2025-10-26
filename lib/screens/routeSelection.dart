@@ -1,11 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/services/polyline_cache_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
 import 'package:pasada_passenger_app/services/traffic_service.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
@@ -152,12 +150,14 @@ class _RouteSelectionState extends State<RouteSelection> {
           }
         }
 
-        // Get polyline coordinates for the route
+        // Get polyline coordinates for the route using cache service
         try {
-          final polylineCoordinates = await _getRoutePolyline(
-            originLatLng,
-            destinationLatLng,
-            route['intermediate_coordinates'],
+          final polylineCacheService = PolylineCacheService();
+          final polylineCoordinates =
+              await polylineCacheService.getPolylineCoordinates(
+            origin: originLatLng,
+            destination: destinationLatLng,
+            intermediatePoints: route['intermediate_coordinates'],
           );
           route['polyline_coordinates'] = polylineCoordinates;
         } catch (e) {
@@ -188,86 +188,6 @@ class _RouteSelectionState extends State<RouteSelection> {
     await RouteService.saveRoute(route);
 
     Navigator.pop(context, route);
-  }
-
-  Future<List<LatLng>> _getRoutePolyline(LatLng origin, LatLng destination,
-      List<dynamic> intermediatePoints) async {
-    try {
-      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey.isEmpty) {
-        debugPrint('API key not found');
-        return [];
-      }
-      // Convert intermediate coordinates to waypoints format
-      List<Map<String, dynamic>> intermediates = [];
-      if (intermediatePoints.isNotEmpty) {
-        for (var point in intermediatePoints) {
-          if (point is Map &&
-              point.containsKey('lat') &&
-              point.containsKey('lng')) {
-            intermediates.add({
-              'location': {
-                'latLng': {
-                  'latitude': double.parse(point['lat'].toString()),
-                  'longitude': double.parse(point['lng'].toString())
-                }
-              }
-            });
-          }
-        }
-      }
-
-      // Routes API request
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-      };
-
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': origin.latitude,
-              'longitude': origin.longitude,
-            },
-          },
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destination.latitude,
-              'longitude': destination.longitude,
-            },
-          },
-        },
-        'intermediates': intermediates,
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-      });
-
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-      if (response == null) return [];
-
-      final data = json.decode(response);
-      if (data['routes'] == null || data['routes'].isEmpty) return [];
-
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) return [];
-
-      // Decode the polyline
-      List<PointLatLng> decodedPolyline =
-          PolylinePoints.decodePolyline(polyline);
-      return decodedPolyline
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-    } catch (e) {
-      debugPrint('Error generating polyline: $e');
-      return [];
-    }
   }
 
   @override

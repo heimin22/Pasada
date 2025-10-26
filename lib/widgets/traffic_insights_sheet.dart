@@ -27,7 +27,9 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
   @override
   void initState() {
     super.initState();
-    _fetchTrafficReports();
+    // Clear cache to ensure we get fresh data with proper route names
+    _analyticsService.clearAllCaches();
+    _fetchTrafficReports(forceRefresh: true);
   }
 
   Future<void> _fetchTrafficReports({bool forceRefresh = false}) async {
@@ -463,60 +465,55 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
       );
     }
 
-    // Build list of routes that have traffic data using normalized name matching
-    final routesWithData = widget.filteredRoutes.where((route) {
-      final routeName = route['route_name']?.toString() ?? '';
-      return _findAnalyticsRouteByName(routeName) != null;
-    }).toList();
+    // Display analytics routes directly using their route names
+    final analyticsRoutes = _trafficData!.routes;
 
-    if (routesWithData.isEmpty) {
-      // Fallback: show all analytics routes to verify data flow
-      final analyticsRoutes = _trafficData!.routes;
+    if (analyticsRoutes.isEmpty) {
       return Expanded(
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 40),
-          child: analyticsRoutes.isEmpty
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.analytics_outlined,
-                      size: 48,
-                      color: textSecondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No analytics data for displayed routes.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Data is being collected.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                )
-              : ListView.separated(
-                  itemCount: analyticsRoutes.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    return _buildTrafficCard(
-                        analyticsRoutes[index], isDarkMode);
-                  },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: 48,
+                color: textSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No analytics data available.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: textSecondary,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Try refreshing or check back later.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () => _fetchTrafficReports(forceRefresh: true),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF00CC58),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -526,46 +523,15 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
         onRefresh: () => _fetchTrafficReports(forceRefresh: true),
         color: const Color(0xFF00CC58),
         child: ListView.separated(
-          itemCount: routesWithData.length,
+          itemCount: analyticsRoutes.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
-            final String routeName =
-                routesWithData[index]['route_name']?.toString() ??
-                    'Unknown Route';
-            final RouteTrafficToday? trafficData =
-                _findAnalyticsRouteByName(routeName);
-
-            if (trafficData == null) {
-              return const SizedBox.shrink();
-            }
-
+            final RouteTrafficToday trafficData = analyticsRoutes[index];
             return _buildTrafficCard(trafficData, isDarkMode);
           },
         ),
       ),
     );
-  }
-
-  // Normalize strings for looser matching between DB route names and analytics route names
-  String _normalizeName(String input) {
-    return input
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), '')
-        .replaceAll(RegExp(r'[-_/]'), '')
-        .trim();
-  }
-
-  RouteTrafficToday? _findAnalyticsRouteByName(String name) {
-    if (_trafficData == null) return null;
-    final normalized = _normalizeName(name);
-    try {
-      return _trafficData!.routes.firstWhere((r) =>
-          _normalizeName(r.routeName) == normalized ||
-          _normalizeName(r.routeName).contains(normalized) ||
-          normalized.contains(_normalizeName(r.routeName)));
-    } catch (_) {
-      return _trafficData!.getRouteByName(name);
-    }
   }
 
   Widget _buildTrafficCard(RouteTrafficToday trafficData, bool isDarkMode) {

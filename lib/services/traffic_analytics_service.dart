@@ -370,8 +370,12 @@ class TrafficAnalyticsService {
     for (final route in input.routes) {
       final isGeneric = _looksGenericRouteName(route.routeName);
       final lastKnown = _lastKnownRouteNames[route.routeId];
+
+      // Only use last known name if current name is generic AND last known name is not generic
       final effectiveName =
-          isGeneric && lastKnown != null ? lastKnown : route.routeName;
+          isGeneric && lastKnown != null && !_looksGenericRouteName(lastKnown)
+              ? lastKnown
+              : route.routeName;
 
       // If name looks non-generic, remember it
       if (!_looksGenericRouteName(effectiveName)) {
@@ -521,5 +525,13 @@ class TrafficAnalyticsService {
   void clearAiExplanationCaches() {
     _aiExplainTableCache.clear();
     _aiExplainRoutesCache.clear();
+  }
+
+  /// Clear all caches including route names
+  void clearAllCaches() {
+    _cache.clear();
+    _aiExplainTableCache.clear();
+    _aiExplainRoutesCache.clear();
+    _lastKnownRouteNames.clear();
   }
 }
