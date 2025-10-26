@@ -78,6 +78,8 @@ class RouteTrafficToday {
   final int totalMeasurements;
   final String peakTrafficTime;
   final List<HourlyBreakdown> hourlyBreakdown;
+  final double confidenceScore;
+  final String aiInsights;
 
   RouteTrafficToday({
     required this.routeId,
@@ -89,6 +91,8 @@ class RouteTrafficToday {
     required this.totalMeasurements,
     required this.peakTrafficTime,
     required this.hourlyBreakdown,
+    required this.confidenceScore,
+    required this.aiInsights,
   });
 
   factory RouteTrafficToday.fromJson(Map<String, dynamic> json) {
@@ -104,6 +108,8 @@ class RouteTrafficToday {
       hourlyBreakdown: (json['hourly_breakdown'] as List<dynamic>)
           .map((item) => HourlyBreakdown.fromJson(item as Map<String, dynamic>))
           .toList(),
+      confidenceScore: (json['confidence_score'] as num).toDouble(),
+      aiInsights: json['ai_insights'] as String,
     );
   }
 
@@ -118,6 +124,8 @@ class RouteTrafficToday {
       'total_measurements': totalMeasurements,
       'peak_traffic_time': peakTrafficTime,
       'hourly_breakdown': hourlyBreakdown.map((item) => item.toJson()).toList(),
+      'confidence_score': confidenceScore,
+      'ai_insights': aiInsights,
     };
   }
 
@@ -138,15 +146,57 @@ class RouteTrafficToday {
   }
 }
 
+class AnalyticsMetadata {
+  final String routeId;
+  final String date;
+  final int routesCount;
+  final DateTime generatedAt;
+  final String mode;
+
+  AnalyticsMetadata({
+    required this.routeId,
+    required this.date,
+    required this.routesCount,
+    required this.generatedAt,
+    required this.mode,
+  });
+
+  factory AnalyticsMetadata.fromJson(Map<String, dynamic> json) {
+    return AnalyticsMetadata(
+      routeId: json['routeId'] as String,
+      date: json['date'] as String,
+      routesCount: json['routesCount'] as int,
+      generatedAt: DateTime.parse(json['generatedAt'] as String),
+      mode: json['mode'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'routeId': routeId,
+      'date': date,
+      'routesCount': routesCount,
+      'generatedAt': generatedAt.toIso8601String(),
+      'mode': mode,
+    };
+  }
+}
+
 class TodayRouteTrafficResponse {
   final DateTime date;
   final List<RouteTrafficToday> routes;
   final String? mode; // "db", "fast", or "fast-fallback"
+  final String? overallAiAnalysis;
+  final String? aiExplanation;
+  final AnalyticsMetadata? metadata;
 
   TodayRouteTrafficResponse({
     required this.date,
     required this.routes,
     this.mode,
+    this.overallAiAnalysis,
+    this.aiExplanation,
+    this.metadata,
   });
 
   factory TodayRouteTrafficResponse.fromJson(Map<String, dynamic> json) {
@@ -160,6 +210,9 @@ class TodayRouteTrafficResponse {
               RouteTrafficToday.fromJson(item as Map<String, dynamic>))
           .toList(),
       mode: metadata != null ? metadata['mode'] as String? : null,
+      overallAiAnalysis: dataMap['overall_ai_analysis'] as String?,
+      aiExplanation: json['aiExplanation'] as String?,
+      metadata: metadata != null ? AnalyticsMetadata.fromJson(metadata) : null,
     );
   }
 
@@ -168,8 +221,10 @@ class TodayRouteTrafficResponse {
       'data': {
         'date': date.toIso8601String().split('T')[0],
         'routes': routes.map((route) => route.toJson()).toList(),
+        if (overallAiAnalysis != null) 'overall_ai_analysis': overallAiAnalysis,
       },
-      if (mode != null) 'metadata': {'mode': mode},
+      if (aiExplanation != null) 'aiExplanation': aiExplanation,
+      if (metadata != null) 'metadata': metadata!.toJson(),
     };
   }
 

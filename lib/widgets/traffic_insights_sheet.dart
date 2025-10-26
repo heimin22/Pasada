@@ -162,6 +162,13 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                   ],
                 ),
                 const SizedBox(height: 18),
+                // Overall AI Analysis and AI Explanation
+                if (_trafficData != null &&
+                    (_trafficData!.overallAiAnalysis != null ||
+                        _trafficData!.aiExplanation != null)) ...[
+                  _buildOverallAiAnalysis(isDarkMode),
+                  const SizedBox(height: 12),
+                ],
                 // Content
                 Flexible(child: _buildTrafficInsightsContent(isDarkMode)),
               ],
@@ -669,8 +676,57 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
                 label: 'Peak: ${trafficData.peakTrafficTime}',
                 isDarkMode: isDarkMode,
               ),
+              const SizedBox(width: 8),
+              _buildMetricChip(
+                icon: Icons.analytics,
+                label:
+                    '${(trafficData.confidenceScore * 100).toStringAsFixed(0)}% confidence',
+                isDarkMode: isDarkMode,
+              ),
             ],
           ),
+          // AI Insights section
+          if (trafficData.aiInsights.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? Colors.blue[900]!.withAlpha(30)
+                    : Colors.blue[50]!,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.blue[700]!.withAlpha(50)
+                      : Colors.blue[200]!,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.psychology,
+                    size: 16,
+                    color: isDarkMode ? Colors.blue[300] : Colors.blue[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      trafficData.aiInsights,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: isDarkMode ? Colors.blue[200] : Colors.blue[800],
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -727,6 +783,75 @@ class _TrafficInsightsSheetState extends State<TrafficInsightsSheet> {
     } else {
       return 'Updating...';
     }
+  }
+
+  Widget _buildOverallAiAnalysis(bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color:
+            isDarkMode ? Colors.purple[900]!.withAlpha(30) : Colors.purple[50]!,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDarkMode
+              ? Colors.purple[700]!.withAlpha(50)
+              : Colors.purple[200]!,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 18,
+                color: isDarkMode ? Colors.purple[300] : Colors.purple[600],
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'AI Analysis',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                ),
+              ),
+            ],
+          ),
+          if (_trafficData!.overallAiAnalysis != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _trafficData!.overallAiAnalysis!,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                color: isDarkMode ? Colors.purple[200] : Colors.purple[800],
+                height: 1.4,
+              ),
+            ),
+          ],
+          if (_trafficData!.aiExplanation != null) ...[
+            if (_trafficData!.overallAiAnalysis != null)
+              const SizedBox(height: 8),
+            Text(
+              _trafficData!.aiExplanation!,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: isDarkMode ? Colors.purple[300] : Colors.purple[700],
+                height: 1.3,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 
