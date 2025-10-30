@@ -25,6 +25,7 @@ import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/bounds_fab.dart';
 import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/holiday_banner.dart';
 import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
@@ -781,42 +782,45 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     onCalendarTap: _showCalendarScreen,
                   ),
                 ),
-                HomeScreenFAB(
-                  mapScreenKey:
-                      mapScreenKey as GlobalKey<State<StatefulWidget>>,
-                  downwardAnimation: _downwardAnimation,
-                  bookingAnimationControllerValue:
-                      bookingAnimationController, // Pass the controller directly
-                  responsivePadding: responsivePadding,
-                  fabVerticalSpacing: fabVerticalSpacing,
-                  iconSize: fabIconSize,
-                  bookingStatus: bookingStatus,
-                  isBookingConfirmed: isBookingConfirmed,
-                  onPressed: () async {
-                    final mapState = mapScreenKey.currentState;
-                    if (mapState != null) {
-                      if (!mapState.isLocationInitialized) {
-                        await mapState.initializeLocation();
+                if (!(isBookingConfirmed &&
+                    (bookingStatus == 'accepted' ||
+                        bookingStatus == 'ongoing')))
+                  HomeScreenFAB(
+                    mapScreenKey:
+                        mapScreenKey as GlobalKey<State<StatefulWidget>>,
+                    downwardAnimation: _downwardAnimation,
+                    bookingAnimationControllerValue:
+                        bookingAnimationController, // Pass the controller directly
+                    responsivePadding: responsivePadding,
+                    fabVerticalSpacing: fabVerticalSpacing,
+                    iconSize: fabIconSize,
+                    bookingStatus: bookingStatus,
+                    isBookingConfirmed: isBookingConfirmed,
+                    onPressed: () async {
+                      final mapState = mapScreenKey.currentState;
+                      if (mapState != null) {
+                        if (!mapState.isLocationInitialized) {
+                          await mapState.initializeLocation();
+                        }
+                        if (mapState.currentLocation != null) {
+                          mapState.animateToLocation(mapState.currentLocation!);
+                        }
+                        mapState.pulseCurrentLocationMarker();
                       }
-                      if (mapState.currentLocation != null) {
-                        mapState.animateToLocation(mapState.currentLocation!);
-                      }
-                      mapState.pulseCurrentLocationMarker();
-                    }
-                  },
-                  bottomOffset: isBookingConfirmed
-                      // When confirmed, track the draggable bottom sheet extent responsively
-                      ? (_bookingSheetExtent * screenHeight) + 20.0
-                      : calculateBottomPadding(
-                          isBookingConfirmed: isBookingConfirmed,
-                          bookingStatusContainerHeight:
-                              bookingStatusContainerHeight,
-                          locationInputContainerHeight:
-                              locationInputContainerHeight,
-                          isNotificationVisible: isNotificationVisible,
-                          notificationHeight: notificationHeight,
-                        ),
-                ),
+                    },
+                    bottomOffset: isBookingConfirmed
+                        // When confirmed, track the draggable bottom sheet extent responsively
+                        ? (_bookingSheetExtent * screenHeight) + 20.0
+                        : calculateBottomPadding(
+                            isBookingConfirmed: isBookingConfirmed,
+                            bookingStatusContainerHeight:
+                                bookingStatusContainerHeight,
+                            locationInputContainerHeight:
+                                locationInputContainerHeight,
+                            isNotificationVisible: isNotificationVisible,
+                            notificationHeight: notificationHeight,
+                          ),
+                  ),
                 if (!isBookingConfirmed)
                   Positioned(
                     bottom: bottomNavBarHeight,
@@ -940,6 +944,27 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         : () => _bookingManager
                             .refreshDriverAndCapacity(activeBookingId!),
                     capacityRefreshTick: capacityRefreshTick,
+                    boundsButton: (bookingStatus == 'accepted' ||
+                            bookingStatus == 'ongoing')
+                        ? BoundsFAB(
+                            heroTag: "sheetBoundsFAB",
+                            onPressed: () {
+                              (mapScreenKey.currentState as dynamic)
+                                  ?.showDriverFocusBounds(bookingStatus);
+                            },
+                            iconSize: fabIconSize,
+                            buttonSize:
+                                MediaQuery.of(context).size.width * 0.12,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1E1E1E)
+                                    : const Color(0xFFF5F5F5),
+                            iconColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF00E865)
+                                    : const Color(0xFF00CC58),
+                          )
+                        : null,
                   ),
               ],
             );

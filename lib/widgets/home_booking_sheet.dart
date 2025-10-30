@@ -29,6 +29,8 @@ class HomeBookingSheet extends StatelessWidget {
   final Future<void> Function()? onRefreshCapacity;
   // an external tick that changes on capacity updates to force rebuild of subtree
   final int? capacityRefreshTick;
+  // Optional in-sheet bounds button
+  final Widget? boundsButton;
 
   const HomeBookingSheet({
     super.key,
@@ -54,6 +56,7 @@ class HomeBookingSheet extends StatelessWidget {
     this.vehicleStandingCapacity,
     this.onRefreshCapacity,
     this.capacityRefreshTick,
+    this.boundsButton,
   });
 
   @override
@@ -65,67 +68,78 @@ class HomeBookingSheet extends StatelessWidget {
       minChildSize: bookingStatus == 'requested' ? 0.25 : 0.2,
       maxChildSize: 0.8,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(16),
+        return Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      // key includes capacity tick to ensure rebuilds when it changes
+                      child: BookingStatusManager(
+                        key: ValueKey<String>(
+                            '${bookingStatus}_${capacityRefreshTick ?? 0}'),
+                        pickupLocation: pickupLocation,
+                        dropoffLocation: dropoffLocation,
+                        paymentMethod: paymentMethod,
+                        fare: fare,
+                        onCancelBooking:
+                            bookingManager.handleBookingCancellation,
+                        driverName: driverName,
+                        plateNumber: plateNumber,
+                        vehicleModel: vehicleModel,
+                        phoneNumber: phoneNumber,
+                        isDriverAssigned: isDriverAssigned,
+                        bookingStatus: bookingStatus,
+                        currentLocation: currentLocation,
+                        bookingId: bookingId,
+                        selectedDiscount: selectedDiscount,
+                        capturedImagePath: capturedImagePath,
+                        capturedImageUrl: capturedImageUrl,
+                        vehicleTotalCapacity: vehicleTotalCapacity,
+                        vehicleSittingCapacity: vehicleSittingCapacity,
+                        vehicleStandingCapacity: vehicleStandingCapacity,
+                        onRefreshCapacity: onRefreshCapacity,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-              )
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+            if (boundsButton != null)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: boundsButton!,
               ),
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  // key includes capacity tick to ensure rebuilds when it changes
-                  child: BookingStatusManager(
-                    key: ValueKey<String>(
-                        '${bookingStatus}_${capacityRefreshTick ?? 0}'),
-                    pickupLocation: pickupLocation,
-                    dropoffLocation: dropoffLocation,
-                    paymentMethod: paymentMethod,
-                    fare: fare,
-                    onCancelBooking: bookingManager.handleBookingCancellation,
-                    driverName: driverName,
-                    plateNumber: plateNumber,
-                    vehicleModel: vehicleModel,
-                    phoneNumber: phoneNumber,
-                    isDriverAssigned: isDriverAssigned,
-                    bookingStatus: bookingStatus,
-                    currentLocation: currentLocation,
-                    bookingId: bookingId,
-                    selectedDiscount: selectedDiscount,
-                    capturedImagePath: capturedImagePath,
-                    capturedImageUrl: capturedImageUrl,
-                    vehicleTotalCapacity: vehicleTotalCapacity,
-                    vehicleSittingCapacity: vehicleSittingCapacity,
-                    vehicleStandingCapacity: vehicleStandingCapacity,
-                    onRefreshCapacity: onRefreshCapacity,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          ],
         );
       },
     );
