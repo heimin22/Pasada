@@ -1,7 +1,8 @@
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiException implements Exception {
@@ -23,9 +24,9 @@ class ApiService {
   }
 
   ApiService._internal() : baseUrl = dotenv.env['API_URL'] ?? '' {
-    debugPrint('API URL configured as: $baseUrl');
+    AppLogger.info('API URL configured as: $baseUrl', tag: 'ApiService');
     if (baseUrl.isEmpty) {
-      debugPrint('WARNING: API_URL is empty in .env file');
+      AppLogger.warn('API_URL is empty in .env file', tag: 'ApiService');
     }
   }
 
@@ -51,12 +52,12 @@ class ApiService {
         queryParameters: queryParams,
       );
 
-      debugPrint('GET request to: $uri');
+      AppLogger.debug('GET $uri', tag: 'ApiService');
       final response = await http.get(uri, headers: headers);
 
       return _handleResponse<T>(response);
     } catch (e) {
-      debugPrint('GET request failed: $e');
+      AppLogger.error('GET failed: $e', tag: 'ApiService');
       rethrow; // Rethrow to allow proper error handling upstream
     }
   }
@@ -69,7 +70,7 @@ class ApiService {
         queryParameters: queryParams,
       );
 
-      debugPrint('POST request to: $uri with body: $body');
+      AppLogger.debug('POST $uri body: $body', tag: 'ApiService');
       final response = await http.post(
         uri,
         headers: headers,
@@ -78,7 +79,7 @@ class ApiService {
 
       return _handleResponse<T>(response);
     } catch (e) {
-      debugPrint('POST request failed: $e');
+      AppLogger.error('POST failed: $e', tag: 'ApiService');
       rethrow; // Rethrow to allow proper error handling upstream
     }
   }
@@ -91,7 +92,7 @@ class ApiService {
         queryParameters: queryParams,
       );
 
-      debugPrint('PUT request to: $uri with body: $body');
+      AppLogger.debug('PUT $uri body: $body', tag: 'ApiService');
       final response = await http.put(
         uri,
         headers: headers,
@@ -100,7 +101,7 @@ class ApiService {
 
       return _handleResponse<T>(response);
     } catch (e) {
-      debugPrint('PUT request failed: $e');
+      AppLogger.error('PUT failed: $e', tag: 'ApiService');
       rethrow; // Rethrow to allow proper error handling upstream
     }
   }
@@ -109,10 +110,10 @@ class ApiService {
     final statusCode = response.statusCode;
     final responseBody = response.body;
 
-    debugPrint('Response status: $statusCode, body: $responseBody');
-
-    // Debug helper to show the full response structure
-    _debugPrintResponseStructure(responseBody);
+    AppLogger.debug('Response $statusCode', tag: 'ApiService');
+    if (AppLogger.verbose && responseBody.isNotEmpty) {
+      _debugPrintResponseStructure(responseBody);
+    }
 
     if (statusCode >= 200 && statusCode < 300) {
       if (responseBody.isEmpty) return null;
@@ -121,7 +122,7 @@ class ApiService {
         final jsonResponse = jsonDecode(responseBody);
         return jsonResponse as T;
       } catch (e) {
-        debugPrint('Error parsing response: $e');
+        AppLogger.warn('Error parsing response: $e', tag: 'ApiService');
         throw ApiException('Invalid response format', statusCode: statusCode);
       }
     } else {
@@ -142,49 +143,57 @@ class ApiService {
   void _debugPrintResponseStructure(String responseBody) {
     try {
       if (responseBody.isEmpty) {
-        debugPrint('API DEBUG: Empty response body');
+        AppLogger.debug('API DEBUG: Empty response body', tag: 'ApiService');
         return;
       }
 
       final data = jsonDecode(responseBody);
-      debugPrint('API DEBUG: Response structure:');
+      AppLogger.debug('API DEBUG: Response structure:', tag: 'ApiService');
 
       if (data is Map) {
         data.forEach((key, value) {
-          debugPrint('  $key: ${_formatValue(value)}');
+          AppLogger.debug('  $key: ${_formatValue(value)}', tag: 'ApiService');
 
           if (value is Map) {
             value.forEach((subKey, subValue) {
-              debugPrint('    $subKey: ${_formatValue(subValue)}');
+              AppLogger.debug('    $subKey: ${_formatValue(subValue)}',
+                  tag: 'ApiService');
             });
           } else if (value is List && value.isNotEmpty) {
-            debugPrint('    [List with ${value.length} items]');
+            AppLogger.debug('    [List with ${value.length} items]',
+                tag: 'ApiService');
             if (value.first is Map) {
               final firstItem = value.first as Map;
-              debugPrint('    First item keys: ${firstItem.keys.toList()}');
+              AppLogger.debug('    First item keys: ${firstItem.keys.toList()}',
+                  tag: 'ApiService');
               firstItem.forEach((itemKey, itemValue) {
-                debugPrint('      $itemKey: ${_formatValue(itemValue)}');
+                AppLogger.debug('      $itemKey: ${_formatValue(itemValue)}',
+                    tag: 'ApiService');
               });
             } else {
-              debugPrint('    First item: ${_formatValue(value.first)}');
+              AppLogger.debug('    First item: ${_formatValue(value.first)}',
+                  tag: 'ApiService');
             }
           }
         });
       } else if (data is List) {
-        debugPrint('  [List with ${data.length} items]');
+        AppLogger.debug('  [List with ${data.length} items]',
+            tag: 'ApiService');
         if (data.isNotEmpty) {
           if (data.first is Map) {
             final firstItem = data.first as Map;
-            debugPrint('  First item keys: ${firstItem.keys.toList()}');
+            AppLogger.debug('  First item keys: ${firstItem.keys.toList()}',
+                tag: 'ApiService');
           } else {
-            debugPrint('  First item: ${data.first}');
+            AppLogger.debug('  First item: ${data.first}', tag: 'ApiService');
           }
         }
       } else {
-        debugPrint('  Raw data: $data');
+        AppLogger.debug('  Raw data: $data', tag: 'ApiService');
       }
     } catch (e) {
-      debugPrint('API DEBUG: Error parsing response JSON: $e');
+      AppLogger.warn('API DEBUG: Error parsing response JSON: $e',
+          tag: 'ApiService');
     }
   }
 

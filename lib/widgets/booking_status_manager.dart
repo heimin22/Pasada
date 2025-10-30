@@ -9,7 +9,6 @@ import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
 import 'eta_container.dart';
-import 'payment_details_container.dart';
 import 'skeleton.dart';
 import 'vehicle_capacity_container.dart';
 
@@ -299,15 +298,9 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                 pickupLocation: widget.pickupLocation,
                 dropoffLocation: widget.dropoffLocation,
                 bookingId: widget.bookingId,
+                fare: widget.fare,
                 selectedDiscount: widget.selectedDiscount,
                 capturedImageUrl: widget.capturedImageUrl,
-              ),
-              PaymentDetailsContainer(
-                paymentMethod: widget.paymentMethod,
-                onCancelBooking: widget.onCancelBooking,
-                fare: widget.fare,
-                showCancelButton:
-                    false, // Cancel button likely not needed for 'ongoing'
               ),
             ] else if (widget.bookingStatus == 'cancelled')
               _buildCancelledStatusContent(isDarkMode),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/services/apiService.dart';
 import 'package:pasada_passenger_app/services/driverService.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 class DriverAssignmentService {
   final ApiService _apiService = ApiService();
@@ -19,11 +20,13 @@ class DriverAssignmentService {
     // Cancel any existing polling before starting
     stopPolling();
 
-    debugPrint('Starting to poll for driver assignment on booking: $bookingId');
+    AppLogger.info('Start polling driver assignment: $bookingId',
+        tag: 'DriverAssign');
 
     // Set a 1-minute timeout to cancel if no driver is found
     _timeoutTimer = Timer(const Duration(minutes: 1), () async {
-      debugPrint('Driver assignment timeout for booking: $bookingId');
+      AppLogger.warn('Driver assignment timeout: $bookingId',
+          tag: 'DriverAssign');
       stopPolling(); // Stop the polling
 
       // Cancel the booking
@@ -33,8 +36,8 @@ class DriverAssignmentService {
           body: {'ride_status': 'cancelled'},
         );
 
-        debugPrint(
-            'Booking $bookingId automatically cancelled due to no driver found');
+        AppLogger.info('Auto-cancelled booking $bookingId (timeout)',
+            tag: 'DriverAssign');
 
         // Notify the caller about the timeout
         if (onTimeout != null) {
@@ -46,7 +49,7 @@ class DriverAssignmentService {
           onStatusChange('cancelled');
         }
       } catch (e) {
-        debugPrint('Error cancelling booking after timeout: $e');
+        AppLogger.error('Cancel on timeout failed: $e', tag: 'DriverAssign');
         if (onError != null) {
           onError();
         }
@@ -60,7 +63,8 @@ class DriverAssignmentService {
         final raw =
             await _apiService.get<Map<String, dynamic>>('bookings/$bookingId');
         if (raw == null) {
-          debugPrint('No response from API (raw) for booking $bookingId');
+          AppLogger.warn('No API response for booking $bookingId',
+              tag: 'DriverAssign');
           if (onError != null) onError();
           return;
         }
@@ -68,11 +72,15 @@ class DriverAssignmentService {
         Map<String, dynamic> response;
         if (raw.containsKey('trip') && raw['trip'] is Map<String, dynamic>) {
           response = raw['trip'] as Map<String, dynamic>;
-          debugPrint(
-              'Unwrapped booking response from raw[\'trip\']: $response');
+          if (AppLogger.verbose) {
+            AppLogger.debug('Unwrapped trip: $response', tag: 'DriverAssign');
+          }
         } else {
           response = raw;
-          debugPrint('Booking status update from bookings endpoint: $response');
+          if (AppLogger.verbose) {
+            AppLogger.debug('Booking status update: $response',
+                tag: 'DriverAssign');
+          }
         }
 
         // Notify about status changes if callback provided
@@ -88,7 +96,17 @@ class DriverAssignmentService {
           _fetchDriverDetailsParallel(bookingId, response, onDriverAssigned);
         }
       } catch (e) {
-        debugPrint('Error polling for driver assignment: $e');
+        // Treat 404 as terminal: booking no longer exists (likely completed)
+        if (e is ApiException && e.statusCode == 404) {
+          AppLogger.info('Stopping polling: booking $bookingId not found (404)',
+              tag: 'DriverAssign');
+          stopPolling();
+          if (onStatusChange != null) {
+            onStatusChange('completed');
+          }
+          return;
+        }
+        AppLogger.error('Polling error: $e', tag: 'DriverAssign');
         if (onError != null) {
           onError();
         }
@@ -127,15 +145,17 @@ class DriverAssignmentService {
             return; // Exit after first successful result
           }
         } catch (e) {
-          debugPrint('Driver details fetch method failed: $e');
+          AppLogger.debug('Driver details fetch method failed: $e',
+              tag: 'DriverAssign');
           continue; // Try next method
         }
       }
 
-      debugPrint(
-          'All parallel driver fetch methods failed for booking $bookingId');
+      AppLogger.warn('All parallel driver fetch methods failed for $bookingId',
+          tag: 'DriverAssign');
     } catch (e) {
-      debugPrint('Error in parallel driver details fetch: $e');
+      AppLogger.error('Parallel driver details fetch error: $e',
+          tag: 'DriverAssign');
     }
   }
 
@@ -164,6 +184,6 @@ class DriverAssignmentService {
     _pollingTimer = null;
     _timeoutTimer?.cancel();
     _timeoutTimer = null;
-    debugPrint('Stopped polling for driver assignment');
+    AppLogger.info('Stopped polling', tag: 'DriverAssign');
   }
 }
