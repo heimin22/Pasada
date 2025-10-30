@@ -27,6 +27,7 @@ class HomeBottomSection extends StatelessWidget {
   final VoidCallback onShowDiscountSelectionDialog;
   final VoidCallback onConfirmBooking;
   final VoidCallback? onFareUpdated;
+  final Widget? boundsButton; // Optional in-sheet bounds button
 
   const HomeBottomSection({
     super.key,
@@ -52,6 +53,7 @@ class HomeBottomSection extends StatelessWidget {
     required this.onShowDiscountSelectionDialog,
     required this.onConfirmBooking,
     this.onFareUpdated,
+    this.boundsButton,
   });
 
   @override
@@ -102,6 +104,13 @@ class HomeBottomSection extends StatelessWidget {
                     );
                   },
                 ),
+                if (boundsButton != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: boundsButton!,
+                  ),
+                ],
               ],
             ),
           ),

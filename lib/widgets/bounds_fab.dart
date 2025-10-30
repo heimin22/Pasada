@@ -4,6 +4,7 @@ class BoundsFAB extends StatelessWidget {
   final VoidCallback onPressed;
   final Color backgroundColor;
   final Color iconColor;
+  final Color borderColor;
   final double elevation;
   final double iconSize;
   final double buttonSize;
@@ -14,24 +15,36 @@ class BoundsFAB extends StatelessWidget {
     required this.onPressed,
     this.backgroundColor = const Color(0xFFF5F5F5),
     this.iconColor = const Color(0xFF00CC58),
-    this.elevation = 4.0,
-    this.iconSize = 24,
-    this.buttonSize = 48,
+    this.borderColor = const Color(0xFF00CC58),
+    this.elevation = 3.0,
+    this.iconSize = 28,
+    this.buttonSize = 56,
     this.heroTag,
   });
 
   @override
   Widget build(BuildContext context) {
-    return FloatingActionButton(
-      heroTag: heroTag ?? UniqueKey(),
-      onPressed: onPressed,
-      backgroundColor: backgroundColor,
+    final ButtonStyle style = ElevatedButton.styleFrom(
       elevation: elevation,
-      mini: true,
+      padding: EdgeInsets.zero,
+      backgroundColor: backgroundColor,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: borderColor, width: 2),
       ),
-      child: Icon(Icons.zoom_out_map, size: iconSize, color: iconColor),
+    );
+
+    return SizedBox(
+      width: buttonSize,
+      height: buttonSize,
+      child: Hero(
+        tag: heroTag ?? UniqueKey(),
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: style,
+          child: Icon(Icons.zoom_out_map, size: iconSize, color: iconColor),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
+import 'package:pasada_passenger_app/services/calendar_service.dart';
 import 'package:pasada_passenger_app/services/id_camera_service.dart';
 import 'package:pasada_passenger_app/widgets/refreshable_bottom_sheet.dart';
 
@@ -107,66 +108,93 @@ class DiscountSelectionDialog {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Discount options
-                    ...discountOptions.map((option) {
-                      return ValueListenableBuilder<String>(
-                        valueListenable: selectedDiscountSpecification,
-                        builder: (context, currentValue, _) {
-                          final isSelected = currentValue == option['value'];
-                          return InkWell(
-                            onTap: () async {
-                              final discountType = option['value']!;
+                    // Discount options (holiday-aware)
+                    FutureBuilder<bool>(
+                      future: CalendarService.instance
+                          .isPhilippineHoliday(DateTime.now()),
+                      builder: (context, snapshot) {
+                        final bool isHoliday = snapshot.data == true;
+                        return Column(
+                          children: [
+                            ...discountOptions.map((option) {
+                              return ValueListenableBuilder<String>(
+                                valueListenable: selectedDiscountSpecification,
+                                builder: (context, currentValue, _) {
+                                  final isSelected =
+                                      currentValue == option['value'];
+                                  final bool isStudentOption =
+                                      (option['value'] ?? '').toLowerCase() ==
+                                          'student';
+                                  final bool isDisabled =
+                                      isHoliday && isStudentOption;
+                                  return InkWell(
+                                    onTap: isDisabled
+                                        ? null
+                                        : () async {
+                                            final discountType =
+                                                option['value']!;
 
-                              // If selecting "None", clear both discount and image
-                              if (discountType.isEmpty) {
-                                selectedDiscountSpecification.value = '';
-                                selectedIdImageUrl.value = null;
-                                // Immediately update fare when discount is cleared
-                                onFareUpdated?.call();
-                                Navigator.of(context).pop();
-                                return;
-                              }
+                                            // If selecting "None", clear both discount and image
+                                            if (discountType.isEmpty) {
+                                              selectedDiscountSpecification
+                                                  .value = '';
+                                              selectedIdImageUrl.value = null;
+                                              // Immediately update fare when discount is cleared
+                                              onFareUpdated?.call();
+                                              Navigator.of(context).pop();
+                                              return;
+                                            }
 
-                              // For other discounts, capture and upload ID image first
-                              Navigator.of(context)
-                                  .pop(); // Close current dialog
+                                            // For other discounts, capture and upload ID image first
+                                            Navigator.of(context)
+                                                .pop(); // Close current dialog
 
-                              final uploadedImageUrl =
-                                  await IdCameraService.captureAndUploadIdImage(
-                                context: context,
-                                passengerType: discountType,
+                                            final uploadedImageUrl =
+                                                await IdCameraService
+                                                    .captureAndUploadIdImage(
+                                              context: context,
+                                              passengerType: discountType,
+                                            );
+                                            if (uploadedImageUrl != null) {
+                                              // Update discount values
+                                              selectedDiscountSpecification
+                                                  .value = discountType;
+                                              selectedIdImageUrl.value =
+                                                  uploadedImageUrl;
+
+                                              // Immediately update fare after discount is applied
+                                              onFareUpdated?.call();
+
+                                              // Refresh content in the current bottom sheet
+                                              if (refreshableBottomSheetState !=
+                                                  null) {
+                                                await refreshableBottomSheetState
+                                                    .refreshContent();
+                                              } else if (onReopenMainBottomSheet !=
+                                                  null) {
+                                                // Fallback to reopening if refreshable state not available
+                                                await Future.delayed(
+                                                    const Duration(
+                                                        milliseconds: 500));
+                                                onReopenMainBottomSheet();
+                                              }
+                                            }
+                                            // If image capture fails or is cancelled, don't update discount
+                                          },
+                                    child: DiscountOptionTile(
+                                      option: option,
+                                      isSelected: isSelected,
+                                      isDarkMode: isDarkMode,
+                                      isDisabled: isDisabled,
+                                    ),
+                                  );
+                                },
                               );
-                              if (uploadedImageUrl != null) {
-                                // Update discount values
-                                selectedDiscountSpecification.value =
-                                    discountType;
-                                selectedIdImageUrl.value = uploadedImageUrl;
-
-                                // Immediately update fare after discount is applied
-                                onFareUpdated?.call();
-
-                                // Refresh content in the current bottom sheet
-                                if (refreshableBottomSheetState != null) {
-                                  await refreshableBottomSheetState
-                                      .refreshContent();
-                                } else if (onReopenMainBottomSheet != null) {
-                                  // Fallback to reopening if refreshable state not available
-                                  await Future.delayed(
-                                      const Duration(milliseconds: 500));
-                                  onReopenMainBottomSheet();
-                                }
-                              }
-                              // If image capture fails or is cancelled, don't update discount
-                            },
-                            child: DiscountOptionTile(
-                              option: option,
-                              isSelected: isSelected,
-                              isDarkMode: isDarkMode,
-                            ),
-                          );
-                        },
-                      );
-                    }),
+                            }),
+                          ],
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -184,77 +212,86 @@ class DiscountOptionTile extends StatelessWidget {
   final Map<String, String> option;
   final bool isSelected;
   final bool isDarkMode;
+  final bool isDisabled;
 
   const DiscountOptionTile({
     super.key,
     required this.option,
     required this.isSelected,
     required this.isDarkMode,
+    this.isDisabled = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? const Color(0xFF00CC58).withAlpha(10)
-            : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.white),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+    return Opacity(
+      opacity: isDisabled ? 0.6 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF00CC58)
-              : (isDarkMode
-                  ? const Color(0xFF3A3A3A)
-                  : const Color(0xFFE0E0E0)),
-          width: isSelected ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isSelected
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked,
+              ? const Color(0xFF00CC58).withAlpha(10)
+              : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
             color: isSelected
                 ? const Color(0xFF00CC58)
-                : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-            size: 24,
+                : (isDarkMode
+                    ? const Color(0xFF3A3A3A)
+                    : const Color(0xFFE0E0E0)),
+            width: isSelected ? 2 : 1,
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  option['label']!,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
-                if (option['description']!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: isSelected
+                  ? const Color(0xFF00CC58)
+                  : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    option['description']!,
+                    option['label']!,
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                       fontFamily: 'Inter',
+                      decoration:
+                          isDisabled ? TextDecoration.lineThrough : null,
                       color: isDarkMode
-                          ? const Color(0xFFAAAAAA)
-                          : const Color(0xFF666666),
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
                     ),
                   ),
+                  if (option['description']!.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      option['description']!,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontFamily: 'Inter',
+                        decoration:
+                            isDisabled ? TextDecoration.lineThrough : null,
+                        color: isDarkMode
+                            ? const Color(0xFFAAAAAA)
+                            : const Color(0xFF666666),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -25,6 +25,7 @@ import 'package:pasada_passenger_app/utils/home_screen_navigation.dart';
 import 'package:pasada_passenger_app/utils/home_screen_utils.dart';
 import 'package:pasada_passenger_app/widgets/alert_sequence_dialog.dart';
 import 'package:pasada_passenger_app/widgets/booking_confirmation_dialog.dart';
+import 'package:pasada_passenger_app/widgets/bounds_fab.dart';
 import 'package:pasada_passenger_app/widgets/discount_selection_dialog.dart';
 import 'package:pasada_passenger_app/widgets/holiday_banner.dart';
 import 'package:pasada_passenger_app/widgets/home_booking_sheet.dart';
@@ -217,28 +218,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       LatLng? originCoordinates = result['origin_coordinates'];
       LatLng? destinationCoordinates = result['destination_coordinates'];
 
-      // Draw the precomputed route polyline if available
-      if (result['polyline_coordinates'] != null &&
-          result['polyline_coordinates'] is List<LatLng>) {
-        final coords = result['polyline_coordinates'] as List<LatLng>;
-        mapScreenKey.currentState?.animateRouteDrawing(
-          const PolylineId('route'),
-          coords,
-          const Color(0xFFFFCE21),
-          4,
-        );
-        mapScreenKey.currentState?.zoomToBounds(coords);
-      } else if (originCoordinates != null && destinationCoordinates != null) {
-        // Fallback to computing the route directly
-        final coords = await PolylineService()
-            .generateBetween(originCoordinates, destinationCoordinates);
-        mapScreenKey.currentState?.animateRouteDrawing(
-          const PolylineId('route'),
-          coords,
-          const Color(0xFFFFCE21),
-          4,
-        );
-        mapScreenKey.currentState?.zoomToBounds(coords);
+      // Draw the route only when not in an active ride
+      if (bookingStatus == 'requested') {
+        // Show bounds only. Do not draw selection polyline.
+        if (result['polyline_coordinates'] != null &&
+            result['polyline_coordinates'] is List<LatLng>) {
+          final coords = result['polyline_coordinates'] as List<LatLng>;
+          mapScreenKey.currentState?.zoomToBounds(coords);
+        } else if (originCoordinates != null &&
+            destinationCoordinates != null) {
+          final coords = await PolylineService()
+              .generateBetween(originCoordinates, destinationCoordinates);
+          mapScreenKey.currentState?.zoomToBounds(coords);
+        }
       }
     }
   }
@@ -395,35 +387,24 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
         debugPrint('Loaded route: ${route['route_name']}');
 
-        // Draw the route on the map if polyline coordinates are available
-        if (route['polyline_coordinates'] != null &&
-            route['polyline_coordinates'] is List<LatLng>) {
-          final coords = route['polyline_coordinates'] as List<LatLng>;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            mapScreenKey.currentState?.animateRouteDrawing(
-              const PolylineId('route'),
-              coords,
-              const Color(0xFFFFCE21),
-              4,
-            );
-            mapScreenKey.currentState?.zoomToBounds(coords);
-          });
-        } else if (route['origin_coordinates'] != null &&
-            route['destination_coordinates'] != null) {
-          // Fallback to drawing route from origin to destination
-          final origin = route['origin_coordinates'] as LatLng;
-          final destination = route['destination_coordinates'] as LatLng;
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            final coords =
-                await PolylineService().generateBetween(origin, destination);
-            mapScreenKey.currentState?.animateRouteDrawing(
-              const PolylineId('route'),
-              coords,
-              const Color(0xFFFFCE21),
-              4,
-            );
-            mapScreenKey.currentState?.zoomToBounds(coords);
-          });
+        // Show bounds only when not in an active ride; do not draw selection polyline
+        if (bookingStatus == 'requested') {
+          if (route['polyline_coordinates'] != null &&
+              route['polyline_coordinates'] is List<LatLng>) {
+            final coords = route['polyline_coordinates'] as List<LatLng>;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              mapScreenKey.currentState?.zoomToBounds(coords);
+            });
+          } else if (route['origin_coordinates'] != null &&
+              route['destination_coordinates'] != null) {
+            final origin = route['origin_coordinates'] as LatLng;
+            final destination = route['destination_coordinates'] as LatLng;
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              final coords =
+                  await PolylineService().generateBetween(origin, destination);
+              mapScreenKey.currentState?.zoomToBounds(coords);
+            });
+          }
         }
       }
     } catch (e) {
@@ -785,6 +766,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                   selectedRoute: selectedRoute,
                   routePolyline:
                       selectedRoute?['polyline_coordinates'] as List<LatLng>?,
+                  bookingStatus: bookingStatus,
                 ),
                 Positioned(
                   top: (MediaQuery.of(context).padding.top + 10) +
@@ -823,13 +805,21 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       mapState.pulseCurrentLocationMarker();
                     }
                   },
-                  bottomOffset: calculateBottomPadding(
-                    isBookingConfirmed: isBookingConfirmed,
-                    bookingStatusContainerHeight: bookingStatusContainerHeight,
-                    locationInputContainerHeight: locationInputContainerHeight,
-                    isNotificationVisible: isNotificationVisible,
-                    notificationHeight: notificationHeight,
-                  ), // FAB uses the main calculation
+                  bottomOffset: isBookingConfirmed
+                      // Track draggable sheet height (in px) + nav bar clearance
+                      ? (_bookingSheetExtent * screenHeight) +
+                          bottomNavBarHeight +
+                          20.0
+                      : calculateBottomPadding(
+                            isBookingConfirmed: isBookingConfirmed,
+                            bookingStatusContainerHeight:
+                                bookingStatusContainerHeight,
+                            locationInputContainerHeight:
+                                locationInputContainerHeight,
+                            isNotificationVisible: isNotificationVisible,
+                            notificationHeight: notificationHeight,
+                          ) +
+                          bottomNavBarHeight,
                 ),
                 if (!isBookingConfirmed)
                   Positioned(
@@ -954,6 +944,27 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                         : () => _bookingManager
                             .refreshDriverAndCapacity(activeBookingId!),
                     capacityRefreshTick: capacityRefreshTick,
+                    boundsButton: (bookingStatus == 'accepted' ||
+                            bookingStatus == 'ongoing')
+                        ? BoundsFAB(
+                            heroTag: "sheetBoundsFAB",
+                            onPressed: () {
+                              (mapScreenKey.currentState as dynamic)
+                                  ?.showDriverFocusBounds(bookingStatus);
+                            },
+                            iconSize: fabIconSize,
+                            buttonSize:
+                                MediaQuery.of(context).size.width * 0.12,
+                            backgroundColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1E1E1E)
+                                    : const Color(0xFFF5F5F5),
+                            iconColor:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF00E865)
+                                    : const Color(0xFF00CC58),
+                          )
+                        : null,
                   ),
               ],
             );

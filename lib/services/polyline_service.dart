@@ -1,13 +1,16 @@
 import 'dart:convert';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:pasada_passenger_app/utils/map_utils.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/utils/map_utils.dart';
 import 'package:pasada_passenger_app/utils/memory_manager.dart';
 
 class PolylineService {
   final _apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
+  // Coalesce duplicate in-flight requests per rounded start/end pair
+  static final Map<String, Future<List<LatLng>>> _pendingRequests = {};
 
   Future<List<LatLng>> generateBetween(LatLng start, LatLng end) async {
     // Use rounded coordinates for better cache hit rate (approx 11m precision)
@@ -20,6 +23,12 @@ class PolylineService {
         '_${roundedEndLat}_$roundedEndLng';
     final cached = MemoryManager.instance.getFromCache(key);
     if (cached is List<LatLng>) return cached;
+
+    // Return same in-flight future if already fetching this exact route
+    final inFlight = _pendingRequests[key];
+    if (inFlight != null) {
+      return await inFlight;
+    }
 
     final uri = Uri.parse(
       'https://routes.googleapis.com/directions/v2:computeRoutes',
@@ -47,34 +56,46 @@ class PolylineService {
           'routes.polyline.encodedPolyline,routes.legs.duration.seconds',
     };
 
-    final resp =
-        await NetworkUtility.postUrl(uri, headers: headers, body: body);
-    if (resp == null) return <LatLng>[];
-    final data = json.decode(resp);
-    // Robustly handle routes as List or Map
-    dynamic routesData = data['routes'];
-    List<dynamic> routesList;
-    if (routesData is List) {
-      routesList = routesData;
-    } else if (routesData is Map) {
-      routesList = routesData.values.toList();
-    } else {
-      return <LatLng>[];
+    // Build the full fetch-and-parse future so duplicates coalesce properly
+    Future<List<LatLng>> doRequest() async {
+      final resp =
+          await NetworkUtility.postUrl(uri, headers: headers, body: body);
+      if (resp == null) return <LatLng>[];
+      final data = json.decode(resp);
+      // Robustly handle routes as List or Map
+      dynamic routesData = data['routes'];
+      List<dynamic> routesList;
+      if (routesData is List) {
+        routesList = routesData;
+      } else if (routesData is Map) {
+        routesList = routesData.values.toList();
+      } else {
+        return <LatLng>[];
+      }
+      if (routesList.isEmpty) return <LatLng>[];
+      final firstRoute = routesList.first;
+      // Extract encodedPolyline safely
+      dynamic polylineData = firstRoute['polyline'];
+      String? poly;
+      if (polylineData is Map && polylineData['encodedPolyline'] != null) {
+        poly = polylineData['encodedPolyline'] as String;
+      } else {
+        return <LatLng>[];
+      }
+      final decoded = PolylinePoints.decodePolyline(poly);
+      final coords =
+          decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
+      // Cache with the rounded key for consistency
+      MemoryManager.instance.addToCache(key, coords);
+      return coords;
     }
-    if (routesList.isEmpty) return <LatLng>[];
-    final firstRoute = routesList.first;
-    // Extract encodedPolyline safely
-    dynamic polylineData = firstRoute['polyline'];
-    String? poly;
-    if (polylineData is Map && polylineData['encodedPolyline'] != null) {
-      poly = polylineData['encodedPolyline'] as String;
-    } else {
-      return <LatLng>[];
-    }
-    final decoded = PolylinePoints.decodePolyline(poly);
-    final coords = decoded.map((p) => LatLng(p.latitude, p.longitude)).toList();
-    // Cache with the rounded key for consistency
-    MemoryManager.instance.addToCache(key, coords);
+
+    // Record pending request to prevent duplicate API calls
+    final future = doRequest();
+    _pendingRequests[key] = future;
+    final coords = await future;
+    // Remove from pending requests after completion
+    _pendingRequests.remove(key);
     return coords;
   }
 
