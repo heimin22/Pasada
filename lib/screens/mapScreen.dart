@@ -28,6 +28,7 @@ class MapScreen extends StatefulWidget {
   final Function(LatLng)? onLocationUpdated;
   final Map<String, dynamic>? selectedRoute;
   final List<LatLng>? routePolyline;
+  final String bookingStatus; // 'requested' | 'accepted' | 'ongoing' | etc.
 
   const MapScreen({
     super.key,
@@ -39,6 +40,7 @@ class MapScreen extends StatefulWidget {
     this.onLocationUpdated,
     this.selectedRoute,
     this.routePolyline,
+    this.bookingStatus = 'requested',
   });
 
   @override
@@ -306,6 +308,11 @@ class MapScreenState extends State<MapScreen>
 
   // handle yung location updates for the previous widget to generate polylines
   Future<void> handleLocationUpdates() async {
+    // Suppress drawing selection polylines while a ride is accepted/ongoing
+    if (widget.bookingStatus == 'accepted' ||
+        widget.bookingStatus == 'ongoing') {
+      return;
+    }
     if (widget.pickUpLocation != null && widget.dropOffLocation != null) {
       if (widget.routePolyline?.isNotEmpty == true) {
         final segment = await _routeManager.renderRouteAlongPolyline(
@@ -397,6 +404,11 @@ class MapScreenState extends State<MapScreen>
   // ito yung method para sa pick-up and drop-off location
   Future<void> updateLocations(
       {LatLng? pickup, LatLng? dropoff, bool skipDistanceCheck = false}) async {
+    // Suppress drawing selection polylines while a ride is accepted/ongoing
+    if (widget.bookingStatus == 'accepted' ||
+        widget.bookingStatus == 'ongoing') {
+      return;
+    }
     if (pickup != null) {
       if (!skipDistanceCheck) {
         final shouldProceed = await checkPickupDistance(pickup);
@@ -463,6 +475,11 @@ class MapScreenState extends State<MapScreen>
 
   // Helper method for backward compatibility
   Future<void> _renderRouteBetween(LatLng start, LatLng destination) async {
+    // Suppress drawing selection polylines while a ride is accepted/ongoing
+    if (widget.bookingStatus == 'accepted' ||
+        widget.bookingStatus == 'ongoing') {
+      return;
+    }
     final route = await _routeManager.renderRouteBetween(start, destination);
     if (route.isNotEmpty) {
       // Update polyline in optimized manager
@@ -537,6 +554,9 @@ class MapScreenState extends State<MapScreen>
       pickupLocation: widget.pickUpLocation,
       dropoffLocation: widget.dropOffLocation,
     );
+
+    // Enforce polyline whitelist to prevent duplicate/stale overlays
+    _enforcePolylineWhitelist(rideStatus);
   }
 
   // Helper to generate and update polyline for driver route without clearing other polylines
@@ -809,6 +829,26 @@ class MapScreenState extends State<MapScreen>
       _stableStateManager.removePolyline(const PolylineId('route'));
       _optimizedPolylineManager.removePolyline(const PolylineId('route'));
     });
+  }
+
+  // Keep only the relevant polylines depending on ride status
+  void _enforcePolylineWhitelist(String rideStatus) {
+    final currentPolylines = _optimizedPolylineManager.polylinesNotifier.value;
+    if (currentPolylines.isEmpty) return;
+
+    // Whitelist IDs
+    final keepIds = <PolylineId>{
+      if (rideStatus == 'accepted' || rideStatus == 'ongoing')
+        const PolylineId('driver_route_live')
+      else
+        const PolylineId('route'),
+    };
+
+    for (final poly in currentPolylines) {
+      if (!keepIds.contains(poly.polylineId)) {
+        _optimizedPolylineManager.removePolyline(poly.polylineId);
+      }
+    }
   }
 
   // Clears all map overlays and selected locations
