@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/services/id_image_upload_service.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,15 +33,20 @@ class BookingService {
   final supabase = Supabase.instance.client;
   StreamSubscription<LocationData>? _locationSubscription;
 
-  void startLocationTracking(String passengerID) {
+  Future<void> startLocationTracking(String passengerID) async {
     stopLocationTracking();
 
     final location = Location();
 
+    // Use balanced accuracy and shorter interval for faster, battery-friendly updates
     location.changeSettings(
-      accuracy: LocationAccuracy.high,
-      interval: 10000,
+      accuracy: LocationAccuracy.balanced,
+      interval: 5000,
     );
+    // Keep updates alive when app goes to background (requires proper permissions)
+    try {
+      await location.enableBackgroundMode(enable: true);
+    } catch (_) {}
 
     _locationSubscription = location.onLocationChanged.listen((locationData) {
       if (locationData.latitude != null && locationData.longitude != null) {
@@ -52,13 +58,14 @@ class BookingService {
       }
     });
 
-    debugPrint('Location tracking started for passenger $passengerID');
+    AppLogger.info('Location tracking started for passenger $passengerID',
+        tag: 'BookingService', throttle: true);
   }
 
   void stopLocationTracking() {
     _locationSubscription?.cancel();
     _locationSubscription = null;
-    debugPrint('Location tracking stopped');
+    AppLogger.info('Location tracking stopped', tag: 'BookingService');
   }
 
   Future<void> _updatePassengerLocation(
@@ -73,9 +80,11 @@ class BookingService {
         'longitude': longitude,
       });
 
-      debugPrint('Passenger location updated: $latitude, $longitude');
+      AppLogger.debug('Passenger location updated: $latitude, $longitude',
+          tag: 'BookingService', throttle: true);
     } catch (e) {
-      debugPrint('Error updating passenger location: $e');
+      AppLogger.warn('Error updating passenger location: $e',
+          tag: 'BookingService');
     }
   }
 
@@ -103,8 +112,8 @@ class BookingService {
 
       // No need to encrypt the ID image URL - it's already securely stored in Supabase
       // The URL contains signed tokens for access control
-      debugPrint(
-          'ID image URL provided for booking: ${idImageUrl != null ? 'Yes' : 'No'}');
+      AppLogger.debug('ID image provided: ${idImageUrl != null}',
+          tag: 'BookingService');
 
       // Prepare encrypted path if an ID image URL is provided
       String? encryptedIdImagePath;
@@ -141,7 +150,8 @@ class BookingService {
         if (encryptedIdImagePath != null)
           'passenger_id_image_path': encryptedIdImagePath,
       };
-      debugPrint('BookingService.createBooking request body: $requestBody');
+      AppLogger.debug('createBooking body: $requestBody',
+          tag: 'BookingService');
       final response = await apiService.post<Map<String, dynamic>>(
         'bookings/assign-driver',
         body: requestBody,
@@ -198,8 +208,9 @@ class BookingService {
         );
 
         await _localDbService.saveBookingDetails(bookingDetails);
-        debugPrint(
-            'Booking created via backend, ID: $bookingId, Status: $rideStatus. Saved locally.');
+        AppLogger.info(
+            'Booking created: $bookingId, status: $rideStatus (saved locally)',
+            tag: 'BookingService');
 
         // Start polling for driver assignment with 1-minute timeout
         if (onDriverAssigned != null ||
@@ -260,12 +271,12 @@ class BookingService {
             errorMessage += ', Reason: ${response['reason']}';
           }
         }
-        debugPrint(errorMessage);
+        AppLogger.warn(errorMessage, tag: 'BookingService');
         return BookingResult(errorMessage: errorMessage);
       }
     } catch (e) {
       // Catches ApiExceptions from apiService.post and other errors
-      debugPrint('Error in createBooking: $e');
+      AppLogger.error('createBooking error: $e', tag: 'BookingService');
 
       // Check if it's an ApiException with a 404 status code (no drivers)
       if (e is ApiException && e.statusCode == 404) {
@@ -308,11 +319,13 @@ class BookingService {
 
       // If not found locally, try to fetch from API
       if (booking == null) {
-        debugPrint('Booking $bookingId not found locally, trying API...');
+        AppLogger.info('Booking $bookingId not found locally, trying API...',
+            tag: 'BookingService');
         final apiBooking = await getBookingDetails(bookingId);
 
         if (apiBooking == null) {
-          debugPrint('Booking $bookingId not found in API either');
+          AppLogger.warn('Booking $bookingId not found in API',
+              tag: 'BookingService');
           return false;
         }
 
@@ -346,7 +359,8 @@ class BookingService {
       }
 
       // Now we have the booking data, proceed with API call
-      debugPrint('Attempting to assign driver for booking $bookingId');
+      AppLogger.info('Assigning driver for booking $bookingId',
+          tag: 'BookingService');
       final response = await apiService.post<Map<String, dynamic>>(
         'bookings/assign-driver',
         body: {
@@ -363,7 +377,8 @@ class BookingService {
         },
       );
 
-      debugPrint('Driver assignment initiated: $response');
+      AppLogger.debug('Driver assignment initiated: $response',
+          tag: 'BookingService');
       return true;
     } catch (e) {
       throw Exception('Error requesting driver assignment: $e');
@@ -387,7 +402,8 @@ class BookingService {
       final response =
           await apiService.get<Map<String, dynamic>>('bookings/$bookingId');
       if (response == null) {
-        debugPrint('getBookingDetails: response null for booking $bookingId');
+        AppLogger.warn('getBookingDetails: null response for $bookingId',
+            tag: 'BookingService');
         return null;
       }
 
@@ -395,18 +411,26 @@ class BookingService {
       // If wrapped under 'trip', unwrap
       if (response.containsKey('trip') &&
           response['trip'] is Map<String, dynamic>) {
-        debugPrint('getBookingDetails: unwrapped trip for booking $bookingId');
+        if (AppLogger.verbose) {
+          AppLogger.debug('getBookingDetails: unwrapped trip for $bookingId',
+              tag: 'BookingService');
+        }
         bookingData = response['trip'] as Map<String, dynamic>;
       }
       // If response directly has ride_status, return it
       else if (response.containsKey('ride_status')) {
-        debugPrint('getBookingDetails: direct response for booking $bookingId');
+        if (AppLogger.verbose) {
+          AppLogger.debug('getBookingDetails: direct response for $bookingId',
+              tag: 'BookingService');
+        }
         bookingData = response;
       }
       // Fallback: return the entire response
       else {
-        debugPrint(
-            'getBookingDetails: fallback response for booking $bookingId');
+        if (AppLogger.verbose) {
+          AppLogger.debug('getBookingDetails: fallback response for $bookingId',
+              tag: 'BookingService');
+        }
         bookingData = response;
       }
 
@@ -428,12 +452,13 @@ class BookingService {
               );
               if (refreshedUrl != null) {
                 bookingData['passenger_id_image_url'] = refreshedUrl;
-                debugPrint('ID image URL refreshed for booking $bookingId');
+                AppLogger.debug('ID image URL refreshed for $bookingId',
+                    tag: 'BookingService');
               }
             }
           } catch (e) {
-            debugPrint(
-                'Error refreshing ID image URL for booking $bookingId: $e');
+            AppLogger.warn('Error refreshing ID image URL for $bookingId: $e',
+                tag: 'BookingService');
             // Keep the original URL if refresh fails
           }
         }
@@ -453,18 +478,27 @@ class BookingService {
             final decryptedPath =
                 await encryptionService.decryptUserData(encryptedPath);
             bookingData['passenger_id_image_path'] = decryptedPath;
-            debugPrint('Legacy ID image path decrypted for booking $bookingId');
+            AppLogger.debug('Legacy ID image path decrypted for $bookingId',
+                tag: 'BookingService');
             // Note: This is legacy data, new bookings should use passenger_id_image_url
           }
         } catch (e) {
-          debugPrint(
-              'Error decrypting legacy ID image path for booking $bookingId: $e');
+          AppLogger.warn(
+              'Error decrypting legacy ID image path for $bookingId: $e',
+              tag: 'BookingService');
         }
       }
 
       return bookingData;
     } catch (e) {
-      debugPrint('Error fetching booking details from API: $e');
+      // If completed and backend returns 404, treat as no active booking
+      if (e is ApiException && e.statusCode == 404) {
+        AppLogger.info('Booking $bookingId not found (404) - likely completed',
+            tag: 'BookingService');
+        return null;
+      }
+      AppLogger.warn('Error fetching booking details from API: $e',
+          tag: 'BookingService');
       return null;
     }
   }

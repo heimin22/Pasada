@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:flutter/cupertino.dart';
+// Removed unused cupertino import
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 // Enhanced cache item with TTL support
 class CacheItem {
@@ -58,12 +59,15 @@ class MemoryManager {
 
   // Initialize memory monitoring system
   void _initializeMemoryMonitoring() {
-    debugPrint('Memory Manager initialized with pressure monitoring');
-    debugPrint('Cache limit: $cacheSizeLimit items');
-    debugPrint(
-        'High pressure threshold: ${(_highPressureThreshold * 100).toInt()}%');
-    debugPrint(
-        'Medium pressure threshold: ${(_mediumPressureThreshold * 100).toInt()}%');
+    AppLogger.debug('Memory Manager initialized (pressure monitoring)',
+        tag: 'Memory');
+    AppLogger.debug('Cache limit: $cacheSizeLimit', tag: 'Memory');
+    AppLogger.debug(
+        'High threshold: ${(_highPressureThreshold * 100).toInt()}%',
+        tag: 'Memory');
+    AppLogger.debug(
+        'Medium threshold: ${(_mediumPressureThreshold * 100).toInt()}%',
+        tag: 'Memory');
   }
 
   // Start TTL cleanup timer
@@ -88,7 +92,8 @@ class MemoryManager {
     }
 
     if (expiredKeys.isNotEmpty) {
-      debugPrint('🕐 TTL cleanup: removed ${expiredKeys.length} expired items');
+      AppLogger.debug('TTL cleanup removed ${expiredKeys.length}',
+          tag: 'Memory', throttle: true);
     }
   }
 
@@ -111,7 +116,7 @@ class MemoryManager {
     // Final safety check - if still over limit after pressure management
     if (cache.length > cacheSizeLimit) {
       cache.remove(cache.keys.first);
-      debugPrint('Emergency cleanup: Removed oldest item');
+      AppLogger.warn('Emergency cleanup: removed oldest item', tag: 'Memory');
     }
 
     _logCacheStatus();
@@ -134,18 +139,19 @@ class MemoryManager {
       _clearOldestItems(itemsToClean);
       _pressureCleanups++;
       _lastPressureCleanup = DateTime.now();
-      debugPrint(
-          '🔴 HIGH memory pressure detected (${(currentPressure * 100).toInt()}%)');
-      debugPrint('   Cleaned $itemsToClean items proactively');
+      AppLogger.warn('HIGH memory pressure ${(currentPressure * 100).toInt()}%',
+          tag: 'Memory');
+      AppLogger.debug('Cleaned $itemsToClean items proactively', tag: 'Memory');
     } else if (currentPressure >= _mediumPressureThreshold) {
       // Medium pressure: Clean 10% of cache
       final itemsToClean = (cacheSizeLimit * 0.1).round();
       _clearOldestItems(itemsToClean);
       _pressureCleanups++;
       _lastPressureCleanup = DateTime.now();
-      debugPrint(
-          '🟡 MEDIUM memory pressure detected (${(currentPressure * 100).toInt()}%)');
-      debugPrint('   Cleaned $itemsToClean items proactively');
+      AppLogger.debug(
+          'MEDIUM memory pressure ${(currentPressure * 100).toInt()}%',
+          tag: 'Memory');
+      AppLogger.debug('Cleaned $itemsToClean items proactively', tag: 'Memory');
     }
   }
 
@@ -172,8 +178,10 @@ class MemoryManager {
     } else {
       status = 'OPTIMAL';
     }
-    debugPrint(
-        'Cache: ${cache.length}/$cacheSizeLimit items | Status: $status (${(pressure * 100).toInt()}%)');
+    AppLogger.debug(
+        'Cache ${cache.length}/$cacheSizeLimit | $status (${(pressure * 100).toInt()}%)',
+        tag: 'Memory',
+        throttle: true);
   }
 
   // Enhanced retrieval with performance tracking and TTL checking
@@ -184,7 +192,8 @@ class MemoryManager {
       if (cacheItem.isExpired) {
         // Don't re-add expired item, treat as cache miss
         _totalCacheMisses++;
-        debugPrint('🕐 Cache item expired: $key');
+        AppLogger.debug('Cache item expired: $key',
+            tag: 'Memory', throttle: true);
         return null;
       }
 
@@ -215,13 +224,13 @@ class MemoryManager {
   // clears the entire cache
   void clearCache() {
     cache.clear();
-    debugPrint("Cache cleared");
+    AppLogger.debug("Cache cleared", tag: 'Memory');
   }
 
   // clear yung specific item duon sa cache
   void clearCacheItem(String key) {
     cache.remove(key);
-    debugPrint("Item $key cleared");
+    AppLogger.debug("Item $key cleared", tag: 'Memory');
   }
 
   // get the current size of the cache
@@ -287,26 +296,31 @@ class MemoryManager {
 
   /// Print comprehensive memory health report
   void printMemoryHealthReport() {
-    debugPrint('\n📊 MEMORY HEALTH REPORT 📊');
-    debugPrint('===============================');
-    debugPrint('Cache Status: $memoryStatus');
-    debugPrint(
-        'Memory Usage: ${cache.length}/$cacheSizeLimit (${(memoryPressureLevel * 100).toInt()}%)');
-    debugPrint('Cache Efficiency: $memoryEfficiencyPercentage% hit ratio');
-    debugPrint('Performance: $_totalCacheHits hits, $_totalCacheMisses misses');
-    debugPrint('Pressure Cleanups: $_pressureCleanups times');
+    AppLogger.debug('\nMEMORY HEALTH REPORT', tag: 'Memory');
+    AppLogger.debug('Cache Status: $memoryStatus', tag: 'Memory');
+    AppLogger.debug(
+        'Memory Usage: ${cache.length}/$cacheSizeLimit (${(memoryPressureLevel * 100).toInt()}%)',
+        tag: 'Memory');
+    AppLogger.debug('Cache Efficiency: $memoryEfficiencyPercentage% hit ratio',
+        tag: 'Memory');
+    AppLogger.debug(
+        'Performance: $_totalCacheHits hits, $_totalCacheMisses misses',
+        tag: 'Memory');
+    AppLogger.debug('Pressure Cleanups: $_pressureCleanups times',
+        tag: 'Memory');
     if (_lastPressureCleanup != null) {
       final timeSinceLastCleanup =
           DateTime.now().difference(_lastPressureCleanup!);
-      debugPrint(
-          'Last Cleanup: ${timeSinceLastCleanup.inMinutes}m ${timeSinceLastCleanup.inSeconds % 60}s ago');
+      AppLogger.debug(
+          'Last Cleanup: ${timeSinceLastCleanup.inMinutes}m ${timeSinceLastCleanup.inSeconds % 60}s ago',
+          tag: 'Memory');
     }
-    debugPrint('===============================\n');
+    // end report
   }
 
   /// Force a memory pressure check and cleanup if needed
   void forceMemoryPressureCheck() {
-    debugPrint('🔍 Manual memory pressure check requested');
+    AppLogger.debug('Manual memory pressure check requested', tag: 'Memory');
     _handleMemoryPressure();
   }
 
@@ -332,7 +346,6 @@ class MemoryManager {
 
     // Clear cache
     clearCache();
-    debugPrint(
-        "Enhanced Memory Manager with TTL and pressure monitoring disposed");
+    AppLogger.debug("Memory Manager disposed", tag: 'Memory');
   }
 }

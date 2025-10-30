@@ -4,7 +4,8 @@ import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:location/location.dart';
+import 'package:permission_handler/permission_handler.dart' as perm;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BackgroundRideService {
@@ -284,19 +285,19 @@ class BackgroundRideService {
   /// Request necessary permissions
   static Future<void> _requestPermissions() async {
     // Request location permissions
-    final locationStatus = await Permission.locationWhenInUse.request();
-    if (locationStatus != PermissionStatus.granted) {
+    final locationStatus = await perm.Permission.locationWhenInUse.request();
+    if (locationStatus != perm.PermissionStatus.granted) {
       throw Exception('Location permission is required for ride tracking');
     }
 
     // Request background location permission for Android
-    if (await Permission.locationAlways.isDenied) {
-      await Permission.locationAlways.request();
+    if (await perm.Permission.locationAlways.isDenied) {
+      await perm.Permission.locationAlways.request();
     }
 
     // Request notification permission
-    final notificationStatus = await Permission.notification.request();
-    if (notificationStatus != PermissionStatus.granted) {
+    final notificationStatus = await perm.Permission.notification.request();
+    if (notificationStatus != perm.PermissionStatus.granted) {
       debugPrint(
           'Notification permission denied - service notification may not work');
     }
@@ -331,8 +332,24 @@ class BackgroundRideService {
   /// Start background location tracking
   static Future<void> _startBackgroundLocationTracking(int bookingId) async {
     try {
-      // This will be implemented to track location in background
-      // and update the server with passenger location
+      // Warm up GPS and keep stream alive in background with balanced accuracy
+      final location = Location();
+      try {
+        await location.enableBackgroundMode(enable: true);
+      } catch (_) {}
+      try {
+        await location.changeSettings(
+          accuracy: LocationAccuracy.balanced,
+          interval: 5000,
+        );
+      } catch (_) {}
+
+      // Trigger a quick initial get to warm GPS with short timeout
+      try {
+        await location.getLocation().timeout(const Duration(seconds: 5));
+      } catch (_) {}
+
+      // Note: Actual upload to server should be implemented via a repository/service
       debugPrint('Background location tracking started for booking $bookingId');
     } catch (e) {
       debugPrint('Error starting background location tracking: $e');

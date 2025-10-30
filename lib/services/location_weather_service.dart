@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:location/location.dart';
 import 'package:pasada_passenger_app/providers/weather_provider.dart';
@@ -15,6 +16,15 @@ class LocationWeatherService {
   /// Initializes location permissions, fetches current weather, and subscribes to updates
   static Future<bool> fetchAndSubscribe(WeatherProvider provider) async {
     try {
+      // Optimize settings and background mode to warm up GPS
+      try {
+        // Temporarily boost to high for the first fix
+        await _location.changeSettings(
+          accuracy: LocationAccuracy.high,
+          interval: 3000,
+        );
+        await _location.enableBackgroundMode(enable: true);
+      } catch (_) {}
       // Use centralized location permission manager to prevent multiple prompts
       final locationManager = LocationPermissionManager.instance;
       final locationReady = await locationManager.ensureLocationReady();
@@ -23,25 +33,41 @@ class LocationWeatherService {
         return false;
       }
 
-      // Get initial location with optimized timeout (since location should already be ready)
-      final locData = await _location.getLocation().timeout(
-        const Duration(seconds: 5), // Reduced timeout since location should be ready
-      );
-      
-      if (locData.latitude != null && locData.longitude != null) {
-        // Fetch weather immediately for better user experience
-        await provider.fetchWeather(locData.latitude!, locData.longitude!);
+      // Get initial location with fast path and fallbacks
+      LocationData? locData;
+      try {
+        locData = await _location.getLocation().timeout(
+              const Duration(seconds: 5),
+            );
+      } catch (_) {
+        // Fallback: take first update from stream (often faster to get a fresh fix)
+        try {
+          locData = await _location.onLocationChanged.first
+              .timeout(const Duration(seconds: 8));
+        } catch (_) {}
+      }
+
+      if (locData?.latitude != null && locData?.longitude != null) {
+        await provider.fetchWeather(locData!.latitude!, locData.longitude!);
         _lastLocationUpdate = DateTime.now();
-        debugPrint('Weather fetched for location: ${locData.latitude}, ${locData.longitude}');
+        debugPrint(
+            'Weather fetched for location: ${locData.latitude}, ${locData.longitude}');
       } else {
-        debugPrint('Location data is null despite location being ready');
-        return false;
+        debugPrint('Initial location unavailable; proceeding to subscribe');
       }
 
       // Cancel existing subscription if any
       await _locationSubscription?.cancel();
 
       // Subscribe to location changes with smart throttling
+      // Revert to balanced for ongoing updates
+      try {
+        await _location.changeSettings(
+          accuracy: LocationAccuracy.balanced,
+          interval: 5000,
+        );
+      } catch (_) {}
+
       _locationSubscription = _location.onLocationChanged.listen(
         (data) => _handleLocationUpdate(data, provider),
         onError: (error) {
@@ -58,11 +84,12 @@ class LocationWeatherService {
   }
 
   /// Handle location updates with smart throttling
-  static void _handleLocationUpdate(LocationData data, WeatherProvider provider) {
+  static void _handleLocationUpdate(
+      LocationData data, WeatherProvider provider) {
     if (data.latitude == null || data.longitude == null) return;
 
     final now = DateTime.now();
-    
+
     // Throttle location updates to avoid excessive API calls
     if (_lastLocationUpdate != null &&
         now.difference(_lastLocationUpdate!) < _locationUpdateThreshold) {
@@ -70,7 +97,7 @@ class LocationWeatherService {
     }
 
     _lastLocationUpdate = now;
-    
+
     // Use background weather fetch to avoid blocking UI
     provider.fetchWeather(data.latitude!, data.longitude!).catchError((error) {
       debugPrint('Background weather fetch error: $error');
@@ -87,11 +114,8 @@ class LocationWeatherService {
 
       final locData = await _location.getLocation().timeout(_locationTimeout);
       if (locData.latitude != null && locData.longitude != null) {
-        await provider.fetchWeather(
-          locData.latitude!, 
-          locData.longitude!, 
-          forceRefresh: true
-        );
+        await provider.fetchWeather(locData.latitude!, locData.longitude!,
+            forceRefresh: true);
         return true;
       }
       return false;

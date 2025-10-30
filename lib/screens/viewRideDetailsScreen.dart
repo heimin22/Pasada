@@ -1,10 +1,5 @@
-import 'dart:convert';
-
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
@@ -15,7 +10,7 @@ import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../network/networkUtilities.dart';
+// networkUtilities not needed after removing map/polylines
 
 class ViewRideDetailsScreen extends StatefulWidget {
   final Map<String, dynamic>? booking;
@@ -32,25 +27,24 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
   Map<String, dynamic> bookingDetails = {};
   final supabase = Supabase.instance.client;
 
-  // Map-related variables
-  GoogleMapController? mapController;
-  Set<Marker> markers = {};
-  Map<PolylineId, Polyline> polylines = {};
-  bool isMapReady = false;
-  List<LatLng>? routePolyline;
-  late BitmapDescriptor pickupIcon;
-  late BitmapDescriptor dropoffIcon;
   // Rating and review controller
   int _rating = 0;
   final TextEditingController _reviewController = TextEditingController();
   bool _canReview = true;
 
+  // Map-related (pins only)
+  GoogleMapController? mapController;
+  Set<Marker> markers = {};
+  bool isMapReady = false;
+  late BitmapDescriptor pickupIcon;
+  late BitmapDescriptor dropoffIcon;
+
   @override
   void initState() {
     super.initState();
-    _loadMarkerIcons();
     // Inspect database schema to understand relationships
     _inspectDatabaseSchema();
+    _loadMarkerIcons();
 
     // Determine booking ID from either provided bookingId or booking map
     final int? bid = widget.bookingId ??
@@ -60,9 +54,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     if (bid != null) {
       // Fetch full booking details (including rating/review)
       fetchBookingDetails(bid).then((_) {
-        if (mounted) {
-          _fetchRouteAndGeneratePolyline();
-        }
+        if (mounted) _prepareMapMarkers();
       });
     } else {
       // No valid booking ID: stop loading
@@ -234,310 +226,57 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
     }
   }
 
-  // Fetch route details and generate polyline
-  Future<void> _fetchRouteAndGeneratePolyline() async {
-    if (bookingDetails['pickup_lat'] == null ||
-        bookingDetails['pickup_lng'] == null ||
-        bookingDetails['dropoff_lat'] == null ||
-        bookingDetails['dropoff_lng'] == null) {
-      debugPrint('Missing coordinates for polyline');
-      return;
-    }
-
+  // Prepare markers based on booking coordinates
+  void _prepareMapMarkers() {
     try {
-      final pickupLatLng = LatLng(
-          double.parse(bookingDetails['pickup_lat'].toString()),
-          double.parse(bookingDetails['pickup_lng'].toString()));
-
-      final dropoffLatLng = LatLng(
-          double.parse(bookingDetails['dropoff_lat'].toString()),
-          double.parse(bookingDetails['dropoff_lng'].toString()));
-
-      // Add markers
-      markers.add(Marker(
-        markerId: const MarkerId('pickup'),
-        position: pickupLatLng,
-        icon: pickupIcon,
-        infoWindow: InfoWindow(
-            title: 'Pickup', snippet: bookingDetails['pickup_address']),
-      ));
-
-      markers.add(Marker(
-        markerId: const MarkerId('dropoff'),
-        position: dropoffLatLng,
-        icon: dropoffIcon,
-        infoWindow: InfoWindow(
-            title: 'Dropoff', snippet: bookingDetails['dropoff_address']),
-      ));
-
-      // Check if we have a route_id to fetch the official route
-      if (bookingDetails['route_id'] != null) {
-        // Fetch the official route details
-        final routeResponse = await supabase
-            .from('official_routes')
-            .select('intermediate_coordinates')
-            .eq('officialroute_id', bookingDetails['route_id'])
-            .single();
-
-        if (routeResponse['intermediate_coordinates'] != null) {
-          var intermediateCoords = routeResponse['intermediate_coordinates'];
-
-          // If it's a string, parse it as JSON
-          if (intermediateCoords is String) {
-            try {
-              intermediateCoords = jsonDecode(intermediateCoords);
-            } catch (e) {
-              debugPrint('Failed to parse intermediate_coordinates: $e');
-            }
-          }
-
-          // Generate polyline with intermediate coordinates
-          await generateRoutePolyline(intermediateCoords,
-              originCoordinates: pickupLatLng,
-              destinationCoordinates: dropoffLatLng);
-        } else {
-          // Fallback to direct route if no intermediate coordinates
-          await generatePolylineBetween(pickupLatLng, dropoffLatLng);
-        }
-      } else {
-        // No route_id, generate direct polyline
-        await generatePolylineBetween(pickupLatLng, dropoffLatLng);
-      }
-
-      if (mounted) {
-        setState(() {
-          isMapReady = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error generating polyline: $e');
-    }
-  }
-
-  // Generate polyline with intermediate coordinates (similar to mapScreen.dart)
-  Future<void> generateRoutePolyline(List<dynamic> intermediateCoordinates,
-      {LatLng? originCoordinates, LatLng? destinationCoordinates}) async {
-    try {
-      final hasConnection = await checkNetworkConnection();
-      if (!hasConnection) return;
-
-      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey.isEmpty) {
-        debugPrint('API key not found');
+      if (bookingDetails['pickup_lat'] == null ||
+          bookingDetails['pickup_lng'] == null ||
+          bookingDetails['dropoff_lat'] == null ||
+          bookingDetails['dropoff_lng'] == null) {
         return;
       }
 
-      // Convert intermediate coordinates to waypoints format
-      List<Map<String, dynamic>> intermediates = [];
-      if (intermediateCoordinates.isNotEmpty) {
-        for (var point in intermediateCoordinates) {
-          if (point is Map &&
-              point.containsKey('lat') &&
-              point.containsKey('lng')) {
-            intermediates.add({
-              'location': {
-                'latLng': {
-                  'latitude': double.parse(point['lat'].toString()),
-                  'longitude': double.parse(point['lng'].toString())
-                }
-              }
-            });
-          }
-        }
-      }
+      final pickup = LatLng(
+        double.parse(bookingDetails['pickup_lat'].toString()),
+        double.parse(bookingDetails['pickup_lng'].toString()),
+      );
+      final dropoff = LatLng(
+        double.parse(bookingDetails['dropoff_lat'].toString()),
+        double.parse(bookingDetails['dropoff_lng'].toString()),
+      );
 
-      // Routes API request
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+      final newMarkers = <Marker>{
+        Marker(
+          markerId: const MarkerId('pickup'),
+          position: pickup,
+          icon: pickupIcon,
+          infoWindow: InfoWindow(
+            title: 'Pickup',
+            snippet: bookingDetails['pickup_address']?.toString(),
+          ),
+        ),
+        Marker(
+          markerId: const MarkerId('dropoff'),
+          position: dropoff,
+          icon: dropoffIcon,
+          infoWindow: InfoWindow(
+            title: 'Dropoff',
+            snippet: bookingDetails['dropoff_address']?.toString(),
+          ),
+        ),
       };
 
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': originCoordinates?.latitude,
-              'longitude': originCoordinates?.longitude,
-            },
-          },
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destinationCoordinates?.latitude,
-              'longitude': destinationCoordinates?.longitude,
-            },
-          },
-        },
-        'intermediates': intermediates,
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-        'computeAlternativeRoutes': false,
-        'routingPreference': 'TRAFFIC_AWARE',
+      setState(() {
+        markers = newMarkers;
+        isMapReady = true;
       });
 
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-
-      if (response == null) {
-        debugPrint('No response from the server');
-        return;
-      }
-
-      final data = json.decode(response);
-
-      // Add response validation
-      if (data['routes'] == null || data['routes'].isEmpty) {
-        debugPrint('No routes found');
-        return;
-      }
-
-      // Null checking for nested properties
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) {
-        debugPrint('No polyline found in the response');
-        return;
-      }
-
-      // Decode the polyline
-      List<PointLatLng> decodedPolyline =
-          PolylinePoints.decodePolyline(polyline);
-      List<LatLng> polylineCoordinates = decodedPolyline
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-
-      // Store the route polyline for later use
-      routePolyline = polylineCoordinates;
-
-      // Update UI with the polyline
-      if (mounted) {
-        setState(() {
-          polylines.clear();
-          polylines[const PolylineId('route_path')] = Polyline(
-            polylineId: const PolylineId('route_path'),
-            points: polylineCoordinates,
-            color: const Color.fromARGB(255, 10, 179, 83),
-            width: 5,
-          );
-        });
+      // Fit bounds if map already created
+      if (mapController != null) {
+        _fitMapToBounds();
       }
     } catch (e) {
-      debugPrint('Error generating route polyline: $e');
-    }
-  }
-
-  // Generate direct polyline between two points (similar to mapScreen.dart)
-  Future<void> generatePolylineBetween(LatLng start, LatLng destination) async {
-    try {
-      final hasConnection = await checkNetworkConnection();
-      if (!hasConnection) return;
-
-      final String apiKey = dotenv.env['ANDROID_MAPS_API_KEY']!;
-      if (apiKey.isEmpty) {
-        debugPrint('API key not found');
-        return;
-      }
-      // Routes API request
-      final uri = Uri.parse(
-          'https://routes.googleapis.com/directions/v2:computeRoutes');
-      final headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
-      };
-
-      final body = jsonEncode({
-        'origin': {
-          'location': {
-            'latLng': {
-              'latitude': start.latitude,
-              'longitude': start.longitude,
-            },
-          },
-        },
-        'destination': {
-          'location': {
-            'latLng': {
-              'latitude': destination.latitude,
-              'longitude': destination.longitude,
-            },
-          },
-        },
-        'travelMode': 'DRIVE',
-        'polylineEncoding': 'ENCODED_POLYLINE',
-        'computeAlternativeRoutes': false,
-        'routingPreference': 'TRAFFIC_AWARE',
-      });
-
-      final response =
-          await NetworkUtility.postUrl(uri, headers: headers, body: body);
-
-      if (response == null) {
-        debugPrint('No response from the server');
-        return;
-      }
-
-      final data = json.decode(response);
-
-      // Add response validation
-      if (data['routes'] == null || data['routes'].isEmpty) {
-        debugPrint('No routes found');
-        return;
-      }
-
-      // Null checking for nested properties
-      final polyline = data['routes'][0]['polyline']?['encodedPolyline'];
-      if (polyline == null) {
-        debugPrint('No polyline found in the response');
-        return;
-      }
-
-      // Decode the polyline
-      List<PointLatLng> decodedPolyline =
-          PolylinePoints.decodePolyline(polyline);
-      List<LatLng> polylineCoordinates = decodedPolyline
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-
-      // Store the route polyline for later use
-      routePolyline = polylineCoordinates;
-
-      // Update UI with the polyline
-      if (mounted) {
-        setState(() {
-          polylines.clear();
-          polylines[const PolylineId('route_path')] = Polyline(
-            polylineId: const PolylineId('route_path'),
-            points: polylineCoordinates,
-            color: const Color(0xFF067837),
-            width: 5,
-          );
-        });
-      }
-    } catch (e) {
-      debugPrint('Error generating polyline: $e');
-    }
-  }
-
-  // Check network connection
-  Future<bool> checkNetworkConnection() async {
-    try {
-      final connectivity = await Connectivity().checkConnectivity();
-      if (connectivity.contains(ConnectivityResult.none)) {
-        Fluttertoast.showToast(
-          msg: 'No internet connection',
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
-        return false;
-      }
-      return true;
-    } catch (e) {
-      debugPrint('Error checking network connection: $e');
-      return false;
+      debugPrint('Error preparing markers: $e');
     }
   }
 
@@ -562,59 +301,28 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           (pickupLng + dropoffLng) / 2,
         );
       }
-    } catch (e) {
-      debugPrint('Error calculating center position: $e');
-    }
-
-    // Default position if coordinates are not available
-    return const LatLng(14.617494, 120.971770); // Default to Manila
+    } catch (_) {}
+    return const LatLng(14.617494, 120.971770); // Manila default
   }
 
-  // Helper method to fit the map to show both markers
+  // Fit the camera to include both pins
   void _fitMapToBounds() {
     if (mapController == null || markers.isEmpty) return;
-
     try {
-      // Calculate the bounds that include all markers
-      double minLat = 90.0;
-      double maxLat = -90.0;
-      double minLng = 180.0;
-      double maxLng = -180.0;
-
-      for (Marker marker in markers) {
-        if (marker.position.latitude < minLat) {
-          minLat = marker.position.latitude;
-        }
-        if (marker.position.latitude > maxLat) {
-          maxLat = marker.position.latitude;
-        }
-        if (marker.position.longitude < minLng) {
-          minLng = marker.position.longitude;
-        }
-        if (marker.position.longitude > maxLng) {
-          maxLng = marker.position.longitude;
-        }
+      double minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
+      for (final m in markers) {
+        minLat = m.position.latitude < minLat ? m.position.latitude : minLat;
+        maxLat = m.position.latitude > maxLat ? m.position.latitude : maxLat;
+        minLng = m.position.longitude < minLng ? m.position.longitude : minLng;
+        maxLng = m.position.longitude > maxLng ? m.position.longitude : maxLng;
       }
-
-      // Add padding to the bounds
-      final double padding = 0.01;
-      minLat -= padding;
-      maxLat += padding;
-      minLng -= padding;
-      maxLng += padding;
-
-      // Animate camera to show the bounds
-      mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(minLat, minLng),
-            northeast: LatLng(maxLat, maxLng),
-          ),
-          50, // Padding in pixels
-        ),
+      final bounds = LatLngBounds(
+        southwest: LatLng(minLat, minLng),
+        northeast: LatLng(maxLat, maxLng),
       );
+      mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
     } catch (e) {
-      debugPrint('Error fitting map to bounds: $e');
+      debugPrint('Error fitting bounds: $e');
     }
   }
 
@@ -631,14 +339,20 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
   // Load custom marker icons for pickup & dropoff
   Future<void> _loadMarkerIcons() async {
-    pickupIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(size: Size(48, 48)),
-      'assets/png/pin_pickup.png',
-    );
-    dropoffIcon = await BitmapDescriptor.asset(
-      ImageConfiguration(size: Size(48, 48)),
-      'assets/png/pin_dropoff.png',
-    );
+    try {
+      pickupIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/png/pin_pickup.png',
+      );
+      dropoffIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/png/pin_dropoff.png',
+      );
+    } catch (_) {
+      // Fallback to default markers if custom assets fail
+      pickupIcon = BitmapDescriptor.defaultMarkerWithHue(120); // green-ish
+      dropoffIcon = BitmapDescriptor.defaultMarkerWithHue(0); // red
+    }
   }
 
   @override
@@ -736,10 +450,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       const SizedBox(height: 20),
-                      // Map skeleton
+                      // Trip details skeleton (map removed)
                       SkeletonBlock(
                         width: double.infinity,
-                        height: 200,
+                        height: 110,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       const SizedBox(height: 20),
@@ -788,7 +502,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                             'Driver Details',
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: isDarkMode
                                   ? const Color(0xFFF5F5F5)
@@ -827,8 +541,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       bookingDetails['driver_name'] ??
                                           'Driver Name',
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
                                         fontFamily: 'Inter',
                                         color: isDarkMode
                                             ? const Color(0xFFF5F5F5)
@@ -843,7 +557,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                           bookingDetails['driver_number'] ??
                                               'N/A',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 13,
                                             fontFamily: 'Inter',
                                             color: isDarkMode
                                                 ? Colors.grey[300]
@@ -857,7 +571,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       bookingDetails['plate_number'] ??
                                           'Plate Number',
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 13,
                                         fontFamily: 'Inter',
                                         color: isDarkMode
                                             ? Colors.grey[300]
@@ -900,7 +614,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 'Booking ID',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: isDarkMode
                                       ? const Color(0xFFF5F5F5)
@@ -915,7 +629,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     ),
                                     style: TextStyle(
                                       fontFamily: 'Inter',
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       color: isDarkMode
                                           ? Colors.grey[300]
@@ -947,7 +661,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 'Booking Date',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: isDarkMode
                                       ? const Color(0xFFF5F5F5)
@@ -964,7 +678,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w500,
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   color: isDarkMode
                                       ? Colors.grey[300]
                                       : Colors.grey[700],
@@ -1000,7 +714,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                             'Payment Details',
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: isDarkMode
                                   ? const Color(0xFFF5F5F5)
@@ -1015,7 +729,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               Text(
                                 'Total Fare',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Inter',
                                   color: isDarkMode
@@ -1026,7 +740,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               Text(
                                 '₱${(bookingDetails['fare'] is num ? bookingDetails['fare'].toDouble() : double.tryParse(bookingDetails['fare']?.toString() ?? '0') ?? 0.0).toStringAsFixed(2)}',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? Colors.grey[300]
@@ -1045,7 +759,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               Text(
                                 'Seating Preference',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Inter',
                                   color: isDarkMode
@@ -1057,7 +771,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                 bookingDetails['seat_type']?.toString() ??
                                     'Any',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontFamily: 'Inter',
                                   color: isDarkMode
                                       ? Colors.grey[300]
@@ -1076,7 +790,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               Text(
                                 'Payment Method',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Inter',
                                   color: isDarkMode
@@ -1097,7 +811,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                             ?.toString() ??
                                         'Cash',
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontFamily: 'Inter',
                                       color: isDarkMode
                                           ? Colors.grey[300]
@@ -1114,14 +828,22 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Map and Location Section (Fourth position unchanged)
+                    // Trip Details Section (Map removed)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: isDarkMode
                             ? const Color(0xFF1E1E1E)
                             : const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black
+                                .withValues(alpha: isDarkMode ? 0.2 : 0.06),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                         border: Border.all(
                           color: isDarkMode
                               ? Colors.grey[700]!
@@ -1133,10 +855,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Trip Route',
+                            'Trip Details',
                             style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: isDarkMode
                                   ? const Color(0xFFF5F5F5)
@@ -1144,7 +866,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          // Map container
+                          // Map container (pins only)
                           Container(
                             height: 200,
                             width: double.infinity,
@@ -1158,7 +880,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                               ),
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: isLoading || !isMapReady
+                            child: !isMapReady
                                 ? Center(
                                     child: Column(
                                       mainAxisAlignment:
@@ -1173,7 +895,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Loading route map...',
+                                          'Loading map...',
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontFamily: 'Inter',
@@ -1223,12 +945,9 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         zoom: 13,
                                       ),
                                       markers: markers,
-                                      polylines:
-                                          Set<Polyline>.of(polylines.values),
                                       onMapCreated:
                                           (GoogleMapController controller) {
                                         mapController = controller;
-                                        // Fit the map to show both markers and the polyline
                                         _fitMapToBounds();
                                       },
                                       zoomControlsEnabled: false,
@@ -1246,72 +965,96 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
 
                           const SizedBox(height: 20),
 
-                          // Pickup and dropoff locations
-                          Row(
-                            children: [
-                              Column(
-                                children: [
-                                  Icon(
-                                    Icons.circle,
-                                    size: 14,
-                                    color: isDarkMode
-                                        ? const Color(0xFFF5F5F5)
-                                        : const Color(0xFF121212),
-                                  ),
-                                  Container(
-                                    width: 2,
-                                    height: 30,
-                                    color: isDarkMode
-                                        ? Colors.grey[300]
-                                        : Colors.grey[700],
-                                  ),
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: isDarkMode
-                                        ? const Color(0xFFF5F5F5)
-                                        : const Color(0xFF121212),
-                                  ),
-                                ],
+                          // Pickup and dropoff locations timeline (sleek card)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDarkMode
+                                  ? const Color(0xFF151515)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? Colors.grey[800]!
+                                    : Colors.grey[200]!,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Column(
                                   children: [
-                                    Text(
-                                      bookingDetails['pickup_address'] ??
-                                          'Pickup Location',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: isDarkMode
-                                            ? Colors.grey[300]
-                                            : Colors.grey[700],
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF00CC58),
+                                        shape: BoxShape.circle,
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    const SizedBox(height: 20),
-                                    Text(
-                                      bookingDetails['dropoff_address'] ??
-                                          'Dropoff Location',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
+                                    Container(
+                                      width: 2,
+                                      height: 36,
+                                      margin: const EdgeInsets.symmetric(
+                                          vertical: 6),
+                                      decoration: BoxDecoration(
                                         color: isDarkMode
-                                            ? Colors.grey[300]
-                                            : Colors.grey[700],
+                                            ? Colors.grey[700]
+                                            : Colors.grey[300],
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: isDarkMode
+                                            ? const Color(0xFFF5F5F5)
+                                            : const Color(0xFF121212),
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        bookingDetails['pickup_address'] ??
+                                            'Pickup Location',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? Colors.grey[300]
+                                              : Colors.grey[800],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        bookingDetails['dropoff_address'] ??
+                                            'Dropoff Location',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: isDarkMode
+                                              ? Colors.grey[400]
+                                              : Colors.grey[600],
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
 
                           const SizedBox(height: 20),
@@ -1334,41 +1077,43 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Rate Your Ride',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                    color: isDarkMode
-                                        ? const Color(0xFFF5F5F5)
-                                        : const Color(0xFF121212),
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(5, (index) {
-                                    if (_canReview) {
-                                      return IconButton(
-                                        onPressed: () {
-                                          setState(() => _rating = index + 1);
-                                        },
-                                        icon: Icon(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Rate Your Ride',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: isDarkMode
+                                              ? const Color(0xFFF5F5F5)
+                                              : const Color(0xFF121212),
+                                        ),
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: List.generate(5, (index) {
+                                        final icon = Icon(
                                           index < _rating
                                               ? Icons.star
                                               : Icons.star_border,
                                           color: Colors.amber,
-                                        ),
-                                      );
-                                    }
-                                    return Icon(
-                                      index < _rating
-                                          ? Icons.star
-                                          : Icons.star_border,
-                                      color: Colors.amber,
-                                    );
-                                  }),
+                                          size: 24,
+                                        );
+                                        if (_canReview) {
+                                          return InkWell(
+                                            onTap: () => setState(
+                                                () => _rating = index + 1),
+                                            child: icon,
+                                          );
+                                        }
+                                        return icon;
+                                      }),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(height: 16),
                                 TextField(
@@ -1379,6 +1124,10 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     fontFamily: 'Inter',
                                   ),
                                   enabled: _canReview,
+                                  cursorColor: const Color(0xFF00CC58),
+                                  minLines: 1,
+                                  maxLines: 6,
+                                  maxLength: 200,
                                   decoration: InputDecoration(
                                     focusColor: Color(0xFF00CC58),
                                     focusedBorder: OutlineInputBorder(
@@ -1397,7 +1146,6 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                     ),
                                     border: OutlineInputBorder(),
                                   ),
-                                  maxLines: 3,
                                 ),
                                 const SizedBox(height: 16),
                                 if (_canReview)

@@ -19,14 +19,8 @@ class BookingIdUtils {
   /// If the ID is already in the correct format, return as-is
   /// Otherwise, generate a new formatted ID
   static String formatBookingId(int backendBookingId) {
-    // For now, we'll generate a new formatted ID based on the backend ID
-    // This ensures consistency while maintaining the prefix format
-    final random =
-        Random(backendBookingId); // Use backend ID as seed for consistency
-    final randomDigits = List.generate(6, (index) => random.nextInt(10));
-    final randomString = randomDigits.join('');
-
-    return '10000$randomString';
+    // Display the exact backend-provided booking ID without transformation
+    return backendBookingId.toString();
   }
 
   /// Check if a booking ID is in the correct format (10000XXXXXX)

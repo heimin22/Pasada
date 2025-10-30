@@ -5,6 +5,7 @@ import 'package:pasada_passenger_app/services/asset_preloader_service.dart'
     as asset_preloader;
 import 'package:pasada_passenger_app/services/image_compression_service.dart';
 import 'package:pasada_passenger_app/utils/adaptive_memory_manager.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 /// Service for lazy initialization of non-critical features
 /// This allows the app to start faster by deferring non-essential services
@@ -35,7 +36,8 @@ class LazyInitializationService {
     if (_isInitializing || _initializationComplete) return;
 
     _isInitializing = true;
-    debugPrint('Starting lazy initialization of non-critical services...');
+    AppLogger.debug('Starting lazy initialization of non-critical services',
+        tag: 'LazyInit');
 
     try {
       // Initialize services in parallel but with lower priority
@@ -51,9 +53,10 @@ class LazyInitializationService {
 
       _initializationComplete = true;
       _memoryManager.addToCache('lazy_initialization_complete', true);
-      debugPrint('Lazy initialization completed successfully');
+      AppLogger.debug('Lazy initialization completed', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Lazy initialization partial failure: $e');
+      AppLogger.warn('Lazy initialization partial failure: $e',
+          tag: 'LazyInit');
     } finally {
       _isInitializing = false;
     }
@@ -70,13 +73,15 @@ class LazyInitializationService {
         // Simulate weather service initialization
         await Future.delayed(const Duration(milliseconds: 500));
         _serviceStatus['weather_service'] = true;
-        debugPrint('Weather service initialized');
+        AppLogger.debug('Weather service initialized', tag: 'LazyInit');
       } else {
-        debugPrint('Weather service skipped - location not available');
+        AppLogger.debug('Weather service skipped - no location',
+            tag: 'LazyInit');
         _serviceStatus['weather_service'] = false;
       }
     } catch (e) {
-      debugPrint('Weather service initialization failed: $e');
+      AppLogger.warn('Weather service initialization failed: $e',
+          tag: 'LazyInit');
       _serviceStatus['weather_service'] = false;
     }
   }
@@ -87,9 +92,9 @@ class LazyInitializationService {
       final preloaderService = asset_preloader.AssetPreloaderService();
       await preloaderService.preloadAssets(maxPriority: AssetPriority.medium);
       _serviceStatus['medium_priority_assets'] = true;
-      debugPrint('Medium priority assets preloaded');
+      AppLogger.debug('Medium priority assets preloaded', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Medium priority assets preloading failed: $e');
+      AppLogger.warn('Medium assets preloading failed: $e', tag: 'LazyInit');
       _serviceStatus['medium_priority_assets'] = false;
     }
   }
@@ -100,9 +105,9 @@ class LazyInitializationService {
       final preloaderService = asset_preloader.AssetPreloaderService();
       await preloaderService.preloadAssets(maxPriority: AssetPriority.low);
       _serviceStatus['low_priority_assets'] = true;
-      debugPrint('Low priority assets preloaded');
+      AppLogger.debug('Low priority assets preloaded', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Low priority assets preloading failed: $e');
+      AppLogger.warn('Low assets preloading failed: $e', tag: 'LazyInit');
       _serviceStatus['low_priority_assets'] = false;
     }
   }
@@ -114,9 +119,10 @@ class LazyInitializationService {
       // Pre-warm the compression cache
       await compressionService.optimizeStorage(maxAgeHours: 24);
       _serviceStatus['image_compression_cache'] = true;
-      debugPrint('Image compression cache initialized');
+      AppLogger.debug('Image compression cache initialized', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Image compression cache initialization failed: $e');
+      AppLogger.warn('Image compression cache init failed: $e',
+          tag: 'LazyInit');
       _serviceStatus['image_compression_cache'] = false;
     }
   }
@@ -131,9 +137,9 @@ class LazyInitializationService {
       _memoryManager.forceMemoryPressureCheck();
 
       _serviceStatus['memory_optimization'] = true;
-      debugPrint('Memory settings optimized');
+      AppLogger.debug('Memory settings optimized', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Memory optimization failed: $e');
+      AppLogger.warn('Memory optimization failed: $e', tag: 'LazyInit');
       _serviceStatus['memory_optimization'] = false;
     }
   }
@@ -144,9 +150,9 @@ class LazyInitializationService {
       // Simulate analytics initialization
       await Future.delayed(const Duration(milliseconds: 300));
       _serviceStatus['background_analytics'] = true;
-      debugPrint('Background analytics initialized');
+      AppLogger.debug('Background analytics initialized', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Background analytics initialization failed: $e');
+      AppLogger.warn('Background analytics init failed: $e', tag: 'LazyInit');
       _serviceStatus['background_analytics'] = false;
     }
   }
@@ -157,9 +163,9 @@ class LazyInitializationService {
       // Simulate offline sync initialization
       await Future.delayed(const Duration(milliseconds: 400));
       _serviceStatus['offline_sync'] = true;
-      debugPrint('Offline sync initialized');
+      AppLogger.debug('Offline sync initialized', tag: 'LazyInit');
     } catch (e) {
-      debugPrint('Offline sync initialization failed: $e');
+      AppLogger.warn('Offline sync initialization failed: $e', tag: 'LazyInit');
       _serviceStatus['offline_sync'] = false;
     }
   }
@@ -249,10 +255,11 @@ class LazyInitializationService {
           break;
       }
 
-      debugPrint('Forced initialization of $serviceName');
+      AppLogger.debug('Forced initialization of $serviceName', tag: 'LazyInit');
       return true;
     } catch (e) {
-      debugPrint('Failed to force initialize $serviceName: $e');
+      AppLogger.warn('Failed to force initialize $serviceName: $e',
+          tag: 'LazyInit');
       return false;
     }
   }
@@ -263,6 +270,6 @@ class LazyInitializationService {
     _initializationComplete = false;
     _serviceStatus.clear();
     _memoryManager.clearCacheItem('lazy_initialization_complete');
-    debugPrint('Lazy initialization service reset');
+    AppLogger.debug('Lazy initialization service reset', tag: 'LazyInit');
   }
 }

@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/material.dart';
+// Removed unused material import
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 /// Service to monitor internet connection speed and show warnings for slow connections
 class SlowInternetWarningService {
@@ -92,7 +93,7 @@ class SlowInternetWarningService {
       final result = await InternetAddress.lookup('google.com');
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (e) {
-      debugPrint('Internet access test failed: $e');
+      AppLogger.warn('Internet access test failed: $e', tag: 'Net');
       return false;
     }
   }
@@ -132,8 +133,8 @@ class SlowInternetWarningService {
         isSlow = true;
       }
 
-      debugPrint(
-          'Connection speed test: ${responseTime.inMilliseconds}ms - $quality');
+      AppLogger.debug('Connection ${responseTime.inMilliseconds}ms - $quality',
+          tag: 'Net', throttle: true);
 
       return SpeedTestResult(
         responseTime: responseTime,
@@ -141,7 +142,7 @@ class SlowInternetWarningService {
         isSlow: isSlow,
       );
     } catch (e) {
-      debugPrint('Speed test failed: $e');
+      AppLogger.warn('Speed test failed: $e', tag: 'Net');
       return SpeedTestResult(
         responseTime: const Duration(seconds: 10),
         quality: ConnectionQuality.veryPoor,
@@ -174,8 +175,10 @@ class SlowInternetWarningService {
     }
 
     if (stateChanged) {
-      debugPrint(
-          'Connection state updated: Online=$isOnline, Slow=$isSlowConnection, Quality=$quality');
+      AppLogger.debug(
+          'Conn updated online:$isOnline slow:$isSlowConnection q:$quality',
+          tag: 'Net',
+          throttle: true);
     }
   }
 

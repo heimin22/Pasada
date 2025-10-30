@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:pasada_passenger_app/utils/heading_calculator.dart';
 
 /// Manages directional bus marker with rotation based on driver heading
@@ -41,15 +42,15 @@ class MapDirectionalBusManager {
   /// Initialize bus icons
   Future<void> initializeBusIcons() async {
     try {
-      debugPrint('MapDirectionalBusManager: Starting to load bus icons...');
+      AppLogger.debug('Starting to load bus icons...', tag: 'BusManager');
 
       // Load default bus icon (vertical)
       _busIconDefault = await BitmapDescriptor.asset(
         ImageConfiguration(size: Size(48, 48)),
         'assets/png/bus.png',
       );
-      debugPrint(
-          'MapDirectionalBusManager: Default bus icon loaded: ${_busIconDefault != null}');
+      AppLogger.debug('Default bus icon loaded: ${_busIconDefault != null}',
+          tag: 'BusManager');
 
       // Load horizontal bus icon
       try {
@@ -57,17 +58,18 @@ class MapDirectionalBusManager {
           ImageConfiguration(size: Size(48, 48)),
           'assets/png/bus_h.png',
         );
-        debugPrint(
-            'MapDirectionalBusManager: Horizontal bus icon loaded: ${_busIconHorizontal != null}');
+        AppLogger.debug(
+            'Horizontal bus icon loaded: ${_busIconHorizontal != null}',
+            tag: 'BusManager');
       } catch (e) {
-        debugPrint(
-            'MapDirectionalBusManager: Failed to load horizontal bus icon, using default: $e');
+        AppLogger.warn('Failed to load horizontal bus icon, using default: $e',
+            tag: 'BusManager');
         _busIconHorizontal = _busIconDefault; // Fallback to default
       }
 
-      debugPrint('MapDirectionalBusManager: Bus icons loaded successfully');
+      AppLogger.info('Bus icons loaded successfully', tag: 'BusManager');
     } catch (e) {
-      debugPrint('MapDirectionalBusManager: Error loading bus icons: $e');
+      AppLogger.error('Error loading bus icons: $e', tag: 'BusManager');
       onError?.call('Failed to load bus icons: ${e.toString()}');
     }
   }
@@ -75,12 +77,15 @@ class MapDirectionalBusManager {
   /// Update driver position with heading
   void updateDriverPosition(LatLng position,
       {double? heading, String? rideStatus}) {
-    debugPrint(
-        'MapDirectionalBusManager: updateDriverPosition called with position: $position, heading: $heading, rideStatus: $rideStatus');
+    AppLogger.debug(
+        'updateDriverPosition pos:$position heading:$heading status:$rideStatus',
+        tag: 'BusManager',
+        throttle: true);
 
     if (_busIconDefault == null || _busIconHorizontal == null) {
-      debugPrint(
-          'MapDirectionalBusManager: Bus icons not initialized - Default: ${_busIconDefault != null}, Horizontal: ${_busIconHorizontal != null}');
+      AppLogger.warn(
+          'Bus icons not initialized - Default: ${_busIconDefault != null}, Horizontal: ${_busIconHorizontal != null}',
+          tag: 'BusManager');
       onError?.call('Bus icons not initialized');
       return;
     }
@@ -100,14 +105,13 @@ class MapDirectionalBusManager {
     // Update marker with appropriate rotation
     _updateBusMarker(position, calculatedHeading);
 
-    debugPrint(
-        'MapDirectionalBusManager: Updated driver position for ride status: $rideStatus');
+    AppLogger.debug('Updated driver position status:$rideStatus',
+        tag: 'BusManager', throttle: true);
   }
 
   /// Update bus marker with rotation
   void _updateBusMarker(LatLng position, double? heading) {
-    debugPrint(
-        'MapDirectionalBusManager: _updateBusMarker called with position: $position, heading: $heading');
+    // quiet: internal marker update
 
     final driverMarkerId = MarkerId('driver');
 
@@ -123,11 +127,9 @@ class MapDirectionalBusManager {
       if ((heading >= 45 && heading <= 135) ||
           (heading >= 225 && heading <= 315)) {
         iconToUse = _busIconHorizontal!;
-        debugPrint(
-            'MapDirectionalBusManager: Using horizontal bus icon for heading: $heading');
+        // quiet
       } else {
-        debugPrint(
-            'MapDirectionalBusManager: Using default bus icon for heading: $heading');
+        // quiet
       }
     }
 
@@ -140,8 +142,7 @@ class MapDirectionalBusManager {
       rotation: rotation,
     );
 
-    debugPrint(
-        'MapDirectionalBusManager: Created bus marker at position: $position with rotation: $rotation');
+    // quiet
     onStateChanged?.call();
   }
 
@@ -266,8 +267,10 @@ class MapDirectionalBusManager {
     final double heading =
         HeadingCalculator.calculateSmoothedHeading(_locationHistory);
 
-    debugPrint(
-        'MapDirectionalBusManager: Calculated heading: ${heading.toStringAsFixed(1)}° (${HeadingCalculator.getHeadingDirection(heading)})');
+    AppLogger.debug(
+        'Smoothed heading: ${heading.toStringAsFixed(1)}° (${HeadingCalculator.getHeadingDirection(heading)})',
+        tag: 'BusManager',
+        throttle: true);
 
     return heading;
   }

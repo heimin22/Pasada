@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 import '../utils/adaptive_memory_manager.dart';
 
@@ -71,34 +72,37 @@ class AssetPreloaderService {
       await _preloadAssetBatch(_criticalAssets, AssetPriority.critical);
       _criticalAssetsLoaded = true;
       onCriticalComplete?.call();
-      debugPrint('Critical assets preloaded (${_criticalAssets.length} items)');
+      AppLogger.debug('Critical assets preloaded (${_criticalAssets.length})',
+          tag: 'Assets');
 
       // Load high priority if requested
       if (maxPriority.index >= AssetPriority.high.index) {
         await _preloadAssetBatch(_highPriorityAssets, AssetPriority.high);
         _highPriorityAssetsLoaded = true;
         onHighPriorityComplete?.call();
-        debugPrint(
-            'High priority assets preloaded (${_highPriorityAssets.length} items)');
+        AppLogger.debug(
+            'High priority assets preloaded (${_highPriorityAssets.length})',
+            tag: 'Assets');
       }
 
       // Load medium priority if requested
       if (maxPriority.index >= AssetPriority.medium.index) {
         await _preloadAssetBatch(_mediumPriorityAssets, AssetPriority.medium);
-        debugPrint(
-            'Medium priority assets preloaded (${_mediumPriorityAssets.length} items)');
+        AppLogger.debug(
+            'Medium assets preloaded (${_mediumPriorityAssets.length})',
+            tag: 'Assets');
       }
 
       // Load low priority if requested (background loading)
       if (maxPriority.index >= AssetPriority.low.index) {
         // Load low priority assets in background without blocking
         _preloadAssetBatch(_lowPriorityAssets, AssetPriority.low).then((_) {
-          debugPrint(
-              'Low priority assets preloaded (${_lowPriorityAssets.length} items)');
+          AppLogger.debug('Low assets preloaded (${_lowPriorityAssets.length})',
+              tag: 'Assets');
         });
       }
     } catch (e) {
-      debugPrint('Asset preloading error: $e');
+      AppLogger.warn('Asset preloading error: $e', tag: 'Assets');
     } finally {
       _isPreloading = false;
     }
@@ -166,9 +170,10 @@ class AssetPreloaderService {
         await completer.future;
       }
 
-      debugPrint('Preloaded ${priority.name}: $assetPath');
+      AppLogger.debug('Preloaded ${priority.name}: $assetPath',
+          tag: 'Assets', throttle: true);
     } catch (e) {
-      debugPrint('Failed to preload $assetPath: $e');
+      AppLogger.warn('Failed to preload $assetPath: $e', tag: 'Assets');
     }
   }
 
@@ -225,6 +230,6 @@ class AssetPreloaderService {
 
     _criticalAssetsLoaded = false;
     _highPriorityAssetsLoaded = false;
-    debugPrint('Preloaded assets cache cleared');
+    AppLogger.debug('Preloaded assets cache cleared', tag: 'Assets');
   }
 }

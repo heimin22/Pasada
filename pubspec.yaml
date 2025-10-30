@@ -45,6 +45,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_animate: ^4.5.2
+  flutter_background_service: ^5.1.0
   flutter_dotenv: ^6.0.0
   flutter_google_maps_webservices: ^1.1.1
   flutter_image_compress: ^2.4.0

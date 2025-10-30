@@ -111,6 +111,7 @@ class MapCameraManager {
     LatLng pickup,
     LatLng dropoff, {
     double padding = 0.05,
+    double boundPadding = 50.0,
   }) async {
     if (mapController == null) return;
 
@@ -122,7 +123,7 @@ class MapCameraManager {
       controller,
       coordinates,
       padding: padding,
-      boundPadding: 50.0,
+      boundPadding: boundPadding,
     );
   }
 
