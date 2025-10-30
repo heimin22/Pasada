@@ -261,16 +261,41 @@ class PriorityInitializationService {
       try {
         if (serviceEnabled && permStatus == PermissionStatus.granted) {
           final location = Location();
-          final locationData = await location.getLocation().timeout(
-                const Duration(seconds: 2), // Very short timeout for startup
-              );
+          // Use high accuracy briefly to acquire first fix quicker
+          try {
+            await location.changeSettings(
+              accuracy: LocationAccuracy.high,
+              interval: 3000,
+            );
+          } catch (_) {}
 
-          if (locationData.latitude != null && locationData.longitude != null) {
-            await prefs.setDouble('last_latitude', locationData.latitude!);
+          LocationData? locationData;
+          try {
+            locationData = await location
+                .getLocation()
+                .timeout(const Duration(seconds: 5));
+          } catch (_) {
+            try {
+              locationData = await location.onLocationChanged.first
+                  .timeout(const Duration(seconds: 8));
+            } catch (_) {}
+          }
+
+          if (locationData?.latitude != null &&
+              locationData?.longitude != null) {
+            await prefs.setDouble('last_latitude', locationData!.latitude!);
             await prefs.setDouble('last_longitude', locationData.longitude!);
             _memoryManager.addToCache('location_available', true);
             debugPrint('Fresh location obtained during initialization');
           }
+
+          // Revert to balanced after acquiring initial fix
+          try {
+            await location.changeSettings(
+              accuracy: LocationAccuracy.balanced,
+              interval: 5000,
+            );
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint(
@@ -290,13 +315,29 @@ class PriorityInitializationService {
     try {
       debugPrint('Starting background location fetch...');
       final location = Location();
-      final locationData = await location.getLocation().timeout(
-            const Duration(seconds: 15), // Generous timeout for background
-          );
+      try {
+        await location.enableBackgroundMode(enable: true);
+        await location.changeSettings(
+          accuracy: LocationAccuracy.balanced,
+          interval: 5000,
+        );
+      } catch (_) {}
 
-      if (locationData.latitude != null && locationData.longitude != null) {
+      LocationData? locationData;
+      try {
+        locationData =
+            await location.getLocation().timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Fallback to first stream event
+        try {
+          locationData = await location.onLocationChanged.first
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
+
+      if (locationData?.latitude != null && locationData?.longitude != null) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setDouble('last_latitude', locationData.latitude!);
+        await prefs.setDouble('last_latitude', locationData!.latitude!);
         await prefs.setDouble('last_longitude', locationData.longitude!);
         _memoryManager.addToCache('location_available', true);
         debugPrint('Background location fetch successful');

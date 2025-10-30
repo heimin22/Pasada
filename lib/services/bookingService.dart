@@ -32,15 +32,20 @@ class BookingService {
   final supabase = Supabase.instance.client;
   StreamSubscription<LocationData>? _locationSubscription;
 
-  void startLocationTracking(String passengerID) {
+  Future<void> startLocationTracking(String passengerID) async {
     stopLocationTracking();
 
     final location = Location();
 
+    // Use balanced accuracy and shorter interval for faster, battery-friendly updates
     location.changeSettings(
-      accuracy: LocationAccuracy.high,
-      interval: 10000,
+      accuracy: LocationAccuracy.balanced,
+      interval: 5000,
     );
+    // Keep updates alive when app goes to background (requires proper permissions)
+    try {
+      await location.enableBackgroundMode(enable: true);
+    } catch (_) {}
 
     _locationSubscription = location.onLocationChanged.listen((locationData) {
       if (locationData.latitude != null && locationData.longitude != null) {

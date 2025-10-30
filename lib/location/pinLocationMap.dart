@@ -202,7 +202,7 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
   // for the google logo's responsiveness
   late double bottomContainerHeight = 0.0;
   final GlobalKey bottomContainerKey = GlobalKey();
-  final fabVerticalSpacing = 10.0;
+  final fabVerticalSpacing = 4.0;
 
   List<String> splitLocation(String location) {
     final List<String> parts = location.split(',');
@@ -225,9 +225,13 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
     ));
 
     locationService.changeSettings(
-      interval: 1000,
-      accuracy: LocationAccuracy.high,
+      interval: 2000,
+      accuracy: LocationAccuracy.balanced,
     );
+    // Keep GPS warm so FAB feels responsive
+    try {
+      locationService.enableBackgroundMode(enable: true);
+    } catch (_) {}
   }
 
   void _initializeMapStyle() {
@@ -578,7 +582,36 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
 
   Future<void> getCurrentLocation() async {
     try {
-      final LocationData locationData = await locationService.getLocation();
+      // Fast path with timeout and stream fallback
+      LocationData? locationData;
+      try {
+        locationData = await locationService
+            .getLocation()
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        try {
+          locationData = await locationService.onLocationChanged.first
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
+      if (locationData == null ||
+          locationData.latitude == null ||
+          locationData.longitude == null) {
+        // Use cached last location if available
+        final cached = _memoryManager.getFromCache(LAST_LOCATION_KEY);
+        if (cached != null) {
+          final newLocation = LatLng(cached['latitude'], cached['longitude']);
+          if (mounted) {
+            setState(() {
+              pinnedLocation = newLocation;
+              currentLocation = newLocation;
+              isLoading = false;
+            });
+          }
+          return;
+        }
+        throw Exception('Location unavailable');
+      }
       final newLocation = LatLng(
         locationData.latitude!,
         locationData.longitude!,
@@ -655,7 +688,35 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
         return;
       }
 
-      final locationData = await locationService.getLocation();
+      // Temporarily boost accuracy for quicker fix, then revert
+      try {
+        await locationService.changeSettings(
+          accuracy: LocationAccuracy.high,
+          interval: 2000,
+        );
+      } catch (_) {}
+
+      LocationData? locationData;
+      try {
+        locationData = await locationService
+            .getLocation()
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        try {
+          locationData = await locationService.onLocationChanged.first
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
+
+      // Restore balanced after fetch
+      try {
+        await locationService.changeSettings(
+          accuracy: LocationAccuracy.balanced,
+          interval: 2000,
+        );
+      } catch (_) {}
+
+      if (locationData == null) return;
       final currentLatLng =
           LatLng(locationData.latitude!, locationData.longitude!);
 
@@ -923,7 +984,13 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           ),
           Positioned(
             right: responsivePadding,
-            bottom: bottomContainerHeight + fabVerticalSpacing,
+            bottom: max(
+                  bottomContainerHeight -
+                      MediaQuery.of(context).padding.bottom -
+                      8.0,
+                  0.0,
+                ) +
+                fabVerticalSpacing,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
