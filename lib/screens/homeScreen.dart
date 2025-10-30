@@ -782,36 +782,35 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     onCalendarTap: _showCalendarScreen,
                   ),
                 ),
-                if (!(isBookingConfirmed &&
-                    (bookingStatus == 'accepted' ||
-                        bookingStatus == 'ongoing')))
-                  HomeScreenFAB(
-                    mapScreenKey:
-                        mapScreenKey as GlobalKey<State<StatefulWidget>>,
-                    downwardAnimation: _downwardAnimation,
-                    bookingAnimationControllerValue:
-                        bookingAnimationController, // Pass the controller directly
-                    responsivePadding: responsivePadding,
-                    fabVerticalSpacing: fabVerticalSpacing,
-                    iconSize: fabIconSize,
-                    bookingStatus: bookingStatus,
-                    isBookingConfirmed: isBookingConfirmed,
-                    onPressed: () async {
-                      final mapState = mapScreenKey.currentState;
-                      if (mapState != null) {
-                        if (!mapState.isLocationInitialized) {
-                          await mapState.initializeLocation();
-                        }
-                        if (mapState.currentLocation != null) {
-                          mapState.animateToLocation(mapState.currentLocation!);
-                        }
-                        mapState.pulseCurrentLocationMarker();
+                HomeScreenFAB(
+                  mapScreenKey:
+                      mapScreenKey as GlobalKey<State<StatefulWidget>>,
+                  downwardAnimation: _downwardAnimation,
+                  bookingAnimationControllerValue:
+                      bookingAnimationController, // Pass the controller directly
+                  responsivePadding: responsivePadding,
+                  fabVerticalSpacing: fabVerticalSpacing,
+                  iconSize: fabIconSize,
+                  bookingStatus: bookingStatus,
+                  isBookingConfirmed: isBookingConfirmed,
+                  onPressed: () async {
+                    final mapState = mapScreenKey.currentState;
+                    if (mapState != null) {
+                      if (!mapState.isLocationInitialized) {
+                        await mapState.initializeLocation();
                       }
-                    },
-                    bottomOffset: isBookingConfirmed
-                        // When confirmed, track the draggable bottom sheet extent responsively
-                        ? (_bookingSheetExtent * screenHeight) + 20.0
-                        : calculateBottomPadding(
+                      if (mapState.currentLocation != null) {
+                        mapState.animateToLocation(mapState.currentLocation!);
+                      }
+                      mapState.pulseCurrentLocationMarker();
+                    }
+                  },
+                  bottomOffset: isBookingConfirmed
+                      // Track draggable sheet height (in px) + nav bar clearance
+                      ? (_bookingSheetExtent * screenHeight) +
+                          bottomNavBarHeight +
+                          20.0
+                      : calculateBottomPadding(
                             isBookingConfirmed: isBookingConfirmed,
                             bookingStatusContainerHeight:
                                 bookingStatusContainerHeight,
@@ -819,8 +818,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                                 locationInputContainerHeight,
                             isNotificationVisible: isNotificationVisible,
                             notificationHeight: notificationHeight,
-                          ),
-                  ),
+                          ) +
+                          bottomNavBarHeight,
+                ),
                 if (!isBookingConfirmed)
                   Positioned(
                     bottom: bottomNavBarHeight,
