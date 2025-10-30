@@ -498,6 +498,16 @@ class MapScreenState extends State<MapScreen>
     await _cameraManager.zoomToBounds(polylineCoordinates);
   }
 
+  // Show bounds between driver and pickup/dropoff depending on ride status
+  Future<void> showDriverFocusBounds(String rideStatus) async {
+    if (driverLocation == null) return;
+    final LatLng? target = rideStatus == 'accepted'
+        ? widget.pickUpLocation
+        : widget.dropOffLocation;
+    if (target == null) return;
+    await _cameraManager.showPickupAndDropoff(driverLocation!, target);
+  }
+
   void onMapCreated(GoogleMapController controller) {
     mapController.complete(controller);
   }

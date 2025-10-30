@@ -56,7 +56,7 @@ class HomeScreenFAB extends StatelessWidget {
                           heroTag: "homeBoundsFAB",
                           onPressed: () {
                             (mapScreenKey.currentState as dynamic)
-                                ?.showBookingBounds();
+                                ?.showDriverFocusBounds(bookingStatus);
                           },
                           iconSize: iconSize,
                           buttonSize: MediaQuery.of(context).size.width * 0.12,

@@ -1043,12 +1043,23 @@ class BookingManager {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (safeContext.mounted) {
-        Navigator.of(safeContext).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => CompletedRideScreen(
-                arrivedTime: DateTime.now(), bookingId: completedBookingId!),
-          ),
-        );
+        if (completedBookingId != null) {
+          Navigator.of(safeContext).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => CompletedRideScreen(
+                arrivedTime: DateTime.now(),
+                bookingId: completedBookingId,
+              ),
+            ),
+          );
+        } else {
+          // Fallback to home screen if booking ID is no longer available
+          Navigator.of(safeContext).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const HomeScreen(),
+            ),
+          );
+        }
       }
     });
   }

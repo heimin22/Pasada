@@ -804,13 +804,18 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                       mapState.pulseCurrentLocationMarker();
                     }
                   },
-                  bottomOffset: calculateBottomPadding(
-                    isBookingConfirmed: isBookingConfirmed,
-                    bookingStatusContainerHeight: bookingStatusContainerHeight,
-                    locationInputContainerHeight: locationInputContainerHeight,
-                    isNotificationVisible: isNotificationVisible,
-                    notificationHeight: notificationHeight,
-                  ), // FAB uses the main calculation
+                  bottomOffset: isBookingConfirmed
+                      // When confirmed, track the draggable bottom sheet extent responsively
+                      ? (_bookingSheetExtent * screenHeight) + 20.0
+                      : calculateBottomPadding(
+                          isBookingConfirmed: isBookingConfirmed,
+                          bookingStatusContainerHeight:
+                              bookingStatusContainerHeight,
+                          locationInputContainerHeight:
+                              locationInputContainerHeight,
+                          isNotificationVisible: isNotificationVisible,
+                          notificationHeight: notificationHeight,
+                        ),
                 ),
                 if (!isBookingConfirmed)
                   Positioned(
