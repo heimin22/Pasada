@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+// Removed unused foundation import
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CapacityService {
@@ -8,8 +9,8 @@ class CapacityService {
   /// Returns a map with sitting_passenger and standing_passenger counts
   Future<Map<String, int>?> getVehicleCapacityForBooking(int bookingId) async {
     try {
-      debugPrint(
-          '[CapacityService] Fetching vehicle capacity for booking $bookingId');
+      AppLogger.debug('Fetching vehicle capacity for $bookingId',
+          tag: 'Capacity');
 
       // Get the driver_id from the booking
       final bookingResponse = await supabase
@@ -19,8 +20,8 @@ class CapacityService {
           .single();
 
       if (bookingResponse['driver_id'] == null) {
-        debugPrint(
-            '[CapacityService] No driver assigned to booking $bookingId');
+        AppLogger.debug('No driver assigned to booking $bookingId',
+            tag: 'Capacity');
         return null;
       }
 
@@ -34,7 +35,7 @@ class CapacityService {
           .single();
 
       if (driverResponse['vehicle_id'] == null) {
-        debugPrint('[CapacityService] No vehicle assigned to driver $driverId');
+        AppLogger.debug('No vehicle for driver $driverId', tag: 'Capacity');
         return null;
       }
 
@@ -52,15 +53,17 @@ class CapacityService {
       final standingPassengers =
           vehicleResponse['standing_passenger'] as int? ?? 0;
 
-      debugPrint(
-          '[CapacityService] Vehicle capacity - Sitting: $sittingPassengers, Standing: $standingPassengers');
+      AppLogger.debug(
+          'Vehicle capacity sit:$sittingPassengers stand:$standingPassengers',
+          tag: 'Capacity',
+          throttle: true);
 
       return {
         'sitting_passenger': sittingPassengers,
         'standing_passenger': standingPassengers,
       };
     } catch (e) {
-      debugPrint('[CapacityService] Error fetching vehicle capacity: $e');
+      AppLogger.warn('Error fetching vehicle capacity: $e', tag: 'Capacity');
       return null;
     }
   }
@@ -72,8 +75,8 @@ class CapacityService {
     required String newSeatType,
   }) async {
     try {
-      debugPrint(
-          '[CapacityService] Updating seating preference for booking $bookingId to $newSeatType');
+      AppLogger.info('Update seat pref booking:$bookingId -> $newSeatType',
+          tag: 'Capacity');
 
       final response =
           await supabase.rpc('update_booking_seating_preference', params: {
@@ -82,15 +85,15 @@ class CapacityService {
       });
 
       if (response != null) {
-        debugPrint('[CapacityService] Successfully updated seating preference');
+        AppLogger.debug('Seat pref updated', tag: 'Capacity');
         return true;
       } else {
-        debugPrint(
-            '[CapacityService] Failed to update seating preference - null response');
+        AppLogger.warn('Seat pref update failed - null response',
+            tag: 'Capacity');
         return false;
       }
     } catch (e) {
-      debugPrint('[CapacityService] Error updating seating preference: $e');
+      AppLogger.warn('Error updating seating preference: $e', tag: 'Capacity');
       return false;
     }
   }
@@ -106,12 +109,12 @@ class CapacityService {
           .single();
 
       final status = response['ride_status'] as String?;
-      debugPrint('[CapacityService] Booking $bookingId status: $status');
+      AppLogger.debug('Booking $bookingId status: $status', tag: 'Capacity');
 
       // Allow changes for 'assigned' and 'accepted' status, but not 'ongoing' or 'completed'
       return status == 'assigned' || status == 'accepted';
     } catch (e) {
-      debugPrint('[CapacityService] Error checking booking status: $e');
+      AppLogger.warn('Error checking booking status: $e', tag: 'Capacity');
       return false;
     }
   }
@@ -127,8 +130,8 @@ class CapacityService {
 
       return response['seat_type'] as String?;
     } catch (e) {
-      debugPrint(
-          '[CapacityService] Error getting current seating preference: $e');
+      AppLogger.warn('Error getting current seat preference: $e',
+          tag: 'Capacity');
       return null;
     }
   }
@@ -137,8 +140,8 @@ class CapacityService {
   /// Returns true if successful, false otherwise
   Future<bool> resetBookingForReassignment(int bookingId) async {
     try {
-      debugPrint(
-          '[CapacityService] Resetting booking $bookingId for reassignment');
+      AppLogger.info('Reset booking $bookingId for reassignment',
+          tag: 'Capacity');
 
       final response =
           await supabase.rpc('reset_booking_for_reassignment', params: {
@@ -146,16 +149,16 @@ class CapacityService {
       });
 
       if (response != null) {
-        debugPrint(
-            '[CapacityService] Successfully reset booking for reassignment');
+        AppLogger.debug('Reset booking for reassignment success',
+            tag: 'Capacity');
         return true;
       } else {
-        debugPrint('[CapacityService] Failed to reset booking - null response');
+        AppLogger.warn('Reset booking failed - null response', tag: 'Capacity');
         return false;
       }
     } catch (e) {
-      debugPrint(
-          '[CapacityService] Error resetting booking for reassignment: $e');
+      AppLogger.warn('Error resetting booking for reassignment: $e',
+          tag: 'Capacity');
       return false;
     }
   }

@@ -1,7 +1,9 @@
 import 'dart:convert';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class RouteService {
   static const String _routeKey = 'selectedRoute';
@@ -42,9 +44,9 @@ class RouteService {
       }
 
       await prefs.setString(_routeKey, jsonEncode(routeData));
-      debugPrint('Route saved successfully: ${routeData['route_name']}');
+      AppLogger.debug('Route saved: ${routeData['route_name']}', tag: 'Route');
     } catch (e) {
-      debugPrint('Error saving route: $e');
+      AppLogger.warn('Error saving route: $e', tag: 'Route');
     }
   }
 
@@ -84,10 +86,10 @@ class RouteService {
         }).toList();
       }
 
-      debugPrint('Route loaded successfully: ${routeData['route_name']}');
+      AppLogger.debug('Route loaded: ${routeData['route_name']}', tag: 'Route');
       return routeData;
     } catch (e) {
-      debugPrint('Error loading route: $e');
+      AppLogger.warn('Error loading route: $e', tag: 'Route');
       // Clear invalid route data
       await clearRoute();
       return null;
@@ -99,7 +101,7 @@ class RouteService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_routeKey);
-      debugPrint('Route cleared successfully');
+      AppLogger.debug('Route cleared', tag: 'Route');
     } catch (e) {
       debugPrint('Error clearing route: $e');
     }
@@ -111,7 +113,7 @@ class RouteService {
       final prefs = await SharedPreferences.getInstance();
       return prefs.containsKey(_routeKey);
     } catch (e) {
-      debugPrint('Error checking for saved route: $e');
+      AppLogger.warn('Error checking for saved route: $e', tag: 'Route');
       return false;
     }
   }

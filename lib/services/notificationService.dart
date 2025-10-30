@@ -88,22 +88,22 @@ class NotificationService {
       try {
         final String? fcmToken = await _firebaseMessaging.getToken();
         if (fcmToken != null) {
-          debugPrint('FCM Token: $fcmToken');
+          // quiet
           // Only save token if Supabase is initialized
           await saveTokenToDatabase(fcmToken);
         }
 
         // Set up token refresh listener
         _firebaseMessaging.onTokenRefresh.listen((newToken) {
-          debugPrint('FCM Token refreshed');
+          // quiet
           // We'll try to save the token, but it will only work if Supabase is initialized
           saveTokenToDatabase(newToken);
         });
       } catch (e) {
-        debugPrint('Error initializing FCM: $e');
+        // quiet
       }
     } catch (e) {
-      debugPrint('Error during NotificationService.initialize: $e');
+      // quiet
     } finally {
       if (!(_initCompleter?.isCompleted ?? true)) {
         _initCompleter!.complete();
@@ -139,7 +139,7 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.initialize(
         initializationSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
-          debugPrint('Notification clicked with payload: ${response.payload}');
+          // quiet
           _handleNotificationTap();
         },
       );
@@ -172,11 +172,10 @@ class NotificationService {
           saveTokenToDatabase(newToken);
         });
       } catch (e) {
-        debugPrint('Error initializing FCM (no-prompt): $e');
+        // quiet
       }
     } catch (e) {
-      debugPrint(
-          'Error during NotificationService.initializeWithoutPrompt: $e');
+      // quiet
     } finally {
       if (!(_initCompleter?.isCompleted ?? true)) {
         _initCompleter!.complete();
@@ -280,7 +279,7 @@ class NotificationService {
   }
 
   static Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    debugPrint('Foreground message received: ${message.data}');
+    // quiet
 
     if (message.notification != null) {
       await showNotification(
@@ -291,7 +290,7 @@ class NotificationService {
   }
 
   static Future<void> _handleBackgroundMessageTap(RemoteMessage message) async {
-    debugPrint('Background message tapped: ${message.data}');
+    // quiet
     _handleNotificationTap();
   }
 
@@ -349,7 +348,7 @@ class NotificationService {
         payload: payload,
       );
     } catch (e) {
-      debugPrint('Error showing notification: $e');
+      // quiet
     }
   }
 
@@ -387,7 +386,7 @@ class NotificationService {
       // Get current user
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
-        debugPrint('No user logged in, showing generic notification');
+        // quiet
         await showNotification(
           title: 'Pasada',
           body: 'You can now book a ride!',
@@ -419,14 +418,14 @@ class NotificationService {
         // The actual FCM notification will be sent from the server
         // This is just a local fallback
       } catch (e) {
-        debugPrint('Error getting user data: $e');
+        // quiet
         await showNotification(
           title: 'Pasada',
           body: 'You can now book a ride!',
         );
       }
     } catch (e) {
-      debugPrint('Error showing availability notification: $e');
+      // quiet
     }
   }
 
@@ -532,7 +531,7 @@ class NotificationService {
       }
 
       if (!isSupabaseInitialized) {
-        debugPrint('Supabase not initialized, skipping token save');
+        // quiet
         return;
       }
 
@@ -553,20 +552,20 @@ class NotificationService {
               'p_device_info': deviceInfo,
             },
           );
-          debugPrint('FCM token saved to database');
+          // quiet
         } catch (e) {
           if (e.toString().contains('auth') ||
               e.toString().contains('Not initialized')) {
-            debugPrint('User not authenticated, skipping FCM token save');
+            // quiet
             return;
           }
-          debugPrint('Error saving FCM token: $e');
+          // quiet
         }
       } else {
-        debugPrint('No user logged in, cannot save token');
+        // quiet
       }
     } catch (e) {
-      debugPrint('Error in saveTokenToDatabase: $e');
+      // quiet
     }
   }
 

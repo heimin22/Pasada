@@ -562,8 +562,7 @@ class MapScreenState extends State<MapScreen>
     _markerManager.removeDriverMarker();
 
     // Update directional bus marker with heading
-    debugPrint(
-        'MapScreen: Calling directional bus manager with location: $location, heading: $heading, rideStatus: $rideStatus');
+    // quiet: reduce verbose logging in production
     _directionalBusManager.updateDriverPosition(location,
         heading: heading, rideStatus: rideStatus);
 

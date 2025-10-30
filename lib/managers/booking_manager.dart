@@ -23,6 +23,7 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/optimized_eta_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:pasada_passenger_app/widgets/capacity_warning_dialog.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
@@ -600,8 +601,10 @@ class BookingManager {
               ? _state.vehicleStandingCapacity
               : int.tryParse(driver['standing_passenger'].toString());
         });
-        debugPrint(
-            '[BookingManager] Updated capacity from flat fields: total=${driver['passenger_capacity']}, sitting=${driver['sitting_passenger']}, standing=${driver['standing_passenger']}');
+        AppLogger.debug(
+            'Capacity(flat) total=${driver['passenger_capacity']} sit=${driver['sitting_passenger']} stand=${driver['standing_passenger']}',
+            tag: 'BookingManager',
+            throttle: true);
         _evaluateCapacityAndMaybeReassign();
       }
     } catch (_) {}
@@ -753,8 +756,9 @@ class BookingManager {
         }
       });
       if (details['driver_id'] != null) {
-        debugPrint(
-            "[BookingManager] _fetchAndUpdateBookingDetails: driver_id ${details['driver_id']} found for booking $bookingId. Calling _loadBookingAfterDriverAssignment.");
+        AppLogger.debug(
+            'driver_id present for $bookingId, loading driver assignment',
+            tag: 'BookingManager');
         await _loadBookingAfterDriverAssignment(bookingId);
       } else {
         debugPrint(
@@ -764,8 +768,8 @@ class BookingManager {
   }
 
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
-    debugPrint(
-        "[BookingManager] _loadBookingAfterDriverAssignment: Entered for booking ID $bookingId");
+    AppLogger.debug('_loadBookingAfterDriverAssignment enter $bookingId',
+        tag: 'BookingManager');
     // Try fetching full driver details (including current_location) via RPC
     final user = supabase.auth.currentUser;
     if (user != null) {
@@ -975,14 +979,12 @@ class BookingManager {
         "[BookingManager] _startCompletionPolling: Starting for booking ID $bookingId");
     _completionTimer =
         Timer.periodic(const Duration(seconds: 10), (timer) async {
-      debugPrint(
-          "[BookingManager] Polling for completion for booking ID $bookingId...");
+      // quiet frequent polling log
       try {
         final details =
             await _state.bookingService?.getBookingDetails(bookingId);
         if (details != null) {
-          debugPrint(
-              "[BookingManager] Polled details for booking ID $bookingId: $details");
+          // quiet payload log
           final status = details['ride_status'];
           // If ride ongoing, update driver location & polyline
           if (status == 'ongoing') {
@@ -1014,8 +1016,8 @@ class BookingManager {
     NotificationService.cancelRideProgressNotification();
     if (!_state.mounted) return;
 
-    debugPrint(
-        "[BookingManager] _handleRideCompletionNavigationAndCleanup: Entered for booking ID ${_state.activeBookingId}");
+    AppLogger.info('Completion cleanup for booking ${_state.activeBookingId}',
+        tag: 'BookingManager');
 
     final BuildContext safeContext = _state.context;
     final int? completedBookingId = _state.activeBookingId;
@@ -1110,7 +1112,8 @@ class BookingManager {
   /// Checks capacity using actual database data and shows dialog if needed
   Future<void> _checkCapacityAndShowDialog(int bookingId) async {
     try {
-      debugPrint('[BookingManager] Checking capacity for booking $bookingId');
+      AppLogger.debug('Checking capacity $bookingId',
+          tag: 'BookingManager', throttle: true);
 
       // Get actual vehicle capacity from database
       final capacityData =

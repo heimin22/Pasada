@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
+// Removed unused foundation import
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 
 import 'roads_api_service.dart';
 
@@ -56,14 +57,14 @@ class OptimizedETAService {
     // Check cache first
     final cached = _etaCache[cacheKey];
     if (cached != null && cached.isValid(_cacheTTL)) {
-      debugPrint('OptimizedETAService: Returning cached ETA for $cacheKey');
+      AppLogger.debug('Returning cached ETA for $cacheKey',
+          tag: 'ETA', throttle: true);
       return {'eta_seconds': cached.etaSeconds};
     }
 
     // Check if there's already a pending request for this route
     if (_pendingRequests.containsKey(cacheKey)) {
-      debugPrint(
-          'OptimizedETAService: Waiting for pending request for $cacheKey');
+      AppLogger.debug('Waiting for pending request $cacheKey', tag: 'ETA');
       return await _pendingRequests[cacheKey]!;
     }
 
@@ -98,12 +99,11 @@ class OptimizedETAService {
       // Use optimized Directions API for other cases
       return await _getETAWithDirectionsAPI(origin, destination, cacheKey);
     } catch (e) {
-      debugPrint('OptimizedETAService: Error fetching ETA: $e');
+      AppLogger.warn('Error fetching ETA: $e', tag: 'ETA');
       // Try to return cached data even if expired
       final cached = _etaCache[cacheKey];
       if (cached != null) {
-        debugPrint(
-            'OptimizedETAService: Returning expired cache due to API error');
+        AppLogger.debug('Returning expired cache due to API error', tag: 'ETA');
         return {'eta_seconds': cached.etaSeconds};
       }
       rethrow;
@@ -156,12 +156,14 @@ class OptimizedETAService {
       _etaCache[cacheKey] =
           _CachedOptimizedETA(etaSeconds, DateTime.now(), 'accepted');
 
-      debugPrint(
-          'OptimizedETAService: Calculated ETA using Roads API: ${etaSeconds}s for ${distance.toStringAsFixed(2)}km at ${avgSpeedKmh.toStringAsFixed(1)}km/h');
+      AppLogger.debug(
+          'ETA via Roads: ${etaSeconds}s ${distance.toStringAsFixed(2)}km @ ${avgSpeedKmh.toStringAsFixed(1)}km/h',
+          tag: 'ETA',
+          throttle: true);
 
       return {'eta_seconds': etaSeconds};
     } catch (e) {
-      debugPrint('OptimizedETAService: Error in Roads API calculation: $e');
+      AppLogger.warn('Roads API calculation error: $e', tag: 'ETA');
       // Fallback to Directions API
       return await _getETAWithDirectionsAPI(origin, destination, cacheKey);
     }
@@ -206,7 +208,7 @@ class OptimizedETAService {
       }
 
       final data = json.decode(resp.body) as Map<String, dynamic>;
-      debugPrint('OptimizedETAService: Directions API response for $cacheKey');
+      AppLogger.debug('Directions API response for $cacheKey', tag: 'ETA');
 
       // Parse response from new API format
       int seconds = _parseDurationFromNewAPI(data);
@@ -217,7 +219,7 @@ class OptimizedETAService {
 
       return {'eta_seconds': seconds};
     } catch (e) {
-      debugPrint('OptimizedETAService: Error in Directions API: $e');
+      AppLogger.warn('Directions API error: $e', tag: 'ETA');
       rethrow;
     }
   }
@@ -251,7 +253,7 @@ class OptimizedETAService {
         return int.tryParse(duration.replaceAll(RegExp(r'\D'), '')) ?? 0;
       }
     } catch (e) {
-      debugPrint('OptimizedETAService: Error parsing duration: $e');
+      AppLogger.warn('Error parsing duration: $e', tag: 'ETA');
       return 0;
     }
   }

@@ -48,13 +48,11 @@ class MapStableStateManager {
     if (_lastDriverLocation != null &&
         _lastRideStatus == rideStatus &&
         _isLocationSimilar(_lastDriverLocation!, location)) {
-      debugPrint(
-          'MapStableStateManager: Skipping driver location update - no significant change');
+      // quiet: skip noisy log
       return; // No significant change, skip update
     }
 
-    debugPrint(
-        'MapStableStateManager: Updating driver location from $_lastDriverLocation to $location');
+    // quiet
     _lastDriverLocation = location;
     _lastRideStatus = rideStatus;
 
@@ -86,13 +84,11 @@ class MapStableStateManager {
     if (!forceUpdate &&
         existingPolyline != null &&
         _arePolylinesSimilar(existingPolyline.points, points)) {
-      debugPrint(
-          'MapStableStateManager: Skipping polyline update for ${id.value} - no significant change');
+      // quiet
       return; // No significant change, skip update
     }
 
-    debugPrint(
-        'MapStableStateManager: Updating polyline ${id.value} with ${points.length} points');
+    // quiet
     _stablePolylines[id] = Polyline(
       polylineId: id,
       points: points,
@@ -190,7 +186,7 @@ class MapStableStateManager {
       _stableMarkers.remove(driverMarkerId);
       _markersChanged = true;
       _notifyChanges();
-      debugPrint('MapStableStateManager: Removed driver marker');
+      // quiet
     }
   }
 

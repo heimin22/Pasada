@@ -1,10 +1,11 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:cryptography/cryptography.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EncryptionService {
   static final EncryptionService _instance = EncryptionService._internal();
@@ -36,7 +37,7 @@ class EncryptionService {
           _aesKey = SecretKey(keyBytes);
           _v3Ready = true;
         } else {
-          debugPrint('ENCRYPTION_MASTER_KEY_B64 is missing; V3 disabled');
+          // quiet: missing env just disables V3
         }
       }
 
@@ -47,10 +48,10 @@ class EncryptionService {
         final keyBytes = List.generate(32, (i) => _rng.nextInt(256));
         _cachedKey = base64.encode(keyBytes);
         await prefs.setString(_keyStorageKey, _cachedKey!);
-        debugPrint('Generated new encryption key');
+        // quiet
       } else {
         _cachedKey = masterKey;
-        debugPrint('Loaded existing encryption key');
+        // quiet
       }
     } catch (e) {
       throw Exception('Error initializing encryption service: $e');
@@ -86,7 +87,8 @@ class EncryptionService {
     }
   }
 
-  Future<Map<String, String>> encryptUserFields(Map<String, String?> userData) async {
+  Future<Map<String, String>> encryptUserFields(
+      Map<String, String?> userData) async {
     final out = <String, String>{};
     for (final entry in userData.entries) {
       if (entry.value != null && entry.value!.isNotEmpty) {
@@ -98,7 +100,8 @@ class EncryptionService {
     return out;
   }
 
-  Future<Map<String, String>> decryptUserFields(Map<String, dynamic> encryptedData) async {
+  Future<Map<String, String>> decryptUserFields(
+      Map<String, dynamic> encryptedData) async {
     final out = <String, String>{};
     for (final entry in encryptedData.entries) {
       final val = entry.value?.toString() ?? '';
@@ -123,7 +126,8 @@ class EncryptionService {
 
   bool isEncrypted(String data) {
     if (data.isEmpty) return false;
-    return data.startsWith(_encryptionPrefixV3) || data.startsWith(_encryptionPrefixV2);
+    return data.startsWith(_encryptionPrefixV3) ||
+        data.startsWith(_encryptionPrefixV2);
   }
 
   // V3 AES-GCM
@@ -169,7 +173,8 @@ class EncryptionService {
     final plainTextBytes = utf8.encode(plainText);
     final encrypted = Uint8List(plainTextBytes.length);
     for (int i = 0; i < plainTextBytes.length; i++) {
-      encrypted[i] = plainTextBytes[i] ^ keyBytes[i % keyBytes.length] ^ (i & 0xFF);
+      encrypted[i] =
+          plainTextBytes[i] ^ keyBytes[i % keyBytes.length] ^ (i & 0xFF);
     }
     return _encryptionPrefixV2 + base64.encode(encrypted);
   }
@@ -183,7 +188,8 @@ class EncryptionService {
     final keyBytes = base64.decode(_cachedKey!);
     final decrypted = Uint8List(encryptedBytes.length);
     for (int i = 0; i < encryptedBytes.length; i++) {
-      decrypted[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length] ^ (i & 0xFF);
+      decrypted[i] =
+          encryptedBytes[i] ^ keyBytes[i % keyBytes.length] ^ (i & 0xFF);
     }
     final result = utf8.decode(decrypted);
     if (_isValidDecryptedData(result)) {
@@ -201,7 +207,9 @@ class EncryptionService {
     final looksLikeEmail = data.contains('@') && data.contains('.');
     final looksLikePhone = data.startsWith('+') && data.length > 10;
     final looksLikeUrl = data.startsWith('http') || data.contains('.');
-    final looksLikeName = data.length > 1 && data.length < 100 && !data.contains(RegExp(r'[^\w\s\-\.@+]'));
+    final looksLikeName = data.length > 1 &&
+        data.length < 100 &&
+        !data.contains(RegExp(r'[^\w\s\-\.@+]'));
     return looksLikeEmail || looksLikePhone || looksLikeUrl || looksLikeName;
   }
 

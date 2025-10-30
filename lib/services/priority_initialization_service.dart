@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -57,14 +58,14 @@ class PriorityInitializationService {
       await _initializeCritical();
       _criticalComplete = true;
       onCriticalComplete?.call();
-      debugPrint('CRITICAL initialization complete');
+      AppLogger.debug('CRITICAL initialization complete', tag: 'Init');
 
       // ESSENTIAL: Services needed for basic functionality
       LoadingDialog.updateMessage('Loading essential features...');
       await _initializeEssential(context);
       _essentialComplete = true;
       onEssentialComplete?.call();
-      debugPrint('ESSENTIAL initialization complete');
+      AppLogger.debug('ESSENTIAL initialization complete', tag: 'Init');
 
       // IMPORTANT: Services that enhance UX (parallel with essential)
       LoadingDialog.updateMessage('Preparing enhanced features...');
@@ -74,7 +75,7 @@ class PriorityInitializationService {
       importantFuture.then((_) {
         _importantComplete = true;
         onImportantComplete?.call();
-        debugPrint('IMPORTANT initialization complete');
+        AppLogger.debug('IMPORTANT initialization complete', tag: 'Init');
 
         // Start background tasks after important ones finish
         _initializeBackground(context);
@@ -83,7 +84,7 @@ class PriorityInitializationService {
       // Small delay to ensure smooth transition
       await Future.delayed(const Duration(milliseconds: 200));
     } catch (e) {
-      debugPrint('Priority initialization error: $e');
+      AppLogger.warn('Priority initialization error: $e', tag: 'Init');
       rethrow;
     } finally {
       _isInitializing = false;
@@ -159,9 +160,9 @@ class PriorityInitializationService {
       _preloadMapIfNeeded(context),
     ]).then((_) {
       _memoryManager.addToCache('init_background_complete', true);
-      debugPrint('BACKGROUND initialization complete');
+      AppLogger.debug('BACKGROUND initialization complete', tag: 'Init');
     }).catchError((e) {
-      debugPrint('Background initialization partial failure: $e');
+      AppLogger.warn('Background init partial failure: $e', tag: 'Init');
     });
   }
 
@@ -248,7 +249,8 @@ class PriorityInitializationService {
       final cachedLng = prefs.getDouble('last_longitude');
 
       if (cachedLat != null && cachedLng != null) {
-        debugPrint('Location initialized with cached coordinates');
+        AppLogger.debug('Location initialized with cached coordinates',
+            tag: 'Init');
         _memoryManager.addToCache('location_available', true);
         _completedTasks[InitializationPriority.important]!.add('location');
 
@@ -286,7 +288,8 @@ class PriorityInitializationService {
             await prefs.setDouble('last_latitude', locationData!.latitude!);
             await prefs.setDouble('last_longitude', locationData.longitude!);
             _memoryManager.addToCache('location_available', true);
-            debugPrint('Fresh location obtained during initialization');
+            AppLogger.debug('Fresh location obtained during initialization',
+                tag: 'Init');
           }
 
           // Revert to balanced after acquiring initial fix
@@ -298,13 +301,13 @@ class PriorityInitializationService {
           } catch (_) {}
         }
       } catch (e) {
-        debugPrint(
-            'Fresh location fetch failed during startup (will retry in background): $e');
+        AppLogger.warn('Fresh location fetch failed (retry in background): $e',
+            tag: 'Init');
         // Start background location fetch
         _fetchLocationInBackground();
       }
     } catch (e) {
-      debugPrint('Location initialization error: $e');
+      AppLogger.warn('Location initialization error: $e', tag: 'Init');
     }
 
     _completedTasks[InitializationPriority.important]!.add('location');
@@ -313,7 +316,7 @@ class PriorityInitializationService {
   /// Fetch location in background without blocking initialization
   void _fetchLocationInBackground() async {
     try {
-      debugPrint('Starting background location fetch...');
+      AppLogger.debug('Starting background location fetch', tag: 'Init');
       final location = Location();
       try {
         await location.enableBackgroundMode(enable: true);
@@ -340,10 +343,10 @@ class PriorityInitializationService {
         await prefs.setDouble('last_latitude', locationData!.latitude!);
         await prefs.setDouble('last_longitude', locationData.longitude!);
         _memoryManager.addToCache('location_available', true);
-        debugPrint('Background location fetch successful');
+        AppLogger.debug('Background location fetch successful', tag: 'Init');
       }
     } catch (e) {
-      debugPrint('Background location fetch failed: $e');
+      AppLogger.warn('Background location fetch failed: $e', tag: 'Init');
     }
   }
 
@@ -402,26 +405,28 @@ class PriorityInitializationService {
       final cachedLng = prefs.getDouble('last_longitude');
 
       if (locationAvailable || (cachedLat != null && cachedLng != null)) {
-        debugPrint('Initializing weather service with available location...');
+        AppLogger.debug('Initializing weather service with available location',
+            tag: 'Init');
 
         // Try to initialize weather service with timeout
         try {
           // Simulate weather service initialization with actual implementation
           await Future.delayed(const Duration(milliseconds: 800));
           _completedTasks[InitializationPriority.background]!.add('weather');
-          debugPrint('Weather service initialized successfully');
+          AppLogger.debug('Weather service initialized successfully',
+              tag: 'Init');
         } catch (e) {
-          debugPrint('Weather service initialization failed: $e');
+          AppLogger.warn('Weather init failed: $e', tag: 'Init');
           _completedTasks[InitializationPriority.background]!
               .add('weather_failed');
         }
       } else {
-        debugPrint('Weather service skipped - no location available');
+        AppLogger.debug('Weather service skipped - no location', tag: 'Init');
         _completedTasks[InitializationPriority.background]!
             .add('weather_skipped');
       }
     } catch (e) {
-      debugPrint('Error checking location for weather initialization: $e');
+      AppLogger.warn('Weather init location error: $e', tag: 'Init');
       _completedTasks[InitializationPriority.background]!.add('weather_error');
     }
   }
@@ -492,6 +497,6 @@ class PriorityInitializationService {
       taskList.clear();
     }
 
-    debugPrint('Priority initialization state reset');
+    AppLogger.debug('Priority initialization state reset', tag: 'Init');
   }
 }
