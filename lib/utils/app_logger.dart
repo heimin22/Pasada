@@ -36,8 +36,9 @@ class AppLogger {
   static void _log(LogLevel msgLevel, String message,
       {String? tag, bool throttle = true}) {
     if (level.index > msgLevel.index) return;
-    if (!kDebugMode && msgLevel == LogLevel.debug)
+    if (!kDebugMode && msgLevel == LogLevel.debug) {
       return; // no debug in release
+    }
 
     final formatted = tag != null ? '[$tag] $message' : message;
     final hash = formatted.hashCode;

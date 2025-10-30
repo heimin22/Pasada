@@ -82,6 +82,12 @@ class MapScreenState extends State<MapScreen>
   String routeEndName = '';
   GoogleMapController? _mapController;
 
+  // Camera tightening state
+  LatLng? _lastTightenDriverPosition;
+  double _currentBoundPadding = 60.0; // pixels
+  static const double _minBoundPadding = 20.0; // pixels
+  static const double _tightenStep = 8.0; // pixels per 500m
+
   // Override methods
   /// state of the app
   @override
@@ -294,6 +300,20 @@ class MapScreenState extends State<MapScreen>
         widget.dropOffLocation != oldWidget.dropOffLocation) {
       handleLocationUpdates();
     }
+
+    // Auto-bind camera when status changes to accepted/ongoing
+    if (widget.bookingStatus != oldWidget.bookingStatus &&
+        (widget.bookingStatus == 'accepted' ||
+            widget.bookingStatus == 'ongoing')) {
+      // Reset tightening state when entering tracking statuses
+      _lastTightenDriverPosition = null;
+      _currentBoundPadding = 60.0;
+      // Attempt immediate focus if we have positions
+      // This schedules after build to ensure map is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDriverFocusBounds(widget.bookingStatus);
+      });
+    }
   }
 
   void calculateRoute() {
@@ -505,7 +525,11 @@ class MapScreenState extends State<MapScreen>
         ? widget.pickUpLocation
         : widget.dropOffLocation;
     if (target == null) return;
-    await _cameraManager.showPickupAndDropoff(driverLocation!, target);
+    await _cameraManager.showPickupAndDropoff(
+      driverLocation!,
+      target,
+      boundPadding: _currentBoundPadding,
+    );
   }
 
   void onMapCreated(GoogleMapController controller) {
@@ -567,6 +591,25 @@ class MapScreenState extends State<MapScreen>
 
     // Enforce polyline whitelist to prevent duplicate/stale overlays
     _enforcePolylineWhitelist(rideStatus);
+
+    // Auto-bind camera between driver and pickup/dropoff for accepted/ongoing
+    if (rideStatus == 'accepted' || rideStatus == 'ongoing') {
+      // Initial bind
+      if (_lastTightenDriverPosition == null) {
+        _lastTightenDriverPosition = location;
+        await showDriverFocusBounds(rideStatus);
+      } else {
+        // Tighten every 500m of driver movement
+        final movedKm =
+            calculateDistance(_lastTightenDriverPosition!, location);
+        if (movedKm >= 0.5 && _currentBoundPadding > _minBoundPadding) {
+          _lastTightenDriverPosition = location;
+          _currentBoundPadding = (_currentBoundPadding - _tightenStep)
+              .clamp(_minBoundPadding, 120.0);
+          await showDriverFocusBounds(rideStatus);
+        }
+      }
+    }
   }
 
   // Helper to generate and update polyline for driver route without clearing other polylines

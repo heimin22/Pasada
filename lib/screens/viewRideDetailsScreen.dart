@@ -839,7 +839,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black
-                                .withOpacity(isDarkMode ? 0.2 : 0.06),
+                                .withValues(alpha: isDarkMode ? 0.2 : 0.06),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),
