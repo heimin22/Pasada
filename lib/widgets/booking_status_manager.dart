@@ -33,6 +33,7 @@ class BookingStatusManager extends StatefulWidget {
   final int? vehicleSittingCapacity;
   final int? vehicleStandingCapacity;
   final Future<void> Function()? onRefreshCapacity;
+  final Widget? boundsButton;
 
   const BookingStatusManager({
     super.key,
@@ -56,6 +57,7 @@ class BookingStatusManager extends StatefulWidget {
     this.vehicleSittingCapacity,
     this.vehicleStandingCapacity,
     this.onRefreshCapacity,
+    this.boundsButton,
   });
 
   @override

@@ -127,6 +127,7 @@ class HomeBookingSheet extends StatelessWidget {
                         vehicleSittingCapacity: vehicleSittingCapacity,
                         vehicleStandingCapacity: vehicleStandingCapacity,
                         onRefreshCapacity: onRefreshCapacity,
+                        boundsButton: boundsButton,
                       ),
                     ),
                   ),
