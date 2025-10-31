@@ -13,6 +13,7 @@ import 'package:pasada_passenger_app/screens/mapScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
 import 'package:pasada_passenger_app/services/calendar_service.dart';
+import 'package:pasada_passenger_app/services/capacity_service.dart';
 import 'package:pasada_passenger_app/services/driverAssignmentService.dart';
 import 'package:pasada_passenger_app/services/error_logging_service.dart';
 import 'package:pasada_passenger_app/services/fare_service.dart';
@@ -477,7 +478,53 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       seatingPreference.value,
     );
     if (result != null && mounted) {
-      seatingPreference.value = result;
+      // If there's an active booking, update the database
+      if (activeBookingId != null && result != seatingPreference.value) {
+        final capacityService = CapacityService();
+
+        // Check if we can change the seating preference
+        final canChange =
+            await capacityService.canChangeSeatingPreference(activeBookingId!);
+
+        if (canChange) {
+          // Update the database
+          final success = await capacityService.updateSeatingPreference(
+            bookingId: activeBookingId!,
+            newSeatType: result,
+          );
+
+          if (success) {
+            // Update local state on success
+            setState(() {
+              seatingPreference.value = result;
+            });
+
+            Fluttertoast.showToast(
+              msg: 'Seating preference updated to $result',
+              toastLength: Toast.LENGTH_SHORT,
+            );
+
+            // Refresh booking details to ensure consistency
+            await _bookingManager.refreshDriverAndCapacity(activeBookingId!);
+          } else {
+            Fluttertoast.showToast(
+              msg: 'Failed to update seating preference. Please try again.',
+              toastLength: Toast.LENGTH_LONG,
+            );
+          }
+        } else {
+          // Status doesn't allow changes, just show a message
+          Fluttertoast.showToast(
+            msg: 'Cannot change seating preference at this time.',
+            toastLength: Toast.LENGTH_LONG,
+          );
+        }
+      } else {
+        // No active booking or same value, just update local state
+        setState(() {
+          seatingPreference.value = result;
+        });
+      }
     }
   }
 

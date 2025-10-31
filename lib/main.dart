@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async'; // TimeoutException is in dart:async
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -32,62 +32,127 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Bootstraps only critical services for faster initial startup
+/// Uses timeouts to prevent hanging on slow networks/low-end devices
 Future<void> _bootstrapCriticalServices() async {
   final performanceMonitor = PerformanceMonitoringService();
   final memoryManager = AdaptiveMemoryManager();
   final slowInternetService = SlowInternetWarningService();
 
-  // Initialize performance monitoring
-  performanceMonitor.initialize();
-  performanceMonitor
-      .recordStartupMilestone('performance_monitoring_initialized');
+  try {
+    // Initialize performance monitoring (synchronous, no timeout needed)
+    performanceMonitor.initialize();
+    performanceMonitor
+        .recordStartupMilestone('performance_monitoring_initialized');
 
-  // Initialize adaptive memory manager
-  await memoryManager.initialize();
-  performanceMonitor.recordStartupMilestone('memory_manager_initialized');
-
-  // Initialize slow internet warning service
-  await slowInternetService.initialize();
-  performanceMonitor
-      .recordStartupMilestone('slow_internet_service_initialized');
-
-  // Initialize background ride service
-  await BackgroundRideService.initialize();
-  performanceMonitor
-      .recordStartupMilestone('background_ride_service_initialized');
-
-  // Check if there's an active ride that needs background service
-  await BackgroundRideService.restoreServiceIfNeeded();
-  performanceMonitor
-      .recordStartupMilestone('background_service_restoration_checked');
-
-  // Start only absolutely essential services in parallel
-  await Future.wait([
-    Firebase.initializeApp(),
-    dotenv.load(fileName: '.env').then((_) {
-      // Cache only essential config
-      memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
-      memoryManager.addToCache(
-          'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
-    }),
-  ]);
-
-  performanceMonitor.recordStartupMilestone('firebase_and_config_loaded');
-
-  // Initialize Supabase if config is present
-  final url = memoryManager.getFromCache('SUPABASE_URL');
-  final key = memoryManager.getFromCache('SUPABASE_ANON_KEY');
-  if (url != null && key != null) {
-    await Supabase.initialize(
-      url: url,
-      anonKey: key,
-      authOptions:
-          const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
-      realtimeClientOptions:
-          const RealtimeClientOptions(logLevel: RealtimeLogLevel.info),
-      storageOptions: const StorageClientOptions(retryAttempts: 3),
+    // Initialize adaptive memory manager with timeout
+    await memoryManager.initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        debugPrint('Warning: Memory manager initialization timed out');
+      },
     );
-    performanceMonitor.recordStartupMilestone('supabase_initialized');
+    performanceMonitor.recordStartupMilestone('memory_manager_initialized');
+
+    // Initialize slow internet warning service with timeout (non-critical)
+    try {
+      await slowInternetService.initialize().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          debugPrint('Warning: Slow internet service initialization timed out');
+        },
+      );
+      performanceMonitor
+          .recordStartupMilestone('slow_internet_service_initialized');
+    } catch (e) {
+      debugPrint('Slow internet service init failed (non-critical): $e');
+      // Continue even if this fails
+    }
+
+    // Initialize background ride service with timeout
+    try {
+      await BackgroundRideService.initialize().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          debugPrint(
+              'Warning: Background ride service initialization timed out');
+        },
+      );
+      performanceMonitor
+          .recordStartupMilestone('background_ride_service_initialized');
+
+      // Check if there's an active ride that needs background service (with timeout)
+      await BackgroundRideService.restoreServiceIfNeeded().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          debugPrint('Warning: Background service restoration timed out');
+        },
+      );
+      performanceMonitor
+          .recordStartupMilestone('background_service_restoration_checked');
+    } catch (e) {
+      debugPrint('Background service init failed (non-critical): $e');
+      // Continue even if this fails
+    }
+
+    // Start only absolutely essential services in parallel with overall timeout
+    await Future.wait([
+      Firebase.initializeApp().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException(
+              'Firebase initialization timed out', const Duration(seconds: 15));
+        },
+      ),
+      dotenv.load(fileName: '.env').timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          throw TimeoutException('Environment config loading timed out',
+              const Duration(seconds: 5));
+        },
+      ).then((_) {
+        // Cache only essential config
+        memoryManager.addToCache('SUPABASE_URL', dotenv.env['SUPABASE_URL']);
+        memoryManager.addToCache(
+            'SUPABASE_ANON_KEY', dotenv.env['SUPABASE_ANON_KEY']);
+      }),
+    ]).timeout(
+      const Duration(seconds: 20), // Overall timeout for both
+      onTimeout: () {
+        throw TimeoutException('Critical services initialization timed out',
+            const Duration(seconds: 20));
+      },
+    );
+
+    performanceMonitor.recordStartupMilestone('firebase_and_config_loaded');
+
+    // Initialize Supabase if config is present (with timeout)
+    final url = memoryManager.getFromCache('SUPABASE_URL');
+    final key = memoryManager.getFromCache('SUPABASE_ANON_KEY');
+    if (url != null && key != null) {
+      await Supabase.initialize(
+        url: url,
+        anonKey: key,
+        authOptions:
+            const FlutterAuthClientOptions(authFlowType: AuthFlowType.pkce),
+        realtimeClientOptions:
+            const RealtimeClientOptions(logLevel: RealtimeLogLevel.info),
+        storageOptions: const StorageClientOptions(retryAttempts: 3),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException(
+              'Supabase initialization timed out', const Duration(seconds: 10));
+        },
+      );
+      performanceMonitor.recordStartupMilestone('supabase_initialized');
+    }
+  } on TimeoutException catch (e) {
+    debugPrint('Critical initialization timeout: $e');
+    // Don't rethrow - allow app to continue with degraded functionality
+    // The app should still be usable even if some services fail to initialize
+  } catch (e) {
+    debugPrint('Critical initialization error: $e');
+    // Don't rethrow - allow app to continue
   }
 }
 
@@ -127,8 +192,15 @@ class _EnhancedAppInitializerState extends State<EnhancedAppInitializer> {
 
   Future<void> _initializeWithProgress() async {
     try {
-      // Wait for critical services
-      await widget.criticalInitFuture;
+      // Wait for critical services with a maximum timeout
+      // This prevents infinite waiting on slow networks/devices
+      await widget.criticalInitFuture.timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          debugPrint('Warning: Initialization exceeded maximum timeout');
+          // App can still work with degraded functionality
+        },
+      );
 
       if (mounted) {
         setState(() {
@@ -136,13 +208,20 @@ class _EnhancedAppInitializerState extends State<EnhancedAppInitializer> {
           _statusMessage = 'Ready to launch!';
           _progress = 1.0;
         });
+        // Small delay to show completion message
+        await Future.delayed(const Duration(milliseconds: 300));
       }
     } catch (e) {
       debugPrint('Critical initialization error: $e');
       if (mounted) {
+        // Even if initialization fails, try to show the app
+        // Some services may have initialized successfully
         setState(() {
-          _statusMessage = 'Initialization failed';
+          _criticalComplete = true;
+          _statusMessage = 'Launching...';
+          _progress = 1.0;
         });
+        await Future.delayed(const Duration(milliseconds: 300));
       }
     }
   }

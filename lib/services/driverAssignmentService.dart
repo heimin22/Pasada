@@ -88,8 +88,14 @@ class DriverAssignmentService {
           onStatusChange(response['ride_status'] as String);
         }
 
-        // When booking status is accepted, fetch driver details using parallel approach
-        if (response['ride_status'] == 'accepted') {
+        // Check if driver is assigned (either status is accepted or driver_id is present)
+        // This handles cases where driver_id appears before status changes to 'accepted'
+        final hasDriverId =
+            response.containsKey('driver_id') && response['driver_id'] != null;
+        final isAccepted = response['ride_status'] == 'accepted';
+
+        if (isAccepted || hasDriverId) {
+          // Driver is assigned - fetch driver details using parallel approach
           // Polling continues to allow updates (do not stopPolling here)
 
           // Use parallel fetching for faster driver details retrieval

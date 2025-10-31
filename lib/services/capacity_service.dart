@@ -84,16 +84,23 @@ class CapacityService {
         'new_seat_type': newSeatType,
       });
 
-      if (response != null) {
-        AppLogger.debug('Seat pref updated', tag: 'Capacity');
+      AppLogger.debug('RPC response: $response', tag: 'Capacity');
+
+      // RPC returns boolean true/false on success
+      if (response == true) {
+        AppLogger.debug('Seat pref updated successfully', tag: 'Capacity');
         return true;
       } else {
-        AppLogger.warn('Seat pref update failed - null response',
-            tag: 'Capacity');
+        AppLogger.warn('Seat pref update returned false', tag: 'Capacity');
         return false;
       }
     } catch (e) {
       AppLogger.warn('Error updating seating preference: $e', tag: 'Capacity');
+      // Log more details about the error
+      if (e.toString().contains('Booking not found')) {
+        AppLogger.warn('Booking $bookingId not found or wrong status',
+            tag: 'Capacity');
+      }
       return false;
     }
   }

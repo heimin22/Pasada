@@ -35,11 +35,12 @@ class BookingManager {
   bool _progressNotificationStarted = false;
   double? _initialDistanceToDropoff;
   Timer? _completionTimer; // Polling for ride completion
-  final bool _reassignmentInProgress = false; // Avoid duplicate auto reassigns
+  bool _reassignmentInProgress =
+      false; // Prevent duplicate reassignments and capacity checks during reassignment
   bool _capacityDialogShown =
       false; // Prevent dialog from showing multiple times
+  bool _capacityCheckInProgress = false; // Prevent concurrent capacity checks
   final CapacityService _capacityService = CapacityService();
-  String? _lastExceededType; // 'Sitting' | 'Standing'
 
   BookingManager(this._state);
 
@@ -722,7 +723,31 @@ class BookingManager {
         return;
       }
       _state.setState(() {
-        _state.bookingStatus = details['ride_status'] ?? 'requested';
+        // Always trust the database status - it's the source of truth
+        final serverStatus = details['ride_status'] ?? 'requested';
+        final serverDriverId = details['driver_id'];
+
+        // Simply use the server status - database is always correct
+        _state.bookingStatus = serverStatus;
+
+        debugPrint(
+            '[BookingManager] Updated status from database: $serverStatus (driver_id: $serverDriverId)');
+
+        // If no driver_id, clear driver assignment state
+        if (serverDriverId == null) {
+          _state.isDriverAssigned = false;
+        }
+
+        // If driver is assigned and status is accepted/ongoing, clear reassignment flags
+        if (serverDriverId != null &&
+            (serverStatus == 'accepted' || serverStatus == 'ongoing')) {
+          if (_reassignmentInProgress) {
+            debugPrint(
+                '[BookingManager] Driver found during reassignment, clearing reassignment flag');
+            _reassignmentInProgress = false;
+            _capacityDialogShown = false;
+          }
+        }
         if (details['fare'] != null) {
           // Get the original fare from server
           final originalFare =
@@ -756,14 +781,44 @@ class BookingManager {
           _state.seatingPreference.value = details['seat_type'].toString();
         }
       });
+
+      // CRITICAL: Always load driver details if driver_id is present
+      // This ensures UI updates even during reassignment when driver is found
       if (details['driver_id'] != null) {
         AppLogger.debug(
             'driver_id present for $bookingId, loading driver assignment',
             tag: 'BookingManager');
+
+        // If driver was just assigned (was null, now present), clear reassignment flag
+        if (_reassignmentInProgress) {
+          debugPrint(
+              '[BookingManager] Driver found during reassignment polling, clearing reassignment flag');
+          _reassignmentInProgress = false;
+          _capacityDialogShown = false;
+        }
+
+        // Load driver details immediately - this will update isDriverAssigned and driver info
+        // This is critical during reassignment to ensure UI updates when new driver is found
         await _loadBookingAfterDriverAssignment(bookingId);
+
+        // Ensure status is at least 'accepted' if driver is assigned
+        if (_state.mounted &&
+            _state.bookingStatus == 'requested' &&
+            _state.isDriverAssigned) {
+          _state.setState(() {
+            _state.bookingStatus = 'accepted';
+          });
+        }
       } else {
         debugPrint(
             "[BookingManager] _fetchAndUpdateBookingDetails: No driver_id found for booking $bookingId.");
+        // Only clear driver assignment state if no driver AND we're not in reassignment
+        // During reassignment, we might have temporary null driver_id while server updates
+        if (_state.mounted && !_reassignmentInProgress) {
+          _state.setState(() {
+            _state.isDriverAssigned = false;
+          });
+        }
       }
     }
   }
@@ -771,6 +826,20 @@ class BookingManager {
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
     AppLogger.debug('_loadBookingAfterDriverAssignment enter $bookingId',
         tag: 'BookingManager');
+
+    // First, check if booking has a driver_id
+    try {
+      final bookingDetails =
+          await _state.bookingService?.getBookingDetails(bookingId);
+      if (bookingDetails == null || bookingDetails['driver_id'] == null) {
+        debugPrint(
+            "[BookingManager] No driver_id in booking $bookingId yet, skipping driver load");
+        return;
+      }
+    } catch (e) {
+      debugPrint("[BookingManager] Error checking booking for driver_id: $e");
+    }
+
     // Try fetching full driver details (including current_location) via RPC
     final user = supabase.auth.currentUser;
     if (user != null) {
@@ -796,12 +865,28 @@ class BookingManager {
       } catch (e) {
         debugPrint(
             "[BookingManager] Error fetching driver details via RPC: $e");
+        // Continue to fallback methods
       }
     }
-    // Fallback to existing fetchBookingDetails logic
-    _state.driverAssignmentService
-        ?.fetchBookingDetails(bookingId)
-        .then((bookingData) {
+
+    // Fallback: Try direct DB fetch (most reliable when RPC fails)
+    try {
+      await _fetchDriverDetailsDirectlyFromDB(bookingId);
+      // If successful, we're done
+      if (_state.isDriverAssigned) {
+        // Check capacity after driver assignment
+        _evaluateCapacityAndMaybeReassign();
+        return;
+      }
+    } catch (e) {
+      debugPrint(
+          "[BookingManager] Error fetching driver details directly from DB: $e");
+    }
+
+    // Last resort: Try driver service methods if direct DB fetch failed
+    try {
+      final bookingData =
+          await _state.driverAssignmentService?.fetchBookingDetails(bookingId);
       if (bookingData != null) {
         debugPrint(
             "[BookingManager] _loadBookingAfterDriverAssignment: Fetched bookingData for $bookingId: $bookingData");
@@ -809,52 +894,69 @@ class BookingManager {
         if (driverId != null) {
           debugPrint(
               "[BookingManager] _loadBookingAfterDriverAssignment: driver_id $driverId found. Fetching driver details via getDriverDetailsByBooking.");
-          DriverService()
-              .getDriverDetailsByBooking(bookingId)
-              .then((driverDetails) {
-            if (driverDetails != null) {
-              debugPrint(
-                  "[BookingManager] _loadBookingAfterDriverAssignment: Got driverDetails via getDriverDetailsByBooking for $bookingId: $driverDetails. Calling _updateDriverDetails.");
-              _updateDriverDetails(driverDetails);
-              if (_state.vehicleTotalCapacity == null &&
-                  _state.vehicleSittingCapacity == null &&
-                  _state.vehicleStandingCapacity == null) {
-                _fetchVehicleCapacityForBooking(bookingId);
-              }
-            } else {
-              debugPrint(
-                  "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetailsByBooking returned null for $bookingId. Trying getDriverDetails with driverId $driverId.");
-              DriverService()
-                  .getDriverDetails(driverId.toString())
-                  .then((directDetails) {
-                if (directDetails != null) {
-                  debugPrint(
-                      "[BookingManager] _loadBookingAfterDriverAssignment: Got directDetails for driver $driverId: $directDetails. Calling _updateDriverDetails.");
-                  _updateDriverDetails(directDetails);
-                  if (_state.vehicleTotalCapacity == null &&
-                      _state.vehicleSittingCapacity == null &&
-                      _state.vehicleStandingCapacity == null) {
-                    _fetchVehicleCapacityForBooking(bookingId);
-                  }
-                } else {
-                  debugPrint(
-                      "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetails also returned null for driver $driverId. Fetching directly from DB for booking $bookingId.");
-                  _fetchDriverDetailsDirectlyFromDB(bookingId);
-                }
-              });
+
+          // Try getDriverDetailsByBooking first
+          final driverDetails =
+              await DriverService().getDriverDetailsByBooking(bookingId);
+          if (driverDetails != null) {
+            debugPrint(
+                "[BookingManager] _loadBookingAfterDriverAssignment: Got driverDetails via getDriverDetailsByBooking for $bookingId: $driverDetails. Calling _updateDriverDetails.");
+            _updateDriverDetails(driverDetails);
+            if (_state.vehicleTotalCapacity == null &&
+                _state.vehicleSittingCapacity == null &&
+                _state.vehicleStandingCapacity == null) {
+              await _fetchVehicleCapacityForBooking(bookingId);
             }
-          });
-        } else {
+            _evaluateCapacityAndMaybeReassign();
+            return;
+          }
+
+          // Try getDriverDetails as fallback
           debugPrint(
-              "[BookingManager] _loadBookingAfterDriverAssignment: No driver_id in bookingData for $bookingId. Fetching directly from DB.");
-          _fetchDriverDetailsDirectlyFromDB(bookingId);
+              "[BookingManager] _loadBookingAfterDriverAssignment: getDriverDetailsByBooking returned null. Trying getDriverDetails with driverId $driverId.");
+          final directDetails =
+              await DriverService().getDriverDetails(driverId.toString());
+          if (directDetails != null) {
+            debugPrint(
+                "[BookingManager] _loadBookingAfterDriverAssignment: Got directDetails for driver $driverId: $directDetails. Calling _updateDriverDetails.");
+            _updateDriverDetails(directDetails);
+            if (_state.vehicleTotalCapacity == null &&
+                _state.vehicleSittingCapacity == null &&
+                _state.vehicleStandingCapacity == null) {
+              await _fetchVehicleCapacityForBooking(bookingId);
+            }
+            _evaluateCapacityAndMaybeReassign();
+            return;
+          }
         }
-      } else {
+      }
+    } catch (e) {
+      debugPrint("[BookingManager] Error in fallback driver details fetch: $e");
+    }
+
+    // If all methods fail, at least ensure we mark driver as assigned if driver_id exists
+    // This prevents the UI from stuck in "Looking for driver" state
+    try {
+      final bookingDetails =
+          await _state.bookingService?.getBookingDetails(bookingId);
+      if (bookingDetails != null && bookingDetails['driver_id'] != null) {
         debugPrint(
-            "[BookingManager] _loadBookingAfterDriverAssignment: fetchBookingDetails returned null for $bookingId. Fetching directly from DB.");
+            "[BookingManager] Driver_id exists but couldn't fetch details. Setting basic driver state to update UI.");
+        if (_state.mounted) {
+          _state.setState(() {
+            _state.isDriverAssigned = true;
+            // Set minimal driver info to indicate driver is assigned
+            _state.driverName = 'Driver';
+            _state.plateNumber = '';
+          });
+        }
+        // Try to fetch capacity and driver details in background
+        _fetchVehicleCapacityForBooking(bookingId);
         _fetchDriverDetailsDirectlyFromDB(bookingId);
       }
-    });
+    } catch (e) {
+      debugPrint("[BookingManager] Error in final fallback: $e");
+    }
 
     // Check capacity after driver assignment
     _evaluateCapacityAndMaybeReassign();
@@ -1103,7 +1205,12 @@ class BookingManager {
   }
 
   void _evaluateCapacityAndMaybeReassign() {
-    if (_reassignmentInProgress) return;
+    // Don't check capacity if reassignment is in progress
+    if (_reassignmentInProgress) {
+      debugPrint(
+          '[BookingManager] Skipping capacity check - reassignment in progress');
+      return;
+    }
     if (_state.activeBookingId == null) return;
 
     // Call the async method without awaiting to avoid blocking
@@ -1112,9 +1219,24 @@ class BookingManager {
 
   /// Checks capacity using actual database data and shows dialog if needed
   Future<void> _checkCapacityAndShowDialog(int bookingId) async {
+    // Prevent concurrent capacity checks
+    if (_capacityCheckInProgress) {
+      debugPrint(
+          '[BookingManager] Capacity check already in progress, skipping...');
+      return;
+    }
+
+    _capacityCheckInProgress = true;
     try {
       AppLogger.debug('Checking capacity $bookingId',
           tag: 'BookingManager', throttle: true);
+
+      // If dialog is already shown, skip check entirely
+      if (_capacityDialogShown) {
+        debugPrint(
+            '[BookingManager] Dialog already shown, skipping capacity check');
+        return;
+      }
 
       // Get actual vehicle capacity from database
       final capacityData =
@@ -1137,37 +1259,37 @@ class BookingManager {
       if (seatType == 'Sitting') {
         exceeded = sitting >= sittingLimit;
         alternativeSeatType = 'Standing';
-        _lastExceededType = exceeded ? 'Sitting' : null;
       } else if (seatType == 'Standing') {
         exceeded = standing >= standingLimit;
         alternativeSeatType = 'Sitting';
-        _lastExceededType = exceeded ? 'Standing' : null;
       } else {
         // Any: exceeded only if both are full
         exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
         alternativeSeatType =
             'Standing'; // Default to standing for 'Any' preference
-        // Track which one is full, prefer Sitting if both full
-        if (sitting >= sittingLimit) {
-          _lastExceededType = 'Sitting';
-        } else if (standing >= standingLimit) {
-          _lastExceededType = 'Standing';
-        } else {
-          _lastExceededType = null;
-        }
       }
 
       debugPrint(
           '[BookingManager] Capacity check - Sitting: $sitting/$sittingLimit, Standing: $standing/$standingLimit, SeatType: $seatType, Exceeded: $exceeded');
 
-      if (exceeded && !_capacityDialogShown) {
-        debugPrint('[BookingManager] Capacity exceeded! Showing dialog...');
-        _capacityDialogShown = true; // Set flag to prevent multiple dialogs
-        await _showCapacityWarningDialog(
-            bookingId, seatType, alternativeSeatType);
-      } else if (exceeded && _capacityDialogShown) {
-        debugPrint(
-            '[BookingManager] Capacity exceeded but dialog already shown, skipping...');
+      if (exceeded) {
+        // Check flag before showing dialog to prevent duplicate dialogs
+        if (!_capacityDialogShown) {
+          debugPrint('[BookingManager] Capacity exceeded! Showing dialog...');
+          // Set flag IMMEDIATELY to prevent race condition from concurrent checks
+          _capacityDialogShown = true;
+          try {
+            await _showCapacityWarningDialog(
+                bookingId, seatType, alternativeSeatType);
+          } catch (e) {
+            // If dialog fails to show, reset flag
+            _capacityDialogShown = false;
+            debugPrint('[BookingManager] Error showing capacity dialog: $e');
+          }
+        } else {
+          debugPrint(
+              '[BookingManager] Capacity exceeded but dialog already shown, skipping...');
+        }
       } else {
         debugPrint('[BookingManager] Capacity within limits, no dialog needed');
         _capacityDialogShown =
@@ -1175,13 +1297,24 @@ class BookingManager {
       }
     } catch (e) {
       debugPrint('[BookingManager] Error checking capacity: $e');
+      // Reset flag on error so check can be retried
+      _capacityDialogShown = false;
+    } finally {
+      _capacityCheckInProgress = false;
     }
   }
 
   /// Shows the capacity warning dialog to the user
   Future<void> _showCapacityWarningDialog(
       int bookingId, String currentSeatType, String alternativeSeatType) async {
-    if (_reassignmentInProgress) return;
+    if (_reassignmentInProgress) {
+      debugPrint('[BookingManager] Reassignment in progress, skipping dialog');
+      _capacityDialogShown = false; // Reset flag if skipping
+      return;
+    }
+
+    // Note: Flag should already be set by caller to prevent race conditions
+    // We don't check it here because it was set synchronously before this async call
 
     // Check if booking is in a state where capacity changes are allowed
     final canChange =
@@ -1195,7 +1328,10 @@ class BookingManager {
           '[BookingManager] Testing mode: Showing dialog anyway for testing');
     }
 
-    if (!_state.mounted) return;
+    if (!_state.mounted) {
+      _capacityDialogShown = false; // Reset flag if not mounted
+      return;
+    }
 
     await showDialog(
       context: _state.context,
@@ -1261,51 +1397,229 @@ class BookingManager {
 
   /// Handles when user declines the capacity change
   Future<void> _handleCapacityChangeDecline(int bookingId) async {
+    // Prevent duplicate calls
+    if (_reassignmentInProgress) {
+      debugPrint(
+          '[BookingManager] Reassignment already in progress, ignoring duplicate decline');
+      return;
+    }
+
+    _reassignmentInProgress = true;
     try {
       debugPrint(
           '[BookingManager] User declined capacity change, resetting booking for reassignment');
 
-      // Reset the dialog flag since user made a decision
-      _capacityDialogShown = false;
+      // Keep dialog flag true to prevent showing again during reassignment
+      // Will be reset when reassignment completes or a new driver is assigned
 
-      // If sitting capacity is the exceeded type, cancel and unassign immediately
-      bool success;
-      if (_lastExceededType == 'Sitting') {
-        success = await _capacityService.cancelAndUnassignDriver(bookingId);
-      } else {
-        // Otherwise, reset status to 'requested' for reassignment
-        success = await _capacityService.resetBookingForReassignment(bookingId);
-      }
+      // Capture current driver to avoid reassigning the same driver
+      String? previousDriverId;
+      try {
+        final details =
+            await _state.bookingService?.getBookingDetails(bookingId);
+        if (details != null && details['driver_id'] != null) {
+          previousDriverId = details['driver_id'].toString();
+        }
+      } catch (_) {}
+
+      // Preserve booking details before resetting (route, locations, fare, seating preference)
+      final retainedRoute = _state.selectedRoute;
+      final retainedPickUp = _state.selectedPickUpLocation;
+      final retainedDropOff = _state.selectedDropOffLocation;
+      final retainedFare = _state.currentFare;
+      final retainedOriginalFare = _state.originalFare;
+      final retainedSeating = _state.seatingPreference.value;
+      final retainedPaymentMethod = _state.selectedPaymentMethod;
+      final retainedDiscountSpec = _state.selectedDiscountSpecification.value;
+      final retainedIdImageUrl = _state.selectedIdImageUrl.value;
+
+      // Reset booking to 'requested' status for driver reassignment
+      // Always use resetBookingForReassignment, not cancel, since we're reassigning
+      final success =
+          await _capacityService.resetBookingForReassignment(bookingId);
 
       if (success) {
-        // Reset all booking-related state
+        // Reset driver-related state only (preserves booking details)
         _resetBookingState();
+        // Ensure background service is stopped before reassignment
+        await _stopBackgroundServiceForRide();
 
-        // Update local state to reflect the status change
+        // Reset notification flags for new driver assignment after reassignment
+        _acceptedNotified = false;
+        _progressNotificationStarted = false;
+
+        // Always reset to 'requested' for reassignment
+        const newStatus = 'requested';
+
+        // Restore booking details and update local state to reflect the status change
         _state.setState(() {
-          _state.bookingStatus =
-              _lastExceededType == 'Sitting' ? 'cancelled' : 'requested';
+          // Preserve route and locations
+          _state.selectedRoute = retainedRoute;
+          _state.selectedPickUpLocation = retainedPickUp;
+          _state.selectedDropOffLocation = retainedDropOff;
+          _state.currentFare = retainedFare;
+          _state.originalFare = retainedOriginalFare;
+          _state.seatingPreference.value = retainedSeating;
+          _state.selectedPaymentMethod = retainedPaymentMethod;
+          _state.selectedDiscountSpecification.value = retainedDiscountSpec;
+          _state.selectedIdImageUrl.value = retainedIdImageUrl;
+
+          // CRITICAL: Set status to requested/cancelled immediately after reset
+          // This ensures local state matches server state (no driver assigned)
+          _state.bookingStatus = newStatus;
           _state.isDriverAssigned = false;
         });
+
+        // Update local DB status to match (will delete if requested)
+        await _state.bookingService?.updateBookingStatus(bookingId, newStatus);
+
+        // Persist preserved values to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        if (retainedPickUp != null) {
+          await prefs.setString('pickup', jsonEncode(retainedPickUp.toJson()));
+        }
+        if (retainedDropOff != null) {
+          await prefs.setString(
+              'dropoff', jsonEncode(retainedDropOff.toJson()));
+        }
+        if (retainedRoute != null) {
+          await RouteService.saveRoute(retainedRoute);
+        }
 
         Fluttertoast.showToast(
           msg: 'Looking for another driver...',
           toastLength: Toast.LENGTH_SHORT,
         );
 
+        // Request a new driver assignment for the reset booking
+        _state.bookingService ??= BookingService();
+        try {
+          debugPrint(
+              '[BookingManager] Requesting new driver assignment for booking $bookingId');
+
+          // Get booking details to pass to assignDriver
+          final bookingDetails =
+              await _state.bookingService!.getBookingDetails(bookingId);
+          if (bookingDetails != null && retainedRoute != null) {
+            final returnedBookingId = await _state.bookingService!.assignDriver(
+              bookingId,
+              fare: retainedFare,
+              paymentMethod: retainedPaymentMethod ?? 'Cash',
+              excludeDriverId: previousDriverId,
+              seatType: retainedSeating,
+            );
+
+            // Check if backend created a new booking with a new ID
+            if (returnedBookingId != bookingId) {
+              debugPrint(
+                  '[BookingManager] New booking created during reassignment: $returnedBookingId (old: $bookingId)');
+
+              // Update active booking ID to the new booking
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setInt('activeBookingId', returnedBookingId);
+
+              if (_state.mounted) {
+                _state.setState(() {
+                  _state.activeBookingId = returnedBookingId;
+                });
+              }
+
+              // Use the new booking ID for polling
+              bookingId = returnedBookingId;
+
+              debugPrint(
+                  '[BookingManager] Updated activeBookingId to $returnedBookingId for reassignment');
+            } else {
+              debugPrint(
+                  '[BookingManager] Driver assignment requested successfully for booking $bookingId');
+            }
+          } else {
+            debugPrint(
+                '[BookingManager] Could not fetch booking details for driver assignment');
+          }
+        } catch (e) {
+          debugPrint('[BookingManager] Error requesting driver assignment: $e');
+          // Continue anyway - polling might still work
+          // Reset reassignment flag on error so it can be retried
+          _reassignmentInProgress = false;
+        }
+
         // Start polling for new driver assignment
         _state.driverAssignmentService = DriverAssignmentService();
         _state.driverAssignmentService!.pollForDriverAssignment(
           bookingId,
-          (driverData) {
-            _loadBookingAfterDriverAssignment(bookingId);
+          (driverData) async {
+            // Driver has been assigned - load details immediately
+            debugPrint(
+                '[BookingManager] Driver assigned callback triggered for booking $bookingId');
+            // Reset reassignment flag immediately when driver is found
+            _reassignmentInProgress = false;
+            _capacityDialogShown = false;
+
+            // Update status to accepted immediately
+            if (_state.mounted) {
+              _state.setState(() {
+                _state.bookingStatus = 'accepted';
+              });
+            }
+
+            // Load driver details to update UI immediately
+            await _loadBookingAfterDriverAssignment(bookingId);
+
+            // Show notification that driver was found
+            if (!_acceptedNotified) {
+              _acceptedNotified = true;
+              NotificationService.showDriverFoundNotification();
+            }
+
+            // Start background service for accepted rides
+            await _startBackgroundServiceForRide(bookingId, 'accepted');
           },
           onError: () {},
-          onStatusChange: (newStatus) {
+          onStatusChange: (newStatus) async {
             if (_state.mounted) {
+              // Update status immediately
               _state.setState(() => _state.bookingStatus = newStatus);
-              if (newStatus == 'accepted' || newStatus == 'ongoing') {
-                _fetchAndUpdateBookingDetails(bookingId);
+
+              if (newStatus == 'accepted') {
+                // Reset notification flag for new driver assignment
+                if (!_acceptedNotified) {
+                  _acceptedNotified = true;
+                  NotificationService.showDriverFoundNotification();
+                }
+
+                // Reset reassignment flag and capacity dialog flag when new driver is assigned
+                _reassignmentInProgress = false;
+                _capacityDialogShown = false;
+
+                // CRITICAL: Load driver details first, then fetch booking details
+                // Wait for driver loading to complete before fetching booking details
+                await _loadBookingAfterDriverAssignment(bookingId);
+
+                // Start background service for accepted rides
+                await _startBackgroundServiceForRide(bookingId, newStatus);
+
+                // Fetch and update booking details after driver is loaded to ensure sync
+                // This will also trigger another driver load check, but _loadBookingAfterDriverAssignment
+                // handles duplicate calls gracefully
+                await _fetchAndUpdateBookingDetails(bookingId);
+              } else if (newStatus == 'ongoing') {
+                if (!_progressNotificationStarted) {
+                  _progressNotificationStarted = true;
+                  NotificationService.showRideProgressNotification(
+                    progress: 0,
+                    maxProgress: 100,
+                  );
+                }
+
+                // Update background service for ongoing rides
+                await _updateBackgroundServiceForRide(bookingId, newStatus);
+
+                // Fetch and update booking details
+                await _fetchAndUpdateBookingDetails(bookingId);
+              } else if (newStatus == 'completed' || newStatus == 'cancelled') {
+                // Stop background service when ride is completed or cancelled
+                await _stopBackgroundServiceForRide();
               }
             }
           },
@@ -1315,6 +1629,9 @@ class BookingManager {
           msg: 'Failed to reset booking. Please try again.',
           toastLength: Toast.LENGTH_LONG,
         );
+        // Reset flag on failure
+        _reassignmentInProgress = false;
+        _capacityDialogShown = false;
       }
     } catch (e) {
       debugPrint('[BookingManager] Error handling capacity change decline: $e');
@@ -1322,6 +1639,9 @@ class BookingManager {
         msg: 'An error occurred. Please try again.',
         toastLength: Toast.LENGTH_LONG,
       );
+      // Reset flag on error
+      _reassignmentInProgress = false;
+      _capacityDialogShown = false;
     }
   }
 

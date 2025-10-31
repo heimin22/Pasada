@@ -105,6 +105,25 @@ class LocalDatabaseService {
   Future<void> updateLocalBookingStatus(int bookingId, String newStatus) async {
     try {
       final db = await BookingDatabase;
+
+      // If status is 'requested', delete the local booking entry
+      // because local DB only stores bookings with driver assigned (accepted, ongoing, completed, cancelled)
+      if (newStatus == 'requested') {
+        final count = await db.delete(
+          tableName,
+          where: 'booking_id = ?',
+          whereArgs: [bookingId],
+        );
+        if (count > 0) {
+          debugPrint(
+              'Deleted local booking $bookingId (status reset to requested).');
+        } else {
+          debugPrint("Local booking $bookingId not found for deletion.");
+        }
+        return;
+      }
+
+      // For other statuses, update normally
       int count = await db.update(
         tableName,
         {'ride_status': newStatus},
