@@ -39,6 +39,7 @@ class BookingManager {
   bool _capacityDialogShown =
       false; // Prevent dialog from showing multiple times
   final CapacityService _capacityService = CapacityService();
+  String? _lastExceededType; // 'Sitting' | 'Standing'
 
   BookingManager(this._state);
 
@@ -1136,14 +1137,24 @@ class BookingManager {
       if (seatType == 'Sitting') {
         exceeded = sitting >= sittingLimit;
         alternativeSeatType = 'Standing';
+        _lastExceededType = exceeded ? 'Sitting' : null;
       } else if (seatType == 'Standing') {
         exceeded = standing >= standingLimit;
         alternativeSeatType = 'Sitting';
+        _lastExceededType = exceeded ? 'Standing' : null;
       } else {
         // Any: exceeded only if both are full
         exceeded = (sitting >= sittingLimit) && (standing >= standingLimit);
         alternativeSeatType =
             'Standing'; // Default to standing for 'Any' preference
+        // Track which one is full, prefer Sitting if both full
+        if (sitting >= sittingLimit) {
+          _lastExceededType = 'Sitting';
+        } else if (standing >= standingLimit) {
+          _lastExceededType = 'Standing';
+        } else {
+          _lastExceededType = null;
+        }
       }
 
       debugPrint(
@@ -1257,9 +1268,14 @@ class BookingManager {
       // Reset the dialog flag since user made a decision
       _capacityDialogShown = false;
 
-      // Reset booking status to 'requested' for driver reassignment
-      final success =
-          await _capacityService.resetBookingForReassignment(bookingId);
+      // If sitting capacity is the exceeded type, cancel and unassign immediately
+      bool success;
+      if (_lastExceededType == 'Sitting') {
+        success = await _capacityService.cancelAndUnassignDriver(bookingId);
+      } else {
+        // Otherwise, reset status to 'requested' for reassignment
+        success = await _capacityService.resetBookingForReassignment(bookingId);
+      }
 
       if (success) {
         // Reset all booking-related state
@@ -1267,7 +1283,8 @@ class BookingManager {
 
         // Update local state to reflect the status change
         _state.setState(() {
-          _state.bookingStatus = 'requested';
+          _state.bookingStatus =
+              _lastExceededType == 'Sitting' ? 'cancelled' : 'requested';
           _state.isDriverAssigned = false;
         });
 

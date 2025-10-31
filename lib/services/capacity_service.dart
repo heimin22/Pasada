@@ -162,4 +162,25 @@ class CapacityService {
       return false;
     }
   }
+
+  /// Cancels a booking and unassigns its driver (driver_id = NULL)
+  /// Uses RPC: cancel_and_unassign_driver
+  Future<bool> cancelAndUnassignDriver(int bookingId) async {
+    try {
+      AppLogger.info('Cancel and unassign booking $bookingId', tag: 'Capacity');
+      final result = await supabase.rpc('cancel_and_unassign_driver',
+          params: {'p_booking_id': bookingId});
+      if (result != null) {
+        AppLogger.debug('Cancel and unassign successful', tag: 'Capacity');
+        return true;
+      }
+      AppLogger.warn('Cancel and unassign failed - null result',
+          tag: 'Capacity');
+      return false;
+    } catch (e) {
+      AppLogger.warn('Error on cancel_and_unassign_driver: $e',
+          tag: 'Capacity');
+      return false;
+    }
+  }
 }
