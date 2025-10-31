@@ -309,8 +309,13 @@ class BookingService {
     }
   }
 
-  Future<bool> assignDriver(int bookingId,
-      {required double fare, required String paymentMethod}) async {
+  Future<int> assignDriver(
+    int bookingId, {
+    required double fare,
+    required String paymentMethod,
+    String? excludeDriverId,
+    String? seatType,
+  }) async {
     try {
       final apiService = ApiService();
 
@@ -326,7 +331,7 @@ class BookingService {
         if (apiBooking == null) {
           AppLogger.warn('Booking $bookingId not found in API',
               tag: 'BookingService');
-          return false;
+          return bookingId; // Return original booking ID if booking not found
         }
 
         // Create a BookingDetails object from API data
@@ -374,12 +379,29 @@ class BookingService {
           'dropoff_address': booking.dropoffAddress,
           'fare': fare,
           'payment_method': paymentMethod,
+          if (excludeDriverId != null) 'exclude_driver_id': excludeDriverId,
+          if (seatType != null) 'seat_type': seatType,
         },
       );
 
       AppLogger.debug('Driver assignment initiated: $response',
           tag: 'BookingService');
-      return true;
+
+      // Check if backend returned a new booking (new booking_id)
+      // This happens when reassignment creates a new booking
+      if (response != null && response.containsKey('booking')) {
+        final bookingData = response['booking'] as Map<String, dynamic>;
+        final newBookingId = bookingData['booking_id'] as int?;
+
+        if (newBookingId != null && newBookingId != bookingId) {
+          AppLogger.info(
+              'New booking created during reassignment: $newBookingId (was $bookingId)',
+              tag: 'BookingService');
+          return newBookingId; // Return new booking ID
+        }
+      }
+
+      return bookingId; // Return same booking ID if no new booking created
     } catch (e) {
       throw Exception('Error requesting driver assignment: $e');
     }
