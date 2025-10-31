@@ -194,3 +194,4 @@ coverage/
 local.properties
 key.properties
 supabase_functions/update_booking_seating_preference.sql
+supabase_functions/cancel_and_unassign_driver.sql

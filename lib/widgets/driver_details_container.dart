@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pasada_passenger_app/services/encryptionService.dart';
 
-class DriverDetailsContainer extends StatelessWidget {
+class DriverDetailsContainer extends StatefulWidget {
   final String driverName;
   final String plateNumber;
   final String phoneNumber;
@@ -13,11 +14,44 @@ class DriverDetailsContainer extends StatelessWidget {
   });
 
   @override
+  State<DriverDetailsContainer> createState() => _DriverDetailsContainerState();
+}
+
+class _DriverDetailsContainerState extends State<DriverDetailsContainer> {
+  String? _decryptedDriverName;
+  bool _isDecrypting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _decryptDriverNameIfNeeded();
+  }
+
+  Future<void> _decryptDriverNameIfNeeded() async {
+    if (widget.driverName.isEmpty) return;
+    setState(() => _isDecrypting = true);
+    String candidate = widget.driverName;
+    try {
+      final encryptionService = EncryptionService();
+      await encryptionService.initialize();
+      final decrypted = await encryptionService.decryptUserData(candidate);
+      if (mounted) setState(() => _decryptedDriverName = decrypted);
+    } catch (_) {
+      // Keep original name if decryption fails
+    } finally {
+      if (mounted) setState(() => _isDecrypting = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    final String displayDriverName = _decryptedDriverName ?? widget.driverName;
+
     // Check if we have meaningful driver data
-    final bool hasDriverData = driverName != 'Driver' && driverName.isNotEmpty;
+    final bool hasDriverData =
+        displayDriverName != 'Driver' && displayDriverName.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -90,7 +124,7 @@ class DriverDetailsContainer extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      driverName,
+                      _isDecrypting ? 'Decrypting…' : displayDriverName,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -100,11 +134,12 @@ class DriverDetailsContainer extends StatelessWidget {
                             : const Color(0xFF121212),
                       ),
                     ),
-                    if (plateNumber.isNotEmpty && plateNumber != 'Unknown')
+                    if (widget.plateNumber.isNotEmpty &&
+                        widget.plateNumber != 'Unknown')
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
-                          'Vehicle: $plateNumber',
+                          'Vehicle: ${widget.plateNumber}',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,

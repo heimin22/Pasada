@@ -106,9 +106,25 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
               .eq('driver_id', bookingDetails['driver_id'])
               .single();
 
+          // Decrypt driver's name and phone number (AES-256 ENC V3)
+          String decryptedDriverName = driverResponse['full_name'] ?? '';
+          String decryptedDriverNumber = driverResponse['driver_number'] ?? '';
+          try {
+            final encryptionService = EncryptionService();
+            await encryptionService.initialize();
+            if (decryptedDriverName.isNotEmpty) {
+              decryptedDriverName =
+                  await encryptionService.decryptUserData(decryptedDriverName);
+            }
+            if (decryptedDriverNumber.isNotEmpty) {
+              decryptedDriverNumber = await encryptionService
+                  .decryptUserData(decryptedDriverNumber);
+            }
+          } catch (_) {}
+
           setState(() {
-            bookingDetails['driver_name'] = driverResponse['full_name'];
-            bookingDetails['driver_number'] = driverResponse['driver_number'];
+            bookingDetails['driver_name'] = decryptedDriverName;
+            bookingDetails['driver_number'] = decryptedDriverNumber;
           });
 
           // If we have vehicle_id, fetch vehicle details
