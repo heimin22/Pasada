@@ -9,6 +9,7 @@ import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/main.dart'; // For supabase
 import 'package:pasada_passenger_app/screens/completedRideScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
+import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/background_ride_service.dart';
 import 'package:pasada_passenger_app/services/bookingService.dart';
@@ -40,6 +41,7 @@ class BookingManager {
   bool _capacityDialogShown =
       false; // Prevent dialog from showing multiple times
   bool _capacityCheckInProgress = false; // Prevent concurrent capacity checks
+  bool _isCompleted = false; // Flag to prevent multiple cleanup calls
   final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
@@ -107,7 +109,17 @@ class BookingManager {
           (_) => _loadBookingAfterDriverAssignment(bookingId),
           onError: () {},
           onStatusChange: (newStatus) async {
-            if (_state.mounted) {
+            if (_state.mounted && !_isCompleted) {
+              // Stop all polling immediately if completed or cancelled
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                _isCompleted = true;
+                _completionTimer?.cancel();
+                _completionTimer = null;
+                _state.driverAssignmentService?.stopPolling();
+                _state.bookingService?.stopLocationTracking();
+                await _stopBackgroundServiceForRide();
+              }
+
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
@@ -125,19 +137,19 @@ class BookingManager {
                 // Update background service for ongoing rides
                 await _updateBackgroundServiceForRide(bookingId, newStatus);
               }
-              if (newStatus == 'completed' || newStatus == 'cancelled') {
-                // Stop background service when ride is completed or cancelled
-                await _stopBackgroundServiceForRide();
-              }
 
               _state.setState(() => _state.bookingStatus = newStatus);
-              // Call _fetchAndUpdateBookingDetails for relevant status changes
-              if (newStatus == 'accepted' ||
-                  newStatus == 'ongoing' ||
-                  newStatus == 'completed' ||
-                  newStatus == 'requested') {
+
+              // Only fetch details if not completed/cancelled to prevent repeated calls
+              if (!_isCompleted &&
+                  (newStatus == 'accepted' ||
+                      newStatus == 'ongoing' ||
+                      newStatus == 'requested')) {
                 _fetchAndUpdateBookingDetails(bookingId);
-              } else {}
+              } else if (newStatus == 'completed' && !_isCompleted) {
+                // Handle completion navigation only once
+                await _handleRideCompletionNavigationAndCleanup();
+              }
             }
           },
         );
@@ -334,7 +346,17 @@ class BookingManager {
           },
           onError: () {},
           onStatusChange: (newStatus) async {
-            if (_state.mounted) {
+            if (_state.mounted && !_isCompleted) {
+              // Stop all polling immediately if completed or cancelled
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                _isCompleted = true;
+                _completionTimer?.cancel();
+                _completionTimer = null;
+                _state.driverAssignmentService?.stopPolling();
+                _state.bookingService?.stopLocationTracking();
+                await _stopBackgroundServiceForRide();
+              }
+
               if (newStatus == 'accepted' && !_acceptedNotified) {
                 _acceptedNotified = true;
                 NotificationService.showDriverFoundNotification();
@@ -354,17 +376,18 @@ class BookingManager {
                 await _updateBackgroundServiceForRide(
                     details.bookingId, newStatus);
               }
-              if (newStatus == 'completed' || newStatus == 'cancelled') {
-                // Stop background service when ride is completed or cancelled
-                await _stopBackgroundServiceForRide();
-              }
 
               _state.setState(() => _state.bookingStatus = newStatus);
-              if (newStatus == 'accepted' ||
-                  newStatus == 'ongoing' ||
-                  newStatus == 'completed' ||
-                  newStatus == 'requested') {
+
+              // Only fetch details if not completed/cancelled to prevent repeated calls
+              if (!_isCompleted &&
+                  (newStatus == 'accepted' ||
+                      newStatus == 'ongoing' ||
+                      newStatus == 'requested')) {
                 _fetchAndUpdateBookingDetails(details.bookingId);
+              } else if (newStatus == 'completed' && !_isCompleted) {
+                // Handle completion navigation only once
+                await _handleRideCompletionNavigationAndCleanup();
               }
             }
           },
@@ -486,6 +509,7 @@ class BookingManager {
   }
 
   void handleBookingCancellation() {
+    _isCompleted = true; // Set flag to prevent any further API calls
     _acceptedNotified = false;
     _progressNotificationStarted = false;
     NotificationService.cancelRideProgressNotification();
@@ -695,6 +719,13 @@ class BookingManager {
   }
 
   Future<void> _fetchAndUpdateBookingDetails(int bookingId) async {
+    // Prevent API calls if already completed
+    if (_isCompleted) {
+      debugPrint(
+          "[BookingManager] _fetchAndUpdateBookingDetails: Already completed, skipping API call for booking ID $bookingId");
+      return;
+    }
+
     _state.bookingService ??= BookingService();
 
     if (!_state.mounted) {
@@ -716,9 +747,10 @@ class BookingManager {
     if (details != null) {
       debugPrint(
           "[BookingManager] _fetchAndUpdateBookingDetails: Details for booking ID $bookingId: $details");
-      if (details['ride_status'] == 'completed') {
+      if (details['ride_status'] == 'completed' && !_isCompleted) {
         debugPrint(
             "[BookingManager] _fetchAndUpdateBookingDetails: Ride COMPLETED for booking ID $bookingId. Navigating.");
+        _isCompleted = true;
         await _handleRideCompletionNavigationAndCleanup();
         return;
       }
@@ -1077,11 +1109,19 @@ class BookingManager {
 
   /// Poll the booking status every 10 seconds until it's completed
   void _startCompletionPolling(int bookingId) {
-    if (_completionTimer != null) return; // Already polling
+    if (_completionTimer != null || _isCompleted)
+      return; // Already polling or completed
     debugPrint(
         "[BookingManager] _startCompletionPolling: Starting for booking ID $bookingId");
     _completionTimer =
         Timer.periodic(const Duration(seconds: 10), (timer) async {
+      // Stop polling if already completed
+      if (_isCompleted) {
+        timer.cancel();
+        _completionTimer = null;
+        return;
+      }
+
       // quiet frequent polling log
       try {
         final details =
@@ -1090,7 +1130,7 @@ class BookingManager {
           // quiet payload log
           final status = details['ride_status'];
           // If ride ongoing, update driver location & polyline
-          if (status == 'ongoing') {
+          if (status == 'ongoing' && !_isCompleted) {
             final driverDetails =
                 await DriverService().getDriverDetailsByBooking(bookingId);
             if (driverDetails != null) {
@@ -1098,8 +1138,13 @@ class BookingManager {
             }
           }
           // When completed, navigate and cleanup
-          if (status == 'completed') {
+          if (status == 'completed' && !_isCompleted) {
+            _isCompleted = true;
             timer.cancel(); // Stop this specific timer instance.
+            _completionTimer = null;
+            // Stop all other polling services
+            _state.driverAssignmentService?.stopPolling();
+            _state.bookingService?.stopLocationTracking();
             await _handleRideCompletionNavigationAndCleanup();
           }
         } else {
@@ -1114,6 +1159,14 @@ class BookingManager {
   }
 
   Future<void> _handleRideCompletionNavigationAndCleanup() async {
+    // Prevent multiple calls
+    if (_isCompleted && _completionTimer == null) {
+      debugPrint(
+          "[BookingManager] _handleRideCompletionNavigationAndCleanup: Already completed, skipping duplicate call");
+      return;
+    }
+
+    _isCompleted = true;
     _acceptedNotified = false;
     _progressNotificationStarted = false;
     NotificationService.cancelRideProgressNotification();
@@ -1125,18 +1178,11 @@ class BookingManager {
     final BuildContext safeContext = _state.context;
     final int? completedBookingId = _state.activeBookingId;
 
+    // Stop all polling immediately
     _completionTimer?.cancel();
     _completionTimer = null;
     _state.driverAssignmentService?.stopPolling();
     _state.bookingService?.stopLocationTracking();
-
-    if (_state.mounted) {
-      _state.setState(() {
-        _state.activeBookingId = null;
-        _state.isBookingConfirmed = false;
-        _state.isDriverAssigned = false;
-      });
-    }
 
     if (completedBookingId != null) {
       await LocalDatabaseService().deleteBookingDetails(completedBookingId);
@@ -1146,25 +1192,54 @@ class BookingManager {
     await prefs.remove('pickup');
     await prefs.remove('dropoff');
 
+    // Only update state, don't navigate immediately
+    // Navigation will happen in post-frame callback
+    if (_state.mounted) {
+      _state.setState(() {
+        // Keep activeBookingId temporarily for navigation, clear after
+        _state.isBookingConfirmed = false;
+        _state.isDriverAssigned = false;
+        _state.bookingStatus = 'completed';
+      });
+    }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (safeContext.mounted) {
-        if (completedBookingId != null) {
-          Navigator.of(safeContext).pushReplacement(
+      if (safeContext.mounted && completedBookingId != null) {
+        // Check if CompletedRideScreen is already on the stack by checking current route
+        final currentRoute = ModalRoute.of(safeContext);
+        final isCompletedScreenActive =
+            currentRoute?.settings.name == '/completed';
+
+        if (!isCompletedScreenActive) {
+          // Use push instead of pushReplacement to preserve the route stack
+          // This ensures the bottom navigation bar remains when user navigates back
+          Navigator.of(safeContext)
+              .push(
             MaterialPageRoute(
+              settings: const RouteSettings(name: '/completed'),
               builder: (_) => CompletedRideScreen(
                 arrivedTime: DateTime.now(),
                 bookingId: completedBookingId,
               ),
             ),
-          );
-        } else {
-          // Fallback to home screen if booking ID is no longer available
-          Navigator.of(safeContext).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => const HomeScreen(),
-            ),
-          );
+          )
+              .then((_) {
+            // Clear activeBookingId after navigation completes (when user pops the screen)
+            if (_state.mounted) {
+              _state.setState(() {
+                _state.activeBookingId = null;
+              });
+            }
+          });
         }
+      } else if (safeContext.mounted) {
+        // Fallback: Navigate to selection screen with bottom nav bar if booking ID is no longer available
+        Navigator.of(safeContext).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const selectionScreen(),
+          ),
+          (route) => false,
+        );
       }
     });
   }
@@ -1577,7 +1652,17 @@ class BookingManager {
           },
           onError: () {},
           onStatusChange: (newStatus) async {
-            if (_state.mounted) {
+            if (_state.mounted && !_isCompleted) {
+              // Stop all polling immediately if completed or cancelled
+              if (newStatus == 'completed' || newStatus == 'cancelled') {
+                _isCompleted = true;
+                _completionTimer?.cancel();
+                _completionTimer = null;
+                _state.driverAssignmentService?.stopPolling();
+                _state.bookingService?.stopLocationTracking();
+                await _stopBackgroundServiceForRide();
+              }
+
               // Update status immediately
               _state.setState(() => _state.bookingStatus = newStatus);
 
@@ -1602,8 +1687,10 @@ class BookingManager {
                 // Fetch and update booking details after driver is loaded to ensure sync
                 // This will also trigger another driver load check, but _loadBookingAfterDriverAssignment
                 // handles duplicate calls gracefully
-                await _fetchAndUpdateBookingDetails(bookingId);
-              } else if (newStatus == 'ongoing') {
+                if (!_isCompleted) {
+                  await _fetchAndUpdateBookingDetails(bookingId);
+                }
+              } else if (newStatus == 'ongoing' && !_isCompleted) {
                 if (!_progressNotificationStarted) {
                   _progressNotificationStarted = true;
                   NotificationService.showRideProgressNotification(
@@ -1617,9 +1704,9 @@ class BookingManager {
 
                 // Fetch and update booking details
                 await _fetchAndUpdateBookingDetails(bookingId);
-              } else if (newStatus == 'completed' || newStatus == 'cancelled') {
-                // Stop background service when ride is completed or cancelled
-                await _stopBackgroundServiceForRide();
+              } else if (newStatus == 'completed' && !_isCompleted) {
+                // Handle completion navigation only once
+                await _handleRideCompletionNavigationAndCleanup();
               }
             }
           },

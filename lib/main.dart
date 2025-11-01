@@ -395,6 +395,17 @@ class _PasadaPassengerState extends State<PasadaPassenger> {
                   color: _themeController.isDarkMode
                       ? const Color(0xFFF5F5F5)
                       : const Color(0xFF121212)),
+              // Ensure TextField text uses proper color in light mode
+              titleMedium: TextStyle(
+                  color: _themeController.isDarkMode
+                      ? const Color(0xFFF5F5F5)
+                      : const Color(0xFF121212)),
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: _themeController.isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : const Color(0xFFF5F5F5),
             ),
           ),
           // screens: const PasadaHomePage(title: 'Pasada'),
