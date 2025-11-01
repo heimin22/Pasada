@@ -84,7 +84,8 @@ class MapScreenState extends State<MapScreen>
 
   // Camera tightening state
   LatLng? _lastTightenDriverPosition;
-  double _currentBoundPadding = 60.0; // pixels
+  double _currentBoundPadding =
+      40.0; // pixels - reduced from 60.0 to prevent excessive bounce
   static const double _minBoundPadding = 20.0; // pixels
   static const double _tightenStep = 8.0; // pixels per 500m
 
@@ -307,7 +308,8 @@ class MapScreenState extends State<MapScreen>
             widget.bookingStatus == 'ongoing')) {
       // Reset tightening state when entering tracking statuses
       _lastTightenDriverPosition = null;
-      _currentBoundPadding = 60.0;
+      _currentBoundPadding =
+          40.0; // Reduced from 60.0 to prevent excessive bounce
       // Attempt immediate focus if we have positions
       // This schedules after build to ensure map is ready
       WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -148,7 +148,7 @@ class MapCameraManager {
       controller,
       coordinates,
       padding: padding,
-      boundPadding: 50.0,
+      boundPadding: 40.0, // Reduced from 50.0 to prevent excessive bounce
     );
   }
 

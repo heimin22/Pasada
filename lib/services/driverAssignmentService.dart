@@ -84,8 +84,17 @@ class DriverAssignmentService {
         }
 
         // Notify about status changes if callback provided
-        if (response['ride_status'] != null && onStatusChange != null) {
-          onStatusChange(response['ride_status'] as String);
+        final rideStatus = response['ride_status'] as String?;
+        if (rideStatus != null && onStatusChange != null) {
+          onStatusChange(rideStatus);
+        }
+
+        // Stop polling immediately if booking is completed or cancelled
+        if (rideStatus == 'completed' || rideStatus == 'cancelled') {
+          AppLogger.info('Stopping polling: booking $bookingId status is $rideStatus',
+              tag: 'DriverAssign');
+          stopPolling();
+          return;
         }
 
         // Check if driver is assigned (either status is accepted or driver_id is present)
