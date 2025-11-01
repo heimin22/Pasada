@@ -21,6 +21,9 @@ class RoadsApiService {
 
   // Cache TTL: 1 hour for snapped points (they don't change often)
   static const Duration _cacheTTL = Duration(hours: 1);
+  
+  // Flag to track if speed limits API is disabled (due to 403 permission error)
+  static bool _speedLimitsDisabled = false;
 
   /// Snap a vehicle location to the nearest road
   /// Returns the snapped coordinates or null if snapping fails
@@ -124,6 +127,11 @@ class RoadsApiService {
   /// This can be useful for calculating ETA more accurately
   Future<Map<String, dynamic>?> getSpeedLimits(List<LatLng> path) async {
     if (path.isEmpty) return null;
+    
+    // Skip API call if speed limits are disabled due to permission error
+    if (_speedLimitsDisabled) {
+      return null;
+    }
 
     try {
       // Build the path parameter for the API
@@ -139,12 +147,35 @@ class RoadsApiService {
         },
       );
 
-      debugPrint(
-          'RoadsApiService: Getting speed limits for path with ${path.length} points');
-
       final response = await http.get(uri);
 
       if (response.statusCode != 200) {
+        // Check for 403 permission denied error
+        if (response.statusCode == 403) {
+          try {
+            final errorData = json.decode(response.body) as Map<String, dynamic>;
+            final error = errorData['error'] as Map<String, dynamic>?;
+            final status = error?['status'] as String?;
+            
+            if (status == 'PERMISSION_DENIED') {
+              // Set flag to disable future calls and log only once
+              _speedLimitsDisabled = true;
+              debugPrint(
+                  'RoadsApiService: Speed limits API not available (403 PERMISSION_DENIED). '
+                  'This feature requires special permissions in Google Cloud Console. '
+                  'Speed limits will be disabled for this session.');
+              return null;
+            }
+          } catch (_) {
+            // If JSON parsing fails, still disable and log once
+            _speedLimitsDisabled = true;
+            debugPrint(
+                'RoadsApiService: Speed limits API returned 403. Disabling speed limits feature.');
+            return null;
+          }
+        }
+        
+        // For other errors, log once but don't disable completely
         debugPrint(
             'RoadsApiService: Speed limits API error ${response.statusCode}: ${response.body}');
         return null;
