@@ -287,6 +287,63 @@ class BookingManager {
 
     final user = supabase.auth.currentUser;
     if (user != null && _state.selectedRoute != null) {
+      // Check rate limit before proceeding
+      _state.bookingService = BookingService();
+      final bookingService = _state.bookingService!;
+
+      final canBook = await bookingService.canBookToday(user.id);
+      if (!canBook) {
+        final todayCount = await bookingService.getTodayBookingCount(user.id);
+        final isDarkMode =
+            Theme.of(_state.context).brightness == Brightness.dark;
+        showDialog(
+          context: _state.context,
+          barrierDismissible: false,
+          builder: (ctx) => ResponsiveDialog(
+            title: 'Daily Booking Limit Reached',
+            contentPadding: const EdgeInsets.all(24),
+            content: Text(
+              'You have reached your daily booking limit of 5 bookings. You have already made $todayCount booking(s) today. Please try again tomorrow.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                fontFamily: 'Inter',
+                color: isDarkMode
+                    ? const Color(0xFFDEDEDE)
+                    : const Color(0xFF1E1E1E),
+              ),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(150, 40),
+                  backgroundColor: const Color(0xFF00CC58),
+                  foregroundColor: const Color(0xFFF5F5F5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text(
+                  'OK',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Inter',
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       _state.setState(() {
         _state.isBookingConfirmed = true;
         _state.bookingStatus = 'requested';
@@ -295,8 +352,6 @@ class BookingManager {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _state.measureContainers());
 
-      _state.bookingService = BookingService();
-      final bookingService = _state.bookingService!;
       final int routeId = _state.selectedRoute!['officialroute_id'] ?? 0;
 
       final passengerTypeToSend =

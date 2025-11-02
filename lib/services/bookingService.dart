@@ -88,6 +88,42 @@ class BookingService {
     }
   }
 
+  // Check how many bookings a user has made today
+  Future<int> getTodayBookingCount(String passengerId) async {
+    try {
+      final now = TimezoneUtils.nowInPhilippines();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      // Query bookings and count them
+      final response = await supabase
+          .from('bookings')
+          .select('booking_id')
+          .eq('passenger_id', passengerId)
+          .gte('created_at', startOfDay.toIso8601String())
+          .lt('created_at', endOfDay.toIso8601String());
+
+      // Count the number of bookings
+      final count = response.length;
+
+      AppLogger.debug('Today booking count for $passengerId: $count',
+          tag: 'BookingService');
+      return count;
+    } catch (e) {
+      AppLogger.error('Error getting today booking count: $e',
+          tag: 'BookingService');
+      // On error, return 0 to allow booking (fail open)
+      return 0;
+    }
+  }
+
+  // Check if user can make a booking (rate limit: 5 per day)
+  Future<bool> canBookToday(String passengerId,
+      {int maxBookingsPerDay = 5}) async {
+    final count = await getTodayBookingCount(passengerId);
+    return count < maxBookingsPerDay;
+  }
+
   // Create a new booking by calling the backend API and save it locally
   Future<BookingResult> createBooking({
     required String
