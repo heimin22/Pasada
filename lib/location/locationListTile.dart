@@ -24,7 +24,8 @@ class LocationListTile extends StatelessWidget {
     final address = parts[1];
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
+    return RepaintBoundary(
+      child: Column(
       children: [
         InkWell(
           onTap: press,
@@ -83,6 +84,7 @@ class LocationListTile extends StatelessWidget {
           color: isDarkMode ? const Color(0xFF1E1E1E) : const Color(0xFFE0E0E0),
         ),
       ],
+    ),
     );
   }
 }

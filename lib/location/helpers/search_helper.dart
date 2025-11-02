@@ -23,21 +23,33 @@ class SearchHelper {
   /// Handle search changes with debounce
   void onSearchChanged(
     TextEditingController searchController,
-    Function() onSearchChanged,
+    Function() onClearResults, // Called to clear results immediately when empty
     Function(String) onSearchAllowedStops,
     Function(String) onPlaceAutocomplete,
   ) {
+    // Cancel previous debounce timer
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    onSearchChanged();
 
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (searchController.text.isEmpty) {
-        onSearchChanged();
+    final query = searchController.text.trim();
+
+    // Clear results immediately if query is empty
+    if (query.isEmpty) {
+      onClearResults();
+      return;
+    }
+
+    // Debounce the actual search operation (400ms delay)
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final currentQuery = searchController.text.trim();
+
+      // Double-check query is still valid
+      if (currentQuery.isEmpty) {
+        onClearResults();
         return;
       }
 
       // If we have stops, search them first
-      onSearchAllowedStops(searchController.text);
+      onSearchAllowedStops(currentQuery);
     });
   }
 

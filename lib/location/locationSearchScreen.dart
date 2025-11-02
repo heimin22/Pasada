@@ -585,19 +585,44 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   void onSearchChanged() {
     _searchHelper.onSearchChanged(
       searchController,
-      () => setState(() => isLoading = true),
-      (query) => searchAllowedStops(query),
+      () {
+        // Clear search results immediately when query is empty
+        if (mounted) {
+          setState(() {
+            _filteredStops = [];
+            placePredictions = [];
+            isLoading = false;
+          });
+        }
+      },
+      (query) {
+        // Set loading state before search (called after debounce)
+        if (mounted) {
+          setState(() => isLoading = true);
+        }
+        searchAllowedStops(query);
+      },
       (query) => placeAutocomplete(query),
     );
   }
 
   Future<void> searchAllowedStops(String query) async {
+    // Check if query is still valid (might have changed during async operation)
+    if (query != searchController.text.trim()) {
+      return; // Query changed, abort this search
+    }
+
     try {
       final filteredStops = await _searchHelper.searchAllowedStops(
         query,
         allowedStops,
         _isLocationAlreadySelected,
       );
+
+      // Double-check query hasn't changed during async operation
+      if (query != searchController.text.trim()) {
+        return; // Query changed, ignore results
+      }
 
       if (filteredStops.isNotEmpty) {
         setState(() {
@@ -606,31 +631,53 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           isLoading = false;
         });
       } else {
-        placeAutocomplete(query);
+        // Only call placeAutocomplete if query still matches
+        if (query == searchController.text.trim()) {
+          await placeAutocomplete(query);
+        }
       }
     } catch (e) {
       debugPrint('Error searching stops: $e');
-      placeAutocomplete(query);
+      // Only call placeAutocomplete if query still matches and we're still searching
+      if (query == searchController.text.trim() && mounted) {
+        await placeAutocomplete(query);
+      }
     }
   }
 
   Future<void> placeAutocomplete(String query) async {
-    if (query.isEmpty) {
-      setState(() {
-        placePredictions = [];
-        isLoading = false;
-      });
+    final trimmedQuery = query.trim();
+
+    if (trimmedQuery.isEmpty) {
+      if (mounted) {
+        setState(() {
+          placePredictions = [];
+          isLoading = false;
+        });
+      }
       return;
     }
 
+    // Check if query still matches (might have changed)
+    if (trimmedQuery != searchController.text.trim()) {
+      return; // Query changed, abort
+    }
+
     try {
-      final predictions = await _searchHelper.placeAutocomplete(query);
-      setState(() {
-        placePredictions = predictions;
-        isLoading = false;
-      });
+      final predictions = await _searchHelper.placeAutocomplete(trimmedQuery);
+
+      // Final check before updating state
+      if (mounted && trimmedQuery == searchController.text.trim()) {
+        setState(() {
+          placePredictions = predictions;
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => isLoading = false);
+      debugPrint('Error in placeAutocomplete: $e');
+      if (mounted && trimmedQuery == searchController.text.trim()) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -780,19 +827,19 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       final Location locationService = Location();
       final LocationData locationData = await locationService.getLocation();
       if (mounted) {
+        // Clear distance cache when location changes
+        _clearDistanceCache();
+
+        // Batch all state updates together
         setState(() {
           currentLocation = LatLng(
             locationData.latitude!,
             locationData.longitude!,
           );
+          // Pre-compute distances with new location (within setState for single rebuild)
+          _precomputeStopDistances(allowedStops);
+          _precomputeRecentSearchDistances(recentSearches);
         });
-        // Clear distance cache when location changes
-        _clearDistanceCache();
-        // Pre-compute distances with new location
-        _precomputeStopDistances(allowedStops);
-        _precomputeRecentSearchDistances(recentSearches);
-        // Refresh sorting to update distances
-        _refreshSorting();
       }
     } catch (e) {
       debugPrint("Error getting current location: $e");
@@ -1128,6 +1175,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                 child: ListView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
+                                  cacheExtent:
+                                      200.0, // Pre-render items above/below viewport
+                                  itemExtent:
+                                      72.0, // Fixed height for recent search tiles
                                   itemCount: recentSearches.take(5).length,
                                   itemBuilder: (context, index) {
                                     final search = recentSearches[index];
@@ -1211,6 +1262,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
+                              cacheExtent: 100.0, // Pre-render filter chips
                               itemCount:
                                   _sortingHelper.getFilterOptions().length,
                               itemBuilder: (context, index) {
@@ -1218,30 +1270,32 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                     _sortingHelper.getFilterOptions()[index];
                                 final isSelected =
                                     _sortingHelper.selectedFilter == filter;
-                                return Padding(
-                                  padding: const EdgeInsets.only(right: 8),
-                                  child: FilterChip(
-                                    label: Text(_getFilterLabel(filter)),
-                                    selected: isSelected,
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        _sortingHelper.setFilter(filter);
-                                        _applyFilter();
-                                      });
-                                    },
-                                    backgroundColor: isDarkMode
-                                        ? const Color(0xFF1E1E1E)
-                                        : const Color(0xFFF5F5F5),
-                                    selectedColor: const Color(0xFF00CC58)
-                                        .withValues(alpha: 0.2),
-                                    checkmarkColor: const Color(0xFF00CC58),
-                                    labelStyle: TextStyle(
-                                      color: isSelected
-                                          ? const Color(0xFF00CC58)
-                                          : (isDarkMode
-                                              ? const Color(0xFFF5F5F5)
-                                              : const Color(0xFF121212)),
-                                      fontWeight: FontWeight.w500,
+                                return RepaintBoundary(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: FilterChip(
+                                      label: Text(_getFilterLabel(filter)),
+                                      selected: isSelected,
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          _sortingHelper.setFilter(filter);
+                                          // Filter is applied in _getFilteredStops() during build
+                                        });
+                                      },
+                                      backgroundColor: isDarkMode
+                                          ? const Color(0xFF1E1E1E)
+                                          : const Color(0xFFF5F5F5),
+                                      selectedColor: const Color(0xFF00CC58)
+                                          .withValues(alpha: 0.2),
+                                      checkmarkColor: const Color(0xFF00CC58),
+                                      labelStyle: TextStyle(
+                                        color: isSelected
+                                            ? const Color(0xFF00CC58)
+                                            : (isDarkMode
+                                                ? const Color(0xFFF5F5F5)
+                                                : const Color(0xFF121212)),
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -1255,6 +1309,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            cacheExtent:
+                                300.0, // Pre-render stops above/below viewport
+                            itemExtent:
+                                95.0, // Fixed height for stop tiles (with distance)
                             itemCount: _getFilteredStops().length,
                             itemBuilder: (context, index) {
                               final stop = _getFilteredStops()[index];
@@ -1290,6 +1348,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            cacheExtent: 300.0, // Pre-render search results
+                            itemExtent:
+                                62.0, // Fixed height for LocationListTile items
                             itemCount: _filteredStops.length,
                             itemBuilder: (context, index) {
                               final stop = _filteredStops[index];
@@ -1321,6 +1382,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                           child: ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            cacheExtent: 300.0, // Pre-render place predictions
+                            itemExtent:
+                                62.0, // Fixed height for LocationListTile items
                             itemCount: placePredictions.length,
                             itemBuilder: (context, index) {
                               final prediction = placePredictions[index];
@@ -1400,20 +1464,5 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   List<Stop> _getFilteredStops() {
     return _sortingHelper.getFilteredAndSortedStops(
         allowedStops, currentLocation);
-  }
-
-  void _applyFilter() {
-    setState(() {
-      // Filter is applied in _getFilteredStops()
-    });
-  }
-
-  // Refresh sorting when location changes
-  void _refreshSorting() {
-    if (mounted) {
-      setState(() {
-        // This will trigger a rebuild with updated distances
-      });
-    }
   }
 }
