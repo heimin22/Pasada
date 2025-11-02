@@ -71,13 +71,7 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           .eq('booking_id', bookingId)
           .single();
 
-      setState(() {
-        bookingDetails = response;
-        isLoading = false;
-      });
-      debugPrint('Fetched booking details: $bookingDetails');
-
-      // Initialize rating/review state
+      // Initialize rating/review state (calculate before setState)
       final ratingVal = response['rating'];
       final reviewVal = response['review'];
       bool passed12h = false;
@@ -91,11 +85,16 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
         } catch (_) {}
       }
       final canReview = ratingVal == null && !passed12h;
+
+      // Batch initial state updates into a single setState
       setState(() {
+        bookingDetails = response;
+        isLoading = false;
         if (ratingVal != null) _rating = (ratingVal as num).toInt();
         _reviewController.text = reviewVal?.toString() ?? '';
         _canReview = canReview;
       });
+      debugPrint('Fetched booking details: $bookingDetails');
 
       // Then fetch related data separately
       if (bookingDetails['driver_id'] != null) {
@@ -122,27 +121,39 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
             }
           } catch (_) {}
 
+          // Collect vehicle details if available
+          String? plateNumber;
+          if (driverResponse['vehicle_id'] != null) {
+            try {
+              final vehicleResponse = await supabase
+                  .from('vehicleTable')
+                  .select('plate_number')
+                  .eq('vehicle_id', driverResponse['vehicle_id'])
+                  .single();
+              plateNumber = vehicleResponse['plate_number'];
+            } catch (e) {
+              debugPrint('Error fetching vehicle details: $e');
+            }
+          }
+
+          // Batch driver and vehicle updates into a single setState
           setState(() {
             bookingDetails['driver_name'] = decryptedDriverName;
             bookingDetails['driver_number'] = decryptedDriverNumber;
+            if (plateNumber != null) {
+              bookingDetails['plate_number'] = plateNumber;
+            }
           });
-
-          // If we have vehicle_id, fetch vehicle details
-          if (driverResponse['vehicle_id'] != null) {
-            final vehicleResponse = await supabase
-                .from('vehicleTable')
-                .select('plate_number')
-                .eq('vehicle_id', driverResponse['vehicle_id'])
-                .single();
-
-            setState(() {
-              bookingDetails['plate_number'] = vehicleResponse['plate_number'];
-            });
-          }
         } catch (e) {
           debugPrint('Error fetching driver details: $e');
         }
       }
+
+      // Collect passenger and ID image updates for batching
+      String? decryptedName;
+      String? decryptedNumber;
+      String? decryptedIdImagePath;
+      bool hasPassengerData = false;
 
       // Fetch passenger details
       if (bookingDetails['id'] != null) {
@@ -154,21 +165,23 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
               .single();
 
           // Decrypt fields if needed
-          String decryptedName = passengerResponse['display_name'] ?? '';
-          String decryptedNumber = passengerResponse['contact_number'] ?? '';
+          final rawName = passengerResponse['display_name'] ?? '';
+          final rawNumber = passengerResponse['contact_number'] ?? '';
+          hasPassengerData = true;
           try {
             final encryptionService = EncryptionService();
             await encryptionService.initialize();
-            decryptedName =
-                await encryptionService.decryptUserData(decryptedName);
-            decryptedNumber =
-                await encryptionService.decryptUserData(decryptedNumber);
-          } catch (_) {}
-
-          setState(() {
-            bookingDetails['passenger_name'] = decryptedName;
-            bookingDetails['contact_number'] = decryptedNumber;
-          });
+            decryptedName = rawName.isNotEmpty
+                ? await encryptionService.decryptUserData(rawName)
+                : '';
+            decryptedNumber = rawNumber.isNotEmpty
+                ? await encryptionService.decryptUserData(rawNumber)
+                : '';
+          } catch (_) {
+            // If decryption fails, use raw values
+            decryptedName = rawName;
+            decryptedNumber = rawNumber;
+          }
         } catch (e) {
           debugPrint('Error fetching passenger details: $e');
         }
@@ -183,11 +196,8 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
           final encryptedPath =
               bookingDetails['passenger_id_image_path'].toString();
           if (encryptedPath.isNotEmpty) {
-            final decryptedPath =
+            decryptedIdImagePath =
                 await encryptionService.decryptUserData(encryptedPath);
-            setState(() {
-              bookingDetails['passenger_id_image_path'] = decryptedPath;
-            });
             debugPrint('ID image path decrypted for booking $bookingId');
           }
         } catch (e) {
@@ -195,6 +205,19 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
               'Error decrypting ID image path for booking $bookingId: $e');
           // Keep the encrypted path if decryption fails
         }
+      }
+
+      // Batch passenger and ID image path updates into a single setState
+      if (hasPassengerData || decryptedIdImagePath != null) {
+        setState(() {
+          if (hasPassengerData) {
+            bookingDetails['passenger_name'] = decryptedName ?? '';
+            bookingDetails['contact_number'] = decryptedNumber ?? '';
+          }
+          if (decryptedIdImagePath != null) {
+            bookingDetails['passenger_id_image_path'] = decryptedIdImagePath;
+          }
+        });
       }
     } catch (e) {
       debugPrint('Error fetching booking details: $e');

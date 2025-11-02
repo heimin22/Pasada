@@ -42,6 +42,45 @@ class StopsService {
     }
   }
 
+  // Get paginated stops for a specific route
+  Future<List<Stop>> getStopsForRoutePaginated(
+    int routeID, {
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await supabase
+          .from('allowed_stops')
+          .select("*")
+          .eq('officialroute_id', routeID)
+          .eq('is_active', true)
+          .order('stop_order')
+          .range(offset, offset + limit - 1);
+
+      return response.map<Stop>((data) => Stop.fromJson(data)).toList();
+    } catch (e) {
+      debugPrint('Error fetching paginated stops for route $routeID: $e');
+      return [];
+    }
+  }
+
+  // Get total count of stops for a route
+  Future<int> getStopsCountForRoute(int routeID) async {
+    try {
+      final countResponse = await supabase
+          .from('allowed_stops')
+          .select('*')
+          .eq('officialroute_id', routeID)
+          .eq('is_active', true)
+          .count(CountOption.exact);
+
+      return countResponse.count;
+    } catch (e) {
+      debugPrint('Error getting stops count for route $routeID: $e');
+      return 0;
+    }
+  }
+
   // Get all active stops across all routes
   Future<List<Stop>> getAllActiveStops() async {
     try {
@@ -109,6 +148,48 @@ class StopsService {
     } catch (e) {
       debugPrint('Error fetching all stops: $e');
       return [];
+    }
+  }
+
+  // Get paginated active stops across all routes
+  Future<List<Stop>> getAllActiveStopsPaginated({
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    try {
+      final response = await supabase
+          .from('allowed_stops')
+          .select('*')
+          .eq('is_active', true)
+          .range(offset, offset + limit - 1);
+
+      return response.map<Stop>((data) {
+        try {
+          return Stop.fromJson(data);
+        } catch (e) {
+          debugPrint('Error parsing stop data: $e');
+          rethrow;
+        }
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching paginated stops: $e');
+      return [];
+    }
+  }
+
+  // Get total count of all active stops
+  Future<int> getAllActiveStopsCount() async {
+    try {
+      final countResponse = await supabase
+          .from('allowed_stops')
+          .select('*')
+          .eq('is_active', true)
+          .count(CountOption.exact);
+
+      return countResponse.count;
+    } catch (e) {
+      debugPrint('Error getting total stops count: $e');
+      return 0;
     }
   }
 

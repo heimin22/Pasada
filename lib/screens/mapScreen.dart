@@ -817,7 +817,8 @@ class MapScreenState extends State<MapScreen>
                       ),
                       mapType: MapType.normal,
                       buildingsEnabled: false,
-                      myLocationButtonEnabled: false,
+                      myLocationButtonEnabled:
+                          false, // Disabled - using custom Location FAB instead
                       indoorViewEnabled: false,
                       zoomControlsEnabled: false,
                       mapToolbarEnabled: true,

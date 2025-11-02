@@ -13,31 +13,47 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 /// Helper class for search functionality
 class SearchHelper {
   Timer? _debounce;
+  TextEditingController? _searchController;
+  VoidCallback? _searchChangedCallback;
 
   /// Initialize search with debounce
   void initializeSearch(
       TextEditingController searchController, VoidCallback onSearchChanged) {
+    _searchController = searchController;
+    _searchChangedCallback = onSearchChanged;
     searchController.addListener(onSearchChanged);
   }
 
   /// Handle search changes with debounce
   void onSearchChanged(
     TextEditingController searchController,
-    Function() onSearchChanged,
+    Function() onClearResults, // Called to clear results immediately when empty
     Function(String) onSearchAllowedStops,
     Function(String) onPlaceAutocomplete,
   ) {
+    // Cancel previous debounce timer
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    onSearchChanged();
 
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      if (searchController.text.isEmpty) {
-        onSearchChanged();
+    final query = searchController.text.trim();
+
+    // Clear results immediately if query is empty
+    if (query.isEmpty) {
+      onClearResults();
+      return;
+    }
+
+    // Debounce the actual search operation (400ms delay)
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      final currentQuery = searchController.text.trim();
+
+      // Double-check query is still valid
+      if (currentQuery.isEmpty) {
+        onClearResults();
         return;
       }
 
       // If we have stops, search them first
-      onSearchAllowedStops(searchController.text);
+      onSearchAllowedStops(currentQuery);
     });
   }
 
@@ -180,6 +196,17 @@ class SearchHelper {
 
   /// Dispose resources
   void dispose() {
+    // Cancel and clear debounce timer
     _debounce?.cancel();
+    _debounce = null;
+
+    // Remove listener from text controller if it exists
+    if (_searchController != null && _searchChangedCallback != null) {
+      _searchController!.removeListener(_searchChangedCallback!);
+    }
+
+    // Clear references
+    _searchController = null;
+    _searchChangedCallback = null;
   }
 }
