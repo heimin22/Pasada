@@ -14,11 +14,15 @@ class UIComponentsHelper {
     RecentSearch search,
     bool isDarkMode,
     LatLng? currentLocation,
-    VoidCallback onTap,
-  ) {
-    final distance = currentLocation != null
-        ? _distanceHelper.getCachedDistance(currentLocation, search.coordinates)
-        : null;
+    VoidCallback onTap, {
+    double? precomputedDistance,
+  }) {
+    // Use pre-computed distance if provided, otherwise calculate (fallback)
+    final distance = precomputedDistance ??
+        (currentLocation != null
+            ? _distanceHelper.getCachedDistance(
+                currentLocation, search.coordinates)
+            : null);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -93,11 +97,15 @@ class UIComponentsHelper {
     Stop stop,
     bool isDarkMode,
     LatLng? currentLocation,
-    VoidCallback onTap,
-  ) {
-    final distance = currentLocation != null
-        ? _distanceHelper.getCachedDistance(currentLocation, stop.coordinates)
-        : null;
+    VoidCallback onTap, {
+    double? precomputedDistance,
+  }) {
+    // Use pre-computed distance if provided, otherwise calculate (fallback)
+    final distance = precomputedDistance ??
+        (currentLocation != null
+            ? _distanceHelper.getCachedDistance(
+                currentLocation, stop.coordinates)
+            : null);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

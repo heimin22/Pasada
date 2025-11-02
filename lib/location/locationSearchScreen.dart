@@ -60,6 +60,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   LatLng? currentLocation;
   StopsService _stopsService = StopsService();
 
+  // Pre-computed distances cache (key: coordinates string, value: distance in meters)
+  final Map<String, double> _stopDistances = {};
+  final Map<String, double> _recentSearchDistances = {};
+
   // Helper classes
   final DistanceHelper _distanceHelper = DistanceHelper();
   final SortingHelper _sortingHelper = SortingHelper();
@@ -94,6 +98,56 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   // Clear distance cache when location changes
   void _clearDistanceCache() {
     _distanceHelper.clearCache();
+    _stopDistances.clear();
+    _recentSearchDistances.clear();
+  }
+
+  /// Pre-compute distances for all stops
+  void _precomputeStopDistances(List<Stop> stops) {
+    if (currentLocation == null) {
+      _stopDistances.clear();
+      return;
+    }
+
+    _stopDistances.clear();
+    for (final stop in stops) {
+      final key = '${stop.coordinates.latitude}_${stop.coordinates.longitude}';
+      _stopDistances[key] = _distanceHelper.getCachedDistance(
+        currentLocation!,
+        stop.coordinates,
+      );
+    }
+  }
+
+  /// Pre-compute distances for all recent searches
+  void _precomputeRecentSearchDistances(List<RecentSearch> searches) {
+    if (currentLocation == null) {
+      _recentSearchDistances.clear();
+      return;
+    }
+
+    _recentSearchDistances.clear();
+    for (final search in searches) {
+      final key =
+          '${search.coordinates.latitude}_${search.coordinates.longitude}';
+      _recentSearchDistances[key] = _distanceHelper.getCachedDistance(
+        currentLocation!,
+        search.coordinates,
+      );
+    }
+  }
+
+  /// Get pre-computed distance for a stop
+  double? _getStopDistance(Stop stop) {
+    final key = '${stop.coordinates.latitude}_${stop.coordinates.longitude}';
+    return _stopDistances[key];
+  }
+
+  /// Get pre-computed distance for a recent search
+  double? _getRecentSearchDistance(RecentSearch search) {
+    final key =
+        '${search.coordinates.latitude}_${search.coordinates.longitude}';
+    return _recentSearchDistances[key];
   }
 
   Future<void> loadStops() async {
@@ -149,6 +203,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           .toList();
 
       if (mounted) {
+        // Pre-compute distances for stops
+        _precomputeStopDistances(stops);
+
         setState(() {
           allowedStops = stops;
           _filteredStops = stops;
@@ -290,6 +347,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         _sortingHelper.sortRecentSearchesByDistance(searches, currentLocation);
 
     if (mounted) {
+      // Pre-compute distances for recent searches
+      _precomputeRecentSearchDistances(searches);
+
       setState(() {
         recentSearches = searches;
       });
@@ -321,7 +381,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
                 ),
                 backgroundColor: const Color(0xFF00CC58),
                 foregroundColor: const Color(0xFFF5F5F5),
@@ -375,7 +435,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: const BorderRadius.all(Radius.circular(10)),
                     ),
                     backgroundColor: const Color(0xFF00CC58),
                     foregroundColor: const Color(0xFFF5F5F5),
@@ -430,7 +490,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: const BorderRadius.all(Radius.circular(10)),
                 ),
                 backgroundColor: const Color(0xFF00CC58),
                 foregroundColor: const Color(0xFFF5F5F5),
@@ -480,7 +540,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: const BorderRadius.all(Radius.circular(10)),
                   ),
                   backgroundColor: const Color(0xFF00CC58),
                   foregroundColor: const Color(0xFFF5F5F5),
@@ -620,7 +680,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: const BorderRadius.all(Radius.circular(10)),
                   ),
                   backgroundColor: const Color(0xFF00CC58),
                   foregroundColor: const Color(0xFFF5F5F5),
@@ -675,7 +735,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                     onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(10)),
                       ),
                       backgroundColor: const Color(0xFF00CC58),
                       foregroundColor: const Color(0xFFF5F5F5),
@@ -727,6 +788,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         });
         // Clear distance cache when location changes
         _clearDistanceCache();
+        // Pre-compute distances with new location
+        _precomputeStopDistances(allowedStops);
+        _precomputeRecentSearchDistances(recentSearches);
         // Refresh sorting to update distances
         _refreshSorting();
       }
@@ -866,7 +930,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             color: isDarkMode
                                 ? const Color(0xFF1E1E1E)
                                 : const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(12)),
                             border: Border.all(
                               color: isDarkMode
                                   ? const Color(0xFF333333)
@@ -883,10 +948,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.history,
                                         size: 18,
-                                        color: const Color(0xFF00CC58),
+                                        color: Color(0xFF00CC58),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
@@ -913,10 +978,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                           content: Column(
                                             mainAxisSize: MainAxisSize.min,
                                             children: [
-                                              Icon(
+                                              const Icon(
                                                 Icons.clear_all,
                                                 size: 48,
-                                                color: const Color(0xFFD7481D),
+                                                color: Color(0xFFD7481D),
                                               ),
                                               const SizedBox(height: 16),
                                               Text(
@@ -1025,7 +1090,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                       decoration: BoxDecoration(
                                         color: const Color(0xFFD7481D)
                                             .withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: const BorderRadius.all(
+                                            Radius.circular(8)),
                                         border: Border.all(
                                           color: const Color(0xFFD7481D)
                                               .withValues(alpha: 0.3),
@@ -1035,10 +1101,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(
+                                          const Icon(
                                             Icons.clear_all,
                                             size: 14,
-                                            color: const Color(0xFFD7481D),
+                                            color: Color(0xFFD7481D),
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
@@ -1057,14 +1123,26 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                 ],
                               ),
                               const SizedBox(height: 12),
-                              // Recent searches list with improved styling
-                              ...recentSearches.take(5).map((search) =>
-                                  _uiComponentsHelper.buildRecentSearchTile(
-                                    search,
-                                    isDarkMode,
-                                    currentLocation,
-                                    () => onRecentSearchSelected(search),
-                                  )),
+                              // Recent searches list with improved styling (lazy loading)
+                              SizedBox(
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: recentSearches.take(5).length,
+                                  itemBuilder: (context, index) {
+                                    final search = recentSearches[index];
+                                    return _uiComponentsHelper
+                                        .buildRecentSearchTile(
+                                      search,
+                                      isDarkMode,
+                                      currentLocation,
+                                      () => onRecentSearchSelected(search),
+                                      precomputedDistance:
+                                          _getRecentSearchDistance(search),
+                                    );
+                                  },
+                                ),
+                              ),
                               if (recentSearches.length > 5) ...[
                                 const SizedBox(height: 8),
                                 Center(
@@ -1173,21 +1251,23 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                           const SizedBox(height: 8),
                         ],
                         // Show stops with improved layout and lazy loading
-                        if (_getFilteredStops().length > 20)
-                          _uiComponentsHelper.buildLazyStopList(
-                            _getFilteredStops(),
-                            isDarkMode,
-                            currentLocation,
-                            onStopSelected,
-                          )
-                        else
-                          ..._getFilteredStops()
-                              .map((stop) => _uiComponentsHelper.buildStopTile(
-                                    stop,
-                                    isDarkMode,
-                                    currentLocation,
-                                    () => onStopSelected(stop),
-                                  )),
+                        SizedBox(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _getFilteredStops().length,
+                            itemBuilder: (context, index) {
+                              final stop = _getFilteredStops()[index];
+                              return _uiComponentsHelper.buildStopTile(
+                                stop,
+                                isDarkMode,
+                                currentLocation,
+                                () => onStopSelected(stop),
+                                precomputedDistance: _getStopDistance(stop),
+                              );
+                            },
+                          ),
+                        ),
                       ]
                       // Show filtered stops if searching
                       else if (searchController.text.isNotEmpty &&
@@ -1206,10 +1286,20 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             ),
                           ),
                         ),
-                        ..._filteredStops.map((stop) => LocationListTile(
-                              press: () => onStopSelected(stop),
-                              location: "${stop.name}\n${stop.address}",
-                            )),
+                        SizedBox(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _filteredStops.length,
+                            itemBuilder: (context, index) {
+                              final stop = _filteredStops[index];
+                              return LocationListTile(
+                                press: () => onStopSelected(stop),
+                                location: "${stop.name}\n${stop.address}",
+                              );
+                            },
+                          ),
+                        ),
                       ]
                       // Show place predictions if available
                       else if (placePredictions.isNotEmpty) ...[
@@ -1227,11 +1317,20 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             ),
                           ),
                         ),
-                        ...placePredictions
-                            .map((prediction) => LocationListTile(
-                                  press: () => onPlaceSelected(prediction),
-                                  location: prediction.description!,
-                                )),
+                        SizedBox(
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: placePredictions.length,
+                            itemBuilder: (context, index) {
+                              final prediction = placePredictions[index];
+                              return LocationListTile(
+                                press: () => onPlaceSelected(prediction),
+                                location: prediction.description!,
+                              );
+                            },
+                          ),
+                        ),
                       ]
                       // Show no locations found message
                       else if (searchController.text.isNotEmpty) ...[
