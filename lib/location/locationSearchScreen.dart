@@ -124,12 +124,23 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           }
         }
         // For drop-off locations, exclude stops at or before the pick-up stop order
+        // Also exclude the first stop (order 1)
         else if (!widget.isPickup && widget.pickupOrder != null) {
-          stops =
-              stops.where((stop) => stop.order > widget.pickupOrder!).toList();
+          stops = stops
+              .where(
+                  (stop) => stop.order > widget.pickupOrder! && stop.order != 1)
+              .toList();
+        }
+        // For drop-off locations without pickupOrder, still exclude the first stop (order 1)
+        else if (!widget.isPickup) {
+          stops = stops.where((stop) => stop.order != 1).toList();
         }
       } else {
         stops = await _stopsService.getAllActiveStops();
+        // For drop-off locations, exclude the first stop (order 1)
+        if (!widget.isPickup) {
+          stops = stops.where((stop) => stop.order != 1).toList();
+        }
       }
 
       // Filter out already selected locations
@@ -189,6 +200,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       }
     }
     // For drop-off locations, exclude recent searches at or before the pick-up stop order
+    // Also exclude recent searches at the first stop (order 1)
     if (!widget.isPickup &&
         widget.routeID != null &&
         widget.pickupOrder != null &&
@@ -200,13 +212,71 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         for (var recent in searches) {
           final Stop? closestStop =
               await _stopsService.findClosestStop(recent.coordinates, routeId);
-          if (closestStop != null && closestStop.order > pickupOrder) {
+          if (closestStop != null &&
+              closestStop.order > pickupOrder &&
+              closestStop.order != 1) {
             filtered.add(recent);
           }
         }
         searches = filtered;
       } catch (e) {
         debugPrint('Error filtering recent searches for drop-off: $e');
+      }
+    }
+    // For drop-off locations without pickupOrder, exclude recent searches at the first stop (order 1)
+    else if (!widget.isPickup && widget.routeID != null && mounted) {
+      try {
+        final int routeId = widget.routeID!;
+        final List<RecentSearch> filtered = [];
+        for (var recent in searches) {
+          final Stop? closestStop =
+              await _stopsService.findClosestStop(recent.coordinates, routeId);
+          if (closestStop != null && closestStop.order != 1) {
+            filtered.add(recent);
+          } else if (closestStop == null) {
+            // If no closest stop found, include it (might be a custom location)
+            filtered.add(recent);
+          }
+        }
+        searches = filtered;
+      } catch (e) {
+        debugPrint(
+            'Error filtering recent searches for drop-off (no pickupOrder): $e');
+      }
+    }
+    // For drop-off locations without routeID, exclude recent searches at the first stop (order 1)
+    // Check against all stops with order 1 from all routes
+    else if (!widget.isPickup && mounted) {
+      try {
+        final List<RecentSearch> filtered = [];
+        final List<Stop> allStops = await _stopsService.getAllActiveStops();
+        final List<Stop> firstStops =
+            allStops.where((stop) => stop.order == 1).toList();
+
+        if (firstStops.isNotEmpty) {
+          const double exclusionRadiusMeters = 100.0;
+          for (var recent in searches) {
+            bool isNearFirstStop = false;
+            // Check if recent search is close to any stop with order 1
+            for (var firstStop in firstStops) {
+              final distance = _distanceHelper.calculateDistance(
+                  recent.coordinates, firstStop.coordinates);
+              if (distance <= exclusionRadiusMeters) {
+                isNearFirstStop = true;
+                break;
+              }
+            }
+            // Only include if not near any first stop
+            if (!isNearFirstStop) {
+              filtered.add(recent);
+            }
+          }
+          searches = filtered;
+        }
+        // If no first stops found, keep all searches
+      } catch (e) {
+        debugPrint(
+            'Error filtering recent searches for drop-off (no routeID): $e');
       }
     }
 
