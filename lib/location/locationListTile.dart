@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:pasada_passenger_app/widgets/optimized_svg_widget.dart';
 
 class LocationListTile extends StatelessWidget {
   const LocationListTile({
@@ -33,7 +33,7 @@ class LocationListTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                SvgPicture.asset(
+                OptimizedSvgWidget(
                   'assets/svg/pindropoff.svg',
                   height: 16,
                   width: 16,

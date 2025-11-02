@@ -36,63 +36,85 @@ class UIComponentsHelper {
             width: 1,
           ),
         ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          leading: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00CC58).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Icon(
-              Icons.history,
-              size: 16,
-              color: Color(0xFF00CC58),
-            ),
-          ),
-          title: Text(
-            search.address,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          subtitle: distance != null
-              ? Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 12,
-                      color: const Color(0xFF00CC58),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${(distance / 1000).toStringAsFixed(1)} km away',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        color: Color(0xFF00CC58),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                )
-              : null,
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            size: 14,
-            color:
-                isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-          ),
+        child: InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // History icon container - aligned to center
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00CC58).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.history,
+                    size: 16,
+                    color: Color(0xFF00CC58),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Address and distance section - expandable
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        search.address,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (distance != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 12,
+                              color: const Color(0xFF00CC58),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${(distance / 1000).toStringAsFixed(1)} km away',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                color: Color(0xFF00CC58),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Chevron icon - aligned to center
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: isDarkMode
+                      ? const Color(0xFFAAAAAA)
+                      : const Color(0xFF666666),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -125,83 +147,99 @@ class UIComponentsHelper {
             width: 1,
           ),
         ),
-        child: ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF00CC58).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(
-                '${stop.order}',
-                style: const TextStyle(
-                  color: Color(0xFF00CC58),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Stop number container - aligned to center
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00CC58).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${stop.order}',
+                      style: const TextStyle(
+                        color: Color(0xFF00CC58),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
-          title: Text(
-            stop.name,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isDarkMode
-                  ? const Color(0xFFF5F5F5)
-                  : const Color(0xFF121212),
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 4),
-              Text(
-                stop.address,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
+                const SizedBox(width: 16),
+                // Title and subtitle section - expandable
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        stop.name,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFF121212),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        stop.address,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          color: isDarkMode
+                              ? const Color(0xFFAAAAAA)
+                              : const Color(0xFF666666),
+                        ),
+                      ),
+                      if (distance != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: const Color(0xFF00CC58),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${(distance / 1000).toStringAsFixed(1)} km away',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: Color(0xFF00CC58),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Chevron icon - aligned to center
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
                   color: isDarkMode
                       ? const Color(0xFFAAAAAA)
                       : const Color(0xFF666666),
                 ),
-              ),
-              if (distance != null) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 14,
-                      color: const Color(0xFF00CC58),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${(distance / 1000).toStringAsFixed(1)} km away',
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        color: Color(0xFF00CC58),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
               ],
-            ],
+            ),
           ),
-          trailing: Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color:
-                isDarkMode ? const Color(0xFFAAAAAA) : const Color(0xFF666666),
-          ),
-          onTap: onTap,
         ),
       ),
     );
@@ -218,7 +256,7 @@ class UIComponentsHelper {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       cacheExtent: 300.0, // Pre-render stops above/below viewport
-      itemExtent: 95.0, // Fixed height for stop tiles (with distance)
+      // Removed fixed itemExtent to allow dynamic height based on content
       itemCount: stops.length,
       itemBuilder: (context, index) {
         return buildStopTile(
