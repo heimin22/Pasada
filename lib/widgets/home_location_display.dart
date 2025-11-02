@@ -72,6 +72,9 @@ class HomeLocationDisplay extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      constraints: BoxConstraints(
+        minHeight: 0, // Allow container to shrink completely when empty
+      ),
       padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
@@ -109,7 +112,8 @@ class HomeLocationDisplay extends StatelessWidget {
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.min, // Constrain to top - minimize when empty
+          mainAxisAlignment: MainAxisAlignment.start, // Align to top
           children: [
             // Top row with Total Fare and Arrow
             if (isRouteSelected) ...[

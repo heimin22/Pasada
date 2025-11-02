@@ -197,6 +197,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         );
 
         // For pick-up locations, filter out the last stop (end of route)
+        // Also filter out stops at or after the drop-off stop order if drop-off is selected
         if (widget.isPickup && stops.isNotEmpty) {
           // Find the stop with the highest order (the last stop)
           Stop? lastStop;
@@ -212,6 +213,24 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           if (lastStop != null) {
             // Remove the last stop from the list
             stops = stops.where((stop) => stop.order != highestOrder).toList();
+          }
+
+          // If drop-off location is selected, filter out stops at or after drop-off order
+          if (widget.selectedDropOffLocation != null &&
+              widget.routeID != null) {
+            try {
+              final dropoffStop = await _stopsService.findClosestStop(
+                  widget.selectedDropOffLocation!.coordinates, widget.routeID!);
+              if (dropoffStop != null) {
+                // Filter out stops with order >= drop-off order
+                stops = stops
+                    .where((stop) => stop.order < dropoffStop.order)
+                    .toList();
+              }
+            } catch (e) {
+              debugPrint(
+                  'Error finding drop-off stop for pick-up filtering: $e');
+            }
           }
         }
         // For drop-off locations, exclude stops at or before the pick-up stop order
@@ -342,6 +361,30 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   recent.coordinates, lastStop!.coordinates);
               return distance > exclusionRadiusMeters;
             }).toList();
+          }
+
+          // If drop-off location is selected, filter out recent searches at or after drop-off order
+          if (widget.selectedDropOffLocation != null) {
+            try {
+              final dropoffStop = await _stopsService.findClosestStop(
+                  widget.selectedDropOffLocation!.coordinates, widget.routeID!);
+              if (dropoffStop != null) {
+                final List<RecentSearch> filtered = [];
+                for (var recent in searches) {
+                  final Stop? closestStop = await _stopsService.findClosestStop(
+                      recent.coordinates, widget.routeID!);
+                  // Include if no closest stop found (might be custom location) or if stop order < drop-off order
+                  if (closestStop == null ||
+                      closestStop.order < dropoffStop.order) {
+                    filtered.add(recent);
+                  }
+                }
+                searches = filtered;
+              }
+            } catch (e) {
+              debugPrint(
+                  'Error filtering recent searches against drop-off stop: $e');
+            }
           }
         }
       } catch (e) {
@@ -499,6 +542,66 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
       final shouldProceed = await checkPickupDistance(search.coordinates);
       if (!shouldProceed) return;
 
+      // If drop-off location is selected, validate pick-up order
+      if (widget.selectedDropOffLocation != null && widget.routeID != null) {
+        try {
+          final dropoffStop = await _stopsService.findClosestStop(
+              widget.selectedDropOffLocation!.coordinates, widget.routeID!);
+          if (dropoffStop != null) {
+            final pickupStop = await _stopsService.findClosestStop(
+                search.coordinates, widget.routeID!);
+            if (pickupStop != null && pickupStop.order >= dropoffStop.order) {
+              final isDarkMode =
+                  Theme.of(context).brightness == Brightness.dark;
+              await showDialog(
+                context: context,
+                builder: (context) => ResponsiveDialog(
+                  title: 'Invalid Stop Order',
+                  contentPadding: const EdgeInsets.all(24),
+                  content: Text(
+                    'Pick-up must be before drop-off for this route.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      color: isDarkMode
+                          ? const Color(0xFFF5F5F5)
+                          : const Color(0xFF121212),
+                    ),
+                  ),
+                  actions: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(10)),
+                        ),
+                        backgroundColor: const Color(0xFF00CC58),
+                        foregroundColor: const Color(0xFFF5F5F5),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text(
+                        'OK',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error validating pick-up order from recent search: $e');
+        }
+      }
+
       // Check if the location is near the final stop
       if (widget.routeID != null) {
         final isNearFinalStop =
@@ -607,6 +710,61 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     if (widget.isPickup) {
       final shouldProceed = await checkPickupDistance(stop.coordinates);
       if (!shouldProceed) return;
+
+      // If drop-off location is selected, validate pick-up stop order
+      if (widget.selectedDropOffLocation != null && widget.routeID != null) {
+        try {
+          final dropoffStop = await _stopsService.findClosestStop(
+              widget.selectedDropOffLocation!.coordinates, widget.routeID!);
+          if (dropoffStop != null && stop.order >= dropoffStop.order) {
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+            await showDialog(
+              context: context,
+              builder: (context) => ResponsiveDialog(
+                title: 'Invalid Stop Order',
+                contentPadding: const EdgeInsets.all(24),
+                content: Text(
+                  'Pick-up must be before drop-off for this route.',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: isDarkMode
+                        ? const Color(0xFFF5F5F5)
+                        : const Color(0xFF121212),
+                  ),
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(10)),
+                      ),
+                      backgroundColor: const Color(0xFF00CC58),
+                      foregroundColor: const Color(0xFFF5F5F5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('Error validating pick-up stop order: $e');
+        }
+      }
     } else if (widget.routeID != null && widget.pickupOrder != null) {
       // This is a dropoff location, enforce stop order
       final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -846,6 +1004,67 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         final shouldProceed =
             await checkPickupDistance(selectedLocation.coordinates);
         if (!shouldProceed) return;
+
+        // If drop-off location is selected, validate pick-up order
+        if (widget.selectedDropOffLocation != null && widget.routeID != null) {
+          try {
+            final dropoffStop = await _stopsService.findClosestStop(
+                widget.selectedDropOffLocation!.coordinates, widget.routeID!);
+            if (dropoffStop != null) {
+              final pickupStop = await _stopsService.findClosestStop(
+                  selectedLocation.coordinates, widget.routeID!);
+              if (pickupStop != null && pickupStop.order >= dropoffStop.order) {
+                final isDarkMode =
+                    Theme.of(context).brightness == Brightness.dark;
+                await showDialog(
+                  context: context,
+                  builder: (context) => ResponsiveDialog(
+                    title: 'Invalid Stop Order',
+                    contentPadding: const EdgeInsets.all(24),
+                    content: Text(
+                      'Pick-up must be before drop-off for this route.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        color: isDarkMode
+                            ? const Color(0xFFF5F5F5)
+                            : const Color(0xFF121212),
+                      ),
+                    ),
+                    actions: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(10)),
+                          ),
+                          backgroundColor: const Color(0xFF00CC58),
+                          foregroundColor: const Color(0xFFF5F5F5),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
+                        ),
+                        child: const Text(
+                          'OK',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+            }
+          } catch (e) {
+            debugPrint(
+                'Error validating pick-up order from place prediction: $e');
+          }
+        }
 
         // Additional check for final stop
         if (widget.routeID != null) {

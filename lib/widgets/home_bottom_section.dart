@@ -66,7 +66,9 @@ class HomeBottomSection extends StatelessWidget {
           child: Opacity(
             opacity: 1 - bookingAnimationController.value,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.min, // Constrain to top - minimize when empty
+              crossAxisAlignment: CrossAxisAlignment.stretch, // Stretch to full width
+              mainAxisAlignment: MainAxisAlignment.start, // Align content to top
               children: [
                 if (isNotificationVisible)
                   NotificationContainer(

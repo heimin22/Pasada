@@ -40,6 +40,47 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Combined state class to reduce nested ValueListenableBuilders
+class _HomeBottomSectionState {
+  final bool isNotificationVisible;
+  final SelectedLocation? selectedPickUpLocation;
+  final SelectedLocation? selectedDropOffLocation;
+  final double currentFare;
+  final String? selectedPaymentMethod;
+  final Map<String, dynamic>? selectedRoute;
+
+  _HomeBottomSectionState({
+    required this.isNotificationVisible,
+    required this.selectedPickUpLocation,
+    required this.selectedDropOffLocation,
+    required this.currentFare,
+    required this.selectedPaymentMethod,
+    required this.selectedRoute,
+  });
+
+  _HomeBottomSectionState copyWith({
+    bool? isNotificationVisible,
+    SelectedLocation? selectedPickUpLocation,
+    SelectedLocation? selectedDropOffLocation,
+    double? currentFare,
+    String? selectedPaymentMethod,
+    Map<String, dynamic>? selectedRoute,
+  }) {
+    return _HomeBottomSectionState(
+      isNotificationVisible:
+          isNotificationVisible ?? this.isNotificationVisible,
+      selectedPickUpLocation:
+          selectedPickUpLocation ?? this.selectedPickUpLocation,
+      selectedDropOffLocation:
+          selectedDropOffLocation ?? this.selectedDropOffLocation,
+      currentFare: currentFare ?? this.currentFare,
+      selectedPaymentMethod:
+          selectedPaymentMethod ?? this.selectedPaymentMethod,
+      selectedRoute: selectedRoute ?? this.selectedRoute,
+    );
+  }
+}
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -93,13 +134,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   bool get wantKeepAlive => true;
   bool isBookingConfirmed = false;
   bool _isInitialized = false;
+  bool _hasInitialContainerMeasurement = false;
 
   // state variable for the payment method
   String? selectedPaymentMethod;
   final double iconSize = 24;
 
   Map<String, dynamic>? selectedRoute;
-  bool isNotificationVisible = true;
+  bool isNotificationVisible =
+      false; // Notification disabled - route warning removed
   double notificationDragOffset = 0;
   final double notificationHeight = 60.0;
   bool showHolidayBanner = false;
@@ -117,8 +160,26 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   final ValueNotifier<Map<String, dynamic>?> _routeNotifier =
       ValueNotifier(null);
   final ValueNotifier<bool> _notificationVisibilityNotifier =
-      ValueNotifier(true);
+      ValueNotifier(false); // Notification disabled - route warning removed
   final ValueNotifier<bool> _holidayBannerNotifier = ValueNotifier(false);
+
+  // Combined notifier to reduce nested rebuilds
+  late final ValueNotifier<_HomeBottomSectionState>
+      _combinedBottomSectionNotifier;
+
+  // Helper method to update combined notifier
+  void _updateCombinedBottomSectionNotifier() {
+    if (!mounted) return;
+    _combinedBottomSectionNotifier.value = _HomeBottomSectionState(
+      isNotificationVisible: _notificationVisibilityNotifier.value,
+      selectedPickUpLocation: _pickupLocationNotifier.value,
+      selectedDropOffLocation: _dropoffLocationNotifier.value,
+      currentFare: _fareNotifier.value,
+      selectedPaymentMethod: _paymentMethodNotifier.value,
+      selectedRoute: _routeNotifier.value,
+    );
+  }
+
   // Controller and current extent for booking bottom sheet
   final DraggableScrollableController _bookingSheetController =
       DraggableScrollableController();
@@ -185,6 +246,9 @@ class HomeScreenPageState extends State<HomeScreenStateful>
         await prefs.remove('pickup');
         await prefs.remove('dropoff');
       } catch (_) {}
+
+      // Measure containers after clearing locations to adjust dialog size
+      WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
 
       // Save the route for persistence
       await RouteService.saveRoute(result);
@@ -264,6 +328,27 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   void initState() {
     super.initState();
+    // Initialize combined notifier with initial values
+    _combinedBottomSectionNotifier = ValueNotifier<_HomeBottomSectionState>(
+      _HomeBottomSectionState(
+        isNotificationVisible: _notificationVisibilityNotifier.value,
+        selectedPickUpLocation: _pickupLocationNotifier.value,
+        selectedDropOffLocation: _dropoffLocationNotifier.value,
+        currentFare: _fareNotifier.value,
+        selectedPaymentMethod: _paymentMethodNotifier.value,
+        selectedRoute: _routeNotifier.value,
+      ),
+    );
+
+    // Set up listeners to update combined notifier when individual notifiers change
+    _notificationVisibilityNotifier
+        .addListener(_updateCombinedBottomSectionNotifier);
+    _pickupLocationNotifier.addListener(_updateCombinedBottomSectionNotifier);
+    _dropoffLocationNotifier.addListener(_updateCombinedBottomSectionNotifier);
+    _fareNotifier.addListener(_updateCombinedBottomSectionNotifier);
+    _paymentMethodNotifier.addListener(_updateCombinedBottomSectionNotifier);
+    _routeNotifier.addListener(_updateCombinedBottomSectionNotifier);
+
     // Observe lifecycle to re-show alerts on resume
     WidgetsBinding.instance.addObserver(this);
     // Listen to bottom sheet size changes to adjust map padding
@@ -298,6 +383,13 @@ class HomeScreenPageState extends State<HomeScreenStateful>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeHomeScreen();
+      // Measure containers once after first build
+      if (!_hasInitialContainerMeasurement) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          measureContainers();
+          _hasInitialContainerMeasurement = true;
+        });
+      }
     });
   }
 
@@ -419,6 +511,17 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     bookingAnimationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
 
+    // Remove listeners from individual notifiers
+    _notificationVisibilityNotifier
+        .removeListener(_updateCombinedBottomSectionNotifier);
+    _pickupLocationNotifier
+        .removeListener(_updateCombinedBottomSectionNotifier);
+    _dropoffLocationNotifier
+        .removeListener(_updateCombinedBottomSectionNotifier);
+    _fareNotifier.removeListener(_updateCombinedBottomSectionNotifier);
+    _paymentMethodNotifier.removeListener(_updateCombinedBottomSectionNotifier);
+    _routeNotifier.removeListener(_updateCombinedBottomSectionNotifier);
+
     // Dispose ValueNotifiers
     _pickupLocationNotifier.dispose();
     _dropoffLocationNotifier.dispose();
@@ -427,6 +530,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     _routeNotifier.dispose();
     _notificationVisibilityNotifier.dispose();
     _holidayBannerNotifier.dispose();
+    _combinedBottomSectionNotifier.dispose();
 
     super.dispose();
   }
@@ -730,7 +834,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    WidgetsBinding.instance.addPostFrameCallback((_) => measureContainers());
+    // Removed measureContainers() from build - now only called when needed:
+    // - After location updates (updateLocation)
+    // - After notification visibility changes (onNotificationClose, animation complete)
+    // - Once after initial layout (in initState)
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -760,7 +867,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
             final fabIconSize =
                 isSmallScreen ? screenWidth * 0.05 : screenWidth * 0.06;
             final bottomNavBarHeight = isSmallScreen ? 15.0 : 20.0;
-            final fabVerticalSpacing = isSmallScreen ? 8.0 : 10.0;
+            final fabVerticalSpacing = isSmallScreen ? 7.7 : 9.7;
             final weatherIconSize =
                 isSmallScreen ? screenWidth * 0.06 : screenWidth * 0.08;
 
@@ -876,86 +983,44 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     child: Container(
                       key:
                           locationInputContainerKey, // Assign key here for measurements
-                      child: ValueListenableBuilder<bool>(
-                        valueListenable: _notificationVisibilityNotifier,
-                        builder: (context, isNotificationVisible, child) {
-                          return ValueListenableBuilder<SelectedLocation?>(
-                            valueListenable: _pickupLocationNotifier,
-                            builder: (context, selectedPickUpLocation, child) {
-                              return ValueListenableBuilder<SelectedLocation?>(
-                                valueListenable: _dropoffLocationNotifier,
-                                builder:
-                                    (context, selectedDropOffLocation, child) {
-                                  return ValueListenableBuilder<double>(
-                                    valueListenable: _fareNotifier,
-                                    builder: (context, currentFare, child) {
-                                      return ValueListenableBuilder<String?>(
-                                        valueListenable: _paymentMethodNotifier,
-                                        builder: (context,
-                                            selectedPaymentMethod, child) {
-                                          return ValueListenableBuilder<
-                                              Map<String, dynamic>?>(
-                                            valueListenable: _routeNotifier,
-                                            builder: (context, selectedRoute,
-                                                child) {
-                                              return HomeBottomSection(
-                                                bookingAnimationController:
-                                                    bookingAnimationController,
-                                                downwardAnimation:
-                                                    _downwardAnimation,
-                                                isNotificationVisible:
-                                                    isNotificationVisible,
-                                                notificationHeight:
-                                                    notificationHeight,
-                                                onNotificationClose: () {
-                                                  _notificationVisibilityNotifier
-                                                      .value = false;
-                                                },
-                                                onMeasureContainers:
-                                                    measureContainers,
-                                                isRouteSelected:
-                                                    selectedRoute != null &&
-                                                        selectedRoute[
-                                                                'route_name'] !=
-                                                            'Select Route',
-                                                selectedPickUpLocation:
-                                                    selectedPickUpLocation,
-                                                selectedDropOffLocation:
-                                                    selectedDropOffLocation,
-                                                currentFareNotifier:
-                                                    _fareNotifier,
-                                                originalFare: originalFare,
-                                                selectedPaymentMethod:
-                                                    selectedPaymentMethod,
-                                                selectedDiscountSpecification:
-                                                    selectedDiscountSpecification,
-                                                seatingPreference:
-                                                    seatingPreference,
-                                                selectedIdImageUrl:
-                                                    selectedIdImageUrl,
-                                                screenWidth: screenWidth,
-                                                responsivePadding:
-                                                    responsivePadding,
-                                                onNavigateToLocationSearch:
-                                                    _navigateToLocationSearch,
-                                                onShowSeatingPreferenceDialog:
-                                                    _showSeatingPreferenceSheet,
-                                                onShowDiscountSelectionDialog:
-                                                    _showDiscountSelectionSheet,
-                                                onConfirmBooking:
-                                                    _showBookingConfirmationDialog,
-                                                onFareUpdated:
-                                                    _updateFareForDiscount,
-                                              );
-                                            },
-                                          );
-                                        },
-                                      );
-                                    },
-                                  );
-                                },
-                              );
+                      child: ValueListenableBuilder<_HomeBottomSectionState>(
+                        valueListenable: _combinedBottomSectionNotifier,
+                        builder: (context, state, child) {
+                          return HomeBottomSection(
+                            bookingAnimationController:
+                                bookingAnimationController,
+                            downwardAnimation: _downwardAnimation,
+                            isNotificationVisible: state.isNotificationVisible,
+                            notificationHeight: notificationHeight,
+                            onNotificationClose: () {
+                              _notificationVisibilityNotifier.value = false;
                             },
+                            onMeasureContainers: measureContainers,
+                            isRouteSelected: state.selectedRoute != null &&
+                                (state.selectedRoute!['route_name']
+                                        as String) !=
+                                    'Select Route',
+                            selectedPickUpLocation:
+                                state.selectedPickUpLocation,
+                            selectedDropOffLocation:
+                                state.selectedDropOffLocation,
+                            currentFareNotifier: _fareNotifier,
+                            originalFare: originalFare,
+                            selectedPaymentMethod: state.selectedPaymentMethod,
+                            selectedDiscountSpecification:
+                                selectedDiscountSpecification,
+                            seatingPreference: seatingPreference,
+                            selectedIdImageUrl: selectedIdImageUrl,
+                            screenWidth: screenWidth,
+                            responsivePadding: responsivePadding,
+                            onNavigateToLocationSearch:
+                                _navigateToLocationSearch,
+                            onShowSeatingPreferenceDialog:
+                                _showSeatingPreferenceSheet,
+                            onShowDiscountSelectionDialog:
+                                _showDiscountSelectionSheet,
+                            onConfirmBooking: _showBookingConfirmationDialog,
+                            onFareUpdated: _updateFareForDiscount,
                           );
                         },
                       ),
