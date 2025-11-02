@@ -13,10 +13,14 @@ import 'package:pasada_passenger_app/network/networkUtilities.dart';
 /// Helper class for search functionality
 class SearchHelper {
   Timer? _debounce;
+  TextEditingController? _searchController;
+  VoidCallback? _searchChangedCallback;
 
   /// Initialize search with debounce
   void initializeSearch(
       TextEditingController searchController, VoidCallback onSearchChanged) {
+    _searchController = searchController;
+    _searchChangedCallback = onSearchChanged;
     searchController.addListener(onSearchChanged);
   }
 
@@ -192,6 +196,17 @@ class SearchHelper {
 
   /// Dispose resources
   void dispose() {
+    // Cancel and clear debounce timer
     _debounce?.cancel();
+    _debounce = null;
+
+    // Remove listener from text controller if it exists
+    if (_searchController != null && _searchChangedCallback != null) {
+      _searchController!.removeListener(_searchChangedCallback!);
+    }
+
+    // Clear references
+    _searchController = null;
+    _searchChangedCallback = null;
   }
 }

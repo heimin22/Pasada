@@ -56,9 +56,22 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   List<Stop> _filteredStops = [];
   HomeScreenPageState? homeScreenState;
   bool isLoading = false;
+  bool isLoadingMore = false;
+  bool hasMoreStops = true;
+  int _currentStopOffset = 0;
+  int _totalStopsCount = 0;
+  static const int _pageSize = 50; // Load 50 stops at a time
   HomeScreenPageState? homeScreenPageState;
   LatLng? currentLocation;
   StopsService _stopsService = StopsService();
+
+  // Cache for filtered stops to avoid recomputing in build
+  List<Stop>? _cachedFilteredStops;
+  List<Stop>? _cachedFilteredStopsAllowedStops;
+  int? _cachedFilteredStopsAllowedStopsLength;
+  LatLng? _cachedFilteredStopsLocation;
+  String? _cachedFilteredStopsSortOption;
+  String? _cachedFilteredStopsFilter;
 
   // Pre-computed distances cache (key: coordinates string, value: distance in meters)
   final Map<String, double> _stopDistances = {};
@@ -150,14 +163,36 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     return _recentSearchDistances[key];
   }
 
-  Future<void> loadStops() async {
-    setState(() => isLoading = true);
+  Future<void> loadStops({bool loadMore = false}) async {
+    if (loadMore) {
+      if (isLoadingMore || !hasMoreStops) return;
+      setState(() => isLoadingMore = true);
+    } else {
+      setState(() {
+        isLoading = true;
+        _currentStopOffset = 0;
+        hasMoreStops = true;
+        allowedStops = [];
+        _filteredStops = [];
+      });
+    }
 
     try {
       List<Stop> stops = [];
 
       if (widget.routeID != null) {
-        stops = await _stopsService.getStopsForRoute(widget.routeID!);
+        // Get total count if first load
+        if (!loadMore) {
+          _totalStopsCount =
+              await _stopsService.getStopsCountForRoute(widget.routeID!);
+        }
+
+        // Load paginated stops
+        stops = await _stopsService.getStopsForRoutePaginated(
+          widget.routeID!,
+          limit: _pageSize,
+          offset: _currentStopOffset,
+        );
 
         // For pick-up locations, filter out the last stop (end of route)
         if (widget.isPickup && stops.isNotEmpty) {
@@ -190,7 +225,17 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           stops = stops.where((stop) => stop.order != 1).toList();
         }
       } else {
-        stops = await _stopsService.getAllActiveStops();
+        // Get total count if first load
+        if (!loadMore) {
+          _totalStopsCount = await _stopsService.getAllActiveStopsCount();
+        }
+
+        // Load paginated stops
+        stops = await _stopsService.getAllActiveStopsPaginated(
+          limit: _pageSize,
+          offset: _currentStopOffset,
+        );
+
         // For drop-off locations, exclude the first stop (order 1)
         if (!widget.isPickup) {
           stops = stops.where((stop) => stop.order != 1).toList();
@@ -203,21 +248,68 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           .toList();
 
       if (mounted) {
-        // Pre-compute distances for stops
+        // Pre-compute distances for new stops
         _precomputeStopDistances(stops);
 
         setState(() {
-          allowedStops = stops;
-          _filteredStops = stops;
-          isLoading = false;
+          if (loadMore) {
+            // Append to existing list
+            allowedStops.addAll(stops);
+          } else {
+            // Replace with new list
+            allowedStops = stops;
+          }
+
+          // Clear cache since stops changed
+          _clearFilteredStopsCache();
+
+          // Update pagination state
+          // Increment offset by page size (not filtered count) for next page
+          if (loadMore) {
+            _currentStopOffset += _pageSize;
+          } else {
+            _currentStopOffset = _pageSize; // Start at first page size
+          }
+
+          // Check if we have more stops to load
+          // Compare loaded offset with total count
+          hasMoreStops = _currentStopOffset < _totalStopsCount;
+
+          if (loadMore) {
+            isLoadingMore = false;
+          } else {
+            isLoading = false;
+          }
         });
+
+        // If we have more stops and initial load, continue loading in background
+        if (!loadMore && hasMoreStops && stops.length >= _pageSize) {
+          // Load next page in background (without blocking UI)
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted && hasMoreStops && !isLoadingMore) {
+              loadStops(loadMore: true);
+            }
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading stops: $e');
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          if (loadMore) {
+            isLoadingMore = false;
+          } else {
+            isLoading = false;
+          }
+        });
       }
     }
+  }
+
+  /// Load more stops when user scrolls near the end
+  Future<void> _loadMoreStops() async {
+    if (!hasMoreStops || isLoadingMore) return;
+    await loadStops(loadMore: true);
   }
 
   Future<void> loadRecentSearches() async {
@@ -577,7 +669,9 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
 
   @override
   void dispose() {
+    // Dispose search helper first (removes listener and cancels timer)
     _searchHelper.dispose();
+    // Dispose text controller (listener already removed by search helper)
     searchController.dispose();
     super.dispose();
   }
@@ -839,6 +933,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
           // Pre-compute distances with new location (within setState for single rebuild)
           _precomputeStopDistances(allowedStops);
           _precomputeRecentSearchDistances(recentSearches);
+          // Clear filtered stops cache since location affects distance sorting
+          _clearFilteredStopsCache();
         });
       }
     } catch (e) {
@@ -964,445 +1060,420 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                       );
                     },
                   )
-                : ListView(
-                    children: [
-                      // Show recent searches if available and search is empty
-                      if (searchController.text.isEmpty &&
-                          recentSearches.isNotEmpty) ...[
-                        Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? const Color(0xFF1E1E1E)
-                                : const Color(0xFFF5F5F5),
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(12)),
-                            border: Border.all(
+                : NotificationListener<ScrollNotification>(
+                    onNotification: (ScrollNotification notification) {
+                      if (notification is ScrollUpdateNotification) {
+                        final metrics = notification.metrics;
+                        // Load more when user scrolls within 300 pixels of the end
+                        if (metrics.pixels >= metrics.maxScrollExtent - 300) {
+                          _loadMoreStops();
+                        }
+                      }
+                      return false;
+                    },
+                    child: ListView(
+                      children: [
+                        // Show recent searches if available and search is empty
+                        if (searchController.text.isEmpty &&
+                            recentSearches.isNotEmpty) ...[
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
                               color: isDarkMode
-                                  ? const Color(0xFF333333)
-                                  : const Color(0xFFE0E0E0),
-                              width: 1,
+                                  ? const Color(0xFF1E1E1E)
+                                  : const Color(0xFFF5F5F5),
+                              borderRadius:
+                                  const BorderRadius.all(Radius.circular(12)),
+                              border: Border.all(
+                                color: isDarkMode
+                                    ? const Color(0xFF333333)
+                                    : const Color(0xFFE0E0E0),
+                                width: 1,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.history,
-                                        size: 18,
-                                        color: Color(0xFF00CC58),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Recent Searches (${recentSearches.length})',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: isDarkMode
-                                              ? const Color(0xFFF5F5F5)
-                                              : const Color(0xFF121212),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.history,
+                                          size: 18,
+                                          color: Color(0xFF00CC58),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  // Add Clear All button with better styling
-                                  GestureDetector(
-                                    onTap: () async {
-                                      final bool? confirm =
-                                          await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => ResponsiveDialog(
-                                          title: 'Clear Recent Searches',
-                                          content: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.clear_all,
-                                                size: 48,
-                                                color: Color(0xFFD7481D),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Recent Searches (${recentSearches.length})',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDarkMode
+                                                ? const Color(0xFFF5F5F5)
+                                                : const Color(0xFF121212),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    // Add Clear All button with better styling
+                                    GestureDetector(
+                                      onTap: () async {
+                                        final bool? confirm =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (context) =>
+                                              ResponsiveDialog(
+                                            title: 'Clear Recent Searches',
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.clear_all,
+                                                  size: 48,
+                                                  color: Color(0xFFD7481D),
+                                                ),
+                                                const SizedBox(height: 16),
+                                                Text(
+                                                  'Are you sure you want to clear all recent searches?',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w500,
+                                                    fontFamily: 'Inter',
+                                                    color: isDarkMode
+                                                        ? const Color(
+                                                            0xFFF5F5F5)
+                                                        : const Color(
+                                                            0xFF121212),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, false),
+                                                style: ElevatedButton.styleFrom(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                    side: BorderSide(
+                                                      color: const Color(
+                                                          0xFFD7481D),
+                                                      width: 2,
+                                                    ),
+                                                  ),
+                                                  elevation: 0,
+                                                  shadowColor:
+                                                      Colors.transparent,
+                                                  minimumSize:
+                                                      const Size(120, 44),
+                                                  backgroundColor:
+                                                      Colors.transparent,
+                                                  foregroundColor:
+                                                      const Color(0xFFD7481D),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 12),
+                                                ),
+                                                child: const Text(
+                                                  'Cancel',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'Inter',
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
                                               ),
-                                              const SizedBox(height: 16),
-                                              Text(
-                                                'Are you sure you want to clear all recent searches?',
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w500,
-                                                  fontFamily: 'Inter',
-                                                  color: isDarkMode
-                                                      ? const Color(0xFFF5F5F5)
-                                                      : const Color(0xFF121212),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                    context, true),
+                                                style: ElevatedButton.styleFrom(
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  elevation: 0,
+                                                  shadowColor:
+                                                      Colors.transparent,
+                                                  minimumSize:
+                                                      const Size(120, 44),
+                                                  backgroundColor:
+                                                      const Color(0xFFD7481D),
+                                                  foregroundColor:
+                                                      const Color(0xFFF5F5F5),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 24,
+                                                      vertical: 12),
+                                                ),
+                                                child: const Text(
+                                                  'Clear All',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontFamily: 'Inter',
+                                                    fontSize: 16,
+                                                  ),
                                                 ),
                                               ),
                                             ],
+                                            actionsAlignment:
+                                                MainAxisAlignment.spaceEvenly,
                                           ),
-                                          actions: [
-                                            ElevatedButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, false),
-                                              style: ElevatedButton.styleFrom(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                  side: BorderSide(
-                                                    color:
-                                                        const Color(0xFFD7481D),
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                elevation: 0,
-                                                shadowColor: Colors.transparent,
-                                                minimumSize:
-                                                    const Size(120, 44),
-                                                backgroundColor:
-                                                    Colors.transparent,
-                                                foregroundColor:
-                                                    const Color(0xFFD7481D),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 24,
-                                                        vertical: 12),
-                                              ),
-                                              child: const Text(
-                                                'Cancel',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 16,
-                                                ),
-                                              ),
+                                        );
+
+                                        if (confirm == true) {
+                                          if (widget.routeID != null) {
+                                            await RecentSearchService
+                                                .clearRecentSearchesByRoute(
+                                                    widget.routeID!);
+                                          } else {
+                                            await RecentSearchService
+                                                .clearRecentSearches();
+                                          }
+                                          setState(() {
+                                            recentSearches = [];
+                                          });
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFD7481D)
+                                              .withValues(alpha: 0.1),
+                                          borderRadius: const BorderRadius.all(
+                                              Radius.circular(8)),
+                                          border: Border.all(
+                                            color: const Color(0xFFD7481D)
+                                                .withValues(alpha: 0.3),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.clear_all,
+                                              size: 14,
+                                              color: Color(0xFFD7481D),
                                             ),
-                                            ElevatedButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context, true),
-                                              style: ElevatedButton.styleFrom(
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                                elevation: 0,
-                                                shadowColor: Colors.transparent,
-                                                minimumSize:
-                                                    const Size(120, 44),
-                                                backgroundColor:
-                                                    const Color(0xFFD7481D),
-                                                foregroundColor:
-                                                    const Color(0xFFF5F5F5),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 24,
-                                                        vertical: 12),
-                                              ),
-                                              child: const Text(
-                                                'Clear All',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 16,
-                                                ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Clear All',
+                                              style: TextStyle(
+                                                fontFamily: 'Inter',
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFFD7481D),
                                               ),
                                             ),
                                           ],
-                                          actionsAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                        ),
-                                      );
-
-                                      if (confirm == true) {
-                                        if (widget.routeID != null) {
-                                          await RecentSearchService
-                                              .clearRecentSearchesByRoute(
-                                                  widget.routeID!);
-                                        } else {
-                                          await RecentSearchService
-                                              .clearRecentSearches();
-                                        }
-                                        setState(() {
-                                          recentSearches = [];
-                                        });
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFD7481D)
-                                            .withValues(alpha: 0.1),
-                                        borderRadius: const BorderRadius.all(
-                                            Radius.circular(8)),
-                                        border: Border.all(
-                                          color: const Color(0xFFD7481D)
-                                              .withValues(alpha: 0.3),
-                                          width: 1,
                                         ),
                                       ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.clear_all,
-                                            size: 14,
-                                            color: Color(0xFFD7481D),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Clear All',
-                                            style: TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFD7481D),
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // Recent searches list with improved styling (lazy loading)
+                                SizedBox(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    cacheExtent:
+                                        200.0, // Pre-render items above/below viewport
+                                    itemExtent:
+                                        72.0, // Fixed height for recent search tiles
+                                    itemCount: recentSearches.take(5).length,
+                                    itemBuilder: (context, index) {
+                                      final search = recentSearches[index];
+                                      return _uiComponentsHelper
+                                          .buildRecentSearchTile(
+                                        search,
+                                        isDarkMode,
+                                        currentLocation,
+                                        () => onRecentSearchSelected(search),
+                                        precomputedDistance:
+                                            _getRecentSearchDistance(search),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (recentSearches.length > 5) ...[
+                                  const SizedBox(height: 8),
+                                  Center(
+                                    child: Text(
+                                      '${recentSearches.length - 5} more searches...',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12,
+                                        color: isDarkMode
+                                            ? const Color(0xFFAAAAAA)
+                                            : const Color(0xFF666666),
+                                        fontStyle: FontStyle.italic,
                                       ),
                                     ),
                                   ),
                                 ],
-                              ),
-                              const SizedBox(height: 12),
-                              // Recent searches list with improved styling (lazy loading)
-                              SizedBox(
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  cacheExtent:
-                                      200.0, // Pre-render items above/below viewport
-                                  itemExtent:
-                                      72.0, // Fixed height for recent search tiles
-                                  itemCount: recentSearches.take(5).length,
-                                  itemBuilder: (context, index) {
-                                    final search = recentSearches[index];
-                                    return _uiComponentsHelper
-                                        .buildRecentSearchTile(
-                                      search,
-                                      isDarkMode,
-                                      currentLocation,
-                                      () => onRecentSearchSelected(search),
-                                      precomputedDistance:
-                                          _getRecentSearchDistance(search),
-                                    );
-                                  },
-                                ),
-                              ),
-                              if (recentSearches.length > 5) ...[
-                                const SizedBox(height: 8),
-                                Center(
-                                  child: Text(
-                                    '${recentSearches.length - 5} more searches...',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12,
-                                      color: isDarkMode
-                                          ? const Color(0xFFAAAAAA)
-                                          : const Color(0xFF666666),
-                                      fontStyle: FontStyle.italic,
-                                    ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Show allowed stops if available
+                        if (searchController.text.isEmpty &&
+                            allowedStops.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Available Stops${hasMoreStops ? ' (${allowedStops.length}+)' : ' (${allowedStops.length})'}',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
                                   ),
+                                ),
+                                // Add sort/filter button
+                                PopupMenuButton<String>(
+                                  icon: Icon(
+                                    Icons.sort,
+                                    color: isDarkMode
+                                        ? const Color(0xFFF5F5F5)
+                                        : const Color(0xFF121212),
+                                    size: 20,
+                                  ),
+                                  onSelected: (String value) {
+                                    setState(() {
+                                      _sortingHelper.setSortOption(value);
+                                      _clearFilteredStopsCache(); // Clear cache when sort changes
+                                    });
+                                  },
+                                  itemBuilder: (BuildContext context) =>
+                                      _uiComponentsHelper.buildSortMenuItems(
+                                          _sortingHelper.currentSortOption),
                                 ),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
-
-                      // Show allowed stops if available
-                      if (searchController.text.isEmpty &&
-                          allowedStops.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Available Stops (${allowedStops.length})',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212),
-                                ),
-                              ),
-                              // Add sort/filter button
-                              PopupMenuButton<String>(
-                                icon: Icon(
-                                  Icons.sort,
-                                  color: isDarkMode
-                                      ? const Color(0xFFF5F5F5)
-                                      : const Color(0xFF121212),
-                                  size: 20,
-                                ),
-                                onSelected: (String value) {
-                                  setState(() {
-                                    _sortingHelper.setSortOption(value);
-                                  });
-                                },
-                                itemBuilder: (BuildContext context) =>
-                                    _uiComponentsHelper.buildSortMenuItems(
-                                        _sortingHelper.currentSortOption),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Add filter chips
-                        if (allowedStops.length > 5) ...[
-                          Container(
-                            height: 50,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: ListView.builder(
-                              scrollDirection: Axis.horizontal,
-                              cacheExtent: 100.0, // Pre-render filter chips
-                              itemCount:
-                                  _sortingHelper.getFilterOptions().length,
-                              itemBuilder: (context, index) {
-                                final filter =
-                                    _sortingHelper.getFilterOptions()[index];
-                                final isSelected =
-                                    _sortingHelper.selectedFilter == filter;
-                                return RepaintBoundary(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: FilterChip(
-                                      label: Text(_getFilterLabel(filter)),
-                                      selected: isSelected,
-                                      onSelected: (selected) {
-                                        setState(() {
-                                          _sortingHelper.setFilter(filter);
-                                          // Filter is applied in _getFilteredStops() during build
-                                        });
-                                      },
-                                      backgroundColor: isDarkMode
-                                          ? const Color(0xFF1E1E1E)
-                                          : const Color(0xFFF5F5F5),
-                                      selectedColor: const Color(0xFF00CC58)
-                                          .withValues(alpha: 0.2),
-                                      checkmarkColor: const Color(0xFF00CC58),
-                                      labelStyle: TextStyle(
-                                        color: isSelected
-                                            ? const Color(0xFF00CC58)
-                                            : (isDarkMode
-                                                ? const Color(0xFFF5F5F5)
-                                                : const Color(0xFF121212)),
-                                        fontWeight: FontWeight.w500,
+                          // Add filter chips
+                          if (allowedStops.length > 5) ...[
+                            Container(
+                              height: 50,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                cacheExtent: 100.0, // Pre-render filter chips
+                                itemCount:
+                                    _sortingHelper.getFilterOptions().length,
+                                itemBuilder: (context, index) {
+                                  final filter =
+                                      _sortingHelper.getFilterOptions()[index];
+                                  final isSelected =
+                                      _sortingHelper.selectedFilter == filter;
+                                  return RepaintBoundary(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: FilterChip(
+                                        label: Text(_getFilterLabel(filter)),
+                                        selected: isSelected,
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            _sortingHelper.setFilter(filter);
+                                            _clearFilteredStopsCache(); // Clear cache when filter changes
+                                          });
+                                        },
+                                        backgroundColor: isDarkMode
+                                            ? const Color(0xFF1E1E1E)
+                                            : const Color(0xFFF5F5F5),
+                                        selectedColor: const Color(0xFF00CC58)
+                                            .withValues(alpha: 0.2),
+                                        checkmarkColor: const Color(0xFF00CC58),
+                                        labelStyle: TextStyle(
+                                          color: isSelected
+                                              ? const Color(0xFF00CC58)
+                                              : (isDarkMode
+                                                  ? const Color(0xFFF5F5F5)
+                                                  : const Color(0xFF121212)),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          // Show stops with improved layout and lazy loading
+                          Builder(
+                            builder: (context) {
+                              // Compute filtered stops once (cached internally)
+                              final filteredStops = _getFilteredStops();
+                              return Column(
+                                children: [
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    cacheExtent:
+                                        300.0, // Pre-render stops above/below viewport
+                                    itemExtent:
+                                        95.0, // Fixed height for stop tiles (with distance)
+                                    itemCount: filteredStops.length,
+                                    itemBuilder: (context, index) {
+                                      final stop = filteredStops[index];
+                                      return _uiComponentsHelper.buildStopTile(
+                                        stop,
+                                        isDarkMode,
+                                        currentLocation,
+                                        () => onStopSelected(stop),
+                                        precomputedDistance:
+                                            _getStopDistance(stop),
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                        // Show stops with improved layout and lazy loading
-                        SizedBox(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            cacheExtent:
-                                300.0, // Pre-render stops above/below viewport
-                            itemExtent:
-                                95.0, // Fixed height for stop tiles (with distance)
-                            itemCount: _getFilteredStops().length,
-                            itemBuilder: (context, index) {
-                              final stop = _getFilteredStops()[index];
-                              return _uiComponentsHelper.buildStopTile(
-                                stop,
-                                isDarkMode,
-                                currentLocation,
-                                () => onStopSelected(stop),
-                                precomputedDistance: _getStopDistance(stop),
+                                  // Loading indicator for pagination
+                                  if (hasMoreStops && isLoadingMore)
+                                    const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            Color(0xFF00CC58),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               );
                             },
                           ),
-                        ),
-                      ]
-                      // Show filtered stops if searching
-                      else if (searchController.text.isNotEmpty &&
-                          _filteredStops.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            'Search Results',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            cacheExtent: 300.0, // Pre-render search results
-                            itemExtent:
-                                62.0, // Fixed height for LocationListTile items
-                            itemCount: _filteredStops.length,
-                            itemBuilder: (context, index) {
-                              final stop = _filteredStops[index];
-                              return LocationListTile(
-                                press: () => onStopSelected(stop),
-                                location: "${stop.name}\n${stop.address}",
-                              );
-                            },
-                          ),
-                        ),
-                      ]
-                      // Show place predictions if available
-                      else if (placePredictions.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            'Search Results',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDarkMode
-                                  ? const Color(0xFFF5F5F5)
-                                  : const Color(0xFF121212),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            cacheExtent: 300.0, // Pre-render place predictions
-                            itemExtent:
-                                62.0, // Fixed height for LocationListTile items
-                            itemCount: placePredictions.length,
-                            itemBuilder: (context, index) {
-                              final prediction = placePredictions[index];
-                              return LocationListTile(
-                                press: () => onPlaceSelected(prediction),
-                                location: prediction.description!,
-                              );
-                            },
-                          ),
-                        ),
-                      ]
-                      // Show no locations found message
-                      else if (searchController.text.isNotEmpty) ...[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Center(
+                        ]
+                        // Show filtered stops if searching
+                        else if (searchController.text.isNotEmpty &&
+                            _filteredStops.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
                             child: Text(
-                              'No locations found',
+                              'Search Results',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,
@@ -1413,9 +1484,80 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               ),
                             ),
                           ),
-                        ),
+                          SizedBox(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              cacheExtent: 300.0, // Pre-render search results
+                              itemExtent:
+                                  62.0, // Fixed height for LocationListTile items
+                              itemCount: _filteredStops.length,
+                              itemBuilder: (context, index) {
+                                final stop = _filteredStops[index];
+                                return LocationListTile(
+                                  press: () => onStopSelected(stop),
+                                  location: "${stop.name}\n${stop.address}",
+                                );
+                              },
+                            ),
+                          ),
+                        ]
+                        // Show place predictions if available
+                        else if (placePredictions.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              'Search Results',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isDarkMode
+                                    ? const Color(0xFFF5F5F5)
+                                    : const Color(0xFF121212),
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              cacheExtent:
+                                  300.0, // Pre-render place predictions
+                              itemExtent:
+                                  62.0, // Fixed height for LocationListTile items
+                              itemCount: placePredictions.length,
+                              itemBuilder: (context, index) {
+                                final prediction = placePredictions[index];
+                                return LocationListTile(
+                                  press: () => onPlaceSelected(prediction),
+                                  location: prediction.description!,
+                                );
+                              },
+                            ),
+                          ),
+                        ]
+                        // Show no locations found message
+                        else if (searchController.text.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Center(
+                              child: Text(
+                                'No locations found',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDarkMode
+                                      ? const Color(0xFFF5F5F5)
+                                      : const Color(0xFF121212),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
           ),
         ],
@@ -1461,8 +1603,46 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     return _sortingHelper.getFilterLabel(filter);
   }
 
+  /// Get filtered and sorted stops with caching
   List<Stop> _getFilteredStops() {
-    return _sortingHelper.getFilteredAndSortedStops(
-        allowedStops, currentLocation);
+    // Check if cache is still valid
+    final currentSortOption = _sortingHelper.currentSortOption;
+    final currentFilter = _sortingHelper.selectedFilter;
+
+    // Check if cache is valid by comparing list reference, length, and other dependencies
+    if (_cachedFilteredStops != null &&
+        identical(_cachedFilteredStopsAllowedStops, allowedStops) &&
+        _cachedFilteredStopsAllowedStopsLength == allowedStops.length &&
+        _cachedFilteredStopsLocation == currentLocation &&
+        _cachedFilteredStopsSortOption == currentSortOption &&
+        _cachedFilteredStopsFilter == currentFilter) {
+      // Cache is valid, return cached result
+      return _cachedFilteredStops!;
+    }
+
+    // Cache is invalid, recompute and cache
+    final filteredStops =
+        _sortingHelper.getFilteredAndSortedStops(allowedStops, currentLocation);
+
+    _cachedFilteredStops = filteredStops;
+    _cachedFilteredStopsAllowedStops =
+        allowedStops; // Store reference for comparison
+    _cachedFilteredStopsAllowedStopsLength =
+        allowedStops.length; // Store length to detect mutations
+    _cachedFilteredStopsLocation = currentLocation;
+    _cachedFilteredStopsSortOption = currentSortOption;
+    _cachedFilteredStopsFilter = currentFilter;
+
+    return filteredStops;
+  }
+
+  /// Clear the filtered stops cache (call when stops or filters change)
+  void _clearFilteredStopsCache() {
+    _cachedFilteredStops = null;
+    _cachedFilteredStopsAllowedStops = null;
+    _cachedFilteredStopsAllowedStopsLength = null;
+    _cachedFilteredStopsLocation = null;
+    _cachedFilteredStopsSortOption = null;
+    _cachedFilteredStopsFilter = null;
   }
 }
