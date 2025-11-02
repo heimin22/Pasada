@@ -167,6 +167,10 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   late final ValueNotifier<_HomeBottomSectionState>
       _combinedBottomSectionNotifier;
 
+  // Store location listener functions for proper disposal
+  late final VoidCallback _pickupLocationListener;
+  late final VoidCallback _dropoffLocationListener;
+
   // Helper method to update combined notifier
   void _updateCombinedBottomSectionNotifier() {
     if (!mounted) return;
@@ -178,6 +182,16 @@ class HomeScreenPageState extends State<HomeScreenStateful>
       selectedPaymentMethod: _paymentMethodNotifier.value,
       selectedRoute: _routeNotifier.value,
     );
+  }
+
+  // Helper method to handle location changes and measure containers
+  void _handleLocationChange() {
+    if (!mounted) return;
+    // Measure containers after location changes to adjust FAB and Google Maps logo positioning
+    // Use postFrameCallback to ensure dialog has rendered before measuring
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      measureContainers();
+    });
   }
 
   // Controller and current extent for booking bottom sheet
@@ -343,8 +357,19 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Set up listeners to update combined notifier when individual notifiers change
     _notificationVisibilityNotifier
         .addListener(_updateCombinedBottomSectionNotifier);
-    _pickupLocationNotifier.addListener(_updateCombinedBottomSectionNotifier);
-    _dropoffLocationNotifier.addListener(_updateCombinedBottomSectionNotifier);
+
+    // Store location listeners for proper disposal
+    _pickupLocationListener = () {
+      _updateCombinedBottomSectionNotifier();
+      _handleLocationChange(); // Measure containers when pickup location changes
+    };
+    _dropoffLocationListener = () {
+      _updateCombinedBottomSectionNotifier();
+      _handleLocationChange(); // Measure containers when dropoff location changes
+    };
+
+    _pickupLocationNotifier.addListener(_pickupLocationListener);
+    _dropoffLocationNotifier.addListener(_dropoffLocationListener);
     _fareNotifier.addListener(_updateCombinedBottomSectionNotifier);
     _paymentMethodNotifier.addListener(_updateCombinedBottomSectionNotifier);
     _routeNotifier.addListener(_updateCombinedBottomSectionNotifier);
@@ -514,10 +539,8 @@ class HomeScreenPageState extends State<HomeScreenStateful>
     // Remove listeners from individual notifiers
     _notificationVisibilityNotifier
         .removeListener(_updateCombinedBottomSectionNotifier);
-    _pickupLocationNotifier
-        .removeListener(_updateCombinedBottomSectionNotifier);
-    _dropoffLocationNotifier
-        .removeListener(_updateCombinedBottomSectionNotifier);
+    _pickupLocationNotifier.removeListener(_pickupLocationListener);
+    _dropoffLocationNotifier.removeListener(_dropoffLocationListener);
     _fareNotifier.removeListener(_updateCombinedBottomSectionNotifier);
     _paymentMethodNotifier.removeListener(_updateCombinedBottomSectionNotifier);
     _routeNotifier.removeListener(_updateCombinedBottomSectionNotifier);
@@ -827,6 +850,14 @@ class HomeScreenPageState extends State<HomeScreenStateful>
           skipDistanceCheck:
               true, // Skip distance warning during app initialization
         );
+        // Measure containers after locations are loaded to adjust FAB and Google Maps logo positioning
+        measureContainers();
+      });
+    } else if (selectedPickUpLocation != null ||
+        selectedDropOffLocation != null) {
+      // Even if only one location is loaded, measure containers to adjust positioning
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        measureContainers();
       });
     }
   }
