@@ -718,6 +718,12 @@ class MapScreenState extends State<MapScreen>
                         _mapController = controller;
                         mapController.complete(controller);
                       },
+                      cameraTargetBounds: CameraTargetBounds(
+                        LatLngBounds(
+                          southwest: LatLng(4.215806, 116.928055),
+                          northeast: LatLng(21.321780, 126.604363),
+                        ),
+                      ),
                       style: isDarkMode
                           ? '''[
         {
