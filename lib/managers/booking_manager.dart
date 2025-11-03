@@ -716,43 +716,52 @@ class BookingManager {
       // Update ride progress notification
       final dropoff = _state.selectedDropOffLocation?.coordinates;
       if (dropoff != null) {
-        _initialDistanceToDropoff ??= _calculateDistance(driverLatLng, dropoff);
-        final currentDistance = _calculateDistance(driverLatLng, dropoff);
-        final int progress = (((_initialDistanceToDropoff! - currentDistance) /
-                    _initialDistanceToDropoff!) *
-                100)
-            .clamp(0, 100)
-            .round();
-        // Compute ETA using optimized service based on booking status
-        try {
-          final optimizedEtaService = OptimizedETAService();
-          final etaResp = await optimizedEtaService.getETA(
-            origin: {
-              'lat': driverLatLng.latitude,
-              'lng': driverLatLng.longitude,
-            },
-            destination: {
-              'lat': dropoff.latitude,
-              'lng': dropoff.longitude,
-            },
-            bookingStatus: _state.bookingStatus,
-            driverLocation: driverLatLng,
-          );
-          final int etaSec = (etaResp['eta_seconds'] as int?) ?? 0;
-          final int etaMin = (etaSec / 60).ceil();
-          final String etaTitle =
-              etaMin > 0 ? 'Arriving at $etaMin min' : 'Arriving';
-          await NotificationService.showRideProgressNotification(
-            progress: progress,
-            maxProgress: 100,
-            title: etaTitle,
-          );
-        } catch (e) {
-          await NotificationService.showRideProgressNotification(
-            progress: progress,
-            maxProgress: 100,
-            title: 'Arriving',
-          );
+        // Do not post progress notifications after completion
+        if (_isCompleted || _state.bookingStatus == 'completed') {
+          // Ensure it's cancelled if any late updates come in
+          NotificationService.cancelRideProgressNotification();
+        } else if (_state.bookingStatus == 'accepted' ||
+            _state.bookingStatus == 'ongoing') {
+          _initialDistanceToDropoff ??=
+              _calculateDistance(driverLatLng, dropoff);
+          final currentDistance = _calculateDistance(driverLatLng, dropoff);
+          final int progress =
+              (((_initialDistanceToDropoff! - currentDistance) /
+                          _initialDistanceToDropoff!) *
+                      100)
+                  .clamp(0, 100)
+                  .round();
+          // Compute ETA using optimized service based on booking status
+          try {
+            final optimizedEtaService = OptimizedETAService();
+            final etaResp = await optimizedEtaService.getETA(
+              origin: {
+                'lat': driverLatLng.latitude,
+                'lng': driverLatLng.longitude,
+              },
+              destination: {
+                'lat': dropoff.latitude,
+                'lng': dropoff.longitude,
+              },
+              bookingStatus: _state.bookingStatus,
+              driverLocation: driverLatLng,
+            );
+            final int etaSec = (etaResp['eta_seconds'] as int?) ?? 0;
+            final int etaMin = (etaSec / 60).ceil();
+            final String etaTitle =
+                etaMin > 0 ? 'Arriving at $etaMin min' : 'Arriving';
+            await NotificationService.showRideProgressNotification(
+              progress: progress,
+              maxProgress: 100,
+              title: etaTitle,
+            );
+          } catch (e) {
+            await NotificationService.showRideProgressNotification(
+              progress: progress,
+              maxProgress: 100,
+              title: 'Arriving',
+            );
+          }
         }
       }
     }
@@ -1225,6 +1234,8 @@ class BookingManager {
     _acceptedNotified = false;
     _progressNotificationStarted = false;
     NotificationService.cancelRideProgressNotification();
+    // Stop background running as soon as completion is detected
+    await _stopBackgroundServiceForRide();
     if (!_state.mounted) return;
 
     AppLogger.info('Completion cleanup for booking ${_state.activeBookingId}',
@@ -1258,64 +1269,36 @@ class BookingManager {
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // Try to dismiss any transient overlays (e.g., bottom sheets) before navigating
-      try {
-        if (safeContext.mounted) {
-          final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
-          // Pop a few times to close sheets/dialogs if present
-          int pops = 0;
-          while (pops < 3 && await rootNavigator.maybePop()) {
-            pops++;
-            await Future.delayed(const Duration(milliseconds: 50));
-          }
-        }
-      } catch (_) {}
-
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (safeContext.mounted && completedBookingId != null) {
-        // Check if CompletedRideScreen is already on the stack by checking current route
-        final currentRoute = ModalRoute.of(safeContext);
-        final isCompletedScreenActive =
-            currentRoute?.settings.name == '/completed';
+        // Dismiss any open dialogs/bottom sheets and navigate using the root navigator
+        final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
+        try {
+          rootNavigator.popUntil((route) => route is PageRoute);
+        } catch (_) {}
 
-        if (!isCompletedScreenActive) {
-          // Use push instead of pushReplacement to preserve the route stack
-          // This ensures the bottom navigation bar remains when user navigates back
-          try {
-            await Navigator.of(safeContext, rootNavigator: true).push(
-              MaterialPageRoute(
-                settings: const RouteSettings(name: '/completed'),
-                builder: (_) => CompletedRideScreen(
-                  arrivedTime: DateTime.now(),
-                  bookingId: completedBookingId,
-                ),
+        // Defer push to next microtask to avoid racing with pop animations
+        Future.microtask(() {
+          if (!safeContext.mounted) return;
+          rootNavigator
+              .push(
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/completed'),
+              builder: (_) => CompletedRideScreen(
+                arrivedTime: DateTime.now(),
+                bookingId: completedBookingId,
               ),
-            );
-          } catch (e) {
-            // Fallback to global navigator if local context fails
-            try {
-              if (navigatorKey.currentState != null) {
-                await navigatorKey.currentState!.push(
-                  MaterialPageRoute(
-                    settings: const RouteSettings(name: '/completed'),
-                    builder: (_) => CompletedRideScreen(
-                      arrivedTime: DateTime.now(),
-                      bookingId: completedBookingId,
-                    ),
-                  ),
-                );
-              }
-            } catch (_) {}
-          }
-
-          // After returning from CompletedRideScreen, clear activeBookingId
-          if (_state.mounted) {
+            ),
+          )
+              .then((_) {
             // Clear activeBookingId after navigation completes (when user pops the screen)
-            _state.setState(() {
-              _state.activeBookingId = null;
-            });
-          }
-        }
+            if (_state.mounted) {
+              _state.setState(() {
+                _state.activeBookingId = null;
+              });
+            }
+          });
+        });
       } else if (safeContext.mounted) {
         // Fallback: Navigate to selection screen with bottom nav bar if booking ID is no longer available
         Navigator.of(safeContext, rootNavigator: true).pushAndRemoveUntil(
