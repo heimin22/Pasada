@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:pasada_passenger_app/widgets/check_painter.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
@@ -25,6 +26,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
   @override
   void initState() {
     super.initState();
+    // Defensive: ensure any ongoing ride progress notification is cleared
+    NotificationService.cancelRideProgressNotification();
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),

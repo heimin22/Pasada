@@ -1258,7 +1258,20 @@ class BookingManager {
       });
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Try to dismiss any transient overlays (e.g., bottom sheets) before navigating
+      try {
+        if (safeContext.mounted) {
+          final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
+          // Pop a few times to close sheets/dialogs if present
+          int pops = 0;
+          while (pops < 3 && await rootNavigator.maybePop()) {
+            pops++;
+            await Future.delayed(const Duration(milliseconds: 50));
+          }
+        }
+      } catch (_) {}
+
       if (safeContext.mounted && completedBookingId != null) {
         // Check if CompletedRideScreen is already on the stack by checking current route
         final currentRoute = ModalRoute.of(safeContext);
@@ -1268,28 +1281,44 @@ class BookingManager {
         if (!isCompletedScreenActive) {
           // Use push instead of pushReplacement to preserve the route stack
           // This ensures the bottom navigation bar remains when user navigates back
-          Navigator.of(safeContext)
-              .push(
-            MaterialPageRoute(
-              settings: const RouteSettings(name: '/completed'),
-              builder: (_) => CompletedRideScreen(
-                arrivedTime: DateTime.now(),
-                bookingId: completedBookingId,
+          try {
+            await Navigator.of(safeContext, rootNavigator: true).push(
+              MaterialPageRoute(
+                settings: const RouteSettings(name: '/completed'),
+                builder: (_) => CompletedRideScreen(
+                  arrivedTime: DateTime.now(),
+                  bookingId: completedBookingId,
+                ),
               ),
-            ),
-          )
-              .then((_) {
+            );
+          } catch (e) {
+            // Fallback to global navigator if local context fails
+            try {
+              if (navigatorKey.currentState != null) {
+                await navigatorKey.currentState!.push(
+                  MaterialPageRoute(
+                    settings: const RouteSettings(name: '/completed'),
+                    builder: (_) => CompletedRideScreen(
+                      arrivedTime: DateTime.now(),
+                      bookingId: completedBookingId,
+                    ),
+                  ),
+                );
+              }
+            } catch (_) {}
+          }
+
+          // After returning from CompletedRideScreen, clear activeBookingId
+          if (_state.mounted) {
             // Clear activeBookingId after navigation completes (when user pops the screen)
-            if (_state.mounted) {
-              _state.setState(() {
-                _state.activeBookingId = null;
-              });
-            }
-          });
+            _state.setState(() {
+              _state.activeBookingId = null;
+            });
+          }
         }
       } else if (safeContext.mounted) {
         // Fallback: Navigate to selection screen with bottom nav bar if booking ID is no longer available
-        Navigator.of(safeContext).pushAndRemoveUntil(
+        Navigator.of(safeContext, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (_) => const selectionScreen(),
           ),
