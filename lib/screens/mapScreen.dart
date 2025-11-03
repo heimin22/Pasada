@@ -82,6 +82,14 @@ class MapScreenState extends State<MapScreen>
   String routeEndName = '';
   GoogleMapController? _mapController;
 
+  // Coalesced rebuild coordinator to avoid chatty setState calls
+  Timer? _rebuildTimer;
+  static const Duration _rebuildInterval = Duration(milliseconds: 33); // ~30Hz
+  bool _rebuildPending = false;
+
+  // Throttle UI updates for location after initial acquisition
+  DateTime? _lastUiLocationRebuild;
+
   // Camera tightening state
   LatLng? _lastTightenDriverPosition;
   double _currentBoundPadding =
@@ -109,7 +117,20 @@ class MapScreenState extends State<MapScreen>
     _locationManager = MapLocationManager(
       onLocationUpdated: (location) {
         if (mounted) {
-          setState(() => currentLocation = location);
+          // First fix: only trigger a full rebuild on first location set.
+          if (currentLocation == null) {
+            setState(() => currentLocation = location);
+          } else {
+            // Update without forcing an immediate rebuild every tick.
+            currentLocation = location;
+            // Throttle UI rebuilds to ~30Hz.
+            final now = DateTime.now();
+            if (_lastUiLocationRebuild == null ||
+                now.difference(_lastUiLocationRebuild!) >= _rebuildInterval) {
+              _requestCoalescedRebuild();
+              _lastUiLocationRebuild = now;
+            }
+          }
           widget.onLocationUpdated?.call(location);
         }
       },
@@ -129,13 +150,13 @@ class MapScreenState extends State<MapScreen>
     _cameraManager = MapCameraManager(
       mapController: mapController,
       onAnimationStateChanged: (isAnimating) {
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
     );
     // Initialize marker manager
     _markerManager = MapMarkerManager(
       onStateChanged: () {
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
     );
 
@@ -145,6 +166,7 @@ class MapScreenState extends State<MapScreen>
     // Initialize polyline state manager
     _polylineStateManager = MapPolylineStateManager(
       onStateChanged: () {
+        // Keep polyline-related behavior unchanged.
         if (mounted) setState(() {});
       },
       onError: (error) => _dialogManager.showError(error),
@@ -153,7 +175,7 @@ class MapScreenState extends State<MapScreen>
     // Initialize driver animation manager
     _driverAnimationManager = MapDriverAnimationManager(
       onStateChanged: () {
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
       onError: (error) => _dialogManager.showError(error),
     );
@@ -161,7 +183,7 @@ class MapScreenState extends State<MapScreen>
     // Initialize directional bus manager
     _directionalBusManager = MapDirectionalBusManager(
       onStateChanged: () {
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
       onError: (error) => _dialogManager.showError(error),
     );
@@ -194,11 +216,11 @@ class MapScreenState extends State<MapScreen>
       onFareUpdated: (fare) {
         fareAmount = fare;
         widget.onFareUpdated?.call(fare);
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
       onError: (error) => _dialogManager.showError(error),
       onStateChanged: () {
-        if (mounted) setState(() {});
+        _requestCoalescedRebuild();
       },
       optimizedPolylineManager: _optimizedPolylineManager,
     );
@@ -261,6 +283,7 @@ class MapScreenState extends State<MapScreen>
   /// disposing of functions
   @override
   void dispose() {
+    _rebuildTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _mapController?.dispose();
     _locationManager.dispose();
@@ -538,6 +561,20 @@ class MapScreenState extends State<MapScreen>
     mapController.complete(controller);
   }
 
+  // Schedules a coalesced rebuild at most once per _rebuildInterval
+  void _requestCoalescedRebuild() {
+    if (!mounted) return;
+    if (_rebuildPending) return;
+    _rebuildPending = true;
+    _rebuildTimer?.cancel();
+    _rebuildTimer = Timer(_rebuildInterval, () {
+      if (!mounted) return;
+      _rebuildPending = false;
+      // Rebuild only once for any number of upstream notifications in the window
+      setState(() {});
+    });
+  }
+
   // Add this method to update map style
   void _updateMapStyle() {
     if (_mapController == null) return;
@@ -713,13 +750,20 @@ class MapScreenState extends State<MapScreen>
                     if (busMarker != null) {
                       allMarkers.add(busMarker);
                     }
-                    return GoogleMap(
-                      onMapCreated: (controller) {
-                        _mapController = controller;
-                        mapController.complete(controller);
-                      },
-                      style: isDarkMode
-                          ? '''[
+                    return RepaintBoundary(
+                      child: GoogleMap(
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                          mapController.complete(controller);
+                        },
+                        cameraTargetBounds: CameraTargetBounds(
+                          LatLngBounds(
+                            southwest: LatLng(4.215806, 116.928055),
+                            northeast: LatLng(21.321780, 126.604363),
+                          ),
+                        ),
+                        style: isDarkMode
+                            ? '''[
         {
           "elementType": "geometry",
           "stylers": [{"color": "#1f2c4d"}]
@@ -803,28 +847,29 @@ class MapScreenState extends State<MapScreen>
           "stylers": [{"color": "#17263c"}]
         }
       ]'''
-                          : '',
-                      initialCameraPosition: CameraPosition(
-                        target:
-                            currentLocation ?? const LatLng(14.5995, 120.9842),
-                        zoom: currentLocation != null ? 15.0 : 10.0,
+                            : '',
+                        initialCameraPosition: CameraPosition(
+                          target: currentLocation ??
+                              const LatLng(14.5995, 120.9842),
+                          zoom: currentLocation != null ? 15.0 : 10.0,
+                        ),
+                        markers: allMarkers,
+                        polylines: polylines,
+                        padding: EdgeInsets.only(
+                          bottom: screenHeight * widget.bottomPadding,
+                          left: screenWidth * 0.04,
+                        ),
+                        mapType: MapType.normal,
+                        buildingsEnabled: false,
+                        myLocationButtonEnabled:
+                            false, // Disabled - using custom Location FAB instead
+                        indoorViewEnabled: false,
+                        zoomControlsEnabled: false,
+                        mapToolbarEnabled: true,
+                        trafficEnabled: false,
+                        rotateGesturesEnabled: true,
+                        myLocationEnabled: currentLocation != null,
                       ),
-                      markers: allMarkers,
-                      polylines: polylines,
-                      padding: EdgeInsets.only(
-                        bottom: screenHeight * widget.bottomPadding,
-                        left: screenWidth * 0.04,
-                      ),
-                      mapType: MapType.normal,
-                      buildingsEnabled: false,
-                      myLocationButtonEnabled:
-                          false, // Disabled - using custom Location FAB instead
-                      indoorViewEnabled: false,
-                      zoomControlsEnabled: false,
-                      mapToolbarEnabled: true,
-                      trafficEnabled: false,
-                      rotateGesturesEnabled: true,
-                      myLocationEnabled: currentLocation != null,
                     );
                   },
                 );

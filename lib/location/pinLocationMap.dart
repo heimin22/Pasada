@@ -904,6 +904,12 @@ class _PinLocationStatefulState extends State<PinLocationStateful> {
           RepaintBoundary(
             child: GoogleMap(
               style: _currentMapStyle,
+              cameraTargetBounds: CameraTargetBounds(
+                LatLngBounds(
+                  southwest: LatLng(4.215806, 116.928055),
+                  northeast: LatLng(21.321780, 126.604363),
+                ),
+              ),
               padding: EdgeInsets.only(
                 bottom: bottomContainerHeight +
                     MediaQuery.of(context).size.height * 0.01,

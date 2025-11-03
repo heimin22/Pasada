@@ -979,6 +979,14 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                       }
                                     ]'''
                                           : '',
+                                      cameraTargetBounds: CameraTargetBounds(
+                                        LatLngBounds(
+                                          southwest:
+                                              LatLng(4.215806, 116.928055),
+                                          northeast:
+                                              LatLng(21.321780, 126.604363),
+                                        ),
+                                      ),
                                       initialCameraPosition: CameraPosition(
                                         target: _getCenterPosition(),
                                         zoom: 13,

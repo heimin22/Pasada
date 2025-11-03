@@ -1,15 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
+
+// removed: import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-import 'package:pasada_passenger_app/location/autocompletePrediction.dart';
 import 'package:pasada_passenger_app/location/recentSearch.dart';
 import 'package:pasada_passenger_app/location/selectedLocation.dart';
 import 'package:pasada_passenger_app/models/stop.dart';
-import 'package:pasada_passenger_app/network/networkUtilities.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
 import 'package:pasada_passenger_app/services/allowedStopsServices.dart';
 import 'package:pasada_passenger_app/services/recentSearchService.dart';
@@ -50,7 +48,7 @@ class SearchLocationScreen extends StatefulWidget {
 
 class _SearchLocationScreenState extends State<SearchLocationScreen> {
   final TextEditingController searchController = TextEditingController();
-  List<AutocompletePrediction> placePredictions = [];
+  // Removed Google place predictions; search limited to stops
   List<RecentSearch> recentSearches = [];
   List<Stop> allowedStops = [];
   HomeScreenPageState? homeScreenState;
@@ -65,8 +63,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
   // ValueNotifiers for frequently changing data to optimize rebuilds
   final ValueNotifier<bool> _isLoadingNotifier = ValueNotifier(false);
   final ValueNotifier<bool> _isLoadingMoreNotifier = ValueNotifier(false);
-  final ValueNotifier<List<AutocompletePrediction>> _placePredictionsNotifier =
-      ValueNotifier([]);
+  // Removed predictions notifier
   final ValueNotifier<List<Stop>> _filteredStopsNotifier = ValueNotifier([]);
 
   // Cache for filtered stops to avoid recomputing in build
@@ -830,7 +827,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     // Dispose ValueNotifiers
     _isLoadingNotifier.dispose();
     _isLoadingMoreNotifier.dispose();
-    _placePredictionsNotifier.dispose();
+    // no predictions notifier to dispose
     _filteredStopsNotifier.dispose();
     // Dispose search helper first (removes listener and cancels timer)
     _searchHelper.dispose();
@@ -846,7 +843,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         // Clear search results immediately when query is empty
         if (mounted) {
           _filteredStopsNotifier.value = [];
-          _placePredictionsNotifier.value = [];
           _isLoadingNotifier.value = false;
         }
       },
@@ -857,7 +853,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         }
         searchAllowedStops(query);
       },
-      (query) => placeAutocomplete(query),
+      (query) {},
     );
   }
 
@@ -879,255 +875,22 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
         return; // Query changed, ignore results
       }
 
-      if (filteredStops.isNotEmpty) {
-        if (mounted) {
-          _filteredStopsNotifier.value = filteredStops;
-          _placePredictionsNotifier.value = [];
-          _isLoadingNotifier.value = false;
-        }
-      } else {
-        // Only call placeAutocomplete if query still matches
-        if (query == searchController.text.trim()) {
-          await placeAutocomplete(query);
-        }
+      if (mounted) {
+        _filteredStopsNotifier.value = filteredStops;
+        _isLoadingNotifier.value = false;
       }
     } catch (e) {
       debugPrint('Error searching stops: $e');
-      // Only call placeAutocomplete if query still matches and we're still searching
-      if (query == searchController.text.trim() && mounted) {
-        await placeAutocomplete(query);
-      }
-    }
-  }
-
-  Future<void> placeAutocomplete(String query) async {
-    final trimmedQuery = query.trim();
-
-    if (trimmedQuery.isEmpty) {
       if (mounted) {
-        _placePredictionsNotifier.value = [];
-        _isLoadingNotifier.value = false;
-      }
-      return;
-    }
-
-    // Check if query still matches (might have changed)
-    if (trimmedQuery != searchController.text.trim()) {
-      return; // Query changed, abort
-    }
-
-    try {
-      final predictions = await _searchHelper.placeAutocomplete(trimmedQuery);
-
-      // Final check before updating state
-      if (mounted && trimmedQuery == searchController.text.trim()) {
-        _placePredictionsNotifier.value = predictions;
-        _isLoadingNotifier.value = false;
-      }
-    } catch (e) {
-      debugPrint('Error in placeAutocomplete: $e');
-      if (mounted && trimmedQuery == searchController.text.trim()) {
+        _filteredStopsNotifier.value = [];
         _isLoadingNotifier.value = false;
       }
     }
   }
 
-  void onPlaceSelected(AutocompletePrediction prediction) async {
-    final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
-    if (apiKey.isEmpty) return;
-    final uri = Uri.https(
-      "maps.googleapis.com",
-      "maps/api/place/details/json",
-      {
-        "place_id": prediction.placeID,
-        "key": apiKey,
-        "fields": "geometry,name"
-      },
-    );
+  // Removed Google place autocomplete; search is limited to stops only
 
-    final response = await NetworkUtility.fetchUrl(uri);
-    if (response != null) {
-      final data = json.decode(response);
-      final location = data['result']['geometry']['location'];
-      final selectedLocation = SelectedLocation(
-        prediction.description!,
-        LatLng(location['lat'], location['lng']),
-      );
-
-      // Check if this location is already selected
-      if (_isLocationAlreadySelected(selectedLocation.coordinates)) {
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-        await showDialog(
-          context: context,
-          builder: (context) => ResponsiveDialog(
-            title: 'Location Already Selected',
-            contentPadding: const EdgeInsets.all(24),
-            content: Text(
-              'This location is already selected as your ${widget.isPickup ? 'drop-off' : 'pick-up'} location. Please choose a different location.',
-              style: TextStyle(
-                fontWeight: FontWeight.w500,
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: isDarkMode
-                    ? const Color(0xFFF5F5F5)
-                    : const Color(0xFF121212),
-              ),
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: const BorderRadius.all(Radius.circular(10)),
-                  ),
-                  backgroundColor: const Color(0xFF00CC58),
-                  foregroundColor: const Color(0xFFF5F5F5),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
-                child: const Text(
-                  'OK',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-
-      if (widget.isPickup) {
-        final shouldProceed =
-            await checkPickupDistance(selectedLocation.coordinates);
-        if (!shouldProceed) return;
-
-        // If drop-off location is selected, validate pick-up order
-        if (widget.selectedDropOffLocation != null && widget.routeID != null) {
-          try {
-            final dropoffStop = await _stopsService.findClosestStop(
-                widget.selectedDropOffLocation!.coordinates, widget.routeID!);
-            if (dropoffStop != null) {
-              final pickupStop = await _stopsService.findClosestStop(
-                  selectedLocation.coordinates, widget.routeID!);
-              if (pickupStop != null && pickupStop.order >= dropoffStop.order) {
-                final isDarkMode =
-                    Theme.of(context).brightness == Brightness.dark;
-                await showDialog(
-                  context: context,
-                  builder: (context) => ResponsiveDialog(
-                    title: 'Invalid Stop Order',
-                    contentPadding: const EdgeInsets.all(24),
-                    content: Text(
-                      'Pick-up must be before drop-off for this route.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        color: isDarkMode
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFF121212),
-                      ),
-                    ),
-                    actions: [
-                      ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(10)),
-                          ),
-                          backgroundColor: const Color(0xFF00CC58),
-                          foregroundColor: const Color(0xFFF5F5F5),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                        ),
-                        child: const Text(
-                          'OK',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-                return;
-              }
-            }
-          } catch (e) {
-            debugPrint(
-                'Error validating pick-up order from place prediction: $e');
-          }
-        }
-
-        // Additional check for final stop
-        if (widget.routeID != null) {
-          final isNearFinalStop =
-              await isLocationNearFinalStop(selectedLocation.coordinates);
-          if (isNearFinalStop) {
-            // Show warning dialog that this is too close to the final stop
-            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-            await showDialog(
-              context: context,
-              builder: (context) => ResponsiveDialog(
-                title: 'Invalid Pick-up Location',
-                contentPadding: const EdgeInsets.all(24),
-                content: Text(
-                  'This location is too close to the final stop of the route. Please select a different pick-up location.',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontFamily: 'Inter',
-                    fontSize: 13,
-                    color: isDarkMode
-                        ? const Color(0xFFF5F5F5)
-                        : const Color(0xFF121212),
-                  ),
-                ),
-                actions: [
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            const BorderRadius.all(Radius.circular(10)),
-                      ),
-                      backgroundColor: const Color(0xFF00CC58),
-                      foregroundColor: const Color(0xFFF5F5F5),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                    ),
-                    child: const Text(
-                      'OK',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-            return;
-          }
-        }
-      }
-
-      // Save to recent searches with route ID
-      await RecentSearchService.addRecentSearch(selectedLocation,
-          routeId: widget.routeID);
-
-      if (mounted) {
-        Navigator.pop(context, selectedLocation);
-      }
-    }
-  }
+  // Removed Google Place selection; search now strictly limited to stops
 
   Future<bool> checkPickupDistance(LatLng pickupLocation) async {
     return _validationHelper.checkPickupDistance(
@@ -1679,26 +1442,40 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                                   final filteredStops = _getFilteredStops();
                                   return Column(
                                     children: [
-                                      ListView.builder(
-                                        shrinkWrap: true,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        cacheExtent:
-                                            300.0, // Pre-render stops above/below viewport
-                                        // Removed fixed itemExtent to allow dynamic height based on content
-                                        itemCount: filteredStops.length,
-                                        itemBuilder: (context, index) {
-                                          final stop = filteredStops[index];
-                                          return _uiComponentsHelper
-                                              .buildStopTile(
-                                            stop,
-                                            isDarkMode,
-                                            currentLocation,
-                                            () => onStopSelected(stop),
-                                            precomputedDistance:
-                                                _getStopDistance(stop),
-                                          );
+                                      NotificationListener<ScrollNotification>(
+                                        onNotification: (notification) {
+                                          if (notification
+                                              is ScrollUpdateNotification) {
+                                            final metrics =
+                                                notification.metrics;
+                                            if (metrics.pixels >=
+                                                metrics.maxScrollExtent - 300) {
+                                              _loadMoreStops();
+                                            }
+                                          }
+                                          return false;
                                         },
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          cacheExtent:
+                                              300.0, // Pre-render stops above/below viewport
+                                          // Removed fixed itemExtent to allow dynamic height based on content
+                                          itemCount: filteredStops.length,
+                                          itemBuilder: (context, index) {
+                                            final stop = filteredStops[index];
+                                            return _uiComponentsHelper
+                                                .buildStopTile(
+                                              stop,
+                                              isDarkMode,
+                                              currentLocation,
+                                              () => onStopSelected(stop),
+                                              precomputedDistance:
+                                                  _getStopDistance(stop),
+                                            );
+                                          },
+                                        ),
                                       ),
                                       // Loading indicator for pagination
                                       ValueListenableBuilder<bool>(
@@ -1732,117 +1509,99 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               ValueListenableBuilder<List<Stop>>(
                                 valueListenable: _filteredStopsNotifier,
                                 builder: (context, filteredStops, child) {
-                                  return ValueListenableBuilder<
-                                      List<AutocompletePrediction>>(
-                                    valueListenable: _placePredictionsNotifier,
-                                    builder:
-                                        (context, placePredictions, child) {
-                                      if (filteredStops.isNotEmpty) {
-                                        return Column(
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.all(16.0),
-                                              child: Text(
-                                                'Search Results',
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDarkMode
-                                                      ? const Color(0xFFF5F5F5)
-                                                      : const Color(0xFF121212),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              child: ListView.builder(
-                                                shrinkWrap: true,
-                                                physics:
-                                                    const NeverScrollableScrollPhysics(),
-                                                cacheExtent:
-                                                    300.0, // Pre-render search results
-                                                itemExtent:
-                                                    62.0, // Fixed height for LocationListTile items
-                                                itemCount: filteredStops.length,
-                                                itemBuilder: (context, index) {
-                                                  final stop =
-                                                      filteredStops[index];
-                                                  return LocationListTile(
-                                                    press: () =>
-                                                        onStopSelected(stop),
-                                                    location:
-                                                        "${stop.name}\n${stop.address}",
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      } else if (placePredictions.isNotEmpty) {
-                                        return Column(
-                                          children: [
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.all(16.0),
-                                              child: Text(
-                                                'Search Results',
-                                                style: TextStyle(
-                                                  fontFamily: 'Inter',
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDarkMode
-                                                      ? const Color(0xFFF5F5F5)
-                                                      : const Color(0xFF121212),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                              child: ListView.builder(
-                                                shrinkWrap: true,
-                                                physics:
-                                                    const NeverScrollableScrollPhysics(),
-                                                cacheExtent:
-                                                    300.0, // Pre-render place predictions
-                                                itemExtent:
-                                                    62.0, // Fixed height for LocationListTile items
-                                                itemCount:
-                                                    placePredictions.length,
-                                                itemBuilder: (context, index) {
-                                                  final prediction =
-                                                      placePredictions[index];
-                                                  return LocationListTile(
-                                                    press: () =>
-                                                        onPlaceSelected(
-                                                            prediction),
-                                                    location:
-                                                        prediction.description!,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      } else {
-                                        return Padding(
+                                  if (filteredStops.isNotEmpty) {
+                                    return Column(
+                                      children: [
+                                        Padding(
                                           padding: const EdgeInsets.all(16.0),
-                                          child: Center(
-                                            child: Text(
-                                              'No locations found',
-                                              style: TextStyle(
-                                                fontFamily: 'Inter',
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: isDarkMode
-                                                    ? const Color(0xFFF5F5F5)
-                                                    : const Color(0xFF121212),
-                                              ),
+                                          child: Text(
+                                            'Search Results',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDarkMode
+                                                  ? const Color(0xFFF5F5F5)
+                                                  : const Color(0xFF121212),
                                             ),
                                           ),
-                                        );
-                                      }
-                                    },
-                                  );
+                                        ),
+                                        NotificationListener<
+                                            ScrollNotification>(
+                                          onNotification: (notification) {
+                                            if (notification
+                                                is ScrollUpdateNotification) {
+                                              final metrics =
+                                                  notification.metrics;
+                                              if (metrics.pixels >=
+                                                  metrics.maxScrollExtent -
+                                                      300) {
+                                                _loadMoreStops();
+                                              }
+                                            }
+                                            return false;
+                                          },
+                                          child: ListView.builder(
+                                            shrinkWrap: true,
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            cacheExtent: 300.0,
+                                            itemExtent: 62.0,
+                                            itemCount: filteredStops.length,
+                                            itemBuilder: (context, index) {
+                                              final stop = filteredStops[index];
+                                              return LocationListTile(
+                                                press: () =>
+                                                    onStopSelected(stop),
+                                                location:
+                                                    "${stop.name}\n${stop.address}",
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        ValueListenableBuilder<bool>(
+                                          valueListenable:
+                                              _isLoadingMoreNotifier,
+                                          builder:
+                                              (context, isLoadingMore, child) {
+                                            return hasMoreStops && isLoadingMore
+                                                ? const Padding(
+                                                    padding:
+                                                        EdgeInsets.all(16.0),
+                                                    child: Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                        valueColor:
+                                                            AlwaysStoppedAnimation<
+                                                                Color>(
+                                                          Color(0xFF00CC58),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )
+                                                : const SizedBox.shrink();
+                                          },
+                                        ),
+                                      ],
+                                    );
+                                  } else {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Center(
+                                        child: Text(
+                                          'No locations found',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDarkMode
+                                                ? const Color(0xFFF5F5F5)
+                                                : const Color(0xFF121212),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                             ],
@@ -1857,33 +1616,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     );
   }
 
-  Future<SelectedLocation?> reverseGeocode(LatLng position) async {
-    final apiKey = dotenv.env['ANDROID_MAPS_API_KEY'] ?? '';
-    final uri = Uri.https("maps.googleapis.com", "maps/api/geocode/json", {
-      "latlng": "${position.latitude},${position.longitude}",
-      "key": apiKey,
-    });
-
-    try {
-      final response = await NetworkUtility.fetchUrl(uri);
-      if (response == null) return null;
-
-      final data = json.decode(response);
-      if (data['status'] == 'REQUEST_DENIED') {
-        return null;
-      }
-
-      if (data['results'] != null && data['results'].isNotEmpty) {
-        return SelectedLocation(
-          data['results'][0]['formatted_address'],
-          position,
-        );
-      }
-    } catch (e) {
-      debugPrint("Error in reverseGeocode: $e");
-    }
-    return null;
-  }
+  // Removed reverseGeocode since Google APIs are no longer used in search
 
   // Helper method to check if selected location is too close to the final stop
   Future<bool> isLocationNearFinalStop(LatLng location) async {
