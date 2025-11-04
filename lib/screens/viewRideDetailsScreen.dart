@@ -9,6 +9,7 @@ import 'package:pasada_passenger_app/utils/timezone_utils.dart';
 import 'package:pasada_passenger_app/widgets/skeleton.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 // networkUtilities not needed after removing map/polylines
 
@@ -681,6 +682,19 @@ class _ViewRideDetailsScreenState extends State<ViewRideDetailsScreen> {
                                         BookingIdUtils.formatBookingId(
                                       bookingDetails['booking_id'] as int? ?? 0,
                                     )),
+                                    color: isDarkMode
+                                        ? Colors.grey[300]
+                                        : Colors.grey[700],
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.share_outlined, size: 18),
+                                    onPressed: () {
+                                      final id = bookingDetails['booking_id'];
+                                      if (id != null) {
+                                        final url = 'https://pasadaapp.vercel.app/track/' + id.toString();
+                                        Share.share(url, subject: 'Track my Pasada booking');
+                                      }
+                                    },
                                     color: isDarkMode
                                         ? Colors.grey[300]
                                         : Colors.grey[700],
