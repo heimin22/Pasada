@@ -42,6 +42,7 @@ class BookingManager {
       false; // Prevent dialog from showing multiple times
   bool _capacityCheckInProgress = false; // Prevent concurrent capacity checks
   bool _isCompleted = false; // Flag to prevent multiple cleanup calls
+  bool _completionNavScheduled = false; // Ensure navigation scheduled only once
   final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
@@ -1243,16 +1244,18 @@ class BookingManager {
   }
 
   Future<void> _handleRideCompletionNavigationAndCleanup() async {
-    // Prevent multiple calls
-    if (_isCompleted && _completionTimer == null) {
+    // Prevent multiple navigation schedules
+    if (_completionNavScheduled) {
       debugPrint(
-          "[BookingManager] _handleRideCompletionNavigationAndCleanup: Already completed, skipping duplicate call");
+          "[BookingManager] _handleRideCompletionNavigationAndCleanup: Navigation already scheduled, skipping");
       AppLogger.debug(
-          'Early return in completion handler due to duplicate call',
+          'Early return in completion handler: navigation already scheduled',
           tag: 'BookingManager');
-      // Note: We still want at least one navigation to occur; if needed, ensure caller triggers it
       return;
     }
+
+    AppLogger.info('Entering completion cleanup/navigation handler',
+        tag: 'BookingManager');
 
     _isCompleted = true;
     _acceptedNotified = false;
@@ -1293,6 +1296,7 @@ class BookingManager {
       });
     }
 
+    _completionNavScheduled = true;
     AppLogger.debug(
         'Scheduling post-frame navigation. mounted=${safeContext.mounted}, bookingId=$completedBookingId',
         tag: 'BookingManager');
