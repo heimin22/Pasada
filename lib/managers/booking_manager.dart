@@ -24,7 +24,7 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/optimized_eta_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
-import 'package:pasada_passenger_app/utils/app_logger.dart';
+// import removed: app_logger
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:pasada_passenger_app/widgets/capacity_warning_dialog.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
@@ -42,6 +42,7 @@ class BookingManager {
       false; // Prevent dialog from showing multiple times
   bool _capacityCheckInProgress = false; // Prevent concurrent capacity checks
   bool _isCompleted = false; // Flag to prevent multiple cleanup calls
+  bool _completionNavScheduled = false; // Ensure navigation scheduled only once
   final CapacityService _capacityService = CapacityService();
 
   BookingManager(this._state);
@@ -118,6 +119,8 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               if (newStatus == 'accepted' && !_acceptedNotified) {
@@ -138,7 +141,9 @@ class BookingManager {
                 await _updateBackgroundServiceForRide(bookingId, newStatus);
               }
 
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                _state.setState(() => _state.bookingStatus = newStatus);
+              }
 
               // Only fetch details if not completed/cancelled to prevent repeated calls
               if (!_isCompleted &&
@@ -410,6 +415,8 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               if (newStatus == 'accepted' && !_acceptedNotified) {
@@ -432,7 +439,9 @@ class BookingManager {
                     details.bookingId, newStatus);
               }
 
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                _state.setState(() => _state.bookingStatus = newStatus);
+              }
 
               // Only fetch details if not completed/cancelled to prevent repeated calls
               if (!_isCompleted &&
@@ -682,10 +691,7 @@ class BookingManager {
               ? _state.vehicleStandingCapacity
               : int.tryParse(driver['standing_passenger'].toString());
         });
-        AppLogger.debug(
-            'Capacity(flat) total=${driver['passenger_capacity']} sit=${driver['sitting_passenger']} stand=${driver['standing_passenger']}',
-            tag: 'BookingManager',
-            throttle: true);
+
         _evaluateCapacityAndMaybeReassign();
       }
     } catch (_) {}
@@ -881,10 +887,6 @@ class BookingManager {
       // CRITICAL: Always load driver details if driver_id is present
       // This ensures UI updates even during reassignment when driver is found
       if (details['driver_id'] != null) {
-        AppLogger.debug(
-            'driver_id present for $bookingId, loading driver assignment',
-            tag: 'BookingManager');
-
         // If driver was just assigned (was null, now present), clear reassignment flag
         if (_reassignmentInProgress) {
           debugPrint(
@@ -920,9 +922,6 @@ class BookingManager {
   }
 
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
-    AppLogger.debug('_loadBookingAfterDriverAssignment enter $bookingId',
-        tag: 'BookingManager');
-
     // First, check if booking has a driver_id
     try {
       final bookingDetails =
@@ -1223,10 +1222,10 @@ class BookingManager {
   }
 
   Future<void> _handleRideCompletionNavigationAndCleanup() async {
-    // Prevent multiple calls
-    if (_isCompleted && _completionTimer == null) {
+    // Prevent multiple navigation schedules
+    if (_completionNavScheduled) {
       debugPrint(
-          "[BookingManager] _handleRideCompletionNavigationAndCleanup: Already completed, skipping duplicate call");
+          "[BookingManager] _handleRideCompletionNavigationAndCleanup: Navigation already scheduled, skipping");
       return;
     }
 
@@ -1237,9 +1236,6 @@ class BookingManager {
     // Stop background running as soon as completion is detected
     await _stopBackgroundServiceForRide();
     if (!_state.mounted) return;
-
-    AppLogger.info('Completion cleanup for booking ${_state.activeBookingId}',
-        tag: 'BookingManager');
 
     final BuildContext safeContext = _state.context;
     final int? completedBookingId = _state.activeBookingId;
@@ -1269,19 +1265,26 @@ class BookingManager {
       });
     }
 
+    _completionNavScheduled = true;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (safeContext.mounted && completedBookingId != null) {
-        // Dismiss any open dialogs/bottom sheets and navigate using the root navigator
+        // Use the root navigator to avoid nested navigator/bottom sheet interference
         final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
         try {
+          // First, close any modals/bottom sheets/dialogs
           rootNavigator.popUntil((route) => route is PageRoute);
-        } catch (_) {}
+        } catch (e) {}
+        try {
+          // Then, pop to the root of the app's main stack
+          rootNavigator.popUntil((route) => route.isFirst);
+        } catch (e) {}
 
-        // Defer push to next microtask to avoid racing with pop animations
-        Future.microtask(() {
+        // Slightly defer replacement to let pops settle and avoid route animation races
+        Future.delayed(const Duration(milliseconds: 50), () {
           if (!safeContext.mounted) return;
           rootNavigator
-              .push(
+              .pushReplacement(
             MaterialPageRoute(
               settings: const RouteSettings(name: '/completed'),
               builder: (_) => CompletedRideScreen(
@@ -1291,7 +1294,7 @@ class BookingManager {
             ),
           )
               .then((_) {
-            // Clear activeBookingId after navigation completes (when user pops the screen)
+            // Clear activeBookingId after navigation completes (when user leaves completed screen)
             if (_state.mounted) {
               _state.setState(() {
                 _state.activeBookingId = null;
@@ -1370,9 +1373,6 @@ class BookingManager {
 
     _capacityCheckInProgress = true;
     try {
-      AppLogger.debug('Checking capacity $bookingId',
-          tag: 'BookingManager', throttle: true);
-
       // If dialog is already shown, skip check entirely
       if (_capacityDialogShown) {
         debugPrint(
@@ -1728,10 +1728,16 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               // Update status immediately
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                if (!_isCompleted) {
+                  _state.setState(() => _state.bookingStatus = newStatus);
+                }
+              }
 
               if (newStatus == 'accepted') {
                 // Reset notification flag for new driver assignment

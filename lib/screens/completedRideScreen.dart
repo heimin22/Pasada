@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
-import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
+import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/widgets/check_painter.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
 import 'package:url_launcher/url_launcher.dart';
