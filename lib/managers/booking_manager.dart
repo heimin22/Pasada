@@ -118,6 +118,11 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                AppLogger.info(
+                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (loadActiveBooking)',
+                    tag: 'BookingManager');
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               if (newStatus == 'accepted' && !_acceptedNotified) {
@@ -138,7 +143,9 @@ class BookingManager {
                 await _updateBackgroundServiceForRide(bookingId, newStatus);
               }
 
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                _state.setState(() => _state.bookingStatus = newStatus);
+              }
 
               // Only fetch details if not completed/cancelled to prevent repeated calls
               if (!_isCompleted &&
@@ -410,6 +417,11 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                AppLogger.info(
+                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (createBooking flow)',
+                    tag: 'BookingManager');
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               if (newStatus == 'accepted' && !_acceptedNotified) {
@@ -432,7 +444,9 @@ class BookingManager {
                     details.bookingId, newStatus);
               }
 
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                _state.setState(() => _state.bookingStatus = newStatus);
+              }
 
               // Only fetch details if not completed/cancelled to prevent repeated calls
               if (!_isCompleted &&
@@ -814,6 +828,9 @@ class BookingManager {
       if (details['ride_status'] == 'completed' && !_isCompleted) {
         debugPrint(
             "[BookingManager] _fetchAndUpdateBookingDetails: Ride COMPLETED for booking ID $bookingId. Navigating.");
+        AppLogger.info(
+            'DB reports completed for $bookingId: invoking completion cleanup/navigation',
+            tag: 'BookingManager');
         _isCompleted = true;
         await _handleRideCompletionNavigationAndCleanup();
         return;
@@ -1203,6 +1220,9 @@ class BookingManager {
           }
           // When completed, navigate and cleanup
           if (status == 'completed' && !_isCompleted) {
+            AppLogger.info(
+                'Polling saw completed for $bookingId: invoking completion cleanup/navigation',
+                tag: 'BookingManager');
             _isCompleted = true;
             timer.cancel(); // Stop this specific timer instance.
             _completionTimer = null;
@@ -1227,6 +1247,10 @@ class BookingManager {
     if (_isCompleted && _completionTimer == null) {
       debugPrint(
           "[BookingManager] _handleRideCompletionNavigationAndCleanup: Already completed, skipping duplicate call");
+      AppLogger.debug(
+          'Early return in completion handler due to duplicate call',
+          tag: 'BookingManager');
+      // Note: We still want at least one navigation to occur; if needed, ensure caller triggers it
       return;
     }
 
@@ -1269,19 +1293,40 @@ class BookingManager {
       });
     }
 
+    AppLogger.debug(
+        'Scheduling post-frame navigation. mounted=${safeContext.mounted}, bookingId=$completedBookingId',
+        tag: 'BookingManager');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (safeContext.mounted && completedBookingId != null) {
-        // Dismiss any open dialogs/bottom sheets and navigate using the root navigator
+        // Use the root navigator to avoid nested navigator/bottom sheet interference
         final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
         try {
+          // First, close any modals/bottom sheets/dialogs
+          AppLogger.debug(
+              'Attempting to pop modal routes to PageRoute boundary',
+              tag: 'BookingManager');
           rootNavigator.popUntil((route) => route is PageRoute);
-        } catch (_) {}
+        } catch (e) {
+          AppLogger.warn('Error popping modal routes: $e',
+              tag: 'BookingManager');
+        }
+        try {
+          // Then, pop to the root of the app's main stack
+          AppLogger.debug('Popping to root of main stack (route.isFirst)',
+              tag: 'BookingManager');
+          rootNavigator.popUntil((route) => route.isFirst);
+        } catch (e) {
+          AppLogger.warn('Error popping to root: $e', tag: 'BookingManager');
+        }
 
-        // Defer push to next microtask to avoid racing with pop animations
-        Future.microtask(() {
+        // Slightly defer replacement to let pops settle and avoid route animation races
+        Future.delayed(const Duration(milliseconds: 50), () {
           if (!safeContext.mounted) return;
+          AppLogger.info(
+              'Navigating to CompletedRideScreen via pushReplacement (bookingId=$completedBookingId)',
+              tag: 'BookingManager');
           rootNavigator
-              .push(
+              .pushReplacement(
             MaterialPageRoute(
               settings: const RouteSettings(name: '/completed'),
               builder: (_) => CompletedRideScreen(
@@ -1291,7 +1336,10 @@ class BookingManager {
             ),
           )
               .then((_) {
-            // Clear activeBookingId after navigation completes (when user pops the screen)
+            // Clear activeBookingId after navigation completes (when user leaves completed screen)
+            AppLogger.debug(
+                'CompletedRideScreen pushReplacement resolved. Clearing activeBookingId',
+                tag: 'BookingManager');
             if (_state.mounted) {
               _state.setState(() {
                 _state.activeBookingId = null;
@@ -1301,6 +1349,9 @@ class BookingManager {
         });
       } else if (safeContext.mounted) {
         // Fallback: Navigate to selection screen with bottom nav bar if booking ID is no longer available
+        AppLogger.warn(
+            'Completed bookingId missing during navigation. Falling back to selectionScreen',
+            tag: 'BookingManager');
         Navigator.of(safeContext, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (_) => const selectionScreen(),
@@ -1728,10 +1779,19 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
+                AppLogger.info(
+                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (reassignment flow)',
+                    tag: 'BookingManager');
+                await _handleRideCompletionNavigationAndCleanup();
+                return;
               }
 
               // Update status immediately
-              _state.setState(() => _state.bookingStatus = newStatus);
+              if (!_isCompleted) {
+                if (!_isCompleted) {
+                  _state.setState(() => _state.bookingStatus = newStatus);
+                }
+              }
 
               if (newStatus == 'accepted') {
                 // Reset notification flag for new driver assignment
