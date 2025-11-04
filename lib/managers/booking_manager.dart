@@ -24,7 +24,7 @@ import 'package:pasada_passenger_app/services/notificationService.dart';
 import 'package:pasada_passenger_app/services/optimized_eta_service.dart';
 import 'package:pasada_passenger_app/services/polyline_service.dart';
 import 'package:pasada_passenger_app/services/route_service.dart';
-import 'package:pasada_passenger_app/utils/app_logger.dart';
+// import removed: app_logger
 import 'package:pasada_passenger_app/utils/exception_handler.dart';
 import 'package:pasada_passenger_app/widgets/capacity_warning_dialog.dart';
 import 'package:pasada_passenger_app/widgets/responsive_dialogs.dart';
@@ -119,9 +119,6 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
-                AppLogger.info(
-                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (loadActiveBooking)',
-                    tag: 'BookingManager');
                 await _handleRideCompletionNavigationAndCleanup();
                 return;
               }
@@ -418,9 +415,6 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
-                AppLogger.info(
-                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (createBooking flow)',
-                    tag: 'BookingManager');
                 await _handleRideCompletionNavigationAndCleanup();
                 return;
               }
@@ -697,10 +691,7 @@ class BookingManager {
               ? _state.vehicleStandingCapacity
               : int.tryParse(driver['standing_passenger'].toString());
         });
-        AppLogger.debug(
-            'Capacity(flat) total=${driver['passenger_capacity']} sit=${driver['sitting_passenger']} stand=${driver['standing_passenger']}',
-            tag: 'BookingManager',
-            throttle: true);
+
         _evaluateCapacityAndMaybeReassign();
       }
     } catch (_) {}
@@ -829,9 +820,6 @@ class BookingManager {
       if (details['ride_status'] == 'completed' && !_isCompleted) {
         debugPrint(
             "[BookingManager] _fetchAndUpdateBookingDetails: Ride COMPLETED for booking ID $bookingId. Navigating.");
-        AppLogger.info(
-            'DB reports completed for $bookingId: invoking completion cleanup/navigation',
-            tag: 'BookingManager');
         _isCompleted = true;
         await _handleRideCompletionNavigationAndCleanup();
         return;
@@ -899,10 +887,6 @@ class BookingManager {
       // CRITICAL: Always load driver details if driver_id is present
       // This ensures UI updates even during reassignment when driver is found
       if (details['driver_id'] != null) {
-        AppLogger.debug(
-            'driver_id present for $bookingId, loading driver assignment',
-            tag: 'BookingManager');
-
         // If driver was just assigned (was null, now present), clear reassignment flag
         if (_reassignmentInProgress) {
           debugPrint(
@@ -938,9 +922,6 @@ class BookingManager {
   }
 
   Future<void> _loadBookingAfterDriverAssignment(int bookingId) async {
-    AppLogger.debug('_loadBookingAfterDriverAssignment enter $bookingId',
-        tag: 'BookingManager');
-
     // First, check if booking has a driver_id
     try {
       final bookingDetails =
@@ -1221,9 +1202,6 @@ class BookingManager {
           }
           // When completed, navigate and cleanup
           if (status == 'completed' && !_isCompleted) {
-            AppLogger.info(
-                'Polling saw completed for $bookingId: invoking completion cleanup/navigation',
-                tag: 'BookingManager');
             _isCompleted = true;
             timer.cancel(); // Stop this specific timer instance.
             _completionTimer = null;
@@ -1248,14 +1226,8 @@ class BookingManager {
     if (_completionNavScheduled) {
       debugPrint(
           "[BookingManager] _handleRideCompletionNavigationAndCleanup: Navigation already scheduled, skipping");
-      AppLogger.debug(
-          'Early return in completion handler: navigation already scheduled',
-          tag: 'BookingManager');
       return;
     }
-
-    AppLogger.info('Entering completion cleanup/navigation handler',
-        tag: 'BookingManager');
 
     _isCompleted = true;
     _acceptedNotified = false;
@@ -1264,9 +1236,6 @@ class BookingManager {
     // Stop background running as soon as completion is detected
     await _stopBackgroundServiceForRide();
     if (!_state.mounted) return;
-
-    AppLogger.info('Completion cleanup for booking ${_state.activeBookingId}',
-        tag: 'BookingManager');
 
     final BuildContext safeContext = _state.context;
     final int? completedBookingId = _state.activeBookingId;
@@ -1297,38 +1266,23 @@ class BookingManager {
     }
 
     _completionNavScheduled = true;
-    AppLogger.debug(
-        'Scheduling post-frame navigation. mounted=${safeContext.mounted}, bookingId=$completedBookingId',
-        tag: 'BookingManager');
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (safeContext.mounted && completedBookingId != null) {
         // Use the root navigator to avoid nested navigator/bottom sheet interference
         final rootNavigator = Navigator.of(safeContext, rootNavigator: true);
         try {
           // First, close any modals/bottom sheets/dialogs
-          AppLogger.debug(
-              'Attempting to pop modal routes to PageRoute boundary',
-              tag: 'BookingManager');
           rootNavigator.popUntil((route) => route is PageRoute);
-        } catch (e) {
-          AppLogger.warn('Error popping modal routes: $e',
-              tag: 'BookingManager');
-        }
+        } catch (e) {}
         try {
           // Then, pop to the root of the app's main stack
-          AppLogger.debug('Popping to root of main stack (route.isFirst)',
-              tag: 'BookingManager');
           rootNavigator.popUntil((route) => route.isFirst);
-        } catch (e) {
-          AppLogger.warn('Error popping to root: $e', tag: 'BookingManager');
-        }
+        } catch (e) {}
 
         // Slightly defer replacement to let pops settle and avoid route animation races
         Future.delayed(const Duration(milliseconds: 50), () {
           if (!safeContext.mounted) return;
-          AppLogger.info(
-              'Navigating to CompletedRideScreen via pushReplacement (bookingId=$completedBookingId)',
-              tag: 'BookingManager');
           rootNavigator
               .pushReplacement(
             MaterialPageRoute(
@@ -1341,9 +1295,6 @@ class BookingManager {
           )
               .then((_) {
             // Clear activeBookingId after navigation completes (when user leaves completed screen)
-            AppLogger.debug(
-                'CompletedRideScreen pushReplacement resolved. Clearing activeBookingId',
-                tag: 'BookingManager');
             if (_state.mounted) {
               _state.setState(() {
                 _state.activeBookingId = null;
@@ -1353,9 +1304,6 @@ class BookingManager {
         });
       } else if (safeContext.mounted) {
         // Fallback: Navigate to selection screen with bottom nav bar if booking ID is no longer available
-        AppLogger.warn(
-            'Completed bookingId missing during navigation. Falling back to selectionScreen',
-            tag: 'BookingManager');
         Navigator.of(safeContext, rootNavigator: true).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (_) => const selectionScreen(),
@@ -1425,9 +1373,6 @@ class BookingManager {
 
     _capacityCheckInProgress = true;
     try {
-      AppLogger.debug('Checking capacity $bookingId',
-          tag: 'BookingManager', throttle: true);
-
       // If dialog is already shown, skip check entirely
       if (_capacityDialogShown) {
         debugPrint(
@@ -1783,9 +1728,6 @@ class BookingManager {
                 _state.driverAssignmentService?.stopPolling();
                 _state.bookingService?.stopLocationTracking();
                 await _stopBackgroundServiceForRide();
-                AppLogger.info(
-                    'onStatusChange "$newStatus": triggering completion cleanup/navigation (reassignment flow)',
-                    tag: 'BookingManager');
                 await _handleRideCompletionNavigationAndCleanup();
                 return;
               }

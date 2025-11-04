@@ -3,7 +3,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/screens/selectionScreen.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:pasada_passenger_app/services/notificationService.dart';
-import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:pasada_passenger_app/widgets/check_painter.dart';
 import 'package:pasada_passenger_app/widgets/circle_painter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,9 +28,6 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     super.initState();
     // Defensive: ensure any ongoing ride progress notification is cleared
     NotificationService.cancelRideProgressNotification();
-    AppLogger.info(
-        'CompletedRideScreen opened (bookingId=${widget.bookingId}, arrived=${widget.arrivedTime.toIso8601String()})',
-        tag: 'CompletedRideScreen');
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -56,7 +52,6 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
 
   @override
   void dispose() {
-    AppLogger.debug('CompletedRideScreen disposed', tag: 'CompletedRideScreen');
     _controller.dispose();
     super.dispose();
   }
