@@ -1172,8 +1172,9 @@ class BookingManager {
 
   /// Poll the booking status every 10 seconds until it's completed
   void _startCompletionPolling(int bookingId) {
-    if (_completionTimer != null || _isCompleted)
+    if (_completionTimer != null || _isCompleted) {
       return; // Already polling or completed
+    }
     debugPrint(
         "[BookingManager] _startCompletionPolling: Starting for booking ID $bookingId");
     _completionTimer =
@@ -1274,11 +1275,15 @@ class BookingManager {
         try {
           // First, close any modals/bottom sheets/dialogs
           rootNavigator.popUntil((route) => route is PageRoute);
-        } catch (e) {}
+        } catch (e) {
+          throw Exception(e);
+        }
         try {
           // Then, pop to the root of the app's main stack
           rootNavigator.popUntil((route) => route.isFirst);
-        } catch (e) {}
+        } catch (e) {
+          throw Exception(e);
+        }
 
         // Slightly defer replacement to let pops settle and avoid route animation races
         Future.delayed(const Duration(milliseconds: 50), () {
