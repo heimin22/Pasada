@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../location/selectedLocation.dart';
 import '../utils/booking_id_utils.dart';
@@ -70,30 +71,47 @@ class BookingDetailsContainer extends StatelessWidget {
                 ),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(
-                    Icons.receipt_outlined,
-                    color: const Color(0xFF00CC58),
-                    size: 18,
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.receipt_outlined,
+                        color: const Color(0xFF00CC58),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Booking ID: ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode
+                              ? const Color(0xFFBBBBBB)
+                              : const Color(0xFF666666),
+                        ),
+                      ),
+                      Text(
+                        '#${BookingIdUtils.formatBookingId(bookingId!)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF00CC58),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Booking ID: ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode
-                          ? const Color(0xFFBBBBBB)
-                          : const Color(0xFF666666),
-                    ),
-                  ),
-                  Text(
-                    '#${BookingIdUtils.formatBookingId(bookingId!)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF00CC58),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined, size: 18),
+                    color: isDarkMode
+                        ? const Color(0xFFBBBBBB)
+                        : const Color(0xFF666666),
+                    tooltip: 'Share tracking link',
+                    onPressed: () {
+                      final id = bookingId!; // safe due to guard above
+                      final url = 'https://pasadaapp.vercel.app/track/$id';
+                      Share.share(url, subject: 'Track my Pasada booking');
+                    },
                   ),
                 ],
               ),
