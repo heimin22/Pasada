@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:pasada_passenger_app/models/traffic_analytics.dart';
 import 'package:pasada_passenger_app/network/networkUtilities.dart';
+import 'package:pasada_passenger_app/utils/app_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Cache entry model for storing traffic analytics with timestamp
@@ -75,7 +75,9 @@ class TrafficAnalyticsService {
     if (!forceRefresh && routeId == null) {
       final persisted = await _readDailyCache();
       if (persisted != null && _isSameDay(persisted.date, DateTime.now())) {
-        debugPrint('TrafficAnalyticsService: Returning persisted daily cache');
+        AppLogger.debug(
+            'TrafficAnalyticsService: Returning persisted daily cache',
+            tag: 'TrafficAnalyticsService');
         _cache[null] = _CachedTrafficAnalytics(persisted, DateTime.now());
         return persisted;
       }
@@ -85,8 +87,9 @@ class TrafficAnalyticsService {
     if (!forceRefresh) {
       final cachedEntry = _cache[routeId];
       if (cachedEntry != null && cachedEntry.isValid(_cacheTTL)) {
-        debugPrint(
-            'TrafficAnalyticsService: Returning cached data for ${routeId ?? "all routes"}');
+        AppLogger.debug(
+            'TrafficAnalyticsService: Returning cached data for ${routeId ?? "all routes"}',
+            tag: 'TrafficAnalyticsService');
         return cachedEntry.data;
       }
     }
@@ -94,7 +97,9 @@ class TrafficAnalyticsService {
     try {
       final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
       if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
-        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
+        AppLogger.warn(
+            'TrafficAnalyticsService: ANALYTICS_API_URL not configured',
+            tag: 'TrafficAnalyticsService');
         return null;
       }
 
@@ -114,19 +119,60 @@ class TrafficAnalyticsService {
         'Content-Type': 'application/json',
       };
 
-      debugPrint('TrafficAnalyticsService: Fetching from $uri');
+      AppLogger.debug('TrafficAnalyticsService: Fetching from $uri',
+          tag: 'TrafficAnalyticsService');
 
-      final String? response = await NetworkUtility.fetchUrl(
+      final effectiveTimeout = timeout ?? Duration(seconds: 30);
+      final raw = await NetworkUtility.getRaw(
         uri,
         headers: headers,
+        timeout: effectiveTimeout,
       );
 
-      if (response == null) {
-        debugPrint('TrafficAnalyticsService: No response from server');
+      if (raw == null) {
+        AppLogger.warn('TrafficAnalyticsService: No response from server',
+            tag: 'TrafficAnalyticsService');
         return null;
       }
 
-      final dynamic responseData = json.decode(response);
+      if (raw.statusCode == 404) {
+        // No data for today – optionally retry with fast mode to bypass DB query
+        final preview = raw.body.isNotEmpty ? raw.body : 'No body';
+        AppLogger.info(
+            'TrafficAnalyticsService: No traffic data for today (404). Body: $preview',
+            tag: 'TrafficAnalyticsService');
+        if (!fast) {
+          AppLogger.info('TrafficAnalyticsService: Retrying in fast mode...',
+              tag: 'TrafficAnalyticsService');
+          return await getTodayTrafficAnalytics(
+            routeId: routeId,
+            forceRefresh: true,
+            fast: true,
+            timeout: timeout,
+          );
+        }
+        return null;
+      }
+
+      if (raw.statusCode != 200) {
+        AppLogger.warn(
+            'TrafficAnalyticsService: Non-200 status ${raw.statusCode} for $uri',
+            tag: 'TrafficAnalyticsService');
+        if (!fast) {
+          AppLogger.info(
+              'TrafficAnalyticsService: Retrying in fast mode after non-200...',
+              tag: 'TrafficAnalyticsService');
+          return await getTodayTrafficAnalytics(
+            routeId: routeId,
+            forceRefresh: true,
+            fast: true,
+            timeout: timeout,
+          );
+        }
+        return null;
+      }
+
+      final dynamic responseData = json.decode(raw.body);
 
       if (responseData is Map<String, dynamic>) {
         // Check if response has success field (new API format)
@@ -134,19 +180,23 @@ class TrafficAnalyticsService {
             responseData.containsKey('data')) {
           final success = responseData['success'] as bool;
           if (!success) {
-            debugPrint('TrafficAnalyticsService: API returned success=false');
+            AppLogger.warn(
+                'TrafficAnalyticsService: API returned success=false',
+                tag: 'TrafficAnalyticsService');
             return null;
           }
           final parsed = TodayRouteTrafficResponse.fromJson(responseData);
           final trafficResponse = _stabilizeRouteNames(parsed);
-          debugPrint(
-              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes');
+          AppLogger.info(
+              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes',
+              tag: 'TrafficAnalyticsService');
 
           // Cache the response
           _cache[routeId] =
               _CachedTrafficAnalytics(trafficResponse, DateTime.now());
-          debugPrint(
-              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
+          AppLogger.debug(
+              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}',
+              tag: 'TrafficAnalyticsService');
 
           // Persist for the day (all routes only)
           if (routeId == null &&
@@ -164,14 +214,16 @@ class TrafficAnalyticsService {
           // Fallback to old format for backward compatibility
           final parsed = TodayRouteTrafficResponse.fromJson(responseData);
           final trafficResponse = _stabilizeRouteNames(parsed);
-          debugPrint(
-              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes (legacy format)');
+          AppLogger.info(
+              'TrafficAnalyticsService: Successfully fetched ${trafficResponse.routes.length} routes (legacy format)',
+              tag: 'TrafficAnalyticsService');
 
           // Cache the response
           _cache[routeId] =
               _CachedTrafficAnalytics(trafficResponse, DateTime.now());
-          debugPrint(
-              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}');
+          AppLogger.debug(
+              'TrafficAnalyticsService: Cached data for ${routeId ?? "all routes"}',
+              tag: 'TrafficAnalyticsService');
 
           // Persist for the day (all routes only)
           if (routeId == null &&
@@ -187,12 +239,14 @@ class TrafficAnalyticsService {
           return trafficResponse;
         }
       } else {
-        debugPrint(
-            'TrafficAnalyticsService: Unexpected response format: ${responseData.runtimeType}');
+        AppLogger.warn(
+            'TrafficAnalyticsService: Unexpected response format: ${responseData.runtimeType}',
+            tag: 'TrafficAnalyticsService');
         return null;
       }
     } catch (e) {
-      debugPrint('TrafficAnalyticsService: Error fetching analytics: $e');
+      AppLogger.error('TrafficAnalyticsService: Error fetching analytics: $e',
+          tag: 'TrafficAnalyticsService');
       return null;
     }
   }
@@ -224,13 +278,15 @@ class TrafficAnalyticsService {
         final fresh = _stabilizeRouteNames(parsed);
         // Only overwrite cache on success
         _cache[routeId] = _CachedTrafficAnalytics(fresh, DateTime.now());
-        debugPrint('TrafficAnalyticsService: Background cache refreshed');
+        AppLogger.debug('TrafficAnalyticsService: Background cache refreshed',
+            tag: 'TrafficAnalyticsService');
 
         if (routeId == null && _isSameDay(fresh.date, DateTime.now())) {
           await _writeDailyCache(fresh);
         }
       } catch (e) {
-        debugPrint('TrafficAnalyticsService: Background refresh failed: $e');
+        AppLogger.warn('TrafficAnalyticsService: Background refresh failed: $e',
+            tag: 'TrafficAnalyticsService');
       }
     }());
   }
@@ -283,14 +339,16 @@ class TrafficAnalyticsService {
   /// Clear all cached data
   void clearCache() {
     _cache.clear();
-    debugPrint('TrafficAnalyticsService: Cache cleared');
+    AppLogger.debug('TrafficAnalyticsService: Cache cleared',
+        tag: 'TrafficAnalyticsService');
   }
 
   /// Clear cached data for a specific route
   void clearRouteCache(int? routeId) {
     _cache.remove(routeId);
-    debugPrint(
-        'TrafficAnalyticsService: Cache cleared for ${routeId ?? "all routes"}');
+    AppLogger.debug(
+        'TrafficAnalyticsService: Cache cleared for ${routeId ?? "all routes"}',
+        tag: 'TrafficAnalyticsService');
   }
 
   /// Check if cached data exists and is still valid
@@ -345,7 +403,8 @@ class TrafficAnalyticsService {
       final model = TodayRouteTrafficResponse.fromJson(decoded);
       return _stabilizeRouteNames(model);
     } catch (e) {
-      debugPrint('TrafficAnalyticsService: Failed to read daily cache: $e');
+      AppLogger.warn('TrafficAnalyticsService: Failed to read daily cache: $e',
+          tag: 'TrafficAnalyticsService');
       return null;
     }
   }
@@ -356,7 +415,8 @@ class TrafficAnalyticsService {
       final raw = json.encode(response.toJson());
       await prefs.setString(_prefsDailyCacheKey, raw);
     } catch (e) {
-      debugPrint('TrafficAnalyticsService: Failed to write daily cache: $e');
+      AppLogger.warn('TrafficAnalyticsService: Failed to write daily cache: $e',
+          tag: 'TrafficAnalyticsService');
     }
   }
 
@@ -427,7 +487,9 @@ class TrafficAnalyticsService {
     try {
       final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
       if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
-        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
+        AppLogger.warn(
+            'TrafficAnalyticsService: ANALYTICS_API_URL not configured',
+            tag: 'TrafficAnalyticsService');
         return null;
       }
 
@@ -452,7 +514,8 @@ class TrafficAnalyticsService {
         'Content-Type': 'application/json',
       };
       final effectiveTimeout = timeout ?? Duration(seconds: 12);
-      debugPrint('TrafficAnalyticsService: AI explain-table GET $uri');
+      AppLogger.debug('TrafficAnalyticsService: AI explain-table GET $uri',
+          tag: 'TrafficAnalyticsService');
       final response = await NetworkUtility.fetchUrlWithTimeout(
         uri,
         headers: headers,
@@ -466,7 +529,9 @@ class TrafficAnalyticsService {
       // Immediately return the parsed AI model instead of the wrapper
       return ai;
     } catch (e) {
-      debugPrint('TrafficAnalyticsService: Error in explainTrafficTable: $e');
+      AppLogger.error(
+          'TrafficAnalyticsService: Error in explainTrafficTable: $e',
+          tag: 'TrafficAnalyticsService');
       return null;
     }
   }
@@ -481,7 +546,9 @@ class TrafficAnalyticsService {
     try {
       final String? analyticsApiUrl = dotenv.env['ANALYTICS_API_URL'];
       if (analyticsApiUrl == null || analyticsApiUrl.isEmpty) {
-        debugPrint('TrafficAnalyticsService: ANALYTICS_API_URL not configured');
+        AppLogger.warn(
+            'TrafficAnalyticsService: ANALYTICS_API_URL not configured',
+            tag: 'TrafficAnalyticsService');
         return null;
       }
 
@@ -503,7 +570,8 @@ class TrafficAnalyticsService {
         'Content-Type': 'application/json',
       };
       final effectiveTimeout = timeout ?? Duration(seconds: 12);
-      debugPrint('TrafficAnalyticsService: AI explain-routes GET $uri');
+      AppLogger.debug('TrafficAnalyticsService: AI explain-routes GET $uri',
+          tag: 'TrafficAnalyticsService');
       final response = await NetworkUtility.fetchUrlWithTimeout(
         uri,
         headers: headers,
@@ -516,7 +584,9 @@ class TrafficAnalyticsService {
       _aiExplainRoutesCache[cacheKey] = _CachedAny(ai, DateTime.now());
       return ai;
     } catch (e) {
-      debugPrint('TrafficAnalyticsService: Error in explainTrafficRoutes: $e');
+      AppLogger.error(
+          'TrafficAnalyticsService: Error in explainTrafficRoutes: $e',
+          tag: 'TrafficAnalyticsService');
       return null;
     }
   }

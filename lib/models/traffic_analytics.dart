@@ -15,12 +15,22 @@ class HourlyBreakdown {
   });
 
   factory HourlyBreakdown.fromJson(Map<String, dynamic> json) {
-    return HourlyBreakdown(
-      hour: json['hour'] as int,
-      avgDensity: (json['avg_density'] as num).toDouble(),
-      avgSpeedKmh: (json['avg_speed_kmh'] as num).toDouble(),
-      samples: json['samples'] as int,
-    );
+    try {
+      return HourlyBreakdown(
+        hour: json['hour'] as int? ?? 0,
+        avgDensity: (json['avg_density'] as num?)?.toDouble() ?? 0.0,
+        avgSpeedKmh: (json['avg_speed_kmh'] as num?)?.toDouble() ?? 0.0,
+        samples: json['samples'] as int? ?? 0,
+      );
+    } catch (e) {
+      // Return default if parsing fails
+      return HourlyBreakdown(
+        hour: 0,
+        avgDensity: 0.0,
+        avgSpeedKmh: 0.0,
+        samples: 0,
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -96,21 +106,67 @@ class RouteTrafficToday {
   });
 
   factory RouteTrafficToday.fromJson(Map<String, dynamic> json) {
-    return RouteTrafficToday(
-      routeId: json['route_id'] as int,
-      routeName: json['route_name'] as String,
-      currentStatus: TrafficStatus.fromString(json['current_status'] as String),
-      avgTrafficDensity: (json['avg_traffic_density'] as num).toDouble(),
-      avgSpeedKmh: (json['avg_speed_kmh'] as num).toDouble(),
-      latestUpdate: DateTime.parse(json['latest_update'] as String),
-      totalMeasurements: json['total_measurements'] as int,
-      peakTrafficTime: json['peak_traffic_time'] as String,
-      hourlyBreakdown: (json['hourly_breakdown'] as List<dynamic>)
-          .map((item) => HourlyBreakdown.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      confidenceScore: (json['confidence_score'] as num).toDouble(),
-      aiInsights: json['ai_insights'] as String,
-    );
+    try {
+      final now = DateTime.now();
+      return RouteTrafficToday(
+        routeId: json['route_id'] as int? ?? 0,
+        routeName: (json['route_name'] as String?) ?? '',
+        currentStatus: TrafficStatus.fromString(
+            (json['current_status'] as String?) ?? 'low'),
+        avgTrafficDensity:
+            (json['avg_traffic_density'] as num?)?.toDouble() ?? 0.0,
+        avgSpeedKmh: (json['avg_speed_kmh'] as num?)?.toDouble() ?? 0.0,
+        latestUpdate: _parseDateTime(json['latest_update'] as String?, now),
+        totalMeasurements: json['total_measurements'] as int? ?? 0,
+        peakTrafficTime: (json['peak_traffic_time'] as String?) ?? '',
+        hourlyBreakdown: _parseHourlyBreakdown(json['hourly_breakdown']),
+        confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.0,
+        aiInsights: (json['ai_insights'] as String?) ?? '',
+      );
+    } catch (e) {
+      // Return default route data if parsing fails
+      final now = DateTime.now();
+      return RouteTrafficToday(
+        routeId: 0,
+        routeName: '',
+        currentStatus: TrafficStatus.low,
+        avgTrafficDensity: 0.0,
+        avgSpeedKmh: 0.0,
+        latestUpdate: now,
+        totalMeasurements: 0,
+        peakTrafficTime: '',
+        hourlyBreakdown: [],
+        confidenceScore: 0.0,
+        aiInsights: '',
+      );
+    }
+  }
+
+  static DateTime _parseDateTime(String? dateStr, DateTime fallback) {
+    if (dateStr == null || dateStr.isEmpty) return fallback;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  static List<HourlyBreakdown> _parseHourlyBreakdown(dynamic data) {
+    if (data == null) return [];
+    if (data is! List<dynamic>) return [];
+    try {
+      return data
+          .map((item) {
+            if (item is Map<String, dynamic>) {
+              return HourlyBreakdown.fromJson(item);
+            }
+            return null;
+          })
+          .whereType<HourlyBreakdown>()
+          .toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -162,13 +218,36 @@ class AnalyticsMetadata {
   });
 
   factory AnalyticsMetadata.fromJson(Map<String, dynamic> json) {
-    return AnalyticsMetadata(
-      routeId: json['routeId'] as String,
-      date: json['date'] as String,
-      routesCount: json['routesCount'] as int,
-      generatedAt: DateTime.parse(json['generatedAt'] as String),
-      mode: json['mode'] as String,
-    );
+    try {
+      final now = DateTime.now();
+      return AnalyticsMetadata(
+        routeId: (json['routeId'] as String?) ?? 'all',
+        date: (json['date'] as String?) ?? now.toIso8601String().split('T')[0],
+        routesCount: json['routesCount'] as int? ?? 0,
+        generatedAt:
+            _parseDateTimeForMetadata(json['generatedAt'] as String?, now),
+        mode: (json['mode'] as String?) ?? 'unknown',
+      );
+    } catch (e) {
+      final now = DateTime.now();
+      return AnalyticsMetadata(
+        routeId: 'all',
+        date: now.toIso8601String().split('T')[0],
+        routesCount: 0,
+        generatedAt: now,
+        mode: 'unknown',
+      );
+    }
+  }
+
+  static DateTime _parseDateTimeForMetadata(
+      String? dateStr, DateTime fallback) {
+    if (dateStr == null || dateStr.isEmpty) return fallback;
+    try {
+      return DateTime.parse(dateStr);
+    } catch (e) {
+      return fallback;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -200,20 +279,70 @@ class TodayRouteTrafficResponse {
   });
 
   factory TodayRouteTrafficResponse.fromJson(Map<String, dynamic> json) {
-    final dataMap = json['data'] as Map<String, dynamic>;
-    final metadata = json['metadata'] as Map<String, dynamic>?;
+    try {
+      final now = DateTime.now();
+      final dataMap = json['data'];
+      Map<String, dynamic> safeDataMap = {};
 
-    return TodayRouteTrafficResponse(
-      date: DateTime.parse(dataMap['date'] as String),
-      routes: (dataMap['routes'] as List<dynamic>)
-          .map((item) =>
-              RouteTrafficToday.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      mode: metadata != null ? metadata['mode'] as String? : null,
-      overallAiAnalysis: dataMap['overall_ai_analysis'] as String?,
-      aiExplanation: json['aiExplanation'] as String?,
-      metadata: metadata != null ? AnalyticsMetadata.fromJson(metadata) : null,
-    );
+      if (dataMap is Map<String, dynamic>) {
+        safeDataMap = dataMap;
+      }
+
+      final metadata = json['metadata'];
+      Map<String, dynamic>? safeMetadata;
+      if (metadata is Map<String, dynamic>) {
+        safeMetadata = metadata;
+      }
+
+      String? dateStr;
+      if (safeDataMap['date'] is String) {
+        dateStr = safeDataMap['date'] as String;
+      }
+
+      DateTime parsedDate = now;
+      if (dateStr != null && dateStr.isNotEmpty) {
+        try {
+          parsedDate = DateTime.parse(dateStr);
+        } catch (e) {
+          parsedDate = now;
+        }
+      }
+
+      List<RouteTrafficToday> parsedRoutes = [];
+      final routesData = safeDataMap['routes'];
+      if (routesData is List<dynamic>) {
+        parsedRoutes = routesData
+            .map((item) {
+              if (item is Map<String, dynamic>) {
+                return RouteTrafficToday.fromJson(item);
+              }
+              return null;
+            })
+            .whereType<RouteTrafficToday>()
+            .toList();
+      }
+
+      return TodayRouteTrafficResponse(
+        date: parsedDate,
+        routes: parsedRoutes,
+        mode: safeMetadata?['mode'] as String?,
+        overallAiAnalysis: safeDataMap['overall_ai_analysis'] as String?,
+        aiExplanation: json['aiExplanation'] as String?,
+        metadata: safeMetadata != null
+            ? AnalyticsMetadata.fromJson(safeMetadata)
+            : null,
+      );
+    } catch (e) {
+      // Return default response if parsing completely fails
+      return TodayRouteTrafficResponse(
+        date: DateTime.now(),
+        routes: [],
+        mode: null,
+        overallAiAnalysis: null,
+        aiExplanation: null,
+        metadata: null,
+      );
+    }
   }
 
   Map<String, dynamic> toJson() {
