@@ -200,27 +200,33 @@ class selectionState extends State<selectionScreen> {
             index: currentIndex,
             children: pages,
           ),
-          bottomNavigationBar: CurvedNavigationBar(
-            key: bottomNavigationKey,
-            items: [
-              buildCurvedNavItem(0),
-              buildCurvedNavItem(1),
-              buildCurvedNavItem(2),
-            ],
-            index: currentIndex,
-            color:
-                isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
-            backgroundColor: getNavBarColor(),
-            buttonBackgroundColor: Color(0xFFF5F5F5),
-            onTap: (newIndex) {
-              setState(() {
-                previousIndex = currentIndex;
-                currentIndex = newIndex;
-              });
-            },
-            animationCurve: Curves.fastOutSlowIn,
-            animationDuration: const Duration(milliseconds: 400),
-            height: MediaQuery.of(context).size.width < 400 ? 65.0 : 75.0,
+          bottomNavigationBar: SafeArea(
+            top: false,
+            left: false,
+            right: false,
+            child: CurvedNavigationBar(
+              key: bottomNavigationKey,
+              items: [
+                buildCurvedNavItem(0),
+                buildCurvedNavItem(1),
+                buildCurvedNavItem(2),
+              ],
+              index: currentIndex,
+              color: isDarkMode
+                  ? const Color(0xFF121212)
+                  : const Color(0xFFF5F5F5),
+              backgroundColor: getNavBarColor(),
+              buttonBackgroundColor: Color(0xFFF5F5F5),
+              onTap: (newIndex) {
+                setState(() {
+                  previousIndex = currentIndex;
+                  currentIndex = newIndex;
+                });
+              },
+              animationCurve: Curves.fastOutSlowIn,
+              animationDuration: const Duration(milliseconds: 400),
+              height: MediaQuery.of(context).size.width < 400 ? 65.0 : 75.0,
+            ),
           ),
         ),
         onRetry: () {
