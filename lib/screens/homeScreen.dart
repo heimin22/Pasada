@@ -865,6 +865,15 @@ class HomeScreenPageState extends State<HomeScreenStateful>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
     // Removed measureContainers() from build - now only called when needed:
     // - After location updates (updateLocation)
     // - After notification visibility changes (onNotificationClose, animation complete)

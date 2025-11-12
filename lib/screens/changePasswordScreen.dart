@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:pasada_passenger_app/main.dart';
 import 'package:pasada_passenger_app/screens/authenticationCodePasswordScreen.dart';
@@ -214,28 +215,38 @@ class ChangePasswordScreenState extends State<ChangePasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
     return Scaffold(
       backgroundColor:
           isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: buildAppBar(isDarkMode),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                buildPasswordField(
-                    'Current Password', currentPasswordController, isDarkMode),
-                buildPasswordField(
-                    'New Password', newPasswordController, isDarkMode),
-                buildPasswordField('Confirm New Password',
-                    confirmPasswordController, isDarkMode),
-              ],
-            ),
-            buildChangePasswordButton(isDarkMode),
-          ],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildPasswordField('Current Password',
+                      currentPasswordController, isDarkMode),
+                  buildPasswordField(
+                      'New Password', newPasswordController, isDarkMode),
+                  buildPasswordField('Confirm New Password',
+                      confirmPasswordController, isDarkMode),
+                ],
+              ),
+              buildChangePasswordButton(isDarkMode),
+            ],
+          ),
         ),
       ),
     );

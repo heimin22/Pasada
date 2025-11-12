@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pasada_passenger_app/screens/changePasswordScreen.dart';
 import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
 import 'package:pasada_passenger_app/screens/preferencesScreen.dart';
@@ -39,6 +40,14 @@ class SettingsScreenPageState extends State<SettingsScreenStateful> {
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
     final connectivityService = OfflineConnectionCheckService();
 
     return Scaffold(

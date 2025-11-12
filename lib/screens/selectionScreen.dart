@@ -1,5 +1,6 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/screens/activityScreen.dart';
 import 'package:pasada_passenger_app/screens/homeScreen.dart';
@@ -191,6 +192,15 @@ class selectionState extends State<selectionScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
+
     return PageStorage(
       bucket: bucket,
       child: SlowInternetWarningBanner(
@@ -202,8 +212,6 @@ class selectionState extends State<selectionScreen> {
           ),
           bottomNavigationBar: SafeArea(
             top: false,
-            left: false,
-            right: false,
             child: CurvedNavigationBar(
               key: bottomNavigationKey,
               items: [
@@ -216,7 +224,7 @@ class selectionState extends State<selectionScreen> {
                   ? const Color(0xFF121212)
                   : const Color(0xFFF5F5F5),
               backgroundColor: getNavBarColor(),
-              buttonBackgroundColor: Color(0xFFF5F5F5),
+              buttonBackgroundColor: const Color(0xFFF5F5F5),
               onTap: (newIndex) {
                 setState(() {
                   previousIndex = currentIndex;
