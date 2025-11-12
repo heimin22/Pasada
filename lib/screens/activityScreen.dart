@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pasada_passenger_app/screens/offflineConnectionCheckService.dart';
 import 'package:pasada_passenger_app/screens/viewRideDetailsScreen.dart';
 import 'package:pasada_passenger_app/widgets/booking_list_item.dart';
@@ -105,6 +106,14 @@ class ActivityScreenPageState extends State<ActivityScreenStateful> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(
+      SystemUiOverlayStyle(
+        systemNavigationBarColor:
+            isDarkMode ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+        systemNavigationBarIconBrightness:
+            isDarkMode ? Brightness.light : Brightness.dark,
+      ),
+    );
     final connectivityService = OfflineConnectionCheckService();
 
     return Scaffold(

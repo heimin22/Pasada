@@ -97,8 +97,6 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
     final supportIconSize = isSmallScreen ? 16.0 : 18.0;
     final supportFontSize = isSmallScreen ? 12.0 : 14.0;
     final buttonPadding = isSmallScreen ? 12.0 : 16.0;
-    final bottomPadding =
-        (isSmallScreen ? 12.0 : 16.0) + MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       body: Container(
@@ -357,12 +355,8 @@ class _CompletedRideScreenState extends State<CompletedRideScreen>
 
                     // Action Buttons
                     Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        isSmallScreen ? 24 : 32,
-                        0,
-                        isSmallScreen ? 24 : 32,
-                        bottomPadding,
-                      ),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 24 : 32),
                       child: Column(
                         children: [
                           // View Receipt Button
