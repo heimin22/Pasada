@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:pasada_passenger_app/authentication/otpVerificationScreen.dart';
 import 'package:pasada_passenger_app/screens/privacyPolicyScreen.dart';
+import 'package:pasada_passenger_app/screens/termsAndConditionsScreen.dart';
 import 'package:pasada_passenger_app/services/phoneValidationService.dart';
 import 'package:pasada_passenger_app/utils/toast_utils.dart';
 
@@ -444,14 +445,24 @@ class _CreateAccountCredPageState extends State<CreateAccountCredPage> {
                     const TextSpan(
                       text: "I agree to Pasada's ",
                     ),
-                    const TextSpan(
+                    TextSpan(
                       text: 'Terms and Conditions',
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Color(0xFF00CC58),
                         fontWeight: FontWeight.w600,
                         decoration: TextDecoration.underline,
                         decorationColor: Color(0xFF00CC58),
                       ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const TermsAndConditionsScreen(),
+                            ),
+                          );
+                        },
                     ),
                     const TextSpan(
                       text: ' and ',

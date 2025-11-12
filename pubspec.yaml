@@ -160,6 +160,7 @@ flutter:
 
     # Content assets
     - assets/md/privacy_policy.md
+    - assets/md/terms_and_conditions.md
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
