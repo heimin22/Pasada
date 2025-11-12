@@ -109,7 +109,7 @@ class BookingDetailsContainer extends StatelessWidget {
                     tooltip: 'Share tracking link',
                     onPressed: () {
                       final id = bookingId!; // safe due to guard above
-                      final url = 'https://pasadaapp.vercel.app/track/$id';
+                      final url = 'https://pasadaapp.com/track/$id';
                       SharePlus.instance.share(
                         ShareParams(
                           text: 'Boss, ito yung link ng booking ko: $url',
