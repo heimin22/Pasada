@@ -124,54 +124,6 @@ class BookingDetailsContainer extends StatelessWidget {
             const SizedBox(height: 16),
           ],
 
-          // Fare Section (when provided)
-          if (fare != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDarkMode
-                    ? const Color(0xFF2A2A2A)
-                    : const Color(0xFFF0FFF5),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF00CC58).withAlpha(0.3.toInt()),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Text(
-                    '₱',
-                    style: TextStyle(
-                      color: Color(0xFF00CC58),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Fare: ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: isDarkMode
-                          ? const Color(0xFFBBBBBB)
-                          : const Color(0xFF666666),
-                    ),
-                  ),
-                  Text(
-                    '₱${fare!.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF00CC58),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-
           _buildLocationRow(
             context,
             'Pick-up',
