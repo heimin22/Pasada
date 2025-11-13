@@ -956,6 +956,7 @@ class MapScreenState extends State<MapScreen>
     setState(() {
       selectedPickupLatLng = null;
       selectedDropOffLatLng = null;
+      driverLocation = null; // Clear driver location
       _routeManager.clearAllPolylines();
       _polylineStateManager.clearAllPolylines();
       _stableStateManager.clearAll();
