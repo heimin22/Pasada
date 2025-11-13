@@ -1081,6 +1081,7 @@ class HomeScreenPageState extends State<HomeScreenStateful>
                     phoneNumber: phoneNumber,
                     isDriverAssigned: isDriverAssigned,
                     currentLocation: mapScreenKey.currentState?.currentLocation,
+                    driverLocation: (mapScreenKey.currentState as dynamic)?.driverLocation,
                     bookingId: activeBookingId,
                     selectedDiscount:
                         selectedDiscountSpecification.value.isNotEmpty &&

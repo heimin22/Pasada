@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../location/selectedLocation.dart';
+import '../utils/heading_calculator.dart';
 import 'booking_details_container.dart';
 import 'driver_details_container.dart';
 import 'driver_loading_container.dart';
 import 'driver_plate_number_container.dart';
 import 'eta_container.dart';
+import 'payment_details_container.dart';
 import 'skeleton.dart';
 import 'vehicle_capacity_container.dart';
 
@@ -25,6 +27,7 @@ class BookingStatusManager extends StatefulWidget {
   final bool isDriverAssigned;
   final String bookingStatus;
   final LatLng? currentLocation;
+  final LatLng? driverLocation;
   final int? bookingId;
   final String? selectedDiscount;
   final String? capturedImageUrl;
@@ -48,6 +51,7 @@ class BookingStatusManager extends StatefulWidget {
     required this.isDriverAssigned,
     this.bookingStatus = 'requested',
     this.currentLocation,
+    this.driverLocation,
     this.bookingId,
     this.selectedDiscount,
     this.capturedImageUrl,
@@ -69,6 +73,11 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
   final Duration _debounceDuration = const Duration(seconds: 1);
   Timer? _autoRefreshTimer;
   bool _isRefreshingCapacity = false;
+
+  /// Calculate distance between two points in meters using Haversine formula
+  double _calculateDistance(LatLng from, LatLng to) {
+    return HeadingCalculator.calculateDistance(from, to);
+  }
 
   @override
   void didUpdateWidget(covariant BookingStatusManager oldWidget) {
@@ -302,6 +311,44 @@ class _BookingStatusManagerState extends State<BookingStatusManager> {
                 selectedDiscount: widget.selectedDiscount,
                 capturedImageUrl: widget.capturedImageUrl,
               ),
+              PaymentDetailsContainer(
+                paymentMethod: widget.paymentMethod,
+                fare: widget.fare,
+                onCancelBooking: widget.onCancelBooking,
+                showCancelButton: false,
+              ),
+              // Show cancel button when status is accepted and driver is 500m+ from pickup
+              if (widget.bookingStatus == 'accepted' &&
+                  widget.driverLocation != null &&
+                  widget.pickupLocation != null &&
+                  _calculateDistance(
+                        widget.driverLocation!,
+                        widget.pickupLocation!.coordinates,
+                      ) >=
+                      500.0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 8.0, horizontal: 16.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      backgroundColor: const Color(0xFFFF3B30),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    onPressed: widget.onCancelBooking,
+                    child: const Text(
+                      'Cancel Booking',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFF5F5F5),
+                      ),
+                    ),
+                  ),
+                ),
             ] else if (widget.bookingStatus == 'cancelled')
               _buildCancelledStatusContent(isDarkMode),
           ],

@@ -563,16 +563,16 @@ class BookingManager {
           ).then((_) => handleNoDriverFound());
         } else {
           // Other booking failures - clear everything
-          handleBookingCancellation();
+          await handleBookingCancellation();
         }
       }
     } else {
       Fluttertoast.showToast(msg: 'User or route missing.');
-      handleBookingCancellation();
+      await handleBookingCancellation();
     }
   }
 
-  void handleBookingCancellation() {
+  Future<void> handleBookingCancellation() async {
     _isCompleted = true; // Set flag to prevent any further API calls
     _acceptedNotified = false;
     _progressNotificationStarted = false;
@@ -584,14 +584,28 @@ class BookingManager {
 
     final currentBookingId = _state.activeBookingId;
 
-    SharedPreferences.getInstance().then((prefs) async {
-      if (currentBookingId != null) {
-        await LocalDatabaseService().deleteBookingDetails(currentBookingId);
+    // Update database to set ride_status to 'cancelled'
+    if (currentBookingId != null) {
+      try {
+        _state.bookingService ??= BookingService();
+        await _state.bookingService!.updateBookingStatus(
+            currentBookingId, 'cancelled');
+        debugPrint(
+            '[BookingManager] Updated booking $currentBookingId status to cancelled in database');
+      } catch (e) {
+        debugPrint(
+            '[BookingManager] Error updating booking status to cancelled: $e');
+        // Continue with cleanup even if database update fails
       }
-      await prefs.remove('activeBookingId');
-      await prefs.remove('pickup');
-      await prefs.remove('dropoff');
-    });
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    if (currentBookingId != null) {
+      await LocalDatabaseService().deleteBookingDetails(currentBookingId);
+    }
+    await prefs.remove('activeBookingId');
+    await prefs.remove('pickup');
+    await prefs.remove('dropoff');
 
     if (_state.mounted) {
       _state.setState(() {
